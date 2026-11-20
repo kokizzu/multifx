@@ -342,5 +342,6 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `LIN-02` | P0 | Exercise the local prerecorded guitar corpus through implemented DSP and retain output metrics without publishing private audio. | [ ] | [ ] | [ ] | Not started |
 | [x] | `DATA-01` | P0 | Keep licensed prerecorded guitar fixtures outside Git, verify their source checksums, and expose them through a local-only ignored symlink. | [x] | [x] | [ ] | EGFxSet Clean (431,036,829 bytes) and Guitar-TECHS P3 music (129,505,089 bytes) pass MD5 verification; 690 and 32 WAVs extracted outside Git; ignored symlink resolves to external storage |
 | [x] | `DATA-02` | P0 | Run deterministic offline DSP regressions on documented clean pickup-position samples and a clean DI musical excerpt. | [x] | [x] | [ ] | `make audio-regression` passed for the same open high-E note across all five EGFxSet positions plus `directinput_01.wav`; source paths and processor settings are recorded in `AUDIO_COMPATIBILITY.md` |
+| [ ] | `WEB-01` | P0 | Provide a browser/WASM guitar-audio test build whose Play control processes and plays the selected effect-chain output, with local-only files and automated audio-output comparison against native C++. | [ ] | [ ] | [ ] | Not started |
 
 Total source requirements: 327; approved additions: 9.

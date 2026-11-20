@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "fix: accept padded 24-bit guitar WAV data"
+COMMIT_MESSAGE = "docs: specify browser WASM playback target"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",

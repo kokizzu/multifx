@@ -26,6 +26,11 @@ def main() -> None:
         raise SystemExit("GOAL.md is missing the approved Windows scope")
     if "percentage of the callback deadline" not in goal:
         raise SystemExit("GOAL.md is missing per-processor DSP-cost reporting")
+    if "WebAssembly" not in goal or "AudioWorklet" not in goal or "Pressing Play" not in goal:
+        raise SystemExit("GOAL.md is missing the browser/WASM guitar-audio playback requirement")
+    bootstrap = (ROOT / "scripts/bootstrap_docs.py").read_text(encoding="utf-8")
+    if '"WEB-01"' not in bootstrap or "WebAssembly" not in bootstrap:
+        raise SystemExit("The initial documentation generator is missing the browser/WASM requirement")
 
     id_pattern = re.compile(r"^\s*- \[ \] \*\*([A-Z][A-Z0-9]*-\d+)(?: · P[012])?\*\*", re.MULTILINE)
     source_ids = id_pattern.findall(goal.split("## Maintainer-approved additions", 1)[0])
@@ -39,10 +44,10 @@ def main() -> None:
         raise SystemExit("Checklist is missing goal IDs: " + ", ".join(sorted(set(source_ids) - set(tracked_ids))))
     expected_additions = {
         "WIN-01", "WIN-02", "WIN-03", "WIN-04", "DSP-01", "LIN-01", "LIN-02",
-        "DATA-01", "DATA-02",
+        "DATA-01", "DATA-02", "WEB-01",
     }
     if not expected_additions.issubset(set(tracked_ids)):
-        raise SystemExit("Checklist is missing approved Windows/DSP requirements")
+        raise SystemExit("Checklist is missing approved platform/DSP requirements")
     print(f"Documentation verified: {len(source_ids)} source requirements and {len(tracked_ids)} tracked rows.")
 
 

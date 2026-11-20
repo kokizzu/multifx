@@ -20,3 +20,7 @@ Record exact app commit, OS build, interface/firmware, USB/power arrangement, po
 `make audio-regression` passed with fixed Gain +2 dB, Noise Gate −72 dB, Soft Drive 3, and Delay 125 ms / 0.2 feedback / 0.1 mix. It processed the five EGFxSet samples (about 5 seconds each) and the 72.5-second Guitar-TECHS excerpt through all four processors. Each output was checked for a successful render and non-empty float32 WAV; temporary rendered files were removed after the run. The EGFxSet neck file has 236,465 frames versus 240,000 for the other pickup files because its source data chunk contains fewer frames; its extra terminal zero padding byte is handled by the WAV reader.
 
 These results verify the deterministic offline Linux path only. No audio hardware, live backend, Android route, or Windows route has been probed.
+
+## Browser/WASM playback
+
+Required but not implemented yet (`WEB-01`). The browser test must load local guitar audio, process blocks through the shared WebAssembly DSP chain in an AudioWorklet, and play the processed output when Play is pressed. Automated browser coverage must capture and check the processed output against the native offline renderer; it must not upload the input recording. Browser output and timing results will be recorded separately from native hardware tests.

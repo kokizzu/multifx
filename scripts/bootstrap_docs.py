@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path("/tmp/TabletFX_Full_Goal_Prompt.md")
 
-WINDOWS_ADDENDUM = """
+MAINTAINER_ADDENDUM = """
 
 ## Maintainer-approved additions (2026-11-20)
 
@@ -21,6 +21,10 @@ WINDOWS_ADDENDUM = """
 - Keep large prerecorded fixtures outside the Git worktree and expose them through a local-only, Git-ignored symlink. Verify dataset checksums, archive paths, audio formats, and attribution before use.
 - For clean electric-guitar coverage, use EGFxSet Clean for its five documented pickup configurations, noting that it contains isolated monophonic notes rather than full performances. Use the CC BY 4.0 Guitar-TECHS DI music excerpt for performance/chord tests; its pickup-selector position is not documented as a per-take label.
 - G.A.D.A. appears to match clean DI chords across pickup settings, but its paper says access is for academic and research purposes and the dataset page does not provide a clear license. Do not download or redistribute it unless its terms are clarified.
+
+### Browser/WASM addition (2026-11-21)
+
+- **WEB-01 (P0):** Provide a browser-run test build that compiles the shared C++ DSP processors to WebAssembly (or an equivalent browser-portable module without duplicating DSP) and runs them in block-based Web Audio `AudioWorklet` processing. The page must load a user-selected local guitar audio file without uploading it. Pressing Play must run the selected effect chain and play the processed chain output through the browser's audio output; provide stop/rewind and a dry/wet comparison. Prepare processor state and memory before playback; do not allocate, block, log, or perform file/network I/O in the audio render callback. Add automated browser tests for local file loading, chain processing, and Play output that capture the processed signal and compare it with the native offline C++ renderer within a defined numeric tolerance. Report browser/version, sample rate, block size and callback deadline, per-processor and whole-chain CPU percentage, and memory use. Keep browser test results separate from native audio hardware and round-trip latency claims. User audio must remain local and never be uploaded.
 """.strip()
 
 
@@ -72,6 +76,7 @@ def build_checklist(spec: str) -> str:
         ("LIN-02", "P0", "Exercise the local prerecorded guitar corpus through implemented DSP and retain output metrics without publishing private audio."),
         ("DATA-01", "P0", "Keep licensed prerecorded guitar fixtures outside Git, verify their source checksums, and expose them through a local-only ignored symlink."),
         ("DATA-02", "P0", "Run deterministic offline DSP regressions on documented clean pickup-position samples and a clean DI musical excerpt."),
+        ("WEB-01", "P0", "Provide a browser/WASM guitar-audio test build whose Play control processes and plays the selected effect-chain output, with local-only files and automated audio-output comparison against native C++."),
     ]
     for requirement_id, priority, requirement in additions:
         output.append(f"| [ ] | `{requirement_id}` | {priority} | {requirement} | [ ] | [ ] | [ ] | Not started |")
@@ -94,7 +99,7 @@ def main() -> None:
     if readme.exists() and readme.read_text(encoding="utf-8").strip():
         raise SystemExit(f"Refusing to replace non-empty README: {readme}")
     spec = SOURCE.read_text(encoding="utf-8")
-    write_new("GOAL.md", spec.rstrip() + "\n\n" + WINDOWS_ADDENDUM)
+    write_new("GOAL.md", spec.rstrip() + "\n\n" + MAINTAINER_ADDENDUM)
     write_empty_readme(
         """# TabletFX
 
