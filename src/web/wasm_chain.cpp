@@ -1,5 +1,6 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/effects.hpp"
+#include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
@@ -44,7 +45,7 @@ public:
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F) {
-        effects_.reserve(12);
+        effects_.reserve(13);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -68,6 +69,9 @@ public:
                             true});
         effects_.push_back({std::make_unique<tabletfx::Wah>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::CleanBoost>(
+                                0.0F, static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::SoftDrive>(3.0F), false});
         effects_.push_back({std::make_unique<tabletfx::Tremolo>(
@@ -186,17 +190,21 @@ public:
     }
 
     void configure_drive(float drive) noexcept {
-        static_cast<tabletfx::SoftDrive*>(effects_[8].effect.get())->set_drive(drive);
+        static_cast<tabletfx::SoftDrive*>(effects_[9].effect.get())->set_drive(drive);
+    }
+
+    void configure_clean_boost(float gain_db) noexcept {
+        static_cast<tabletfx::CleanBoost*>(effects_[8].effect.get())->set_gain_db(gain_db);
     }
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[10].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[11].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[11].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[12].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
@@ -267,7 +275,7 @@ public:
     void configure_tremolo(float rate_hz, float depth, std::uint32_t waveform,
                            std::uint32_t tempo_sync, float tempo_bpm,
                            float beats_per_cycle) noexcept {
-        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[9].effect.get());
+        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[10].effect.get());
         tremolo->set_rate_hz(rate_hz);
         switch (waveform) {
         case 1:
@@ -528,6 +536,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tremolo(
 TABLETFX_WASM_EXPORT void tf_chain_set_drive(void* opaque, float drive) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_drive(drive);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_clean_boost(void* opaque,
+                                                  float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_clean_boost(gain_db);
     }
 }
 

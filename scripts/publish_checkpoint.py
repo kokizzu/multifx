@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add noise gate hysteresis and hold"
+COMMIT_MESSAGE = "feat: add clean boost effect"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -35,7 +35,9 @@ CHECKPOINT_PATHS = (
     "tests/test_volume_pedal.cpp",
     "tests/test_wah.cpp",
     "tests/test_noise_gate.cpp",
+    "tests/test_clean_boost.cpp",
     "include/tabletfx/effects/filters.hpp",
+    "include/tabletfx/effects/clean_boost.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",
     "include/tabletfx/effects/compressor.hpp",
@@ -59,6 +61,7 @@ CHECKPOINT_PATHS = (
     "scripts/web.py",
     "src/effects.cpp",
     "src/effects/filters.cpp",
+    "src/effects/clean_boost.cpp",
     "src/effects/pedal_compressor.cpp",
     "src/effects/peak_limiter.cpp",
     "src/effects/tremolo.cpp",

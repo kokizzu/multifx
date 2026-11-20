@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(tabletfx_core
     src/effects.cpp
+    src/effects/clean_boost.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
@@ -51,6 +52,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_noise_gate_tests tests/test_noise_gate.cpp)
     target_link_libraries(tabletfx_noise_gate_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_noise_gate_tests COMMAND tabletfx_noise_gate_tests)
+
+    add_executable(tabletfx_clean_boost_tests tests/test_clean_boost.cpp)
+    target_link_libraries(tabletfx_clean_boost_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_clean_boost_tests COMMAND tabletfx_clean_boost_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)

@@ -2,7 +2,7 @@ import createWasmModule from "../build/web/tabletfx_wasm.js";
 
 const EFFECTS = [
   "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
-  "pedal-compressor", "compressor", "wah", "soft-drive", "tremolo",
+  "pedal-compressor", "compressor", "wah", "clean-boost", "soft-drive", "tremolo",
   "three-band-eq", "delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
@@ -40,7 +40,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.captureOffset = 0;
     this.captureComplete = false;
     this.enabled = config.enabled || [true, true, false, false, false, false,
-      true, false, false, false, false, false, true, true];
+      true, false, false, false, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -77,6 +77,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_volume_pedal(this.chain, ...volumePedal);
       const wah = parameters.wah || [0.5, 350, 2200, 4, 0];
       module._tf_chain_set_wah(this.chain, ...wah);
+      module._tf_chain_set_clean_boost(this.chain, parameters.cleanBoostDb ?? 0);
       const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1];
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const limiter = parameters.limiter || [-1, 80];
@@ -123,6 +124,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_noise_gate(this.chain, ...message.value);
     } else if (message.type === "wah" && this.ready) {
       this.module._tf_chain_set_wah(this.chain, ...message.value);
+    } else if (message.type === "clean-boost" && this.ready) {
+      this.module._tf_chain_set_clean_boost(this.chain, Number(message.value));
     } else if (message.type === "tremolo" && this.ready) {
       this.module._tf_chain_set_tremolo(this.chain, ...message.value);
     } else if (message.type === "limiter" && this.ready) {

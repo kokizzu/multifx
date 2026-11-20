@@ -9,6 +9,7 @@ const EFFECT_NAMES = [
   "Pedal compressor",
   "Studio compressor",
   "Wah",
+  "Clean boost",
   "Soft drive",
   "Tremolo",
   "Three-band parametric EQ",
@@ -21,6 +22,7 @@ const DEFAULT_PARAMETERS = {
   outputGainDb: 0,
   volumePedal: [1, -96, 0, 1],
   noiseGate: [-60, -72, 3, 2, 20, 80],
+  cleanBoostDb: 0,
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1],
@@ -81,6 +83,8 @@ const wahResonance = document.querySelector("#wah-q");
 const wahResonanceValue = document.querySelector("#wah-q-value");
 const wahLevel = document.querySelector("#wah-level-db");
 const wahLevelValue = document.querySelector("#wah-level-value");
+const cleanBoost = document.querySelector("#clean-boost-db");
+const cleanBoostValue = document.querySelector("#clean-boost-value");
 const tremoloRate = document.querySelector("#tremolo-rate-hz");
 const tremoloRateValue = document.querySelector("#tremolo-rate-value");
 const tremoloDepth = document.querySelector("#tremolo-depth");
@@ -545,6 +549,13 @@ for (const control of [wahPosition, wahMinimum, wahMaximum, wahResonance, wahLev
   control.addEventListener("change", updateWah);
 }
 
+cleanBoost.addEventListener("input", () => {
+  const value = Number(cleanBoost.value);
+  DEFAULT_PARAMETERS.cleanBoostDb = value;
+  cleanBoostValue.value = `${value.toFixed(1)} dB`;
+  if (workletNode) workletNode.port.postMessage({ type: "clean-boost", value });
+});
+
 function updateTremolo() {
   const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
   const values = [
@@ -664,12 +675,13 @@ async function runBrowserSelfTest() {
     const captureView = new Int32Array(captureControl);
     const testOptions = {
       enabled: [true, true, true, true, true, true, true, true, true, true,
-        true, true, true, true],
+        true, true, true, true, true],
       parameters: {
         inputGainDb: 2,
         outputGainDb: -1,
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
+        cleanBoostDb: 3,
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1],
@@ -700,6 +712,8 @@ async function runBrowserSelfTest() {
     wahMaximum.value = "2200";
     wahResonance.value = "4";
     wahLevel.value = "0";
+    cleanBoost.value = "3";
+    cleanBoostValue.value = "3.0 dB";
     tremoloRate.value = "4";
     tremoloDepth.value = "0.2";
     tremoloWaveform.value = "sine";

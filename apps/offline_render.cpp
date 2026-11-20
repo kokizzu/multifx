@@ -1,4 +1,5 @@
 #include "tabletfx/effects.hpp"
+#include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
@@ -39,6 +40,8 @@ struct Options {
     float limiter_release_ms = 80.0F;
     bool wah_enabled = false;
     tabletfx::WahParameters wah{};
+    bool clean_boost_enabled = false;
+    float clean_boost_db = 0.0F;
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
     float high_pass_hz = 0.0F;
@@ -206,6 +209,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.noise_gate_enabled = true;
         }
         else if (key == "--drive") options.drive = value;
+        else if (key == "--boost-db") {
+            options.clean_boost_db = value;
+            options.clean_boost_enabled = true;
+        }
         else if (key == "--delay-ms") options.delay_ms = value;
         else if (key == "--delay-feedback") options.delay_feedback = value;
         else if (key == "--delay-mix") options.delay_mix = value;
@@ -325,6 +332,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.wah_enabled) {
         effects.push_back(std::make_unique<tabletfx::Wah>(
             static_cast<float>(sample_rate), channels, options.wah));
+    }
+    if (options.clean_boost_enabled) {
+        effects.push_back(std::make_unique<tabletfx::CleanBoost>(
+            options.clean_boost_db, static_cast<float>(sample_rate)));
     }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
@@ -459,6 +470,7 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     tabletfx::WahParameters wah_parameters;
     wah_parameters.position = 0.62F;
     effects.push_back(std::make_unique<tabletfx::Wah>(sample_rate, channels, wah_parameters));
+    effects.push_back(std::make_unique<tabletfx::CleanBoost>(3.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     tabletfx::TremoloParameters tremolo_parameters;
     tremolo_parameters.rate_hz = 4.0F;
@@ -572,6 +584,9 @@ void run_bench() {
         parameters.position = 0.7F;
         return std::make_unique<tabletfx::Wah>(static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("clean-boost", [=] {
+        return std::make_unique<tabletfx::CleanBoost>(6.0F, static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;
@@ -590,6 +605,7 @@ void print_usage() {
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
+                 " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"

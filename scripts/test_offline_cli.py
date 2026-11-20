@@ -137,6 +137,29 @@ def check_noise_gate(executable: Path) -> None:
                 )
 
 
+def check_clean_boost(executable: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="tabletfx-clean-boost-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        output = root / "output.wav"
+        write_pcm16(source, 48000, [8192, -8192])
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--boost-db", "6"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Clean boost was not constructed: {result.stdout}")
+        values = struct.unpack("<2f", output.read_bytes()[44:52])
+        expected = 0.25 * 10.0 ** (6.0 / 20.0)
+        if any(not math.isfinite(value) for value in values) or any(
+            abs(actual - wanted) > 1.0e-6
+            for actual, wanted in zip(values, (expected, -expected), strict=True)
+        ):
+            raise AssertionError(f"Clean boost did not apply transparent level gain: {values}")
+
+
 def check_pcm24_padding(executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="tabletfx-pcm24-test-") as directory:
         root = Path(directory)
@@ -181,9 +204,10 @@ def main() -> None:
     check_render(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
+    check_clean_boost(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
