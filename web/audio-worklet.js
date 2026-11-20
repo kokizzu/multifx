@@ -71,6 +71,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_filters(this.chain, ...filters);
       const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
       module._tf_chain_set_pedal_compressor(this.chain, ...pedalCompressor);
+      const noiseGate = parameters.noiseGate || [-60, -72, 3, 2, 20, 80];
+      module._tf_chain_set_noise_gate(this.chain, ...noiseGate);
       const volumePedal = parameters.volumePedal || [1, -96, 0, 1];
       module._tf_chain_set_volume_pedal(this.chain, ...volumePedal);
       const wah = parameters.wah || [0.5, 350, 2200, 4, 0];
@@ -117,6 +119,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
+    } else if (message.type === "noise-gate" && this.ready) {
+      this.module._tf_chain_set_noise_gate(this.chain, ...message.value);
     } else if (message.type === "wah" && this.ready) {
       this.module._tf_chain_set_wah(this.chain, ...message.value);
     } else if (message.type === "tremolo" && this.ready) {

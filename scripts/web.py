@@ -119,6 +119,7 @@ def build_web() -> None:
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
         "_tf_chain_ramp_output_gain", "_tf_chain_process_output_gain",
         "_tf_chain_process_output_limiter", "_tf_chain_set_volume_pedal",
+        "_tf_chain_set_noise_gate",
         "_tf_chain_set_limiter", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
     ]
     command = [
@@ -390,7 +391,9 @@ def browser_test() -> None:
             "--wah-max-hz", "2200", "--wah-q", "4", "--wah-level-db", "0",
             "--tremolo-rate-hz", "4", "--tremolo-depth", "0.2",
             "--tremolo-waveform", "sine", "--tremolo-sync", "off",
-            "--gate-threshold-db", "-72",
+            "--gate-threshold-db", "-60", "--gate-attenuation-db", "-72",
+            "--gate-hysteresis-db", "3", "--gate-attack-ms", "2",
+            "--gate-hold-ms", "20", "--gate-release-ms", "80",
             "--compressor-threshold-db", "-18", "--compressor-ratio", "3",
             "--compressor-knee-db", "6", "--compressor-attack-ms", "8",
             "--compressor-release-ms", "100", "--compressor-makeup-db", "0",

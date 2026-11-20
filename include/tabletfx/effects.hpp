@@ -31,26 +31,41 @@ private:
     std::size_t ramp_remaining_ = 0;
 };
 
+struct NoiseGateParameters {
+    float threshold_db = -60.0F;
+    float attenuation_db = -72.0F;
+    float hysteresis_db = 3.0F;
+    float attack_ms = 2.0F;
+    float hold_ms = 20.0F;
+    float release_ms = 80.0F;
+};
+
 class NoiseGate final : public Effect {
 public:
     NoiseGate(float sample_rate, float threshold_db = -60.0F,
               float attenuation_db = -72.0F, float attack_ms = 2.0F,
               float release_ms = 80.0F) noexcept;
+    NoiseGate(float sample_rate, NoiseGateParameters parameters) noexcept;
     [[nodiscard]] std::string_view id() const noexcept override { return "noise-gate"; }
     [[nodiscard]] std::size_t memory_bytes() const noexcept override { return sizeof(*this); }
     void configure(float sample_rate, float threshold_db, float attenuation_db,
                    float attack_ms, float release_ms) noexcept;
+    void configure(float sample_rate, NoiseGateParameters parameters) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
     float sample_rate_;
     float threshold_;
+    float close_threshold_;
     float closed_gain_;
     float attack_coefficient_;
     float release_coefficient_;
     float envelope_ = 0.0F;
     float gain_ = 0.0F;
+    std::size_t hold_duration_samples_ = 0;
+    std::size_t hold_remaining_samples_ = 0;
+    bool gate_open_ = false;
 };
 
 class SoftDrive final : public Effect {

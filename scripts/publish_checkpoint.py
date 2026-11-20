@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add wah and synchronized tremolo"
+COMMIT_MESSAGE = "feat: add noise gate hysteresis and hold"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -34,6 +34,7 @@ CHECKPOINT_PATHS = (
     "tests/test_tremolo.cpp",
     "tests/test_volume_pedal.cpp",
     "tests/test_wah.cpp",
+    "tests/test_noise_gate.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",

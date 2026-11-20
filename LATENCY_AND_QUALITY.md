@@ -14,20 +14,20 @@ Measured with `make bench` on an AMD Ryzen 9 5950X 16-Core Processor, GCC 13.3.0
 
 | Processor / chain | Median % | p95 % | p99 % | p99.9 % | Maximum % | Owned memory bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| Input gain | 0.0068 | 0.0068 | 0.0086 | 0.0135 | 0.4091 | 40 |
-| Volume pedal | 0.0060 | 0.0060 | 0.0060 | 0.0120 | 0.3600 | 56 |
-| High-pass | 0.0323 | 0.0327 | 0.0371 | 0.2280 | 0.8655 | 64 |
-| Low-pass | 0.0326 | 0.0353 | 0.0394 | 0.0480 | 0.5453 | 64 |
-| Noise gate | 0.0188 | 0.0217 | 0.0266 | 0.0338 | 0.1961 | 40 |
-| Pedal compressor | 0.1024 | 0.1031 | 0.1474 | 0.3660 | 0.3994 | 72 |
-| Studio compressor | 0.0941 | 0.1219 | 0.1256 | 0.3563 | 0.5929 | 64 |
-| Wah | 0.0469 | 0.0499 | 0.0540 | 0.2700 | 0.2921 | 104 |
-| Soft drive | 0.1249 | 0.2044 | 0.2063 | 0.4189 | 0.8325 | 16 |
-| Tremolo | 0.0641 | 0.0645 | 0.0660 | 0.2749 | 0.3904 | 96 |
-| Three-band parametric EQ | 0.0566 | 0.0574 | 0.0893 | 0.2955 | 0.3551 | 160 |
-| Delay (2 s stereo allocation) | 0.0210 | 0.0217 | 0.0229 | 0.0315 | 0.2873 | 768,080 |
-| Output gain | 0.0053 | 0.0056 | 0.0056 | 0.0101 | 0.0188 | 40 |
-| Peak limiter | 0.0176 | 0.0176 | 0.0289 | 0.0311 | 0.3611 | 32 |
-| Full fourteen-effect chain | 0.5884 | 0.7834 | 0.9056 | 1.0425 | 1.1202 | 768,928 |
+| Input gain | 0.0053 | 0.0060 | 0.0064 | 0.0064 | 0.1545 | 40 |
+| Volume pedal | 0.0045 | 0.0045 | 0.0045 | 0.0045 | 0.1613 | 56 |
+| High-pass | 0.0326 | 0.0409 | 0.0409 | 0.3038 | 1.2458 | 64 |
+| Low-pass | 0.0323 | 0.0326 | 0.0330 | 0.0394 | 0.3188 | 64 |
+| Noise gate | 0.0214 | 0.0217 | 0.0289 | 0.0401 | 0.2997 | 64 |
+| Pedal compressor | 0.1163 | 0.1669 | 0.1770 | 0.4624 | 0.6282 | 72 |
+| Studio compressor | 0.1084 | 0.1500 | 0.1598 | 0.3274 | 0.4279 | 64 |
+| Wah | 0.0469 | 0.0525 | 0.0585 | 0.1976 | 0.2640 | 104 |
+| Soft drive | 0.1433 | 0.1444 | 0.2292 | 0.4463 | 1.4738 | 16 |
+| Tremolo | 0.0728 | 0.0735 | 0.0743 | 0.2929 | 0.4065 | 96 |
+| Three-band parametric EQ | 0.0570 | 0.0716 | 0.0979 | 0.4016 | 0.7965 | 160 |
+| Delay (2 s stereo allocation) | 0.0240 | 0.0248 | 0.0251 | 0.0296 | 0.2925 | 768,080 |
+| Output gain | 0.0053 | 0.0056 | 0.0056 | 0.0057 | 0.3330 | 40 |
+| Peak limiter | 0.0195 | 0.0199 | 0.0311 | 0.0349 | 0.2396 | 32 |
+| Full fourteen-effect chain | 0.6758 | 0.8082 | 0.9623 | 1.9752 | 20.7707 | 768,952 |
 
-The full chain is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Timing includes processor calls only; buffer copy/setup are outside the timed region. Memory is processor objects plus directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, and backend/runtime overhead. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.
+The full chain is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Timing includes processor calls only; buffer copy/setup are outside the timed region. Memory is processor objects plus directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, and backend/runtime overhead. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise; the 20.7707% full-chain maximum is a clear outlier and does not represent typical load. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.

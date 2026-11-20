@@ -20,6 +20,7 @@ const DEFAULT_PARAMETERS = {
   inputGainDb: 0,
   outputGainDb: 0,
   volumePedal: [1, -96, 0, 1],
+  noiseGate: [-60, -72, 3, 2, 20, 80],
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1],
@@ -54,6 +55,18 @@ const volumeMinimumValue = document.querySelector("#volume-min-value");
 const volumeMaximum = document.querySelector("#volume-max-db");
 const volumeMaximumValue = document.querySelector("#volume-max-value");
 const volumeTaper = document.querySelector("#volume-taper");
+const noiseGateThreshold = document.querySelector("#noise-gate-threshold-db");
+const noiseGateThresholdValue = document.querySelector("#noise-gate-threshold-value");
+const noiseGateAttenuation = document.querySelector("#noise-gate-attenuation-db");
+const noiseGateAttenuationValue = document.querySelector("#noise-gate-attenuation-value");
+const noiseGateHysteresis = document.querySelector("#noise-gate-hysteresis-db");
+const noiseGateHysteresisValue = document.querySelector("#noise-gate-hysteresis-value");
+const noiseGateAttack = document.querySelector("#noise-gate-attack-ms");
+const noiseGateAttackValue = document.querySelector("#noise-gate-attack-value");
+const noiseGateHold = document.querySelector("#noise-gate-hold-ms");
+const noiseGateHoldValue = document.querySelector("#noise-gate-hold-value");
+const noiseGateRelease = document.querySelector("#noise-gate-release-ms");
+const noiseGateReleaseValue = document.querySelector("#noise-gate-release-value");
 const limiterCeiling = document.querySelector("#limiter-ceiling-db");
 const limiterCeilingValue = document.querySelector("#limiter-ceiling-value");
 const limiterRelease = document.querySelector("#limiter-release-ms");
@@ -472,6 +485,31 @@ for (const control of [volumePosition, volumeMinimum, volumeMaximum, volumeTaper
   control.addEventListener("change", updateVolumePedal);
 }
 
+function updateNoiseGate() {
+  const values = [
+    Number(noiseGateThreshold.value),
+    Number(noiseGateAttenuation.value),
+    Number(noiseGateHysteresis.value),
+    Number(noiseGateAttack.value),
+    Number(noiseGateHold.value),
+    Number(noiseGateRelease.value),
+  ];
+  DEFAULT_PARAMETERS.noiseGate = values;
+  noiseGateThresholdValue.value = `${noiseGateThreshold.value} dB`;
+  noiseGateAttenuationValue.value = `${noiseGateAttenuation.value} dB`;
+  noiseGateHysteresisValue.value = `${noiseGateHysteresis.value} dB`;
+  noiseGateAttackValue.value = `${noiseGateAttack.value} ms`;
+  noiseGateHoldValue.value = `${noiseGateHold.value} ms`;
+  noiseGateReleaseValue.value = `${noiseGateRelease.value} ms`;
+  if (workletNode) workletNode.port.postMessage({ type: "noise-gate", value: values });
+}
+
+for (const control of [noiseGateThreshold, noiseGateAttenuation, noiseGateHysteresis,
+  noiseGateAttack, noiseGateHold, noiseGateRelease]) {
+  control.addEventListener("input", updateNoiseGate);
+  control.addEventListener("change", updateNoiseGate);
+}
+
 function updateLimiter() {
   const values = [Number(limiterCeiling.value), Number(limiterRelease.value)];
   DEFAULT_PARAMETERS.limiter = values;
@@ -631,6 +669,7 @@ async function runBrowserSelfTest() {
         inputGainDb: 2,
         outputGainDb: -1,
         volumePedal: [0.92, -96, 0, 1],
+        noiseGate: [-60, -72, 3, 2, 20, 80],
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1],
@@ -648,6 +687,12 @@ async function runBrowserSelfTest() {
     volumeMinimum.value = "-96";
     volumeMaximum.value = "0";
     volumeTaper.value = "audio";
+    noiseGateThreshold.value = "-60";
+    noiseGateAttenuation.value = "-72";
+    noiseGateHysteresis.value = "3";
+    noiseGateAttack.value = "2";
+    noiseGateHold.value = "20";
+    noiseGateRelease.value = "80";
     limiterCeiling.value = "-1";
     limiterRelease.value = "80";
     wahPosition.value = "62";
@@ -662,6 +707,7 @@ async function runBrowserSelfTest() {
     tremoloBpm.value = "120";
     tremoloDivision.value = "1";
     updateVolumePedal();
+    updateNoiseGate();
     updateLimiter();
     updateWah();
     updateTremolo();

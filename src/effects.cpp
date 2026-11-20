@@ -99,18 +99,59 @@ void Gain::configure_smoothing(float sample_rate, float smoothing_ms) noexcept {
 
 NoiseGate::NoiseGate(float sample_rate, float threshold_db, float attenuation_db,
                      float attack_ms, float release_ms) noexcept
-    : sample_rate_(sample_rate), threshold_(0.0F), closed_gain_(0.0F),
+    : sample_rate_(sample_rate), threshold_(0.0F), close_threshold_(0.0F),
+      closed_gain_(0.0F),
       attack_coefficient_(0.0F), release_coefficient_(0.0F) {
     configure(sample_rate, threshold_db, attenuation_db, attack_ms, release_ms);
 }
 
+NoiseGate::NoiseGate(float sample_rate, NoiseGateParameters parameters) noexcept
+    : sample_rate_(sample_rate), threshold_(0.0F), close_threshold_(0.0F),
+      closed_gain_(0.0F), attack_coefficient_(0.0F), release_coefficient_(0.0F) {
+    configure(sample_rate, parameters);
+}
+
 void NoiseGate::configure(float sample_rate, float threshold_db, float attenuation_db,
                           float attack_ms, float release_ms) noexcept {
-    sample_rate_ = std::max(sample_rate, 1.0F);
-    threshold_ = decibels_to_linear(std::clamp(threshold_db, -120.0F, 0.0F));
-    closed_gain_ = decibels_to_linear(std::clamp(attenuation_db, -96.0F, 0.0F));
-    attack_coefficient_ = time_coefficient(std::clamp(attack_ms, 0.0F, 2000.0F), sample_rate_);
-    release_coefficient_ = time_coefficient(std::clamp(release_ms, 0.0F, 5000.0F), sample_rate_);
+    NoiseGateParameters parameters;
+    parameters.threshold_db = threshold_db;
+    parameters.attenuation_db = attenuation_db;
+    parameters.attack_ms = attack_ms;
+    parameters.release_ms = release_ms;
+    configure(sample_rate, parameters);
+}
+
+void NoiseGate::configure(float sample_rate, NoiseGateParameters parameters) noexcept {
+    sample_rate_ = std::isfinite(sample_rate) ? std::clamp(sample_rate, 1.0F, 384000.0F)
+                                             : 48000.0F;
+    const float threshold_db = std::isfinite(parameters.threshold_db)
+                                   ? std::clamp(parameters.threshold_db, -120.0F, 0.0F)
+                                   : -60.0F;
+    const float attenuation_db = std::isfinite(parameters.attenuation_db)
+                                     ? std::clamp(parameters.attenuation_db, -96.0F, 0.0F)
+                                     : -72.0F;
+    const float hysteresis_db = std::isfinite(parameters.hysteresis_db)
+                                    ? std::clamp(parameters.hysteresis_db, 0.0F, 24.0F)
+                                    : 3.0F;
+    const float attack_ms = std::isfinite(parameters.attack_ms)
+                                ? std::clamp(parameters.attack_ms, 0.0F, 2000.0F)
+                                : 2.0F;
+    const float hold_ms = std::isfinite(parameters.hold_ms)
+                              ? std::clamp(parameters.hold_ms, 0.0F, 5000.0F)
+                              : 20.0F;
+    const float release_ms = std::isfinite(parameters.release_ms)
+                                 ? std::clamp(parameters.release_ms, 0.0F, 5000.0F)
+                                 : 80.0F;
+
+    threshold_ = decibels_to_linear(threshold_db);
+    close_threshold_ = decibels_to_linear(threshold_db - hysteresis_db);
+    closed_gain_ = decibels_to_linear(attenuation_db);
+    attack_coefficient_ = time_coefficient(attack_ms, sample_rate_);
+    release_coefficient_ = time_coefficient(release_ms, sample_rate_);
+    const double hold_samples = static_cast<double>(sample_rate_) *
+                                static_cast<double>(hold_ms) / 1000.0;
+    hold_duration_samples_ = static_cast<std::size_t>(std::llround(hold_samples));
+    hold_remaining_samples_ = std::min(hold_remaining_samples_, hold_duration_samples_);
 }
 
 void NoiseGate::process(std::span<float> interleaved, std::uint16_t channels) noexcept {
@@ -122,15 +163,34 @@ void NoiseGate::process(std::span<float> interleaved, std::uint16_t channels) no
         float peak = 0.0F;
         const std::size_t offset = frame * channels;
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
-            peak = std::max(peak, std::abs(interleaved[offset + channel]));
+            const float sample = interleaved[offset + channel];
+            if (std::isfinite(sample)) {
+                peak = std::max(peak, std::abs(sample));
+            }
         }
         const float envelope_coefficient = peak > envelope_ ? attack_coefficient_ : release_coefficient_;
         envelope_ = envelope_coefficient * envelope_ + (1.0F - envelope_coefficient) * peak;
-        const float target_gain = envelope_ >= threshold_ ? 1.0F : closed_gain_;
+        if (!gate_open_) {
+            if (envelope_ >= threshold_) {
+                gate_open_ = true;
+                hold_remaining_samples_ = hold_duration_samples_;
+            }
+        } else if (envelope_ >= close_threshold_) {
+            hold_remaining_samples_ = hold_duration_samples_;
+        } else if (hold_remaining_samples_ > 0) {
+            --hold_remaining_samples_;
+        } else {
+            gate_open_ = false;
+        }
+
+        const float target_gain = gate_open_ ? 1.0F : closed_gain_;
         const float gain_coefficient = target_gain > gain_ ? attack_coefficient_ : release_coefficient_;
         gain_ = gain_coefficient * gain_ + (1.0F - gain_coefficient) * target_gain;
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
-            interleaved[offset + channel] *= gain_;
+            const std::size_t index = offset + channel;
+            interleaved[index] = std::isfinite(interleaved[index])
+                                     ? interleaved[index] * gain_
+                                     : 0.0F;
         }
     }
 }
@@ -138,6 +198,8 @@ void NoiseGate::process(std::span<float> interleaved, std::uint16_t channels) no
 void NoiseGate::reset() noexcept {
     envelope_ = 0.0F;
     gain_ = closed_gain_;
+    hold_remaining_samples_ = 0;
+    gate_open_ = false;
 }
 
 SoftDrive::SoftDrive(float drive) noexcept : drive_(1.0F), normalization_(1.0F) {

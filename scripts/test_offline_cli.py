@@ -99,6 +99,44 @@ def check_compressor(executable: Path) -> None:
             raise AssertionError("Compressor did not reduce a signal above threshold")
 
 
+def check_noise_gate(executable: Path) -> None:
+    sample_rate = 48000
+    input_samples = [1638, 16384, 2621, 1966, 16384]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-gate-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        output = root / "output.wav"
+        write_pcm16(source, sample_rate, input_samples)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--gate-threshold-db", "-20",
+                "--gate-attenuation-db", "-60",
+                "--gate-hysteresis-db", "3",
+                "--gate-attack-ms", "0",
+                "--gate-hold-ms", "0",
+                "--gate-release-ms", "0",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Noise gate was not constructed: {result.stdout}")
+        data = output.read_bytes()
+        values = struct.unpack("<" + "f" * len(input_samples), data[44:])
+        expected = [input_samples[0] / 32768.0 * 0.001,
+                    input_samples[1] / 32768.0,
+                    input_samples[2] / 32768.0,
+                    input_samples[3] / 32768.0 * 0.001,
+                    input_samples[4] / 32768.0]
+        for index, (actual, wanted) in enumerate(zip(values, expected, strict=True)):
+            if not math.isfinite(actual) or abs(actual - wanted) > 1.0e-6:
+                raise AssertionError(
+                    f"Gate sample {index}: expected {wanted}, got {actual}"
+                )
+
+
 def check_pcm24_padding(executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="tabletfx-pcm24-test-") as directory:
         root = Path(directory)
@@ -142,9 +180,10 @@ def main() -> None:
     args = parser.parse_args()
     check_render(args.executable.resolve())
     check_compressor(args.executable.resolve())
+    check_noise_gate(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

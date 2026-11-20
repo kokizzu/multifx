@@ -43,7 +43,8 @@ struct Options {
     tabletfx::TremoloParameters tremolo{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
-    float gate_threshold_db = -120.0F;
+    bool noise_gate_enabled = false;
+    tabletfx::NoiseGateParameters noise_gate{};
     float drive = 1.0F;
     float delay_ms = 0.0F;
     float delay_feedback = 0.25F;
@@ -180,7 +181,30 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
-        else if (key == "--gate-threshold-db") options.gate_threshold_db = value;
+        else if (key == "--gate-threshold-db") {
+            options.noise_gate.threshold_db = value;
+            options.noise_gate_enabled = true;
+        }
+        else if (key == "--gate-attenuation-db") {
+            options.noise_gate.attenuation_db = value;
+            options.noise_gate_enabled = true;
+        }
+        else if (key == "--gate-hysteresis-db") {
+            options.noise_gate.hysteresis_db = value;
+            options.noise_gate_enabled = true;
+        }
+        else if (key == "--gate-attack-ms") {
+            options.noise_gate.attack_ms = value;
+            options.noise_gate_enabled = true;
+        }
+        else if (key == "--gate-hold-ms") {
+            options.noise_gate.hold_ms = value;
+            options.noise_gate_enabled = true;
+        }
+        else if (key == "--gate-release-ms") {
+            options.noise_gate.release_ms = value;
+            options.noise_gate_enabled = true;
+        }
         else if (key == "--drive") options.drive = value;
         else if (key == "--delay-ms") options.delay_ms = value;
         else if (key == "--delay-feedback") options.delay_feedback = value;
@@ -286,9 +310,9 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::LowPassFilter>(
             static_cast<float>(sample_rate), channels, options.low_pass_hz));
     }
-    if (options.gate_threshold_db > -119.0F) {
+    if (options.noise_gate_enabled) {
         effects.push_back(std::make_unique<tabletfx::NoiseGate>(
-            static_cast<float>(sample_rate), options.gate_threshold_db));
+            static_cast<float>(sample_rate), options.noise_gate));
     }
     if (options.pedal_compressor_enabled) {
         effects.push_back(std::make_unique<tabletfx::PedalCompressor>(
@@ -567,7 +591,9 @@ void print_usage() {
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
                  " [--high-pass-hz Hz]"
-                 " [--low-pass-hz Hz] [--gate-threshold-db dB]"
+                 " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
+                 " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
+                 " [--gate-release-ms ms]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
                  " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"

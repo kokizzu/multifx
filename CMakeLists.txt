@@ -48,6 +48,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_pedal_compressor_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pedal_compressor_tests COMMAND tabletfx_pedal_compressor_tests)
 
+    add_executable(tabletfx_noise_gate_tests tests/test_noise_gate.cpp)
+    target_link_libraries(tabletfx_noise_gate_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_noise_gate_tests COMMAND tabletfx_noise_gate_tests)
+
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_gain_tests COMMAND tabletfx_gain_tests)

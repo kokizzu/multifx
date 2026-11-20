@@ -37,7 +37,7 @@ class WasmChain {
 public:
     WasmChain(std::uint32_t sample_rate, std::uint16_t channels,
               std::uint32_t max_frames)
-        : channels_(channels), max_frames_(max_frames),
+        : sample_rate_(sample_rate), channels_(channels), max_frames_(max_frames),
           input_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           dry_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           work_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
@@ -58,7 +58,7 @@ public:
                                 static_cast<float>(sample_rate), channels, 12000.0F),
                             false});
         effects_.push_back({std::make_unique<tabletfx::NoiseGate>(
-                                static_cast<float>(sample_rate), -72.0F),
+                                static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::PedalCompressor>(
                                 static_cast<float>(sample_rate)),
@@ -232,6 +232,20 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_noise_gate(float threshold_db, float attenuation_db,
+                              float hysteresis_db, float attack_ms,
+                              float hold_ms, float release_ms) noexcept {
+        tabletfx::NoiseGateParameters parameters;
+        parameters.threshold_db = threshold_db;
+        parameters.attenuation_db = attenuation_db;
+        parameters.hysteresis_db = hysteresis_db;
+        parameters.attack_ms = attack_ms;
+        parameters.hold_ms = hold_ms;
+        parameters.release_ms = release_ms;
+        static_cast<tabletfx::NoiseGate*>(effects_[4].effect.get())
+            ->configure(static_cast<float>(sample_rate_), parameters);
+    }
+
     void configure_volume_pedal(float position, float minimum_db,
                                 float maximum_db, std::uint32_t taper) noexcept {
         auto* pedal = static_cast<tabletfx::VolumePedal*>(effects_[1].effect.get());
@@ -306,6 +320,7 @@ public:
     }
 
 private:
+    std::uint32_t sample_rate_;
     std::uint16_t channels_;
     std::uint32_t max_frames_;
     std::uint32_t frames_ = 0;
@@ -461,6 +476,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pedal_compressor(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pedal_compressor(sensitivity, sustain, attack,
                                                      level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_noise_gate(
+    void* opaque, float threshold_db, float attenuation_db,
+    float hysteresis_db, float attack_ms, float hold_ms,
+    float release_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_noise_gate(threshold_db, attenuation_db,
+                                              hysteresis_db, attack_ms,
+                                              hold_ms, release_ms);
     }
 }
 
