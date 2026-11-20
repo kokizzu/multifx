@@ -10,8 +10,10 @@ add_library(tabletfx_core
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
+    src/effects/tremolo.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
+    src/effects/wah.cpp
 )
 target_include_directories(tabletfx_core PUBLIC include)
 target_compile_definitions(tabletfx_core PUBLIC TABLETFX_BUILD_TYPE="$<CONFIG>")
@@ -57,6 +59,14 @@ if(BUILD_TESTING)
     add_executable(tabletfx_volume_pedal_tests tests/test_volume_pedal.cpp)
     target_link_libraries(tabletfx_volume_pedal_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_volume_pedal_tests COMMAND tabletfx_volume_pedal_tests)
+
+    add_executable(tabletfx_tremolo_tests tests/test_tremolo.cpp)
+    target_link_libraries(tabletfx_tremolo_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_tremolo_tests COMMAND tabletfx_tremolo_tests)
+
+    add_executable(tabletfx_wah_tests tests/test_wah.cpp)
+    target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_wah_tests COMMAND tabletfx_wah_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(

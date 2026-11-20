@@ -19,7 +19,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `UTL-11` | P1 | Delay alignment/sample delay for branches and external routes. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-12` | P2 | External send/return only when the interface exposes sufficient I/O; measure its extra latency. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-13` | P1 | Mid/side and stereo-width utility with mono-compatibility checks. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `UTL-14` | P0 | Configurable output protection and controlled mute/unmute ramps. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `UTL-14` | P0 | Configurable output protection and controlled mute/unmute ramps. | [ ] | [ ] | [ ] | Configurable −1 dBFS sample-peak protection is implemented and tracked under `DYN-11`; controlled mute/unmute and panic-mute ramps remain open. |
 | [ ] | `DYN-01` | P0 | Noise gate with threshold, hysteresis, attack, hold, release. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-02` | P1 | Fast hard gate for high-gain rhythms. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-03` | P1 | Downward expander for gentler noise control. | [ ] | [ ] | [ ] | Not started |
@@ -43,7 +43,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `EQF-05` | P1 | Shelving and tilt EQ. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-06` | P1 | Notch filter for narrow problem frequencies. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-07` | P2 | Dynamic EQ. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `EQF-08` | P0 | Pedal wah with range, resonance, position, and level. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `EQF-08` | P0 | Pedal wah with range, resonance, position, and level. | [x] | [x] | [ ] | Generic expression wah uses a logarithmic 350–2200 Hz sweep, Q 4, level 0 dB, and 10 ms control ramps. Frequency response, bounds, monotonic sweep, block invariance, stereo isolation, reset, invalid-input recovery, and no-allocation tests pass. Linux CPU/memory measured; hardware/listening remains open. |
 | [ ] | `EQF-09` | P1 | Multiple audited wah voicings, including bass wah. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-10` | P0 | Envelope/touch wah with sensitivity and up/down sweep. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-11` | P1 | LFO auto-wah. | [ ] | [ ] | [ ] | Not started |
@@ -84,7 +84,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `MOD-08` | P1 | Envelope/step phaser. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `MOD-09` | P1 | Vibe-style phase modulation. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `MOD-10` | P0 | Vibrato. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `MOD-11` | P0 | Amplitude tremolo with waveform and sync. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `MOD-11` | P0 | Amplitude tremolo with waveform and sync. | [x] | [x] | [ ] | Sine/triangle/square tremolo supports 0.05–20 Hz free rate or BPM sync (quarter-note beat units), 0–100% depth, stereo-linked LFO, and a 10 ms depth ramp. Waveforms, sync math, phase continuity, depth ramp, bounds, variable blocks, reset, finite output, and no-allocation tests pass. Linux CPU/memory measured; hardware/listening remains open. |
 | [ ] | `MOD-12` | P1 | Harmonic tremolo. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `MOD-13` | P1 | Bias/optical-style tremolo variants. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `MOD-14` | P1 | Stereo auto-pan. | [ ] | [ ] | [ ] | Not started |
@@ -337,12 +337,12 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `WIN-02` | P0 | Verify portable preset save/load and matching DSP state across Windows, Linux, and Android builds. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `WIN-03` | P0 | Run automated Windows compile, DSP, preset, and audio-backend tests; retain exact toolchain and results. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `WIN-04` | P0 | Verify live full-duplex guitar input/output on Windows with an actual supported interface; keep this manual check open until performed. | [ ] | [ ] | [ ] | Not started |
-| [x] | `DSP-01` | P0 | Measure each processor's CPU use as a percentage of the callback deadline and report the complete benchmark configuration and percentiles. | [x] | [x] | [ ] | All twelve processor stages plus the twelve-effect chain measured on Linux desktop; p50/p95/p99/p99.9/max, owned memory, and exact configuration recorded in `LATENCY_AND_QUALITY.md`; repeat on Android/Windows and after DSP changes |
+| [x] | `DSP-01` | P0 | Measure each processor's CPU use as a percentage of the callback deadline and report the complete benchmark configuration and percentiles. | [x] | [x] | [ ] | All fourteen processor stages plus the fourteen-effect chain measured on Linux desktop; p50/p95/p99/p99.9/max, owned memory, and exact configuration recorded in `LATENCY_AND_QUALITY.md`; repeat on Android/Windows and after DSP changes |
 | [x] | `LIN-01` | P0 | Provide a reproducible Linux WAV ingest/render/regression path using prerecorded audio and deterministic settings. | [x] | [x] | [ ] | `make audio-regression` rendered five EGFxSet pickup variants and one 72.5-second Guitar-TECHS DI excerpt through Gain, Gate, Compressor, Drive, EQ, and Delay; live audio hardware remains unprobed |
 | [x] | `LIN-02` | P0 | Exercise the local prerecorded guitar corpus through implemented DSP and retain output metrics without publishing private audio. | [x] | [x] | [ ] | Local-only regression passed on five pickup-position note files and the 72.5-second DI performance; render metrics were retained in command output and temporary WAV outputs removed; no user audio published |
 | [x] | `DATA-01` | P0 | Keep licensed prerecorded guitar fixtures outside Git, verify their source checksums, and expose them through a local-only ignored symlink. | [x] | [x] | [ ] | EGFxSet Clean (431,036,829 bytes) and Guitar-TECHS P3 music (129,505,089 bytes) pass MD5 verification; 690 and 32 WAVs extracted outside Git; ignored symlink resolves to external storage |
 | [x] | `DATA-02` | P0 | Run deterministic offline DSP regressions on documented clean pickup-position samples and a clean DI musical excerpt. | [x] | [x] | [ ] | `make audio-regression` passed for the same open high-E note across all five EGFxSet positions plus `directinput_01.wav`; source paths and processor settings are recorded in `AUDIO_COMPATIBILITY.md` |
 | [x] | `WIN-05` | P0 | Provide a repeatable MinGW-w64 Windows x64 cross-build of the shared DSP/offline CLI and a WASAPI backend compile-smoke target. | [x] | [x] | [ ] | `make windows-cross-build` passed with MinGW GCC 13.0 and CMake 3.28.3, compiling the shared DSP, offline CLI, WASAPI library, and smoke executable; Windows execution/device tests remain separate |
-| [ ] | `WEB-01` | P0 | Provide a browser/WASM guitar-audio test build whose Play control processes and plays the selected effect-chain output, with local-only files and automated audio-output comparison against native C++. | [x] | [x] | [ ] | `make web-test` passed on HeadlessChrome 151 at 48 kHz/128 frames; local-file decode, Worklet/WASM chain, Play capture, and native comparison passed with max absolute error 0.00010422 / RMS 0.000009145 (limits 0.0002 / 0.00002). Chain state 515,516 bytes within a fixed 16 MiB WASM heap. Worklet CPU timer falls back to 1 ms `Date.now()` in this browser, so its per-effect percentages are coarse. Manual listening through an actual browser output device remains open. |
+| [ ] | `WEB-01` | P0 | Provide a browser/WASM guitar-audio test build whose Play control processes and plays the selected effect-chain output, with local-only files and automated audio-output comparison against native C++. | [x] | [x] | [ ] | `make web-test` passed on HeadlessChrome 151 at 48 kHz/128 frames; local-file decode, Worklet/WASM chain, Play capture, and native comparison passed with max absolute error 0.00001402 / RMS 0.000000438 (limits 0.0002 / 0.00002). The fourteen-stage chain owns 516,116 bytes within a fixed 16 MiB WASM heap. Worklet CPU timer falls back to 1 ms `Date.now()` in this browser, so its per-effect percentages are coarse. Manual listening through an actual browser output device remains open. |
 
 Total source requirements: 327; approved additions: 11.

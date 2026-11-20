@@ -8,7 +8,9 @@ const EFFECT_NAMES = [
   "Noise gate",
   "Pedal compressor",
   "Studio compressor",
+  "Wah",
   "Soft drive",
+  "Tremolo",
   "Three-band parametric EQ",
   "Stereo delay",
   "Output level",
@@ -19,6 +21,8 @@ const DEFAULT_PARAMETERS = {
   outputGainDb: 0,
   volumePedal: [1, -96, 0, 1],
   limiter: [-1, 80],
+  wah: [0.5, 350, 2200, 4, 0],
+  tremolo: [5, 0.5, 0, 0, 120, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -54,6 +58,25 @@ const limiterCeiling = document.querySelector("#limiter-ceiling-db");
 const limiterCeilingValue = document.querySelector("#limiter-ceiling-value");
 const limiterRelease = document.querySelector("#limiter-release-ms");
 const limiterReleaseValue = document.querySelector("#limiter-release-value");
+const wahPosition = document.querySelector("#wah-position");
+const wahPositionValue = document.querySelector("#wah-position-value");
+const wahMinimum = document.querySelector("#wah-min-hz");
+const wahMinimumValue = document.querySelector("#wah-min-value");
+const wahMaximum = document.querySelector("#wah-max-hz");
+const wahMaximumValue = document.querySelector("#wah-max-value");
+const wahResonance = document.querySelector("#wah-q");
+const wahResonanceValue = document.querySelector("#wah-q-value");
+const wahLevel = document.querySelector("#wah-level-db");
+const wahLevelValue = document.querySelector("#wah-level-value");
+const tremoloRate = document.querySelector("#tremolo-rate-hz");
+const tremoloRateValue = document.querySelector("#tremolo-rate-value");
+const tremoloDepth = document.querySelector("#tremolo-depth");
+const tremoloDepthValue = document.querySelector("#tremolo-depth-value");
+const tremoloWaveform = document.querySelector("#tremolo-waveform");
+const tremoloSync = document.querySelector("#tremolo-sync");
+const tremoloBpm = document.querySelector("#tremolo-tempo-bpm");
+const tremoloBpmValue = document.querySelector("#tremolo-tempo-value");
+const tremoloDivision = document.querySelector("#tremolo-beats-per-cycle");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -462,6 +485,51 @@ for (const control of [limiterCeiling, limiterRelease]) {
   control.addEventListener("change", updateLimiter);
 }
 
+function updateWah() {
+  const values = [
+    Number(wahPosition.value) / 100,
+    Number(wahMinimum.value),
+    Number(wahMaximum.value),
+    Number(wahResonance.value),
+    Number(wahLevel.value),
+  ];
+  DEFAULT_PARAMETERS.wah = values;
+  wahPositionValue.value = `${wahPosition.value}%`;
+  wahMinimumValue.value = `${wahMinimum.value} Hz`;
+  wahMaximumValue.value = `${wahMaximum.value} Hz`;
+  wahResonanceValue.value = wahResonance.value;
+  wahLevelValue.value = `${wahLevel.value} dB`;
+  if (workletNode) workletNode.port.postMessage({ type: "wah", value: values });
+}
+
+for (const control of [wahPosition, wahMinimum, wahMaximum, wahResonance, wahLevel]) {
+  control.addEventListener("input", updateWah);
+  control.addEventListener("change", updateWah);
+}
+
+function updateTremolo() {
+  const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
+  const values = [
+    Number(tremoloRate.value),
+    Number(tremoloDepth.value),
+    waveform,
+    tremoloSync.value === "on" ? 1 : 0,
+    Number(tremoloBpm.value),
+    Number(tremoloDivision.value),
+  ];
+  DEFAULT_PARAMETERS.tremolo = values;
+  tremoloRateValue.value = `${Number(tremoloRate.value).toFixed(2)} Hz`;
+  tremoloDepthValue.value = `${Math.round(Number(tremoloDepth.value) * 100)}%`;
+  tremoloBpmValue.value = `${tremoloBpm.value} BPM`;
+  if (workletNode) workletNode.port.postMessage({ type: "tremolo", value: values });
+}
+
+for (const control of [tremoloRate, tremoloDepth, tremoloWaveform,
+  tremoloSync, tremoloBpm, tremoloDivision]) {
+  control.addEventListener("input", updateTremolo);
+  control.addEventListener("change", updateTremolo);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -557,12 +625,15 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: [true, true, true, true, true, true, true, true, true, true, true, true],
+      enabled: [true, true, true, true, true, true, true, true, true, true,
+        true, true, true, true],
       parameters: {
         inputGainDb: 2,
         outputGainDb: -1,
         volumePedal: [0.92, -96, 0, 1],
         limiter: [-1, 80],
+        wah: [0.62, 350, 2200, 4, 0],
+        tremolo: [4, 0.2, 0, 0, 120, 1],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -579,8 +650,21 @@ async function runBrowserSelfTest() {
     volumeTaper.value = "audio";
     limiterCeiling.value = "-1";
     limiterRelease.value = "80";
+    wahPosition.value = "62";
+    wahMinimum.value = "350";
+    wahMaximum.value = "2200";
+    wahResonance.value = "4";
+    wahLevel.value = "0";
+    tremoloRate.value = "4";
+    tremoloDepth.value = "0.2";
+    tremoloWaveform.value = "sine";
+    tremoloSync.value = "off";
+    tremoloBpm.value = "120";
+    tremoloDivision.value = "1";
     updateVolumePedal();
     updateLimiter();
+    updateWah();
+    updateTremolo();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

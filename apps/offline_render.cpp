@@ -3,8 +3,10 @@
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
+#include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
+#include "tabletfx/effects/wah.hpp"
 #include "tabletfx/wav.hpp"
 
 #include <algorithm>
@@ -35,6 +37,10 @@ struct Options {
     bool limiter_enabled = false;
     float limiter_ceiling_db = -1.0F;
     float limiter_release_ms = 80.0F;
+    bool wah_enabled = false;
+    tabletfx::WahParameters wah{};
+    bool tremolo_enabled = false;
+    tabletfx::TremoloParameters tremolo{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     float gate_threshold_db = -120.0F;
@@ -87,6 +93,32 @@ Options parse_options(int argc, char** argv, int first) {
             options.volume_pedal_enabled = true;
             continue;
         }
+        if (key == "--tremolo-waveform") {
+            const std::string_view value(argv[++i]);
+            if (value == "sine") {
+                options.tremolo.waveform = tabletfx::TremoloWaveform::Sine;
+            } else if (value == "triangle") {
+                options.tremolo.waveform = tabletfx::TremoloWaveform::Triangle;
+            } else if (value == "square") {
+                options.tremolo.waveform = tabletfx::TremoloWaveform::Square;
+            } else {
+                throw std::invalid_argument("Tremolo waveform must be sine, triangle, or square");
+            }
+            options.tremolo_enabled = true;
+            continue;
+        }
+        if (key == "--tremolo-sync") {
+            const std::string_view value(argv[++i]);
+            if (value == "on") {
+                options.tremolo.tempo_sync = true;
+            } else if (value == "off") {
+                options.tremolo.tempo_sync = false;
+            } else {
+                throw std::invalid_argument("Tremolo sync must be 'on' or 'off'");
+            }
+            options.tremolo_enabled = true;
+            continue;
+        }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
         else if (key == "--output-gain-db") options.output_gain_db = value;
@@ -109,6 +141,42 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--limiter-release-ms") {
             options.limiter_release_ms = value;
             options.limiter_enabled = true;
+        }
+        else if (key == "--wah-position") {
+            options.wah.position = value;
+            options.wah_enabled = true;
+        }
+        else if (key == "--wah-min-hz") {
+            options.wah.minimum_hz = value;
+            options.wah_enabled = true;
+        }
+        else if (key == "--wah-max-hz") {
+            options.wah.maximum_hz = value;
+            options.wah_enabled = true;
+        }
+        else if (key == "--wah-q") {
+            options.wah.resonance_q = value;
+            options.wah_enabled = true;
+        }
+        else if (key == "--wah-level-db") {
+            options.wah.level_db = value;
+            options.wah_enabled = true;
+        }
+        else if (key == "--tremolo-rate-hz") {
+            options.tremolo.rate_hz = value;
+            options.tremolo_enabled = true;
+        }
+        else if (key == "--tremolo-depth") {
+            options.tremolo.depth = value;
+            options.tremolo_enabled = true;
+        }
+        else if (key == "--tremolo-tempo-bpm") {
+            options.tremolo.tempo_bpm = value;
+            options.tremolo_enabled = true;
+        }
+        else if (key == "--tremolo-beats-per-cycle") {
+            options.tremolo.beats_per_cycle = value;
+            options.tremolo_enabled = true;
         }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
@@ -230,8 +298,16 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Compressor>(
             static_cast<float>(sample_rate), options.compressor));
     }
+    if (options.wah_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Wah>(
+            static_cast<float>(sample_rate), channels, options.wah));
+    }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
+    }
+    if (options.tremolo_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Tremolo>(
+            static_cast<float>(sample_rate), options.tremolo));
     }
     if (options.eq_enabled) {
         auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -356,7 +432,14 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::NoiseGate>(sample_rate, -72.0F));
     effects.push_back(std::make_unique<tabletfx::PedalCompressor>(sample_rate));
     effects.push_back(std::make_unique<tabletfx::Compressor>(sample_rate, compressor_parameters));
+    tabletfx::WahParameters wah_parameters;
+    wah_parameters.position = 0.62F;
+    effects.push_back(std::make_unique<tabletfx::Wah>(sample_rate, channels, wah_parameters));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
+    tabletfx::TremoloParameters tremolo_parameters;
+    tremolo_parameters.rate_hz = 4.0F;
+    tremolo_parameters.depth = 0.2F;
+    effects.push_back(std::make_unique<tabletfx::Tremolo>(sample_rate, tremolo_parameters));
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
@@ -460,6 +543,17 @@ void run_bench() {
     benchmark_one("peak-limiter", [=] {
         return std::make_unique<tabletfx::PeakLimiter>(static_cast<float>(sample_rate), -1.0F, 80.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("wah", [=] {
+        tabletfx::WahParameters parameters;
+        parameters.position = 0.7F;
+        return std::make_unique<tabletfx::Wah>(static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("tremolo", [=] {
+        tabletfx::TremoloParameters parameters;
+        parameters.rate_hz = 5.0F;
+        parameters.depth = 0.5F;
+        return std::make_unique<tabletfx::Tremolo>(static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
@@ -468,6 +562,10 @@ void print_usage() {
               << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--output-gain-db dB]"
                  " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
                  " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
+                 " [--wah-position 0..1] [--wah-min-hz Hz] [--wah-max-hz Hz] [--wah-q Q] [--wah-level-db dB]"
+                 " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
+                 " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
+                 " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"

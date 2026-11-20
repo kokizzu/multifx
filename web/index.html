@@ -63,11 +63,13 @@
         <label class="effect-row"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Noise gate</span><span class="effect-default">−72 dB</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="5"><span class="effect-number">06</span><span class="effect-name">Pedal compressor</span><span class="effect-default">Sens / Sustain / Attack / Level</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="6" checked><span class="effect-number">07</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="10" checked><span class="effect-number">11</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="11" checked><span class="effect-number">12</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Pedal wah</span><span class="effect-default">350–2200 Hz · Q 4</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="10"><span class="effect-number">11</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="12" checked><span class="effect-number">13</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="13" checked><span class="effect-number">14</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">
@@ -105,6 +107,54 @@
         <label class="mix-control" for="limiter-release-ms">
           <span>Limiter release</span><output id="limiter-release-value" for="limiter-release-ms">80 ms</output>
           <input id="limiter-release-ms" type="range" min="5" max="500" step="5" value="80">
+        </label>
+      </div>
+      <div class="gain-controls">
+        <label class="mix-control" for="wah-position">
+          <span>Wah position</span><output id="wah-position-value" for="wah-position">50%</output>
+          <input id="wah-position" type="range" min="0" max="100" step="1" value="50">
+        </label>
+        <label class="mix-control" for="wah-q">
+          <span>Wah resonance Q</span><output id="wah-q-value" for="wah-q">4</output>
+          <input id="wah-q" type="range" min="0.7" max="10" step="0.1" value="4">
+        </label>
+        <label class="mix-control" for="wah-min-hz">
+          <span>Wah heel frequency</span><output id="wah-min-value" for="wah-min-hz">350 Hz</output>
+          <input id="wah-min-hz" type="range" min="200" max="800" step="10" value="350">
+        </label>
+        <label class="mix-control" for="wah-max-hz">
+          <span>Wah toe frequency</span><output id="wah-max-value" for="wah-max-hz">2200 Hz</output>
+          <input id="wah-max-hz" type="range" min="1000" max="4000" step="25" value="2200">
+        </label>
+        <label class="mix-control" for="wah-level-db">
+          <span>Wah output level</span><output id="wah-level-value" for="wah-level-db">0 dB</output>
+          <input id="wah-level-db" type="range" min="-24" max="12" step="0.5" value="0">
+        </label>
+      </div>
+      <div class="gain-controls">
+        <label class="mix-control" for="tremolo-rate-hz">
+          <span>Tremolo rate</span><output id="tremolo-rate-value" for="tremolo-rate-hz">5.00 Hz</output>
+          <input id="tremolo-rate-hz" type="range" min="0.05" max="20" step="0.05" value="5">
+        </label>
+        <label class="mix-control" for="tremolo-depth">
+          <span>Tremolo depth</span><output id="tremolo-depth-value" for="tremolo-depth">50%</output>
+          <input id="tremolo-depth" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+        <label class="mix-control" for="tremolo-waveform">
+          <span>Tremolo waveform</span>
+          <select id="tremolo-waveform"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="square">Square</option></select>
+        </label>
+        <label class="mix-control" for="tremolo-sync">
+          <span>Rate mode</span>
+          <select id="tremolo-sync"><option value="off" selected>Free rate</option><option value="on">Tempo sync</option></select>
+        </label>
+        <label class="mix-control" for="tremolo-tempo-bpm">
+          <span>Tempo</span><output id="tremolo-tempo-value" for="tremolo-tempo-bpm">120 BPM</output>
+          <input id="tremolo-tempo-bpm" type="range" min="30" max="300" step="1" value="120">
+        </label>
+        <label class="mix-control" for="tremolo-beats-per-cycle">
+          <span>Beats per cycle</span>
+          <select id="tremolo-beats-per-cycle"><option value="0.25">1/16 note</option><option value="0.5">1/8 note</option><option value="1" selected>Quarter note</option><option value="2">Half note</option><option value="4">Whole note</option></select>
         </label>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>
