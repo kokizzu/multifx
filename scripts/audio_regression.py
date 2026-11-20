@@ -79,6 +79,11 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
         "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
         "--wah-position", "0.62", "--wah-min-hz", "350", "--wah-max-hz", "2200",
         "--wah-q", "4", "--wah-level-db", "0",
+        "--touch-wah-sensitivity", "0.8", "--touch-wah-direction", "up",
+        "--touch-wah-min-hz", "350", "--touch-wah-max-hz", "2200",
+        "--touch-wah-q", "4", "--touch-wah-level-db", "0",
+        "--touch-wah-attack-ms", "5", "--touch-wah-release-ms", "80",
+        "--touch-wah-smoothing-ms", "5",
         "--boost-db", "3",
         "--tremolo-rate-hz", "4", "--tremolo-depth", "0.2",
         "--tremolo-waveform", "sine", "--tremolo-sync", "off",
@@ -103,7 +108,7 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 15:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 16:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if float(match.group(3)) > 0.8914:
         raise RuntimeError(f"Peak limiter exceeded its -1 dBFS ceiling for {source}: {report}")
@@ -144,7 +149,7 @@ def main() -> None:
         source = music_files[0]
         report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the fifteen-effect offline chain.")
+    print("All prerecorded clean guitar inputs rendered through the sixteen-effect offline chain.")
 
 
 if __name__ == "__main__":

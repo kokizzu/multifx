@@ -14,21 +14,22 @@ Measured with `make bench` on an AMD Ryzen 9 5950X 16-Core Processor, GCC 13.3.0
 
 | Processor / chain | Median % | p95 % | p99 % | p99.9 % | Maximum % | Owned memory bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| Input gain | 0.0045 | 0.0045 | 0.0097 | 0.0105 | 0.0143 | 40 |
-| Volume pedal | 0.0053 | 0.0056 | 0.0056 | 0.0060 | 0.6023 | 56 |
-| High-pass | 0.0401 | 0.0435 | 0.0480 | 0.2475 | 0.2978 | 64 |
-| Low-pass | 0.0398 | 0.0402 | 0.0469 | 0.2528 | 0.6364 | 64 |
-| Noise gate | 0.0240 | 0.0244 | 0.0244 | 0.1178 | 0.9383 | 64 |
-| Pedal compressor | 0.0971 | 0.1361 | 0.1395 | 0.3897 | 0.4684 | 72 |
-| Studio compressor | 0.0911 | 0.1189 | 0.1474 | 0.5468 | 0.9068 | 64 |
-| Wah | 0.0435 | 0.0439 | 0.0495 | 0.2584 | 0.3079 | 104 |
-| Clean boost | 0.0041 | 0.0041 | 0.0041 | 0.0042 | 0.2029 | 48 |
-| Soft drive | 0.1511 | 0.1526 | 0.2505 | 0.7099 | 0.9420 | 16 |
-| Tremolo | 0.0593 | 0.0596 | 0.0597 | 0.2554 | 0.3934 | 96 |
-| Three-band parametric EQ | 0.0536 | 0.0544 | 0.0735 | 0.2722 | 0.2993 | 160 |
-| Delay (2 s stereo allocation) | 0.0251 | 0.0252 | 0.0263 | 0.0375 | 0.3008 | 768,080 |
-| Output gain | 0.0056 | 0.0116 | 0.0124 | 0.0135 | 0.0232 | 40 |
-| Peak limiter | 0.0165 | 0.0165 | 0.0165 | 0.0289 | 0.2760 | 32 |
-| Full fifteen-effect chain | 0.5367 | 0.6420 | 0.8014 | 1.1052 | 4.5770 | 769,000 |
+| Input gain | 0.0049 | 0.0053 | 0.0053 | 0.0086 | 0.8216 | 40 |
+| Volume pedal | 0.0060 | 0.0064 | 0.0064 | 0.0064 | 0.0068 | 56 |
+| High-pass | 0.0368 | 0.0409 | 0.0420 | 0.2543 | 1.2960 | 64 |
+| Low-pass | 0.0372 | 0.0480 | 0.0514 | 0.2329 | 0.3806 | 64 |
+| Noise gate | 0.0229 | 0.0413 | 0.0499 | 0.2479 | 0.7834 | 64 |
+| Pedal compressor | 0.1024 | 0.1414 | 0.1463 | 0.3488 | 10.5918 | 72 |
+| Studio compressor | 0.1069 | 0.1087 | 0.1391 | 0.3173 | 0.7954 | 64 |
+| Wah | 0.0469 | 0.0533 | 0.0585 | 0.2865 | 0.3252 | 104 |
+| Envelope wah | 0.1133 | 0.1294 | 0.1459 | 0.3656 | 0.4185 | 616 |
+| Clean boost | 0.0045 | 0.0045 | 0.0090 | 0.0097 | 0.0105 | 48 |
+| Soft drive | 0.1418 | 0.1433 | 0.2292 | 0.4069 | 0.9747 | 16 |
+| Tremolo | 0.0641 | 0.0743 | 0.0765 | 0.2820 | 0.3454 | 96 |
+| Three-band parametric EQ | 0.0570 | 0.0641 | 0.0908 | 0.3124 | 0.8561 | 160 |
+| Delay (2 s stereo allocation) | 0.0236 | 0.0251 | 0.0281 | 0.1422 | 0.3154 | 768,080 |
+| Output gain | 0.0049 | 0.0083 | 0.0113 | 0.0124 | 0.3630 | 40 |
+| Peak limiter | 0.0199 | 0.0199 | 0.0330 | 0.0371 | 0.2974 | 32 |
+| Full sixteen-effect chain | 0.7043 | 0.9518 | 1.1940 | 1.4314 | 8.0575 | 769,616 |
 
-The full chain is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Clean Boost → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Timing includes processor calls only; buffer copy/setup are outside the timed region. Memory is processor objects plus directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, and backend/runtime overhead. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.
+The full chain is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Envelope Wah → Clean Boost → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Timing includes processor calls only; buffer copy/setup are outside the timed region. Memory is processor objects plus directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, and backend/runtime overhead. The envelope wah contributes 616 B to this chain and measured 0.1133% p50 / 0.1294% p95 of the block deadline. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.

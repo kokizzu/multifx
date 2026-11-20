@@ -2,6 +2,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
+#include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
@@ -45,7 +46,7 @@ public:
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F) {
-        effects_.reserve(13);
+        effects_.reserve(14);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -68,6 +69,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             true});
         effects_.push_back({std::make_unique<tabletfx::Wah>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::EnvelopeWah>(
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::CleanBoost>(
@@ -190,21 +194,21 @@ public:
     }
 
     void configure_drive(float drive) noexcept {
-        static_cast<tabletfx::SoftDrive*>(effects_[9].effect.get())->set_drive(drive);
+        static_cast<tabletfx::SoftDrive*>(effects_[10].effect.get())->set_drive(drive);
     }
 
     void configure_clean_boost(float gain_db) noexcept {
-        static_cast<tabletfx::CleanBoost*>(effects_[8].effect.get())->set_gain_db(gain_db);
+        static_cast<tabletfx::CleanBoost*>(effects_[9].effect.get())->set_gain_db(gain_db);
     }
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[11].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[12].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[12].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[13].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
@@ -272,10 +276,29 @@ public:
         wah->set_position(position);
     }
 
+    void configure_envelope_wah(float sensitivity, float minimum_hz,
+                                float maximum_hz, float resonance_q,
+                                float level_db, float attack_ms, float release_ms,
+                                float smoothing_ms, std::uint32_t direction) noexcept {
+        tabletfx::EnvelopeWahParameters parameters;
+        parameters.sensitivity = sensitivity;
+        parameters.minimum_hz = minimum_hz;
+        parameters.maximum_hz = maximum_hz;
+        parameters.resonance_q = resonance_q;
+        parameters.level_db = level_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.smoothing_ms = smoothing_ms;
+        parameters.direction = direction == 1 ? tabletfx::EnvelopeWahDirection::Down
+                                              : tabletfx::EnvelopeWahDirection::Up;
+        static_cast<tabletfx::EnvelopeWah*>(effects_[8].effect.get())
+            ->configure(static_cast<float>(sample_rate_), channels_, parameters);
+    }
+
     void configure_tremolo(float rate_hz, float depth, std::uint32_t waveform,
                            std::uint32_t tempo_sync, float tempo_bpm,
                            float beats_per_cycle) noexcept {
-        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[10].effect.get());
+        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[11].effect.get());
         tremolo->set_rate_hz(rate_hz);
         switch (waveform) {
         case 1:
@@ -520,6 +543,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_wah(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_wah(position, minimum_hz, maximum_hz,
                                         resonance_q, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_envelope_wah(
+    void* opaque, float sensitivity, float minimum_hz, float maximum_hz,
+    float resonance_q, float level_db, float attack_ms, float release_ms,
+    float smoothing_ms, std::uint32_t direction) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_envelope_wah(
+            sensitivity, minimum_hz, maximum_hz, resonance_q, level_db,
+            attack_ms, release_ms, smoothing_ms, direction);
     }
 }
 

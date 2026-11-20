@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import argparse
+from difflib import unified_diff
 from pathlib import Path
 import subprocess
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add clean boost effect"
+COMMIT_MESSAGE = "feat: add envelope-controlled wah"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -36,8 +37,10 @@ CHECKPOINT_PATHS = (
     "tests/test_wah.cpp",
     "tests/test_noise_gate.cpp",
     "tests/test_clean_boost.cpp",
+    "tests/test_envelope_wah.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/clean_boost.hpp",
+    "include/tabletfx/effects/envelope_wah.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",
     "include/tabletfx/effects/compressor.hpp",
@@ -62,6 +65,7 @@ CHECKPOINT_PATHS = (
     "src/effects.cpp",
     "src/effects/filters.cpp",
     "src/effects/clean_boost.cpp",
+    "src/effects/envelope_wah.cpp",
     "src/effects/pedal_compressor.cpp",
     "src/effects/peak_limiter.cpp",
     "src/effects/tremolo.cpp",
@@ -159,6 +163,18 @@ def plan() -> list[str]:
         print("  " + path)
     stat = git("diff", "--stat")
     print(stat.rstrip() or "Untracked files are listed above; no tracked diff stat yet.")
+    status = git("status", "--porcelain=v1", "--untracked-files=all")
+    untracked = {line[3:] for line in status.splitlines() if line.startswith("?? ")}
+    print("Full reviewed patch:")
+    for path in paths:
+        staged_diff = git("diff", "--cached", "--", path)
+        unstaged_diff = git("diff", "--", path)
+        diff = staged_diff + unstaged_diff
+        if diff:
+            print(diff, end="" if diff.endswith("\n") else "\n")
+        elif path in untracked:
+            contents = (ROOT / path).read_text(encoding="utf-8").splitlines(keepends=True)
+            print("".join(unified_diff([], contents, fromfile="/dev/null", tofile="b/" + path)), end="")
     print("No workflow files are included. Only the paths above will be staged.")
     return paths
 

@@ -160,6 +160,44 @@ def check_clean_boost(executable: Path) -> None:
             raise AssertionError(f"Clean boost did not apply transparent level gain: {values}")
 
 
+def check_envelope_wah(executable: Path) -> None:
+    sample_rate = 48000
+    samples = [round(16384 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+               for frame in range(4800)]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-touch-wah-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        write_pcm16(source, sample_rate, samples)
+        outputs = []
+        for direction in ("up", "down"):
+            output = root / f"{direction}.wav"
+            result = subprocess.run(
+                [
+                    str(executable), "render", str(source), str(output),
+                    "--touch-wah-sensitivity", "1",
+                    "--touch-wah-direction", direction,
+                    "--touch-wah-attack-ms", "0",
+                    "--touch-wah-release-ms", "0",
+                    "--touch-wah-smoothing-ms", "0",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"Envelope wah was not constructed: {result.stdout}")
+            values = struct.unpack("<" + "f" * len(samples), output.read_bytes()[44:])
+            if any(not math.isfinite(value) for value in values):
+                raise AssertionError(f"Envelope wah produced non-finite audio ({direction})")
+            rms = math.sqrt(sum(value * value for value in values) / len(values))
+            if rms < 1.0e-4:
+                raise AssertionError(f"Envelope wah produced unexpectedly silent audio ({direction})")
+            outputs.append(values)
+        difference = max(abs(up - down) for up, down in zip(*outputs, strict=True))
+        if difference < 1.0e-3:
+            raise AssertionError("Touch-wah up/down directions produced indistinguishable output")
+
+
 def check_pcm24_padding(executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="tabletfx-pcm24-test-") as directory:
         root = Path(directory)
@@ -205,9 +243,10 @@ def main() -> None:
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
+    check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

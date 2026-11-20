@@ -1,6 +1,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
+#include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
@@ -40,6 +41,8 @@ struct Options {
     float limiter_release_ms = 80.0F;
     bool wah_enabled = false;
     tabletfx::WahParameters wah{};
+    bool envelope_wah_enabled = false;
+    tabletfx::EnvelopeWahParameters envelope_wah{};
     bool clean_boost_enabled = false;
     float clean_boost_db = 0.0F;
     bool tremolo_enabled = false;
@@ -123,6 +126,18 @@ Options parse_options(int argc, char** argv, int first) {
             options.tremolo_enabled = true;
             continue;
         }
+        if (key == "--touch-wah-direction") {
+            const std::string_view value(argv[++i]);
+            if (value == "up") {
+                options.envelope_wah.direction = tabletfx::EnvelopeWahDirection::Up;
+            } else if (value == "down") {
+                options.envelope_wah.direction = tabletfx::EnvelopeWahDirection::Down;
+            } else {
+                throw std::invalid_argument("Touch-wah direction must be 'up' or 'down'");
+            }
+            options.envelope_wah_enabled = true;
+            continue;
+        }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
         else if (key == "--output-gain-db") options.output_gain_db = value;
@@ -165,6 +180,38 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--wah-level-db") {
             options.wah.level_db = value;
             options.wah_enabled = true;
+        }
+        else if (key == "--touch-wah-sensitivity") {
+            options.envelope_wah.sensitivity = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-min-hz") {
+            options.envelope_wah.minimum_hz = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-max-hz") {
+            options.envelope_wah.maximum_hz = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-q") {
+            options.envelope_wah.resonance_q = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-level-db") {
+            options.envelope_wah.level_db = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-attack-ms") {
+            options.envelope_wah.attack_ms = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-release-ms") {
+            options.envelope_wah.release_ms = value;
+            options.envelope_wah_enabled = true;
+        }
+        else if (key == "--touch-wah-smoothing-ms") {
+            options.envelope_wah.smoothing_ms = value;
+            options.envelope_wah_enabled = true;
         }
         else if (key == "--tremolo-rate-hz") {
             options.tremolo.rate_hz = value;
@@ -333,6 +380,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Wah>(
             static_cast<float>(sample_rate), channels, options.wah));
     }
+    if (options.envelope_wah_enabled) {
+        effects.push_back(std::make_unique<tabletfx::EnvelopeWah>(
+            static_cast<float>(sample_rate), channels, options.envelope_wah));
+    }
     if (options.clean_boost_enabled) {
         effects.push_back(std::make_unique<tabletfx::CleanBoost>(
             options.clean_boost_db, static_cast<float>(sample_rate)));
@@ -470,6 +521,10 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     tabletfx::WahParameters wah_parameters;
     wah_parameters.position = 0.62F;
     effects.push_back(std::make_unique<tabletfx::Wah>(sample_rate, channels, wah_parameters));
+    tabletfx::EnvelopeWahParameters envelope_wah_parameters;
+    envelope_wah_parameters.sensitivity = 0.8F;
+    effects.push_back(std::make_unique<tabletfx::EnvelopeWah>(
+        static_cast<float>(sample_rate), channels, envelope_wah_parameters));
     effects.push_back(std::make_unique<tabletfx::CleanBoost>(3.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     tabletfx::TremoloParameters tremolo_parameters;
@@ -584,6 +639,12 @@ void run_bench() {
         parameters.position = 0.7F;
         return std::make_unique<tabletfx::Wah>(static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("envelope-wah", [=] {
+        tabletfx::EnvelopeWahParameters parameters;
+        parameters.sensitivity = 0.8F;
+        return std::make_unique<tabletfx::EnvelopeWah>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("clean-boost", [=] {
         return std::make_unique<tabletfx::CleanBoost>(6.0F, static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
@@ -602,6 +663,10 @@ void print_usage() {
                  " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
                  " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
                  " [--wah-position 0..1] [--wah-min-hz Hz] [--wah-max-hz Hz] [--wah-q Q] [--wah-level-db dB]"
+                  " [--touch-wah-sensitivity 0..1] [--touch-wah-direction up|down]"
+                  " [--touch-wah-min-hz Hz] [--touch-wah-max-hz Hz] [--touch-wah-q Q]"
+                  " [--touch-wah-level-db dB] [--touch-wah-attack-ms ms]"
+                  " [--touch-wah-release-ms ms] [--touch-wah-smoothing-ms ms]"
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"

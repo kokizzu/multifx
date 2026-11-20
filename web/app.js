@@ -9,6 +9,7 @@ const EFFECT_NAMES = [
   "Pedal compressor",
   "Studio compressor",
   "Wah",
+  "Envelope wah",
   "Clean boost",
   "Soft drive",
   "Tremolo",
@@ -25,6 +26,7 @@ const DEFAULT_PARAMETERS = {
   cleanBoostDb: 0,
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
+  envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
@@ -83,6 +85,23 @@ const wahResonance = document.querySelector("#wah-q");
 const wahResonanceValue = document.querySelector("#wah-q-value");
 const wahLevel = document.querySelector("#wah-level-db");
 const wahLevelValue = document.querySelector("#wah-level-value");
+const touchWahSensitivity = document.querySelector("#touch-wah-sensitivity");
+const touchWahSensitivityValue = document.querySelector("#touch-wah-sensitivity-value");
+const touchWahDirection = document.querySelector("#touch-wah-direction");
+const touchWahMinimum = document.querySelector("#touch-wah-min-hz");
+const touchWahMinimumValue = document.querySelector("#touch-wah-min-value");
+const touchWahMaximum = document.querySelector("#touch-wah-max-hz");
+const touchWahMaximumValue = document.querySelector("#touch-wah-max-value");
+const touchWahResonance = document.querySelector("#touch-wah-q");
+const touchWahResonanceValue = document.querySelector("#touch-wah-q-value");
+const touchWahLevel = document.querySelector("#touch-wah-level-db");
+const touchWahLevelValue = document.querySelector("#touch-wah-level-value");
+const touchWahAttack = document.querySelector("#touch-wah-attack-ms");
+const touchWahAttackValue = document.querySelector("#touch-wah-attack-value");
+const touchWahRelease = document.querySelector("#touch-wah-release-ms");
+const touchWahReleaseValue = document.querySelector("#touch-wah-release-value");
+const touchWahSmoothing = document.querySelector("#touch-wah-smoothing-ms");
+const touchWahSmoothingValue = document.querySelector("#touch-wah-smoothing-value");
 const cleanBoost = document.querySelector("#clean-boost-db");
 const cleanBoostValue = document.querySelector("#clean-boost-value");
 const tremoloRate = document.querySelector("#tremolo-rate-hz");
@@ -549,6 +568,37 @@ for (const control of [wahPosition, wahMinimum, wahMaximum, wahResonance, wahLev
   control.addEventListener("change", updateWah);
 }
 
+function updateEnvelopeWah() {
+  const values = [
+    Number(touchWahSensitivity.value),
+    Number(touchWahMinimum.value),
+    Number(touchWahMaximum.value),
+    Number(touchWahResonance.value),
+    Number(touchWahLevel.value),
+    Number(touchWahAttack.value),
+    Number(touchWahRelease.value),
+    Number(touchWahSmoothing.value),
+    touchWahDirection.value === "down" ? 1 : 0,
+  ];
+  DEFAULT_PARAMETERS.envelopeWah = values;
+  touchWahSensitivityValue.value = Number(touchWahSensitivity.value).toFixed(2);
+  touchWahMinimumValue.value = `${touchWahMinimum.value} Hz`;
+  touchWahMaximumValue.value = `${touchWahMaximum.value} Hz`;
+  touchWahResonanceValue.value = touchWahResonance.value;
+  touchWahLevelValue.value = `${touchWahLevel.value} dB`;
+  touchWahAttackValue.value = `${touchWahAttack.value} ms`;
+  touchWahReleaseValue.value = `${touchWahRelease.value} ms`;
+  touchWahSmoothingValue.value = `${touchWahSmoothing.value} ms`;
+  if (workletNode) workletNode.port.postMessage({ type: "envelope-wah", value: values });
+}
+
+for (const control of [touchWahSensitivity, touchWahDirection, touchWahMinimum,
+  touchWahMaximum, touchWahResonance, touchWahLevel, touchWahAttack,
+  touchWahRelease, touchWahSmoothing]) {
+  control.addEventListener("input", updateEnvelopeWah);
+  control.addEventListener("change", updateEnvelopeWah);
+}
+
 cleanBoost.addEventListener("input", () => {
   const value = Number(cleanBoost.value);
   DEFAULT_PARAMETERS.cleanBoostDb = value;
@@ -675,7 +725,7 @@ async function runBrowserSelfTest() {
     const captureView = new Int32Array(captureControl);
     const testOptions = {
       enabled: [true, true, true, true, true, true, true, true, true, true,
-        true, true, true, true, true],
+        true, true, true, true, true, true],
       parameters: {
         inputGainDb: 2,
         outputGainDb: -1,
@@ -684,6 +734,7 @@ async function runBrowserSelfTest() {
         cleanBoostDb: 3,
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
+        envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
@@ -712,6 +763,15 @@ async function runBrowserSelfTest() {
     wahMaximum.value = "2200";
     wahResonance.value = "4";
     wahLevel.value = "0";
+    touchWahSensitivity.value = "0.8";
+    touchWahDirection.value = "up";
+    touchWahMinimum.value = "350";
+    touchWahMaximum.value = "2200";
+    touchWahResonance.value = "4";
+    touchWahLevel.value = "0";
+    touchWahAttack.value = "5";
+    touchWahRelease.value = "80";
+    touchWahSmoothing.value = "5";
     cleanBoost.value = "3";
     cleanBoostValue.value = "3.0 dB";
     tremoloRate.value = "4";
@@ -724,6 +784,7 @@ async function runBrowserSelfTest() {
     updateNoiseGate();
     updateLimiter();
     updateWah();
+    updateEnvelopeWah();
     updateTremolo();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];

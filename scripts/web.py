@@ -122,6 +122,7 @@ def build_web() -> None:
         "_tf_chain_process_output_limiter", "_tf_chain_set_volume_pedal",
         "_tf_chain_set_noise_gate",
         "_tf_chain_set_limiter", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
+        "_tf_chain_set_envelope_wah",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -129,6 +130,7 @@ def build_web() -> None:
         "-I", str(ROOT / "include"),
         str(ROOT / "src" / "effects.cpp"),
         str(ROOT / "src" / "effects" / "clean_boost.cpp"),
+        str(ROOT / "src" / "effects" / "envelope_wah.cpp"),
         str(ROOT / "src" / "effects" / "filters.cpp"),
         str(ROOT / "src" / "effects" / "peak_limiter.cpp"),
         str(ROOT / "src" / "effects" / "pedal_compressor.cpp"),
@@ -391,6 +393,11 @@ def browser_test() -> None:
             "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
             "--wah-position", "0.62", "--wah-min-hz", "350",
             "--wah-max-hz", "2200", "--wah-q", "4", "--wah-level-db", "0",
+            "--touch-wah-sensitivity", "0.8", "--touch-wah-direction", "up",
+            "--touch-wah-min-hz", "350", "--touch-wah-max-hz", "2200",
+            "--touch-wah-q", "4", "--touch-wah-level-db", "0",
+            "--touch-wah-attack-ms", "5", "--touch-wah-release-ms", "80",
+            "--touch-wah-smoothing-ms", "5",
             "--tremolo-rate-hz", "4", "--tremolo-depth", "0.2",
             "--tremolo-waveform", "sine", "--tremolo-sync", "off",
             "--gate-threshold-db", "-60", "--gate-attenuation-db", "-72",
