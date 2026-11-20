@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add browser WASM guitar-audio test path"
+COMMIT_MESSAGE = "feat: add high-low filters and pedal compressor"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -29,6 +29,8 @@ CHECKPOINT_PATHS = (
     "cmake/toolchains/mingw-w64.cmake",
     "include/tabletfx/effect.hpp",
     "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/filters.hpp",
+    "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",
     "include/tabletfx/effects/compressor.hpp",
     "include/tabletfx/effects/three_band_eq.hpp",
@@ -46,12 +48,16 @@ CHECKPOINT_PATHS = (
     "scripts/validate_docs.py",
     "scripts/web.py",
     "src/effects.cpp",
+    "src/effects/filters.cpp",
+    "src/effects/pedal_compressor.cpp",
     "src/audio/wasapi_backend.cpp",
     "src/web/wasm_chain.cpp",
     "src/wav.cpp",
     "tests/test_dsp.cpp",
     "tests/test_compressor.cpp",
     "tests/test_three_band_eq.cpp",
+    "tests/test_filters.cpp",
+    "tests/test_pedal_compressor.cpp",
     "tests/wasapi_compile.cpp",
     "web/app.js",
     "web/audio-worklet.js",

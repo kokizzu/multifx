@@ -1,5 +1,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/compressor.hpp"
+#include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/wav.hpp"
 
@@ -25,6 +27,8 @@ using Clock = std::chrono::steady_clock;
 
 struct Options {
     float gain_db = 0.0F;
+    float high_pass_hz = 0.0F;
+    float low_pass_hz = 0.0F;
     float gate_threshold_db = -120.0F;
     float drive = 1.0F;
     float delay_ms = 0.0F;
@@ -32,6 +36,8 @@ struct Options {
     float delay_mix = 0.0F;
     bool compressor_enabled = false;
     tabletfx::CompressorParameters compressor{};
+    bool pedal_compressor_enabled = false;
+    tabletfx::PedalCompressorParameters pedal_compressor{};
     bool eq_enabled = false;
     float eq_band1_frequency_hz = 120.0F;
     float eq_band1_gain_db = 0.0F;
@@ -63,6 +69,8 @@ Options parse_options(int argc, char** argv, int first) {
         }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
+        else if (key == "--high-pass-hz") options.high_pass_hz = value;
+        else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") options.gate_threshold_db = value;
         else if (key == "--drive") options.drive = value;
         else if (key == "--delay-ms") options.delay_ms = value;
@@ -91,6 +99,22 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--compressor-makeup-db") {
             options.compressor.makeup_db = value;
             options.compressor_enabled = true;
+        }
+        else if (key == "--pedal-compressor-sensitivity") {
+            options.pedal_compressor.sensitivity = value;
+            options.pedal_compressor_enabled = true;
+        }
+        else if (key == "--pedal-compressor-sustain") {
+            options.pedal_compressor.sustain = value;
+            options.pedal_compressor_enabled = true;
+        }
+        else if (key == "--pedal-compressor-attack") {
+            options.pedal_compressor.attack = value;
+            options.pedal_compressor_enabled = true;
+        }
+        else if (key == "--pedal-compressor-level-db") {
+            options.pedal_compressor.level_db = value;
+            options.pedal_compressor_enabled = true;
         }
         else if (key == "--eq-band1-frequency-hz") {
             options.eq_band1_frequency_hz = value;
@@ -140,9 +164,21 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (std::abs(options.gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(options.gain_db));
     }
+    if (options.high_pass_hz > 0.0F) {
+        effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
+            static_cast<float>(sample_rate), channels, options.high_pass_hz));
+    }
+    if (options.low_pass_hz > 0.0F) {
+        effects.push_back(std::make_unique<tabletfx::LowPassFilter>(
+            static_cast<float>(sample_rate), channels, options.low_pass_hz));
+    }
     if (options.gate_threshold_db > -119.0F) {
         effects.push_back(std::make_unique<tabletfx::NoiseGate>(
             static_cast<float>(sample_rate), options.gate_threshold_db));
+    }
+    if (options.pedal_compressor_enabled) {
+        effects.push_back(std::make_unique<tabletfx::PedalCompressor>(
+            static_cast<float>(sample_rate), options.pedal_compressor));
     }
     if (options.compressor_enabled) {
         effects.push_back(std::make_unique<tabletfx::Compressor>(
@@ -256,7 +292,10 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
 
     std::vector<std::unique_ptr<tabletfx::Effect>> effects;
     effects.push_back(std::make_unique<tabletfx::Gain>(2.0F));
+    effects.push_back(std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F));
+    effects.push_back(std::make_unique<tabletfx::LowPassFilter>(sample_rate, channels, 12000.0F));
     effects.push_back(std::make_unique<tabletfx::NoiseGate>(sample_rate, -72.0F));
+    effects.push_back(std::make_unique<tabletfx::PedalCompressor>(sample_rate));
     effects.push_back(std::make_unique<tabletfx::Compressor>(sample_rate, compressor_parameters));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     effects.push_back(std::move(eq));
@@ -320,6 +359,12 @@ void run_bench() {
     std::cout << "processor,median_pct,p95_pct,p99_pct,p99_9_pct,max_pct,owned_memory_bytes,output_rms\n";
     benchmark_one("gain", [] { return std::make_unique<tabletfx::Gain>(6.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("high-pass", [=] {
+        return std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("low-pass", [=] {
+        return std::make_unique<tabletfx::LowPassFilter>(sample_rate, channels, 12000.0F);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("noise-gate", [=] { return std::make_unique<tabletfx::NoiseGate>(sample_rate, -48.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("soft-drive", [] { return std::make_unique<tabletfx::SoftDrive>(4.0F); },
@@ -332,6 +377,9 @@ void run_bench() {
     benchmark_one("compressor", [=] {
         return std::make_unique<tabletfx::Compressor>(sample_rate, compressor_parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("pedal-compressor", [=] {
+        return std::make_unique<tabletfx::PedalCompressor>(sample_rate);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("three-band-parametric-eq", [=] {
         auto effect = std::make_unique<tabletfx::ThreeBandParametricEQ>(sample_rate, channels);
         effect->configure(120.0F, 3.0F, 0.707F, 800.0F, -2.0F, 0.8F,
@@ -343,8 +391,11 @@ void run_bench() {
 
 void print_usage() {
     std::cerr << "Usage:\n"
-              << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--gate-threshold-db dB]"
+              << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--high-pass-hz Hz]"
+                 " [--low-pass-hz Hz] [--gate-threshold-db dB]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"
+              << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
+                 " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"
               << "                 [--compressor-threshold-db dB] [--compressor-ratio 1..20]"
                  " [--compressor-knee-db dB] [--compressor-attack-ms ms]"
                  " [--compressor-release-ms ms] [--compressor-makeup-db dB]\n"

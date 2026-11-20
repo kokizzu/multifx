@@ -7,6 +7,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(tabletfx_core
     src/effects.cpp
+    src/effects/filters.cpp
+    src/effects/pedal_compressor.cpp
     src/wav.cpp
 )
 target_include_directories(tabletfx_core PUBLIC include)
@@ -33,6 +35,14 @@ if(BUILD_TESTING)
     add_executable(tabletfx_three_band_eq_tests tests/test_three_band_eq.cpp)
     target_link_libraries(tabletfx_three_band_eq_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_three_band_eq_tests COMMAND tabletfx_three_band_eq_tests)
+
+    add_executable(tabletfx_filter_tests tests/test_filters.cpp)
+    target_link_libraries(tabletfx_filter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_filter_tests COMMAND tabletfx_filter_tests)
+
+    add_executable(tabletfx_pedal_compressor_tests tests/test_pedal_compressor.cpp)
+    target_link_libraries(tabletfx_pedal_compressor_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_pedal_compressor_tests COMMAND tabletfx_pedal_compressor_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(

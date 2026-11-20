@@ -1,6 +1,9 @@
 import createWasmModule from "../build/web/tabletfx_wasm.js";
 
-const EFFECTS = ["gain", "noise-gate", "compressor", "soft-drive", "three-band-eq", "delay"];
+const EFFECTS = [
+  "gain", "high-pass", "low-pass", "noise-gate", "pedal-compressor",
+  "compressor", "soft-drive", "three-band-eq", "delay",
+];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -35,7 +38,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.captureControl = config.captureControl ? new Int32Array(config.captureControl) : null;
     this.captureOffset = 0;
     this.captureComplete = false;
-    this.enabled = config.enabled || [false, false, true, false, false, false];
+    this.enabled = config.enabled || [false, false, false, false, false, true, false, false, false];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -60,6 +63,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_eq(this.chain, ...eq);
       const delay = parameters.delay || [350, 0.25, 0.25];
       module._tf_chain_set_delay(this.chain, ...delay);
+      const filters = parameters.filters || [80, 12000];
+      module._tf_chain_set_filters(this.chain, ...filters);
+      const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
+      module._tf_chain_set_pedal_compressor(this.chain, ...pedalCompressor);
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
         effectMemoryBytes.push(module._tf_chain_effect_memory_bytes(this.chain, i));

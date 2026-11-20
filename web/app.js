@@ -2,7 +2,10 @@ import { decodePcmWave } from "./wav_decoder.js";
 
 const EFFECT_NAMES = [
   "Input gain",
+  "High-pass",
+  "Low-pass",
   "Noise gate",
+  "Pedal compressor",
   "Studio compressor",
   "Soft drive",
   "Three-band parametric EQ",
@@ -13,6 +16,8 @@ const DEFAULT_PARAMETERS = {
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
+  filters: [80, 12000],
+  pedalCompressor: [0.45, 0.45, 0.25, 0],
 };
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -484,12 +489,14 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: [false, true, true, true, true, true],
+      enabled: [false, true, true, true, true, true, true, true, true],
       parameters: {
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
+        filters: [80, 12000],
+        pedalCompressor: [0.45, 0.45, 0.25, 0],
       },
       captureBuffer,
       captureControl,

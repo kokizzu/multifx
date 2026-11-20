@@ -1,6 +1,8 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/compressor.hpp"
+#include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 
 #include <algorithm>
@@ -36,10 +38,19 @@ public:
           dry_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           work_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F) {
-        effects_.reserve(6);
+        effects_.reserve(9);
         effects_.push_back({std::make_unique<tabletfx::Gain>(0.0F), false});
+        effects_.push_back({std::make_unique<tabletfx::HighPassFilter>(
+                                static_cast<float>(sample_rate), channels, 80.0F),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::LowPassFilter>(
+                                static_cast<float>(sample_rate), channels, 12000.0F),
+                            false});
         effects_.push_back({std::make_unique<tabletfx::NoiseGate>(
                                 static_cast<float>(sample_rate), -72.0F),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::PedalCompressor>(
+                                static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::Compressor>(
                                 static_cast<float>(sample_rate)),
@@ -120,7 +131,7 @@ public:
     void configure_compressor(float threshold_db, float ratio, float knee_db,
                               float attack_ms, float release_ms,
                               float makeup_db) noexcept {
-        auto* compressor = static_cast<tabletfx::Compressor*>(effects_[2].effect.get());
+        auto* compressor = static_cast<tabletfx::Compressor*>(effects_[5].effect.get());
         tabletfx::CompressorParameters parameters;
         parameters.threshold_db = threshold_db;
         parameters.ratio = ratio;
@@ -132,18 +143,34 @@ public:
     }
 
     void configure_drive(float drive) noexcept {
-        static_cast<tabletfx::SoftDrive*>(effects_[3].effect.get())->set_drive(drive);
+        static_cast<tabletfx::SoftDrive*>(effects_[6].effect.get())->set_drive(drive);
     }
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[4].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[7].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[5].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[8].effect.get())
             ->configure(delay_ms, feedback, mix);
+    }
+
+    void configure_filters(float high_pass_hz, float low_pass_hz) noexcept {
+        static_cast<tabletfx::HighPassFilter*>(effects_[1].effect.get())->configure(high_pass_hz);
+        static_cast<tabletfx::LowPassFilter*>(effects_[2].effect.get())->configure(low_pass_hz);
+    }
+
+    void configure_pedal_compressor(float sensitivity, float sustain, float attack,
+                                    float level_db) noexcept {
+        tabletfx::PedalCompressorParameters parameters;
+        parameters.sensitivity = sensitivity;
+        parameters.sustain = sustain;
+        parameters.attack = attack;
+        parameters.level_db = level_db;
+        static_cast<tabletfx::PedalCompressor*>(effects_[4].effect.get())
+            ->set_parameters(parameters);
     }
 
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
@@ -268,6 +295,22 @@ TABLETFX_WASM_EXPORT void tf_chain_set_compressor(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_compressor(threshold_db, ratio, knee_db, attack_ms,
                                                release_ms, makeup_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_filters(void* opaque, float high_pass_hz,
+                                              float low_pass_hz) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_filters(high_pass_hz, low_pass_hz);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pedal_compressor(
+    void* opaque, float sensitivity, float sustain, float attack,
+    float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pedal_compressor(sensitivity, sustain, attack,
+                                                     level_db);
     }
 }
 

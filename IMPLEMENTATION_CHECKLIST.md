@@ -24,7 +24,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `DYN-02` | P1 | Fast hard gate for high-gain rhythms. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-03` | P1 | Downward expander for gentler noise control. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-04` | P2 | Adaptive noise reduction with declared latency and guitar-tail preservation tests. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `DYN-05` | P0 | Guitar pedal compressor with sensitivity, sustain, attack, level. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `DYN-05` | P0 | Guitar pedal compressor with sensitivity, sustain, attack, level. | [x] | [x] | [ ] | In-house four-control pedal compressor implemented with bounded defaults, stereo-linked detection, and no lookahead. Transfer/control, bounds, reset, non-finite, irregular-block, and no-allocation tests pass. Linux per-effect CPU/memory recorded; live hardware/listening and native UI integration remain open. |
 | [ ] | `DYN-06` | P1 | Studio compressor with threshold, ratio, knee, attack, release, makeup. | [x] | [x] | [ ] | In-house compressor implemented; CTest transfer/stereo/bounds/reset/finite/variable-block/no-allocation checks pass. Linux CPU/memory results recorded; hardware/listening evidence remains open. |
 | [ ] | `DYN-07` | P1 | Optical-style compression. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-08` | P1 | FET-style compression. | [ ] | [ ] | [ ] | Not started |
@@ -36,7 +36,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `DYN-14` | P1 | Sustain enhancement, distinguished from a frozen audio buffer. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-15` | P1 | Sidechain/envelope ducking. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-16` | P2 | De-esser for a separately enabled vocal path. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `EQF-01` | P0 | Low-cut/high-pass and high-cut/low-pass filters. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `EQF-01` | P0 | Low-cut/high-pass and high-cut/low-pass filters. | [x] | [x] | [ ] | In-house second-order Butterworth high-pass (80 Hz default) and low-pass (12 kHz default) implemented with bounded cutoff and fixed stereo state. Response, bounds, channel isolation, variable blocks, reset, non-finite recovery, and no-allocation tests pass. Linux per-effect CPU/memory recorded; coefficient changes reset state, so live cutoff smoothing/listening and native UI remain open. |
 | [ ] | `EQF-02` | P0 | Three/five-band parametric EQ with frequency, gain, Q. | [x] | [x] | [ ] | In-house three-band peaking EQ implemented with frequency/gain/Q per band; CTest response/channel/bounds/reset/finite/variable-block/no-allocation checks pass. Linux CPU/memory results recorded; hardware/listening evidence remains open. |
 | [ ] | `EQF-03` | P1 | Guitar graphic EQ with selectable band layouts. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-04` | P1 | Bass graphic EQ with appropriate frequency coverage. | [ ] | [ ] | [ ] | Not started |
