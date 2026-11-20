@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add input and output level meters"
+COMMIT_MESSAGE = "docs: refresh benchmark figures"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
