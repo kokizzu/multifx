@@ -1,0 +1,9 @@
+# Large external reference audio; repository stores instructions and attribution only.
+/testdata/reference_audio
+
+# Native and Qt build output.
+/build/
+/build-*/
+/cmake-build-*/
+__pycache__/
+*.pyc
