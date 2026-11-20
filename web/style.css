@@ -46,6 +46,11 @@ h2 { margin-bottom: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
 .button:disabled { cursor: not-allowed; opacity: 0.45; }
 .button-primary { border-color: #148a6a; color: #071c18; background: #6ad7bd; font-weight: 760; }
 .button-primary:hover:not(:disabled) { border-color: #8fe8d1; background: #8fe8d1; }
+.button-danger { border-color: #8c414c; color: #ffdfe2; background: #48242b; }
+.button-danger[aria-pressed="true"] { border-color: #ef8290; color: #251015; background: #f28c98; font-weight: 750; }
+.signal-control-toggles { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; color: #c7d1dd; font-size: 0.8rem; }
+.signal-control-toggles label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.signal-control-toggles input { width: 18px; height: 18px; accent-color: #6ad7bd; }
 .progress-track { height: 4px; margin-top: 16px; overflow: hidden; border-radius: 8px; background: #2b3542; }
 .progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: #6ad7bd; transition: width 80ms linear; }
 .hint { margin: 12px 0 0; font-size: 0.75rem; line-height: 1.5; }

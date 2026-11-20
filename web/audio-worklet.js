@@ -58,6 +58,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       }
       module._tf_chain_set_mix(this.chain, this.initialMix);
       const parameters = config.parameters || {};
+      module._tf_chain_set_global_bypass(this.chain, config.globalBypass ? 1 : 0);
+      module._tf_chain_set_input_mute(this.chain, config.inputMuted ? 1 : 0);
+      module._tf_chain_set_panic_mute(this.chain, config.panicMuted ? 1 : 0);
       module._tf_chain_set_input_gain(this.chain, parameters.inputGainDb ?? 0);
       module._tf_chain_set_output_gain(this.chain, parameters.outputGainDb ?? 0);
       const compressor = parameters.compressor || [-18, 3, 6, 8, 100, 0];
@@ -116,6 +119,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       }
     } else if (message.type === "mix" && this.ready) {
       this.module._tf_chain_set_mix(this.chain, Number(message.value));
+    } else if (message.type === "global-bypass" && this.ready) {
+      this.module._tf_chain_set_global_bypass(this.chain, message.value ? 1 : 0);
+    } else if (message.type === "input-mute" && this.ready) {
+      this.module._tf_chain_set_input_mute(this.chain, message.value ? 1 : 0);
+    } else if (message.type === "panic-mute" && this.ready) {
+      this.module._tf_chain_set_panic_mute(this.chain, message.value ? 1 : 0);
     } else if (message.type === "input-gain" && this.ready) {
       this.module._tf_chain_ramp_input_gain(this.chain, Number(message.value));
     } else if (message.type === "output-gain" && this.ready) {

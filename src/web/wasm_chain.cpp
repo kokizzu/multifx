@@ -10,6 +10,7 @@
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
+#include "tabletfx/signal_controls.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -45,7 +46,8 @@ public:
           work_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
-          output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F) {
+          output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
+          signal_controls_(static_cast<float>(sample_rate)) {
         effects_.reserve(14);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -118,8 +120,10 @@ public:
         }
         frames_ = frames;
         const std::size_t samples = static_cast<std::size_t>(frames) * channels_;
-        std::copy_n(input_.begin(), samples, dry_.begin());
-        std::copy_n(input_.begin(), samples, work_.begin());
+        signal_controls_.process_input(
+            std::span<const float>(input_.data(), samples),
+            std::span<float>(work_.data(), samples), channels_);
+        std::copy_n(work_.begin(), samples, dry_.begin());
         return frames_;
     }
 
@@ -132,9 +136,19 @@ public:
     }
 
     void set_mix(float mix) noexcept {
-        if (std::isfinite(mix)) {
-            mix_ = std::clamp(mix, 0.0F, 1.0F);
-        }
+        signal_controls_.set_mix(mix);
+    }
+
+    void set_global_bypass(bool bypassed) noexcept {
+        signal_controls_.set_global_bypassed(bypassed);
+    }
+
+    void set_input_muted(bool muted) noexcept {
+        signal_controls_.set_input_muted(muted);
+    }
+
+    void set_panic_muted(bool muted) noexcept {
+        signal_controls_.set_panic_muted(muted);
     }
 
     void finish(std::uint32_t frames) noexcept {
@@ -142,16 +156,10 @@ public:
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
-        if (mix_ <= 0.0F) {
-            std::copy_n(dry_.begin(), samples, output_.begin());
-        } else if (mix_ >= 1.0F) {
-            std::copy_n(work_.begin(), samples, output_.begin());
-        } else {
-            const float dry_gain = 1.0F - mix_;
-            for (std::size_t i = 0; i < samples; ++i) {
-                output_[i] = dry_[i] * dry_gain + work_[i] * mix_;
-            }
-        }
+        signal_controls_.process_output(
+            std::span<const float>(dry_.data(), samples),
+            std::span<const float>(work_.data(), samples),
+            std::span<float>(output_.data(), samples), channels_);
     }
 
     void process_output_gain() noexcept {
@@ -176,6 +184,7 @@ public:
         }
         output_gain_.reset();
         output_limiter_.reset();
+        signal_controls_.reset();
         frames_ = 0;
     }
 
@@ -355,7 +364,6 @@ private:
     std::uint16_t channels_;
     std::uint32_t max_frames_;
     std::uint32_t frames_ = 0;
-    float mix_ = 1.0F;
     std::vector<EffectEntry> effects_;
     std::vector<float> input_;
     std::vector<float> dry_;
@@ -363,6 +371,7 @@ private:
     std::vector<float> output_;
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
+    tabletfx::SignalControls signal_controls_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
 };
@@ -422,6 +431,27 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_set_enabled(void* opaque, std::uint3
 TABLETFX_WASM_EXPORT void tf_chain_set_mix(void* opaque, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->set_mix(mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_global_bypass(void* opaque,
+                                                      std::uint32_t bypassed) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->set_global_bypass(bypassed != 0);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_input_mute(void* opaque,
+                                                  std::uint32_t muted) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->set_input_muted(muted != 0);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_panic_mute(void* opaque,
+                                                   std::uint32_t muted) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->set_panic_muted(muted != 0);
     }
 }
 

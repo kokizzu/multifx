@@ -38,6 +38,7 @@
         <button id="play-button" class="button button-primary" type="button" disabled>Play processed chain</button>
         <button id="stop-button" class="button" type="button" disabled>Stop</button>
         <button id="rewind-button" class="button" type="button" disabled>Rewind</button>
+        <button id="panic-mute" class="button button-danger" type="button" aria-pressed="false">Panic mute</button>
       </div>
       <div class="progress-track" aria-label="Playback progress"><span id="progress-fill"></span></div>
       <p class="hint">Play sends the selected file through the enabled processors and to your browser’s audio output.</p>
@@ -54,6 +55,10 @@
           <output id="wet-mix-value" for="wet-mix">100%</output>
           <input id="wet-mix" type="range" min="0" max="100" value="100">
         </label>
+      </div>
+      <div class="signal-control-toggles" aria-label="Signal controls">
+        <label><input id="global-bypass" type="checkbox"> Global bypass</label>
+        <label><input id="input-mute" type="checkbox"> Input mute</label>
       </div>
       <div class="effects-list">
         <label class="effect-row"><input type="checkbox" data-effect="0" checked><span class="effect-number">01</span><span class="effect-name">Input trim</span><span class="effect-default">0 dB</span></label>

@@ -9,6 +9,7 @@
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
+#include "tabletfx/signal_controls.hpp"
 #include "tabletfx/wav.hpp"
 
 #include <algorithm>
@@ -497,6 +498,46 @@ void benchmark_one(std::string_view name, Factory make_effect, std::uint32_t sam
               << signal.rms << '\n';
 }
 
+void benchmark_signal_controls(std::uint32_t sample_rate, std::uint16_t channels,
+                               std::size_t block_frames, std::size_t warmup_blocks,
+                               std::size_t measured_blocks) {
+    tabletfx::SignalControls controls(static_cast<float>(sample_rate));
+    std::vector<float> input(block_frames * channels);
+    std::vector<float> dry(block_frames * channels);
+    std::vector<float> wet(block_frames * channels);
+    std::vector<float> output(block_frames * channels);
+    std::uint32_t noise = 0x1234567U;
+    for (float& sample : input) {
+        noise = noise * 1664525U + 1013904223U;
+        sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
+    }
+    std::copy(input.begin(), input.end(), wet.begin());
+    const auto process = [&] {
+        controls.process_input(input, dry, channels);
+        controls.process_output(dry, wet, output, channels);
+    };
+    for (std::size_t i = 0; i < warmup_blocks; ++i) process();
+    controls.reset();
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    for (std::size_t i = 0; i < measured_blocks; ++i) {
+        const auto start = Clock::now();
+        process();
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        percentages.push_back(100.0 * elapsed_us / deadline_us);
+    }
+    const Metrics signal = metrics(output);
+    std::cout << "signal-controls," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << controls.memory_bytes() << "," << signal.rms << '\n';
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -536,18 +577,26 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                                                         125.0F, 0.2F, 0.1F));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
+    tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
 
     std::vector<float> buffer(block_frames * channels);
+    std::vector<float> dry_buffer(block_frames * channels);
+    std::vector<float> wet_buffer(block_frames * channels);
+    std::vector<float> output_buffer(block_frames * channels);
     std::uint32_t noise = 0x1234567U;
     for (float& sample : buffer) {
         noise = noise * 1664525U + 1013904223U;
         sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
     }
     const std::vector<float> source_buffer = buffer;
-    const auto process_chain = [&effects, channels](std::span<float> block) noexcept {
+    const auto process_chain = [&effects, &signal_controls, &dry_buffer, &wet_buffer,
+                                &output_buffer, channels](std::span<const float> input) noexcept {
+        signal_controls.process_input(input, dry_buffer, channels);
+        std::copy(dry_buffer.begin(), dry_buffer.end(), wet_buffer.begin());
         for (const auto& effect : effects) {
-            effect->process(block, channels);
+            effect->process(wet_buffer, channels);
         }
+        signal_controls.process_output(dry_buffer, wet_buffer, output_buffer, channels);
     };
     for (std::size_t i = 0; i < warmup_blocks; ++i) {
         std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
@@ -571,7 +620,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     for (const auto& effect : effects) {
         memory_bytes += effect->memory_bytes();
     }
-    const Metrics signal = metrics(buffer);
+    memory_bytes += signal_controls.memory_bytes();
+    const Metrics signal = metrics(output_buffer);
     std::cout << "full-chain," << std::fixed << std::setprecision(4)
               << percentile(percentages, 0.50) << ","
               << percentile(percentages, 0.95) << ","
@@ -648,6 +698,8 @@ void run_bench() {
     benchmark_one("clean-boost", [=] {
         return std::make_unique<tabletfx::CleanBoost>(6.0F, static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_signal_controls(sample_rate, channels, block_frames,
+                              warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;

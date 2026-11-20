@@ -48,6 +48,9 @@ const fileName = document.querySelector("#file-name");
 const fileDetails = document.querySelector("#file-details");
 const wetMix = document.querySelector("#wet-mix");
 const wetMixValue = document.querySelector("#wet-mix-value");
+const inputMute = document.querySelector("#input-mute");
+const globalBypass = document.querySelector("#global-bypass");
+const panicMute = document.querySelector("#panic-mute");
 const inputTrim = document.querySelector("#input-trim-db");
 const inputTrimValue = document.querySelector("#input-trim-value");
 const outputGain = document.querySelector("#output-gain-db");
@@ -252,6 +255,9 @@ async function setupProcessor(testOptions = null) {
     channels,
     enabled: testOptions?.enabled || enabledEffects(),
     mix: Number(wetMix.value) / 100,
+    inputMuted: testOptions?.inputMuted ?? inputMute.checked,
+    globalBypass: testOptions?.globalBypass ?? globalBypass.checked,
+    panicMuted: testOptions?.panicMuted ?? panicMute.getAttribute("aria-pressed") === "true",
     parameters: testOptions?.parameters || DEFAULT_PARAMETERS,
   };
   if (statsBuffer) processorOptions.statsBuffer = statsBuffer;
@@ -473,6 +479,21 @@ for (const checkbox of document.querySelectorAll("[data-effect]")) {
 wetMix.addEventListener("input", () => {
   wetMixValue.value = `${wetMix.value}%`;
   if (workletNode) workletNode.port.postMessage({ type: "mix", value: Number(wetMix.value) / 100 });
+});
+
+inputMute.addEventListener("change", () => {
+  if (workletNode) workletNode.port.postMessage({ type: "input-mute", value: inputMute.checked });
+});
+
+globalBypass.addEventListener("change", () => {
+  if (workletNode) workletNode.port.postMessage({ type: "global-bypass", value: globalBypass.checked });
+});
+
+panicMute.addEventListener("click", () => {
+  const muted = panicMute.getAttribute("aria-pressed") !== "true";
+  panicMute.setAttribute("aria-pressed", String(muted));
+  panicMute.textContent = muted ? "Release panic mute" : "Panic mute";
+  if (workletNode) workletNode.port.postMessage({ type: "panic-mute", value: muted });
 });
 
 inputTrim.addEventListener("input", () => {
@@ -726,6 +747,9 @@ async function runBrowserSelfTest() {
     const testOptions = {
       enabled: [true, true, true, true, true, true, true, true, true, true,
         true, true, true, true, true, true],
+      inputMuted: false,
+      globalBypass: false,
+      panicMuted: false,
       parameters: {
         inputGainDb: 2,
         outputGainDb: -1,

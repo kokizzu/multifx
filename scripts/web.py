@@ -123,6 +123,8 @@ def build_web() -> None:
         "_tf_chain_set_noise_gate",
         "_tf_chain_set_limiter", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
         "_tf_chain_set_envelope_wah",
+        "_tf_chain_set_global_bypass", "_tf_chain_set_input_mute",
+        "_tf_chain_set_panic_mute",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -131,6 +133,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects.cpp"),
         str(ROOT / "src" / "effects" / "clean_boost.cpp"),
         str(ROOT / "src" / "effects" / "envelope_wah.cpp"),
+        str(ROOT / "src" / "signal_controls.cpp"),
         str(ROOT / "src" / "effects" / "filters.cpp"),
         str(ROOT / "src" / "effects" / "peak_limiter.cpp"),
         str(ROOT / "src" / "effects" / "pedal_compressor.cpp"),
