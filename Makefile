@@ -2,7 +2,8 @@ PYTHON ?= python3
 
 .PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench audio-regression \
 	audio-fixtures-plan audio-fixtures-fetch audio-fixtures-verify audio-fixtures-inspect \
-	test-audio-fixtures windows-cross-build diff-check publish-plan publish-checkpoint
+	test-audio-fixtures windows-cross-build web-toolchain-bootstrap web-toolchain-verify \
+	web-build web-browser-test web-test web-serve diff-check publish-plan publish-checkpoint
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -54,6 +55,24 @@ test-audio-fixtures:
 
 windows-cross-build:
 	$(PYTHON) scripts/run_cmake.py windows-build
+
+web-toolchain-bootstrap:
+	$(PYTHON) scripts/web.py bootstrap-toolchain
+
+web-toolchain-verify:
+	$(PYTHON) scripts/web.py verify-toolchain
+
+web-build:
+	$(PYTHON) scripts/web.py build
+
+web-test: test web-build
+	$(PYTHON) scripts/web.py test
+
+web-browser-test:
+	$(PYTHON) scripts/web.py test
+
+web-serve: web-build
+	$(PYTHON) scripts/web.py serve
 
 diff-check:
 	$(PYTHON) scripts/check_repo_diff.py

@@ -8,13 +8,15 @@ import shutil
 import subprocess
 
 
-def probe(label: str, args: list[str], timeout: int = 8) -> None:
-    executable = shutil.which(args[0])
+def probe(label: str, args: list[str], timeout: int = 8,
+          fallback_executable: str | None = None) -> None:
+    executable = shutil.which(args[0]) or fallback_executable
     if executable is None:
         print(f"{label}: not found")
         return
     try:
-        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout, check=False)
+        result = subprocess.run([executable, *args[1:]], capture_output=True,
+                                text=True, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         print(f"{label}: unavailable ({exc})")
         return
@@ -30,6 +32,10 @@ def main() -> None:
         ("Ninja", ["ninja", "--version"]),
         ("C++ compiler", ["c++", "--version"]),
         ("Clang", ["clang++", "--version"]),
+        ("Node.js", ["node", "--version"]),
+        ("Playwright CLI", ["playwright", "--version"]),
+        ("Chromium", ["chromium", "--version"]),
+        ("Google Chrome", ["google-chrome", "--version"]),
         ("Qt 6 Core", ["pkg-config", "--modversion", "Qt6Core"]),
         ("Qt 6 Quick", ["pkg-config", "--modversion", "Qt6Quick"]),
         ("JACK", ["pkg-config", "--modversion", "jack"]),
@@ -38,6 +44,9 @@ def main() -> None:
         ("Java", ["java", "-version"]),
     ):
         probe(label, args)
+    emsdk_root = os.environ.get("TABLETFX_EMSDK_ROOT", "/tmp/multifx-emsdk")
+    emscripten = os.path.join(emsdk_root, "upstream", "emscripten", "em++")
+    probe("Emscripten C++", ["em++", "--version"], fallback_executable=emscripten)
     print(f"ANDROID_HOME: {os.environ.get('ANDROID_HOME', 'unset')}")
     print(f"ANDROID_SDK_ROOT: {os.environ.get('ANDROID_SDK_ROOT', 'unset')}")
     print(f"JAVA_HOME: {os.environ.get('JAVA_HOME', 'unset')}")

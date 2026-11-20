@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>TabletFX Browser Audio Test</title>
+  <link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">TABLETFX · WEBASSEMBLY PROTOTYPE</p>
+        <h1>Guitar chain tester</h1>
+      </div>
+      <span class="local-badge">Local audio only</span>
+    </header>
+
+    <section class="panel source-panel" aria-labelledby="source-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">SOURCE</p>
+          <h2 id="source-title">Choose guitar audio</h2>
+        </div>
+        <span id="audio-status" class="status" role="status">Waiting for a file</span>
+      </div>
+      <label class="file-picker" for="audio-file">
+        <span class="file-icon" aria-hidden="true">♫</span>
+        <span><strong>Open an audio file</strong><small>Decoded in this browser; nothing is uploaded.</small></span>
+        <input id="audio-file" type="file" accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a">
+      </label>
+      <div class="file-meta">
+        <span id="file-name">No file selected</span>
+        <span id="file-details">—</span>
+      </div>
+      <div class="transport" aria-label="Playback controls">
+        <button id="play-button" class="button button-primary" type="button" disabled>Play processed chain</button>
+        <button id="stop-button" class="button" type="button" disabled>Stop</button>
+        <button id="rewind-button" class="button" type="button" disabled>Rewind</button>
+      </div>
+      <div class="progress-track" aria-label="Playback progress"><span id="progress-fill"></span></div>
+      <p class="hint">Play sends the selected file through the enabled processors and to your browser’s audio output.</p>
+    </section>
+
+    <section class="panel chain-panel" aria-labelledby="chain-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">SIGNAL CHAIN</p>
+          <h2 id="chain-title">Processors</h2>
+        </div>
+        <label class="mix-control" for="wet-mix">
+          <span>Dry / wet</span>
+          <output id="wet-mix-value" for="wet-mix">100%</output>
+          <input id="wet-mix" type="range" min="0" max="100" value="100">
+        </label>
+      </div>
+      <div class="effects-list">
+        <label class="effect-row"><input type="checkbox" data-effect="0"><span class="effect-number">01</span><span class="effect-name">Input gain</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="1"><span class="effect-number">02</span><span class="effect-name">Noise gate</span><span class="effect-default">−72 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="2" checked><span class="effect-number">03</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="3"><span class="effect-number">04</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="5"><span class="effect-number">06</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+      </div>
+      <p class="hint">Effect order is fixed for this test build. Settings and processor state are prepared before playback.</p>
+    </section>
+
+    <section class="panel metrics-panel" aria-labelledby="metrics-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">RUNTIME</p>
+          <h2 id="metrics-title">Audio load</h2>
+        </div>
+        <span id="browser-version" class="muted">Browser details appear after playback setup.</span>
+      </div>
+      <div class="runtime-grid">
+        <div><span class="metric-label">Sample rate</span><strong id="sample-rate">—</strong></div>
+        <div><span class="metric-label">Render block</span><strong id="block-size">—</strong></div>
+        <div><span class="metric-label">Callback budget</span><strong id="deadline">—</strong></div>
+        <div><span class="metric-label">WASM linear memory</span><strong id="wasm-memory-use">—</strong></div>
+        <div><span class="metric-label">Chain state within heap</span><strong id="memory-use">—</strong></div>
+      </div>
+      <p id="timer-resolution-note" class="hint" hidden>Per-effect CPU percentages use a 1 ms timer in this browser and are coarse. Use the native benchmark for precise processor comparisons.</p>
+      <div class="load-table-wrap">
+        <table>
+          <thead><tr><th>Processor</th><th>Average callback budget</th><th>Peak observed</th><th>State bytes</th></tr></thead>
+          <tbody id="load-rows"><tr><td colspan="4" class="muted">Load is measured while audio is playing.</td></tr></tbody>
+        </table>
+      </div>
+      <p id="isolation-note" class="hint" hidden>Per-effect CPU reporting needs a local server with cross-origin isolation. Use <code>make web-serve</code>.</p>
+    </section>
+
+    <footer>Browser prototype · Shared C++ DSP · No microphone access · No audio upload</footer>
+    <pre id="browser-test-result" data-status="not-running" hidden></pre>
+  </main>
+  <script type="module" src="/web/app.js"></script>
+</body>
+</html>

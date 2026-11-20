@@ -1,6 +1,6 @@
 # Latency, quality, and DSP-load protocol
 
-Status: Linux desktop processor-call and owned-memory measurements are recorded below. Native hardware round-trip, Windows/Android routes, and sustained live callback measurements remain unverified.
+Status: Linux desktop processor-call and owned-memory measurements are recorded below. A browser AudioWorklet also reports per-processor and whole-chain callback load, but HeadlessChrome 151 falls back to a 1 ms timer, so those live browser percentages are coarse. Native hardware round-trip, Windows/Android routes, and sustained live callback measurements remain unverified.
 
 The provisional targets are ≤15 ms electrical round trip for the dry/basic path and ≤20 ms for an advertised live-transpose configuration, with acceptable chord quality. Measure the actual physical loop through the exact host/interface. Record buffer estimate, algorithm-reported delay, adapter/scheduling delay, and physical round trip separately.
 

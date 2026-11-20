@@ -14,7 +14,7 @@ Add a browser test application that reuses the C++ DSP processors compiled to We
 
 Prepare the WASM module, effect state, and bounded buffers before playback. The render callback must not allocate, block, log, access files, or rebuild the graph. Add browser automation that loads a local prerecorded test WAV, activates the chain, presses Play, captures the output, verifies non-silent processed audio, and compares deterministic WASM output with the native offline C++ renderer within a documented numeric tolerance. Report the browser/version, sample rate, render block/callback deadline, CPU percentage for each processor and the whole chain, and memory use. Browser playback and benchmarks do not prove native Oboe, JACK/PipeWire, or WASAPI device support or live round-trip latency.
 
-This target is required by `WEB-01` in `GOAL.md` and remains unimplemented until its build, automated browser checks, and measurements are recorded in `IMPLEMENTATION_CHECKLIST.md`.
+The browser/WASM test page uses the same C++ DSP chain in an AudioWorklet; its build, headless audio comparison, memory figures, and timer-resolution limitation are recorded in `AUDIO_COMPATIBILITY.md` and `IMPLEMENTATION_CHECKLIST.md`. The implementation is an audition/test page, not a full graph editor. Manual audible-output verification remains open.
 
 ## Windows WASAPI backend status
 

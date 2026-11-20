@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add compressor EQ and Windows WASAPI backend"
+COMMIT_MESSAGE = "feat: add browser WASM guitar-audio test path"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -44,13 +44,21 @@ CHECKPOINT_PATHS = (
     "scripts/test_audio_fixtures.py",
     "scripts/test_offline_cli.py",
     "scripts/validate_docs.py",
+    "scripts/web.py",
     "src/effects.cpp",
     "src/audio/wasapi_backend.cpp",
+    "src/web/wasm_chain.cpp",
     "src/wav.cpp",
     "tests/test_dsp.cpp",
     "tests/test_compressor.cpp",
     "tests/test_three_band_eq.cpp",
     "tests/wasapi_compile.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+    "web/wav_decoder.js",
+    "web/worklet-smoke.js",
 )
 
 
