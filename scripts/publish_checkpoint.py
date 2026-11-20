@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add high-low filters and pedal compressor"
+COMMIT_MESSAGE = "feat: add smoothed input and output gain"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -29,6 +29,7 @@ CHECKPOINT_PATHS = (
     "cmake/toolchains/mingw-w64.cmake",
     "include/tabletfx/effect.hpp",
     "include/tabletfx/effects.hpp",
+    "tests/test_gain.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",

@@ -25,22 +25,76 @@ float time_coefficient(float milliseconds, float sample_rate) noexcept {
 
 } // namespace
 
-Gain::Gain(float gain_db) noexcept : gain_db_(0.0F), gain_(1.0F) {
-    set_gain_db(gain_db);
+Gain::Gain(float gain_db, float sample_rate, float smoothing_ms) noexcept
+    : gain_db_(0.0F), gain_(1.0F), target_gain_(1.0F), ramp_step_(0.0F),
+      sample_rate_(48000.0F), smoothing_ms_(10.0F) {
+    configure_smoothing(sample_rate, smoothing_ms);
+    set_gain_db_immediate(gain_db);
 }
 
 void Gain::set_gain_db(float gain_db) noexcept {
-    gain_db_ = std::clamp(gain_db, kMinGainDb, kMaxGainDb);
-    gain_ = decibels_to_linear(gain_db_);
+    if (std::isfinite(gain_db)) {
+        gain_db_ = std::clamp(gain_db, kMinGainDb, kMaxGainDb);
+    }
+    target_gain_ = decibels_to_linear(gain_db_);
+    const double requested_frames = static_cast<double>(sample_rate_) *
+                                    static_cast<double>(smoothing_ms_) / 1000.0;
+    const std::size_t ramp_frames = static_cast<std::size_t>(std::llround(requested_frames));
+    if (ramp_frames == 0) {
+        gain_ = target_gain_;
+        ramp_step_ = 0.0F;
+        ramp_remaining_ = 0;
+        return;
+    }
+    ramp_step_ = (target_gain_ - gain_) / static_cast<float>(ramp_frames);
+    ramp_remaining_ = ramp_frames;
+}
+
+void Gain::set_gain_db_immediate(float gain_db) noexcept {
+    if (std::isfinite(gain_db)) {
+        gain_db_ = std::clamp(gain_db, kMinGainDb, kMaxGainDb);
+    }
+    target_gain_ = decibels_to_linear(gain_db_);
+    gain_ = target_gain_;
+    ramp_step_ = 0.0F;
+    ramp_remaining_ = 0;
 }
 
 void Gain::process(std::span<float> interleaved, std::uint16_t channels) noexcept {
     if (channels == 0) {
         return;
     }
-    for (float& sample : interleaved) {
-        sample *= gain_;
+    const std::size_t frames = interleaved.size() / channels;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        if (ramp_remaining_ > 0) {
+            gain_ += ramp_step_;
+            --ramp_remaining_;
+            if (ramp_remaining_ == 0) {
+                gain_ = target_gain_;
+                ramp_step_ = 0.0F;
+            }
+        }
+        const std::size_t offset = frame * channels;
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            interleaved[offset + channel] *= gain_;
+        }
     }
+}
+
+void Gain::reset() noexcept {
+    gain_ = target_gain_;
+    ramp_step_ = 0.0F;
+    ramp_remaining_ = 0;
+}
+
+void Gain::configure_smoothing(float sample_rate, float smoothing_ms) noexcept {
+    sample_rate_ = std::isfinite(sample_rate) && sample_rate >= 8000.0F &&
+                           sample_rate <= 384000.0F
+                       ? sample_rate
+                       : 48000.0F;
+    smoothing_ms_ = std::isfinite(smoothing_ms)
+                        ? std::clamp(smoothing_ms, 0.0F, 1000.0F)
+                        : 10.0F;
 }
 
 NoiseGate::NoiseGate(float sample_rate, float threshold_db, float attenuation_db,

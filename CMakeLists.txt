@@ -43,6 +43,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_pedal_compressor_tests tests/test_pedal_compressor.cpp)
     target_link_libraries(tabletfx_pedal_compressor_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pedal_compressor_tests COMMAND tabletfx_pedal_compressor_tests)
+
+    add_executable(tabletfx_gain_tests tests/test_gain.cpp)
+    target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_gain_tests COMMAND tabletfx_gain_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(

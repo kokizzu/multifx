@@ -10,16 +10,25 @@ namespace tabletfx {
 
 class Gain final : public Effect {
 public:
-    explicit Gain(float gain_db = 0.0F) noexcept;
+    explicit Gain(float gain_db = 0.0F, float sample_rate = 48000.0F,
+                  float smoothing_ms = 10.0F) noexcept;
     [[nodiscard]] std::string_view id() const noexcept override { return "gain"; }
     [[nodiscard]] std::size_t memory_bytes() const noexcept override { return sizeof(*this); }
     void set_gain_db(float gain_db) noexcept;
+    void set_gain_db_immediate(float gain_db) noexcept;
     [[nodiscard]] float gain_db() const noexcept { return gain_db_; }
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
+    void reset() noexcept override;
+    void configure_smoothing(float sample_rate, float smoothing_ms) noexcept;
 
 private:
     float gain_db_;
     float gain_;
+    float target_gain_;
+    float ramp_step_;
+    float sample_rate_;
+    float smoothing_ms_;
+    std::size_t ramp_remaining_ = 0;
 };
 
 class NoiseGate final : public Effect {

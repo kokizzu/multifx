@@ -1,7 +1,7 @@
 import { decodePcmWave } from "./wav_decoder.js";
 
 const EFFECT_NAMES = [
-  "Input gain",
+  "Input trim",
   "High-pass",
   "Low-pass",
   "Noise gate",
@@ -10,8 +10,11 @@ const EFFECT_NAMES = [
   "Soft drive",
   "Three-band parametric EQ",
   "Stereo delay",
+  "Output level",
 ];
 const DEFAULT_PARAMETERS = {
+  inputGainDb: 0,
+  outputGainDb: 0,
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -32,6 +35,10 @@ const fileName = document.querySelector("#file-name");
 const fileDetails = document.querySelector("#file-details");
 const wetMix = document.querySelector("#wet-mix");
 const wetMixValue = document.querySelector("#wet-mix-value");
+const inputTrim = document.querySelector("#input-trim-db");
+const inputTrimValue = document.querySelector("#input-trim-value");
+const outputGain = document.querySelector("#output-gain-db");
+const outputGainValue = document.querySelector("#output-gain-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -394,6 +401,20 @@ wetMix.addEventListener("input", () => {
   if (workletNode) workletNode.port.postMessage({ type: "mix", value: Number(wetMix.value) / 100 });
 });
 
+inputTrim.addEventListener("input", () => {
+  const value = Number(inputTrim.value);
+  DEFAULT_PARAMETERS.inputGainDb = value;
+  inputTrimValue.value = `${value.toFixed(1)} dB`;
+  if (workletNode) workletNode.port.postMessage({ type: "input-gain", value });
+});
+
+outputGain.addEventListener("input", () => {
+  const value = Number(outputGain.value);
+  DEFAULT_PARAMETERS.outputGainDb = value;
+  outputGainValue.value = `${value.toFixed(1)} dB`;
+  if (workletNode) workletNode.port.postMessage({ type: "output-gain", value });
+});
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -489,8 +510,10 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: [false, true, true, true, true, true, true, true, true],
+      enabled: [true, true, true, true, true, true, true, true, true, true],
       parameters: {
+        inputGainDb: 2,
+        outputGainDb: -1,
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],

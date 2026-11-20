@@ -27,6 +27,7 @@ using Clock = std::chrono::steady_clock;
 
 struct Options {
     float gain_db = 0.0F;
+    float output_gain_db = 0.0F;
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     float gate_threshold_db = -120.0F;
@@ -69,6 +70,7 @@ Options parse_options(int argc, char** argv, int first) {
         }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
+        else if (key == "--output-gain-db") options.output_gain_db = value;
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") options.gate_threshold_db = value;
@@ -162,7 +164,8 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                                                             std::uint16_t channels) {
     std::vector<std::unique_ptr<tabletfx::Effect>> effects;
     if (std::abs(options.gain_db) > 0.0001F) {
-        effects.push_back(std::make_unique<tabletfx::Gain>(options.gain_db));
+        effects.push_back(std::make_unique<tabletfx::Gain>(
+            options.gain_db, static_cast<float>(sample_rate)));
     }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
@@ -199,6 +202,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F, options.delay_ms,
             options.delay_feedback, options.delay_mix));
+    }
+    if (std::abs(options.output_gain_db) > 0.0001F) {
+        effects.push_back(std::make_unique<tabletfx::Gain>(
+            options.output_gain_db, static_cast<float>(sample_rate)));
     }
     return effects;
 }
@@ -291,7 +298,7 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                   5000.0F, 1.5F, 0.707F);
 
     std::vector<std::unique_ptr<tabletfx::Effect>> effects;
-    effects.push_back(std::make_unique<tabletfx::Gain>(2.0F));
+    effects.push_back(std::make_unique<tabletfx::Gain>(2.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F));
     effects.push_back(std::make_unique<tabletfx::LowPassFilter>(sample_rate, channels, 12000.0F));
     effects.push_back(std::make_unique<tabletfx::NoiseGate>(sample_rate, -72.0F));
@@ -301,6 +308,7 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
+    effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
 
     std::vector<float> buffer(block_frames * channels);
     std::uint32_t noise = 0x1234567U;
@@ -357,8 +365,13 @@ void run_bench() {
               << " warmup_blocks=" << warmup_blocks << " measured_blocks=" << measured_blocks
               << " metric=elapsed_block_us/callback_deadline_us*100\n";
     std::cout << "processor,median_pct,p95_pct,p99_pct,p99_9_pct,max_pct,owned_memory_bytes,output_rms\n";
-    benchmark_one("gain", [] { return std::make_unique<tabletfx::Gain>(6.0F); },
+    benchmark_one("input-gain", [=] {
+        return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));
+    },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("output-gain", [=] {
+        return std::make_unique<tabletfx::Gain>(-6.0F, static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("high-pass", [=] {
         return std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
@@ -391,7 +404,8 @@ void run_bench() {
 
 void print_usage() {
     std::cerr << "Usage:\n"
-              << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--high-pass-hz Hz]"
+              << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--output-gain-db dB]"
+                 " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"

@@ -115,7 +115,9 @@ def build_web() -> None:
         "_tf_chain_begin", "_tf_chain_process_effect", "_tf_chain_finish",
         "_tf_chain_reset", "_tf_chain_set_compressor", "_tf_chain_set_drive",
         "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_filters",
-        "_tf_chain_set_pedal_compressor",
+        "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
+        "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
+        "_tf_chain_ramp_output_gain", "_tf_chain_process_output_gain",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -366,6 +368,7 @@ def browser_test() -> None:
         make_test_audio(input_path)
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
+            "--gain-db", "2", "--output-gain-db", "-1",
             "--gate-threshold-db", "-72",
             "--compressor-threshold-db", "-18", "--compressor-ratio", "3",
             "--compressor-knee-db", "6", "--compressor-attack-ms", "8",

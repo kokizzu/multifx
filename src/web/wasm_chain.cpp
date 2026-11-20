@@ -37,9 +37,12 @@ public:
           input_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           dry_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           work_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
-          output_(static_cast<std::size_t>(channels) * max_frames, 0.0F) {
+          output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
+          output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F) {
         effects_.reserve(9);
-        effects_.push_back({std::make_unique<tabletfx::Gain>(0.0F), false});
+        effects_.push_back({std::make_unique<tabletfx::Gain>(
+                                0.0F, static_cast<float>(sample_rate), 10.0F),
+                            false});
         effects_.push_back({std::make_unique<tabletfx::HighPassFilter>(
                                 static_cast<float>(sample_rate), channels, 80.0F),
                             false});
@@ -65,12 +68,16 @@ public:
                             false});
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size(); }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 1; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
 
     [[nodiscard]] bool set_enabled(std::uint32_t index, bool enabled) noexcept {
+        if (index == effects_.size()) {
+            output_gain_enabled_ = enabled;
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -121,10 +128,19 @@ public:
         }
     }
 
+    void process_output_gain() noexcept {
+        if (frames_ == 0 || !output_gain_enabled_) {
+            return;
+        }
+        const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        output_gain_.process(std::span<float>(output_.data(), samples), channels_);
+    }
+
     void reset() noexcept {
         for (EffectEntry& entry : effects_) {
             entry.effect->reset();
         }
+        output_gain_.reset();
         frames_ = 0;
     }
 
@@ -162,6 +178,22 @@ public:
         static_cast<tabletfx::LowPassFilter*>(effects_[2].effect.get())->configure(low_pass_hz);
     }
 
+    void configure_input_gain(float gain_db) noexcept {
+        static_cast<tabletfx::Gain*>(effects_[0].effect.get())->set_gain_db_immediate(gain_db);
+    }
+
+    void configure_output_gain(float gain_db) noexcept {
+        output_gain_.set_gain_db_immediate(gain_db);
+    }
+
+    void ramp_input_gain(float gain_db) noexcept {
+        static_cast<tabletfx::Gain*>(effects_[0].effect.get())->set_gain_db(gain_db);
+    }
+
+    void ramp_output_gain(float gain_db) noexcept {
+        output_gain_.set_gain_db(gain_db);
+    }
+
     void configure_pedal_compressor(float sensitivity, float sustain, float attack,
                                     float level_db) noexcept {
         tabletfx::PedalCompressorParameters parameters;
@@ -177,6 +209,7 @@ public:
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
         bytes += work_.capacity() * sizeof(float) + output_.capacity() * sizeof(float);
+        bytes += output_gain_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -186,6 +219,9 @@ public:
     }
 
     [[nodiscard]] std::uint32_t effect_memory_bytes(std::uint32_t index) const noexcept {
+        if (index == effects_.size()) {
+            return static_cast<std::uint32_t>(output_gain_.memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -205,6 +241,8 @@ private:
     std::vector<float> dry_;
     std::vector<float> work_;
     std::vector<float> output_;
+    tabletfx::Gain output_gain_;
+    bool output_gain_enabled_ = true;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -265,6 +303,30 @@ TABLETFX_WASM_EXPORT void tf_chain_set_mix(void* opaque, float mix) noexcept {
     }
 }
 
+TABLETFX_WASM_EXPORT void tf_chain_set_input_gain(void* opaque, float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_input_gain(gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_output_gain(void* opaque, float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_output_gain(gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_ramp_input_gain(void* opaque, float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->ramp_input_gain(gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_ramp_output_gain(void* opaque, float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->ramp_output_gain(gain_db);
+    }
+}
+
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_begin(void* opaque,
                                                  std::uint32_t frames) noexcept {
     return opaque == nullptr ? 0U : as_chain(opaque)->begin(frames);
@@ -280,6 +342,12 @@ TABLETFX_WASM_EXPORT void tf_chain_process_effect(void* opaque,
 TABLETFX_WASM_EXPORT void tf_chain_finish(void* opaque, std::uint32_t frames) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->finish(frames);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_process_output_gain(void* opaque) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->process_output_gain();
     }
 }
 
