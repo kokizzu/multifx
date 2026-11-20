@@ -1,4 +1,6 @@
 #include "tabletfx/effects.hpp"
+#include "tabletfx/effects/compressor.hpp"
+#include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/wav.hpp"
 
 #include <algorithm>
@@ -28,6 +30,18 @@ struct Options {
     float delay_ms = 0.0F;
     float delay_feedback = 0.25F;
     float delay_mix = 0.0F;
+    bool compressor_enabled = false;
+    tabletfx::CompressorParameters compressor{};
+    bool eq_enabled = false;
+    float eq_band1_frequency_hz = 120.0F;
+    float eq_band1_gain_db = 0.0F;
+    float eq_band1_q = 0.707F;
+    float eq_band2_frequency_hz = 800.0F;
+    float eq_band2_gain_db = 0.0F;
+    float eq_band2_q = 0.707F;
+    float eq_band3_frequency_hz = 5000.0F;
+    float eq_band3_gain_db = 0.0F;
+    float eq_band3_q = 0.707F;
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -54,6 +68,66 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--delay-ms") options.delay_ms = value;
         else if (key == "--delay-feedback") options.delay_feedback = value;
         else if (key == "--delay-mix") options.delay_mix = value;
+        else if (key == "--compressor-threshold-db") {
+            options.compressor.threshold_db = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--compressor-ratio") {
+            options.compressor.ratio = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--compressor-knee-db") {
+            options.compressor.knee_db = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--compressor-attack-ms") {
+            options.compressor.attack_ms = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--compressor-release-ms") {
+            options.compressor.release_ms = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--compressor-makeup-db") {
+            options.compressor.makeup_db = value;
+            options.compressor_enabled = true;
+        }
+        else if (key == "--eq-band1-frequency-hz") {
+            options.eq_band1_frequency_hz = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band1-gain-db") {
+            options.eq_band1_gain_db = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band1-q") {
+            options.eq_band1_q = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band2-frequency-hz") {
+            options.eq_band2_frequency_hz = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band2-gain-db") {
+            options.eq_band2_gain_db = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band2-q") {
+            options.eq_band2_q = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band3-frequency-hz") {
+            options.eq_band3_frequency_hz = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band3-gain-db") {
+            options.eq_band3_gain_db = value;
+            options.eq_enabled = true;
+        }
+        else if (key == "--eq-band3-q") {
+            options.eq_band3_q = value;
+            options.eq_enabled = true;
+        }
         else throw std::invalid_argument("Unknown option: " + std::string(key));
     }
     return options;
@@ -70,8 +144,20 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::NoiseGate>(
             static_cast<float>(sample_rate), options.gate_threshold_db));
     }
+    if (options.compressor_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Compressor>(
+            static_cast<float>(sample_rate), options.compressor));
+    }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
+    }
+    if (options.eq_enabled) {
+        auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
+            static_cast<float>(sample_rate), channels);
+        eq->configure(options.eq_band1_frequency_hz, options.eq_band1_gain_db, options.eq_band1_q,
+                      options.eq_band2_frequency_hz, options.eq_band2_gain_db, options.eq_band2_q,
+                      options.eq_band3_frequency_hz, options.eq_band3_gain_db, options.eq_band3_q);
+        effects.push_back(std::move(eq));
     }
     if (options.delay_ms > 0.0F && options.delay_mix > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::Delay>(
@@ -152,8 +238,73 @@ void benchmark_one(std::string_view name, Factory make_effect, std::uint32_t sam
               << percentile(percentages, 0.50) << ","
               << percentile(percentages, 0.95) << ","
               << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
               << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << effect->memory_bytes() << ","
               << signal.rms << '\n';
+}
+
+void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
+                          std::size_t block_frames, std::size_t warmup_blocks,
+                          std::size_t measured_blocks) {
+    tabletfx::CompressorParameters compressor_parameters;
+    compressor_parameters.threshold_db = -24.0F;
+    compressor_parameters.ratio = 3.0F;
+    auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(sample_rate, channels);
+    eq->configure(120.0F, 2.0F, 0.707F, 800.0F, -1.0F, 0.707F,
+                  5000.0F, 1.5F, 0.707F);
+
+    std::vector<std::unique_ptr<tabletfx::Effect>> effects;
+    effects.push_back(std::make_unique<tabletfx::Gain>(2.0F));
+    effects.push_back(std::make_unique<tabletfx::NoiseGate>(sample_rate, -72.0F));
+    effects.push_back(std::make_unique<tabletfx::Compressor>(sample_rate, compressor_parameters));
+    effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
+    effects.push_back(std::move(eq));
+    effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
+                                                        125.0F, 0.2F, 0.1F));
+
+    std::vector<float> buffer(block_frames * channels);
+    std::uint32_t noise = 0x1234567U;
+    for (float& sample : buffer) {
+        noise = noise * 1664525U + 1013904223U;
+        sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
+    }
+    const std::vector<float> source_buffer = buffer;
+    const auto process_chain = [&effects, channels](std::span<float> block) noexcept {
+        for (const auto& effect : effects) {
+            effect->process(block, channels);
+        }
+    };
+    for (std::size_t i = 0; i < warmup_blocks; ++i) {
+        std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
+        process_chain(buffer);
+    }
+    for (const auto& effect : effects) {
+        effect->reset();
+    }
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    for (std::size_t i = 0; i < measured_blocks; ++i) {
+        std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
+        const auto start = Clock::now();
+        process_chain(buffer);
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        percentages.push_back(100.0 * elapsed_us / deadline_us);
+    }
+    std::size_t memory_bytes = 0;
+    for (const auto& effect : effects) {
+        memory_bytes += effect->memory_bytes();
+    }
+    const Metrics signal = metrics(buffer);
+    std::cout << "full-chain," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << memory_bytes << "," << signal.rms << '\n';
 }
 
 void run_bench() {
@@ -166,7 +317,7 @@ void run_bench() {
               << " block_frames=" << block_frames << " channels=" << channels
               << " warmup_blocks=" << warmup_blocks << " measured_blocks=" << measured_blocks
               << " metric=elapsed_block_us/callback_deadline_us*100\n";
-    std::cout << "processor,median_pct,p95_pct,p99_pct,max_pct,output_rms\n";
+    std::cout << "processor,median_pct,p95_pct,p99_pct,p99_9_pct,max_pct,owned_memory_bytes,output_rms\n";
     benchmark_one("gain", [] { return std::make_unique<tabletfx::Gain>(6.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("noise-gate", [=] { return std::make_unique<tabletfx::NoiseGate>(sample_rate, -48.0F); },
@@ -175,12 +326,29 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    tabletfx::CompressorParameters compressor_parameters;
+    compressor_parameters.threshold_db = -24.0F;
+    compressor_parameters.ratio = 4.0F;
+    benchmark_one("compressor", [=] {
+        return std::make_unique<tabletfx::Compressor>(sample_rate, compressor_parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("three-band-parametric-eq", [=] {
+        auto effect = std::make_unique<tabletfx::ThreeBandParametricEQ>(sample_rate, channels);
+        effect->configure(120.0F, 3.0F, 0.707F, 800.0F, -2.0F, 0.8F,
+                          5000.0F, 4.0F, 0.707F);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
 void print_usage() {
     std::cerr << "Usage:\n"
               << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--gate-threshold-db dB]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"
+              << "                 [--compressor-threshold-db dB] [--compressor-ratio 1..20]"
+                 " [--compressor-knee-db dB] [--compressor-attack-ms ms]"
+                 " [--compressor-release-ms ms] [--compressor-makeup-db dB]\n"
+              << "                 [--eq-bandN-frequency-hz Hz] [--eq-bandN-gain-db dB] [--eq-bandN-q Q] (N=1..3)\n"
               << "  tabletfx_offline --bench\n";
 }
 

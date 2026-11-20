@@ -16,6 +16,12 @@ Prepare the WASM module, effect state, and bounded buffers before playback. The 
 
 This target is required by `WEB-01` in `GOAL.md` and remains unimplemented until its build, automated browser checks, and measurements are recorded in `IMPLEMENTATION_CHECKLIST.md`.
 
+## Windows WASAPI backend status
+
+An initial event-driven shared-mode WASAPI backend now lives in `include/tabletfx/audio/wasapi_backend.hpp` and `src/audio/wasapi_backend.cpp`. It opens the default capture/render endpoints, accepts supported PCM 8/16/24/32-bit or float32 mix formats, converts into bounded float32 scratch buffers, splits endpoint events into prepared blocks, and exposes startup errors and capture underrun/overrun counters. The processing callback performs no repository-owned allocation or lock operations.
+
+`make windows-cross-build` cross-compiles the shared DSP/offline CLI and a WASAPI object-lifecycle smoke executable with MinGW-w64. This does not run the executable or establish Windows runtime support. The initial backend requires equal capture/render sample rates and currently has no device selection, resampling, exclusive mode, GUI integration, or hardware latency measurement; keep those checks open in `AUDIO_COMPATIBILITY.md`.
+
 ## Alternatives considered
 
 1. Reuse selected Amp Rack host concepts or effect source. Advantage: existing Android guitar-host work; risk: mixed per-file licenses, prebuilt-only processors, existing host lifecycle choices, and incomplete integration.

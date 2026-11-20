@@ -1083,6 +1083,7 @@ These links support the research statements. Proposed app layouts, priorities, a
 ## Maintainer-approved additions (2026-11-20)
 
 - Windows is a required implementation target alongside Android and Linux. Provide a Windows x64 build, a native WASAPI audio backend, the shared editor and portable preset format, and platform-specific tests. Mark Windows hardware audio verification incomplete until tested on Windows with a real audio interface.
+- **WIN-05 (P0):** Provide a repeatable MinGW-w64 Windows x64 cross-build of the shared DSP/offline CLI and a WASAPI backend compile-smoke target. Record the toolchain result separately from Windows runtime and real-device verification.
 - Prefer low latency and bounded CPU/memory use. For each processor, record measured callback cost as a percentage of the callback deadline, with sample rate, block size, CPU, build mode, warmup, percentile, and test command. Keep per-processor benchmark results distinct from whole-chain DSP load.
 - Test every implementation automatically before marking its implementation/test checkboxes complete. Keep hardware and listening checks separate. Commit and push finished checkpoints directly to the existing primary branch; do not create branches or GitHub Actions workflows.
 - Prioritize reproducible local Linux tests that process prerecorded guitar audio. Keep file-based renders and offline algorithm latency distinct from live hardware round-trip measurements; do not upload private recordings or commit them without explicit permission.

@@ -43,7 +43,7 @@ def main() -> None:
     if set(source_ids) - set(tracked_ids):
         raise SystemExit("Checklist is missing goal IDs: " + ", ".join(sorted(set(source_ids) - set(tracked_ids))))
     expected_additions = {
-        "WIN-01", "WIN-02", "WIN-03", "WIN-04", "DSP-01", "LIN-01", "LIN-02",
+        "WIN-01", "WIN-02", "WIN-03", "WIN-04", "WIN-05", "DSP-01", "LIN-01", "LIN-02",
         "DATA-01", "DATA-02", "WEB-01",
     }
     if not expected_additions.issubset(set(tracked_ids)):

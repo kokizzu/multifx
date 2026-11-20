@@ -25,6 +25,14 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
     target_link_libraries(tabletfx_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tests COMMAND tabletfx_tests)
+
+    add_executable(tabletfx_compressor_tests tests/test_compressor.cpp)
+    target_link_libraries(tabletfx_compressor_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_compressor_tests COMMAND tabletfx_compressor_tests)
+
+    add_executable(tabletfx_three_band_eq_tests tests/test_three_band_eq.cpp)
+    target_link_libraries(tabletfx_three_band_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_three_band_eq_tests COMMAND tabletfx_three_band_eq_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(
@@ -32,5 +40,22 @@ if(BUILD_TESTING)
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/test_offline_cli.py
                     --executable $<TARGET_FILE:tabletfx_offline>
         )
+    endif()
+endif()
+
+if(WIN32)
+    add_library(tabletfx_wasapi STATIC src/audio/wasapi_backend.cpp)
+    target_include_directories(tabletfx_wasapi PUBLIC include)
+    if(MSVC)
+        target_compile_options(tabletfx_wasapi PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(tabletfx_wasapi PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    endif()
+    target_link_libraries(tabletfx_wasapi PRIVATE ole32 avrt uuid)
+
+    add_executable(tabletfx_wasapi_compile tests/wasapi_compile.cpp)
+    target_link_libraries(tabletfx_wasapi_compile PRIVATE tabletfx_wasapi)
+    if(BUILD_TESTING)
+        add_test(NAME tabletfx_wasapi_compile_test COMMAND tabletfx_wasapi_compile)
     endif()
 endif()

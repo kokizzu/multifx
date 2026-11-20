@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely publish the reviewed initial offline-core checkpoint to upstream main."""
+"""Safely publish the reviewed DSP and Windows-backend checkpoint to upstream main."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "docs: specify browser WASM playback target"
+COMMIT_MESSAGE = "feat: add compressor EQ and Windows WASAPI backend"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -26,8 +26,12 @@ CHECKPOINT_PATHS = (
     "RESEARCH.md",
     "THIRD_PARTY_NOTICES.md",
     "apps/offline_render.cpp",
+    "cmake/toolchains/mingw-w64.cmake",
     "include/tabletfx/effect.hpp",
     "include/tabletfx/effects.hpp",
+    "include/tabletfx/audio/wasapi_backend.hpp",
+    "include/tabletfx/effects/compressor.hpp",
+    "include/tabletfx/effects/three_band_eq.hpp",
     "include/tabletfx/wav.hpp",
     "scripts/audio_fixtures.py",
     "scripts/audio_regression.py",
@@ -41,8 +45,12 @@ CHECKPOINT_PATHS = (
     "scripts/test_offline_cli.py",
     "scripts/validate_docs.py",
     "src/effects.cpp",
+    "src/audio/wasapi_backend.cpp",
     "src/wav.cpp",
     "tests/test_dsp.cpp",
+    "tests/test_compressor.cpp",
+    "tests/test_three_band_eq.cpp",
+    "tests/wasapi_compile.cpp",
 )
 
 

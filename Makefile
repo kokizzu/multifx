@@ -2,7 +2,7 @@ PYTHON ?= python3
 
 .PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench audio-regression \
 	audio-fixtures-plan audio-fixtures-fetch audio-fixtures-verify audio-fixtures-inspect \
-	test-audio-fixtures diff-check publish-plan publish-checkpoint
+	test-audio-fixtures windows-cross-build diff-check publish-plan publish-checkpoint
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -30,6 +30,7 @@ test:
 	$(PYTHON) scripts/test_audio_fixtures.py
 	$(PYTHON) scripts/run_cmake.py test
 
+
 bench:
 	$(PYTHON) scripts/run_cmake.py bench
 
@@ -50,6 +51,9 @@ audio-fixtures-inspect:
 
 test-audio-fixtures:
 	$(PYTHON) scripts/test_audio_fixtures.py
+
+windows-cross-build:
+	$(PYTHON) scripts/run_cmake.py windows-build
 
 diff-check:
 	$(PYTHON) scripts/check_repo_diff.py

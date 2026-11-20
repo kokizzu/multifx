@@ -64,6 +64,8 @@ void test_effect_processing_allocates_nothing() {
     tabletfx::NoiseGate gate(48000.0F, -48.0F);
     tabletfx::SoftDrive drive(3.0F);
     tabletfx::Delay delay(48000.0F, 2, 2000.0F);
+    require(delay.memory_bytes() >= sizeof(delay) + 96000U * 2U * sizeof(float),
+            "delay memory estimate must include its owned delay line");
     std::vector<float> samples(256 * 2, 0.1F);
     const auto before = allocation_count.load(std::memory_order_relaxed);
     gain.process(samples, 2);

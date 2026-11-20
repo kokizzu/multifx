@@ -25,7 +25,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `DYN-03` | P1 | Downward expander for gentler noise control. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-04` | P2 | Adaptive noise reduction with declared latency and guitar-tail preservation tests. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-05` | P0 | Guitar pedal compressor with sensitivity, sustain, attack, level. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `DYN-06` | P1 | Studio compressor with threshold, ratio, knee, attack, release, makeup. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `DYN-06` | P1 | Studio compressor with threshold, ratio, knee, attack, release, makeup. | [x] | [x] | [ ] | In-house compressor implemented; CTest transfer/stereo/bounds/reset/finite/variable-block/no-allocation checks pass. Linux CPU/memory results recorded; hardware/listening evidence remains open. |
 | [ ] | `DYN-07` | P1 | Optical-style compression. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-08` | P1 | FET-style compression. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-09` | P1 | Parallel compression with time-aligned dry blend. | [ ] | [ ] | [ ] | Not started |
@@ -37,7 +37,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `DYN-15` | P1 | Sidechain/envelope ducking. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DYN-16` | P2 | De-esser for a separately enabled vocal path. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-01` | P0 | Low-cut/high-pass and high-cut/low-pass filters. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `EQF-02` | P0 | Three/five-band parametric EQ with frequency, gain, Q. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `EQF-02` | P0 | Three/five-band parametric EQ with frequency, gain, Q. | [x] | [x] | [ ] | In-house three-band peaking EQ implemented with frequency/gain/Q per band; CTest response/channel/bounds/reset/finite/variable-block/no-allocation checks pass. Linux CPU/memory results recorded; hardware/listening evidence remains open. |
 | [ ] | `EQF-03` | P1 | Guitar graphic EQ with selectable band layouts. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-04` | P1 | Bass graphic EQ with appropriate frequency coverage. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `EQF-05` | P1 | Shelving and tilt EQ. | [ ] | [ ] | [ ] | Not started |
@@ -337,11 +337,12 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `WIN-02` | P0 | Verify portable preset save/load and matching DSP state across Windows, Linux, and Android builds. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `WIN-03` | P0 | Run automated Windows compile, DSP, preset, and audio-backend tests; retain exact toolchain and results. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `WIN-04` | P0 | Verify live full-duplex guitar input/output on Windows with an actual supported interface; keep this manual check open until performed. | [ ] | [ ] | [ ] | Not started |
-| [x] | `DSP-01` | P0 | Measure each processor's CPU use as a percentage of the callback deadline and report the complete benchmark configuration and percentiles. | [x] | [x] | [ ] | Four initial processors measured on Linux desktop; rerun on target hardware and after DSP changes |
-| [x] | `LIN-01` | P0 | Provide a reproducible Linux WAV ingest/render/regression path using prerecorded audio and deterministic settings. | [x] | [x] | [ ] | `make audio-regression` rendered five EGFxSet pickup variants and one 72.5-second Guitar-TECHS DI excerpt through Gain, Gate, Drive, and Delay; live audio hardware remains unprobed |
-| [ ] | `LIN-02` | P0 | Exercise the local prerecorded guitar corpus through implemented DSP and retain output metrics without publishing private audio. | [ ] | [ ] | [ ] | Not started |
+| [x] | `DSP-01` | P0 | Measure each processor's CPU use as a percentage of the callback deadline and report the complete benchmark configuration and percentiles. | [x] | [x] | [ ] | All six processors plus the six-effect chain measured on Linux desktop; p50/p95/p99/p99.9/max, owned memory, and exact configuration recorded in `LATENCY_AND_QUALITY.md`; repeat on Android/Windows and after DSP changes |
+| [x] | `LIN-01` | P0 | Provide a reproducible Linux WAV ingest/render/regression path using prerecorded audio and deterministic settings. | [x] | [x] | [ ] | `make audio-regression` rendered five EGFxSet pickup variants and one 72.5-second Guitar-TECHS DI excerpt through Gain, Gate, Compressor, Drive, EQ, and Delay; live audio hardware remains unprobed |
+| [x] | `LIN-02` | P0 | Exercise the local prerecorded guitar corpus through implemented DSP and retain output metrics without publishing private audio. | [x] | [x] | [ ] | Local-only regression passed on five pickup-position note files and the 72.5-second DI performance; render metrics were retained in command output and temporary WAV outputs removed; no user audio published |
 | [x] | `DATA-01` | P0 | Keep licensed prerecorded guitar fixtures outside Git, verify their source checksums, and expose them through a local-only ignored symlink. | [x] | [x] | [ ] | EGFxSet Clean (431,036,829 bytes) and Guitar-TECHS P3 music (129,505,089 bytes) pass MD5 verification; 690 and 32 WAVs extracted outside Git; ignored symlink resolves to external storage |
 | [x] | `DATA-02` | P0 | Run deterministic offline DSP regressions on documented clean pickup-position samples and a clean DI musical excerpt. | [x] | [x] | [ ] | `make audio-regression` passed for the same open high-E note across all five EGFxSet positions plus `directinput_01.wav`; source paths and processor settings are recorded in `AUDIO_COMPATIBILITY.md` |
+| [x] | `WIN-05` | P0 | Provide a repeatable MinGW-w64 Windows x64 cross-build of the shared DSP/offline CLI and a WASAPI backend compile-smoke target. | [x] | [x] | [ ] | `make windows-cross-build` passed with MinGW GCC 13.0 and CMake 3.28.3, compiling the shared DSP, offline CLI, WASAPI library, and smoke executable; Windows execution/device tests remain separate |
 | [ ] | `WEB-01` | P0 | Provide a browser/WASM guitar-audio test build whose Play control processes and plays the selected effect-chain output, with local-only files and automated audio-output comparison against native C++. | [ ] | [ ] | [ ] | Not started |
 
-Total source requirements: 327; approved additions: 9.
+Total source requirements: 327; approved additions: 11.

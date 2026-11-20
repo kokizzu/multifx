@@ -60,6 +60,45 @@ def check_render(executable: Path) -> None:
                 raise AssertionError(f"Sample {index}: expected {expected}, got {actual}")
 
 
+def check_compressor(executable: Path) -> None:
+    sample_rate = 48000
+    input_samples = [16384] * sample_rate
+    with tempfile.TemporaryDirectory(prefix="tabletfx-compressor-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        output = root / "output.wav"
+        write_pcm16(source, sample_rate, input_samples)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--compressor-threshold-db", "-24",
+                "--compressor-ratio", "4",
+                "--compressor-knee-db", "0",
+                "--compressor-attack-ms", "0.1",
+                "--compressor-release-ms", "50",
+                "--eq-band2-frequency-hz", "1000",
+                "--eq-band2-gain-db", "3",
+                "--eq-band2-q", "0.7",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=2" not in result.stdout:
+            raise AssertionError(f"Compressor chain was not constructed: {result.stdout}")
+        data = output.read_bytes()
+        values = struct.unpack("<" + "f" * sample_rate, data[44:])
+        input_level_db = 20.0 * math.log10(0.5)
+        expected_level_db = -24.0 + (input_level_db + 24.0) / 4.0
+        expected_sample = 10.0 ** (expected_level_db / 20.0)
+        if not math.isfinite(values[-1]) or abs(values[-1] - expected_sample) > 2.0e-3:
+            raise AssertionError(
+                f"Compressor output expected {expected_sample}, got {values[-1]}"
+            )
+        if not abs(values[-1]) < 0.5:
+            raise AssertionError("Compressor did not reduce a signal above threshold")
+
+
 def check_pcm24_padding(executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="tabletfx-pcm24-test-") as directory:
         root = Path(directory)
@@ -102,9 +141,10 @@ def main() -> None:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     check_render(args.executable.resolve())
+    check_compressor(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

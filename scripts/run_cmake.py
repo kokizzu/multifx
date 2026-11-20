@@ -14,6 +14,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build" / "native"
+WINDOWS_BUILD_DIR = ROOT / "build" / "windows-mingw"
+WINDOWS_TOOLCHAIN = ROOT / "cmake" / "toolchains" / "mingw-w64.cmake"
 
 
 def find_cmake() -> str:
@@ -76,6 +78,24 @@ def test(cmake: str, ctest: str) -> None:
     run([ctest, "--test-dir", str(BUILD_DIR), "-C", "Release", "--output-on-failure"])
 
 
+def build_windows(cmake: str) -> None:
+    compiler = shutil.which("x86_64-w64-mingw32-g++")
+    if not compiler:
+        raise SystemExit("MinGW-w64 x86_64 C++ compiler is required for windows-cross-build")
+    if not WINDOWS_TOOLCHAIN.is_file():
+        raise SystemExit(f"Windows CMake toolchain file is missing: {WINDOWS_TOOLCHAIN}")
+    command = [
+        cmake, "-S", str(ROOT), "-B", str(WINDOWS_BUILD_DIR),
+        "-DCMAKE_TOOLCHAIN_FILE=" + str(WINDOWS_TOOLCHAIN),
+        "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_TESTING=OFF",
+    ]
+    if shutil.which("ninja"):
+        command.extend(["-G", "Ninja"])
+    run(command)
+    run([cmake, "--build", str(WINDOWS_BUILD_DIR), "--parallel",
+         str(min(4, os.cpu_count() or 1))])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -90,7 +110,7 @@ def cpu_name() -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("configure", "build", "test", "bench"))
+    parser.add_argument("action", choices=("configure", "build", "test", "bench", "windows-build"))
     action = parser.parse_args().action
     cmake = find_cmake()
     ctest = find_ctest(cmake) if action == "test" else None
@@ -105,6 +125,8 @@ def main() -> None:
         print(f"CPU: {cpu_name()}")
         executable = BUILD_DIR / ("tabletfx_offline.exe" if os.name == "nt" else "tabletfx_offline")
         run([str(executable), "--bench"])
+    elif action == "windows-build":
+        build_windows(cmake)
 
 
 if __name__ == "__main__":

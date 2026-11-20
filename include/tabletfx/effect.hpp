@@ -13,6 +13,9 @@ public:
     [[nodiscard]] virtual std::string_view id() const noexcept = 0;
     virtual void process(std::span<float> interleaved, std::uint16_t channels) noexcept = 0;
     virtual void reset() noexcept {}
+    // Object plus memory owned directly by the processor; excludes caller buffers,
+    // allocator metadata, and backend/runtime overhead.
+    [[nodiscard]] virtual std::size_t memory_bytes() const noexcept = 0;
 };
 
 [[nodiscard]] inline std::size_t frame_count(std::span<const float> interleaved,
