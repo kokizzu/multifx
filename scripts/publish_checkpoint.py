@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "fix: verify and recover external audio extraction"
+COMMIT_MESSAGE = "fix: accept padded 24-bit guitar WAV data"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",

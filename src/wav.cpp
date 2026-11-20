@@ -117,8 +117,18 @@ AudioBuffer read_wav(const std::filesystem::path& path) {
     }
     const std::uint16_t bytes_per_sample = static_cast<std::uint16_t>(bits_per_sample / 8);
     const std::uint16_t expected_align = static_cast<std::uint16_t>(channels * bytes_per_sample);
-    if (block_align != expected_align || block_align == 0 || data.size() % block_align != 0) {
+    if (block_align != expected_align || block_align == 0) {
         throw std::runtime_error("Invalid WAV block alignment: " + path.string());
+    }
+    const std::size_t unaligned_bytes = data.size() % block_align;
+    if (unaligned_bytes != 0) {
+        // A small number of PCM writers include the RIFF word-padding byte in
+        // the data chunk length. Accept only one terminal zero byte; reject
+        // incomplete samples or frames of any other shape.
+        if (unaligned_bytes != 1 || data.empty() || data.back() != 0 || !pcm) {
+            throw std::runtime_error("Invalid WAV block alignment: " + path.string());
+        }
+        data.pop_back();
     }
 
     AudioBuffer audio{sample_rate, channels, {}};
