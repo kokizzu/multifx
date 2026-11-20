@@ -100,6 +100,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--compressor-knee-db", "6", "--compressor-attack-ms", "8",
         "--compressor-release-ms", "100",
         "--drive", "3", "--delay-ms", "125", "--delay-feedback", "0.2", "--delay-mix", "0.1",
+        "--pitch-semitones", "5",
         "--eq-band1-frequency-hz", "120", "--eq-band1-gain-db", "1.5", "--eq-band1-q", "0.7",
         "--eq-band2-frequency-hz", "900", "--eq-band2-gain-db", "-1", "--eq-band2-q", "1",
         "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "0.5", "--eq-band3-q", "0.7",
@@ -111,7 +112,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 16:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 17:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -158,7 +159,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the sixteen-effect offline chain.")
+    print("All prerecorded clean guitar inputs rendered through the seventeen-effect offline chain.")
 
 
 if __name__ == "__main__":

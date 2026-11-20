@@ -8,6 +8,7 @@
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
+#include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
@@ -62,6 +63,8 @@ struct Options {
     float delay_ms = 0.0F;
     float delay_feedback = 0.25F;
     float delay_mix = 0.0F;
+    bool pitch_enabled = false;
+    float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
     tabletfx::CompressorParameters compressor{};
     bool pedal_compressor_enabled = false;
@@ -285,6 +288,10 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--delay-ms") options.delay_ms = value;
         else if (key == "--delay-feedback") options.delay_feedback = value;
         else if (key == "--delay-mix") options.delay_mix = value;
+        else if (key == "--pitch-semitones") {
+            options.pitch_semitones = value;
+            options.pitch_enabled = true;
+        }
         else if (key == "--compressor-threshold-db") {
             options.compressor.threshold_db = value;
             options.compressor_enabled = true;
@@ -429,6 +436,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F, options.delay_ms,
             options.delay_feedback, options.delay_mix));
+    }
+    if (options.pitch_enabled) {
+        auto pitch = std::make_unique<tabletfx::PolyPitchShifter>(
+            static_cast<float>(sample_rate), channels);
+        pitch->set_pitch_semitones(options.pitch_semitones);
+        effects.push_back(std::move(pitch));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -798,6 +811,10 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
+    auto pitch = std::make_unique<tabletfx::PolyPitchShifter>(
+        static_cast<float>(sample_rate), channels);
+    pitch->set_pitch_semitones(5.0F);
+    effects.push_back(std::move(pitch));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -902,6 +919,18 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("poly-pitch-shifter", [=] {
+        auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
+            static_cast<float>(sample_rate), channels);
+        effect->set_pitch_semitones(5.0F);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("poly-pitch-shifter-mono", [=] {
+        auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
+            static_cast<float>(sample_rate), 1);
+        effect->set_pitch_semitones(5.0F);
+        return effect;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
     tabletfx::CompressorParameters compressor_parameters;
     compressor_parameters.threshold_db = -24.0F;
     compressor_parameters.ratio = 4.0F;
@@ -972,7 +1001,8 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                 " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"
+                 " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]"
+                 " [--pitch-semitones -12..12]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
                  " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"
               << "                 [--compressor-threshold-db dB] [--compressor-ratio 1..20]"

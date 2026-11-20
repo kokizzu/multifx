@@ -75,8 +75,15 @@
         <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="14" checked><span class="effect-number">15</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="15" checked><span class="effect-number">16</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="15" checked><span class="effect-number">16</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="16" checked><span class="effect-number">17</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+      </div>
+      <div class="gain-controls">
+        <label class="mix-control" for="pitch-semitones">
+          <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
+          <input id="pitch-semitones" type="range" min="-12" max="12" step="0.5" value="0">
+        </label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">

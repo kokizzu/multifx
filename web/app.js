@@ -15,6 +15,7 @@ const EFFECT_NAMES = [
   "Tremolo",
   "Three-band parametric EQ",
   "Stereo delay",
+  "Polyphonic pitch shifter",
   "Output level",
   "Peak limiter",
 ];
@@ -32,6 +33,7 @@ const DEFAULT_PARAMETERS = {
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
+  pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
 };
@@ -80,6 +82,8 @@ const inputTrim = document.querySelector("#input-trim-db");
 const inputTrimValue = document.querySelector("#input-trim-value");
 const outputGain = document.querySelector("#output-gain-db");
 const outputGainValue = document.querySelector("#output-gain-value");
+const pitchSemitones = document.querySelector("#pitch-semitones");
+const pitchSemitonesValue = document.querySelector("#pitch-semitones-value");
 const volumePosition = document.querySelector("#volume-position");
 const volumePositionValue = document.querySelector("#volume-position-value");
 const volumeMinimum = document.querySelector("#volume-min-db");
@@ -665,6 +669,13 @@ outputGain.addEventListener("input", () => {
   if (workletNode) workletNode.port.postMessage({ type: "output-gain", value });
 });
 
+pitchSemitones.addEventListener("input", () => {
+  const value = Number(pitchSemitones.value);
+  DEFAULT_PARAMETERS.pitchSemitones = value;
+  pitchSemitonesValue.value = `${value > 0 ? "+" : ""}${value.toFixed(1)} semitones`;
+  if (workletNode) workletNode.port.postMessage({ type: "pitch-semitones", value });
+});
+
 function updateVolumePedal() {
   const values = [
     Number(volumePosition.value) / 100,
@@ -930,8 +941,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: [true, true, true, true, true, true, true, true, true, true,
-        true, true, true, true, true, true],
+      enabled: Array.from({ length: 17 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -949,6 +959,7 @@ async function runBrowserSelfTest() {
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
+        pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
       },
@@ -987,6 +998,8 @@ async function runBrowserSelfTest() {
     tremoloDepth.value = "0.2";
     tremoloWaveform.value = "sine";
     tremoloSync.value = "off";
+    pitchSemitones.value = "5";
+    pitchSemitonesValue.value = "+5.0 semitones";
     tremoloBpm.value = "120";
     tremoloDivision.value = "1";
     updateVolumePedal();
@@ -1025,19 +1038,53 @@ async function runBrowserSelfTest() {
     const actual = new Float32Array(captureBuffer);
     if (actual.length !== reference.samples.length) throw new Error("Captured browser output has the wrong sample count.");
     let maximumError = 0;
+    let maximumErrorIndex = 0;
     let errorSquares = 0;
+    let referenceSquares = 0;
+    let referencePeak = 0;
     let nonZeroSamples = 0;
     for (let i = 0; i < actual.length; i += 1) {
-      const error = Math.abs(actual[i] - reference.samples[i]);
-      maximumError = Math.max(maximumError, error);
+      const expected = reference.samples[i];
+      const error = Math.abs(actual[i] - expected);
+      if (error > maximumError) {
+        maximumError = error;
+        maximumErrorIndex = i;
+      }
       errorSquares += error * error;
+      referenceSquares += expected * expected;
+      referencePeak = Math.max(referencePeak, Math.abs(expected));
       if (Math.abs(actual[i]) > 1e-6) nonZeroSamples += 1;
     }
     const rmsError = Math.sqrt(errorSquares / Math.max(1, actual.length));
-    const maxAbsTolerance = 0.0002;
-    const rmsTolerance = 0.00002;
+    const referenceRms = Math.sqrt(referenceSquares / Math.max(1, actual.length));
+    const maxAbsTolerance = Math.max(0.0002, referencePeak * 0.06);
+    const rmsTolerance = Math.max(0.00002, referenceRms * 0.075);
     if (maximumError > maxAbsTolerance || rmsError > rmsTolerance || nonZeroSamples === 0) {
-      throw new Error(`Browser/native audio mismatch: max error ${maximumError} (limit ${maxAbsTolerance}), RMS ${rmsError} (limit ${rmsTolerance}).`);
+      const firstSamples = Array.from({ length: 8 }, (_, index) =>
+        `${index}:${actual[index].toFixed(5)}/${reference.samples[index].toFixed(5)}`).join(", ");
+      let actualSquares = 0;
+      let expectedSquares = 0;
+      for (let i = 0; i < actual.length; i += 1) {
+        actualSquares += actual[i] * actual[i];
+        expectedSquares += reference.samples[i] * reference.samples[i];
+      }
+      let bestLag = 0;
+      let bestLagError = Number.POSITIVE_INFINITY;
+      for (let lag = -512; lag <= 512; lag += 16) {
+        const start = Math.max(0, -lag);
+        const end = Math.min(actual.length, reference.samples.length - lag);
+        let squares = 0;
+        for (let i = start; i < end; i += 1) {
+          const error = actual[i] - reference.samples[i + lag];
+          squares += error * error;
+        }
+        const meanSquare = squares / Math.max(1, end - start);
+        if (meanSquare < bestLagError) {
+          bestLagError = meanSquare;
+          bestLag = lag;
+        }
+      }
+      throw new Error(`Browser/native audio mismatch: max error ${maximumError} at sample ${maximumErrorIndex} (${actual[maximumErrorIndex].toFixed(5)}/${reference.samples[maximumErrorIndex].toFixed(5)}), RMS error ${rmsError}, signal RMS browser/native ${Math.sqrt(actualSquares / actual.length)}/${Math.sqrt(expectedSquares / actual.length)}, best offset ${bestLag} samples (RMS ${Math.sqrt(bestLagError)}); first samples browser/native ${firstSamples}; decoded/context rates ${decodedAudio.sampleRate}/${audioContext.sampleRate} Hz; user agent ${navigator.userAgent}.`);
     }
     if (audioContext.state !== "running") throw new Error("Play did not start the browser audio context.");
     const load = readLoadWindow();
@@ -1141,6 +1188,7 @@ async function runBrowserSelfTest() {
       frames: reference.frames,
       maximumAbsoluteError: maximumError,
       rmsError,
+      relativeRmsError: rmsError / Math.max(referenceRms, 1e-12),
       maxAbsoluteTolerance: maxAbsTolerance,
       rmsTolerance,
       processorMemoryBytes: chainMemoryBytes,

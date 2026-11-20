@@ -66,6 +66,57 @@ def check_render(executable: Path) -> None:
                 raise AssertionError(f"Sample {index}: expected {expected}, got {actual}")
 
 
+def check_pitch_shifter(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-pitch-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "tone.wav"
+        output = root / "shifted.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--pitch-semitones", "7"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Pitch option did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        header = struct.unpack("<4sI4s4sIHHIIHH4sI", data[:44])
+        if header[5:8] != (3, 1, sample_rate) or header[10] != 32:
+            raise AssertionError(f"Pitch render has unexpected WAV format: {header}")
+        samples = struct.unpack("<" + "f" * ((len(data) - 44) // 4), data[44:])
+        start = 18000
+        length = 12000
+
+        def amplitude_at(frequency: float) -> float:
+            cosine = 0.0
+            sine = 0.0
+            window_sum = 0.0
+            for offset in range(length):
+                window = 0.5 - 0.5 * math.cos(2.0 * math.pi * offset / (length - 1))
+                angle = 2.0 * math.pi * frequency * offset / sample_rate
+                value = samples[start + offset] * window
+                cosine += value * math.cos(angle)
+                sine += value * math.sin(angle)
+                window_sum += window
+            return 2.0 * math.hypot(cosine, sine) / window_sum
+
+        expected = 220.0 * 2.0 ** (7.0 / 12.0)
+        candidates = [expected * 0.94 + index * 0.5 for index in range(49)]
+        frequency = max(candidates, key=amplitude_at)
+        amplitude = amplitude_at(frequency)
+        cents = 1200.0 * math.log2(frequency / expected)
+        if abs(cents) > 40.0 or amplitude < 0.03:
+            raise AssertionError(
+                f"CLI pitch result {frequency:.2f} Hz ({cents:.1f} cents), amplitude {amplitude:.3f}"
+            )
+
+
 def check_compressor(executable: Path) -> None:
     sample_rate = 48000
     input_samples = [16384] * sample_rate
@@ -308,6 +359,7 @@ def main() -> None:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     check_render(args.executable.resolve())
+    check_pitch_shifter(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
@@ -315,7 +367,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

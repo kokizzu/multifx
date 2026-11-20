@@ -7,6 +7,7 @@
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
+#include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
@@ -54,7 +55,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(14);
+        effects_.reserve(15);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -95,6 +96,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::Delay>(
                                 static_cast<float>(sample_rate), channels, 2000.0F,
                                 350.0F, 0.25F, 0.25F),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::PolyPitchShifter>(
+                                static_cast<float>(sample_rate), channels),
                             false});
     }
 
@@ -303,6 +307,11 @@ public:
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
         static_cast<tabletfx::Delay*>(effects_[13].effect.get())
             ->configure(delay_ms, feedback, mix);
+    }
+
+    void configure_pitch(float semitones) noexcept {
+        static_cast<tabletfx::PolyPitchShifter*>(effects_[14].effect.get())
+            ->set_pitch_semitones(semitones);
     }
 
     void configure_filters(float high_pass_hz, float low_pass_hz) noexcept {
@@ -841,6 +850,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,
                                              float feedback, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay(delay_ms, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch(void* opaque, float semitones) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch(semitones);
     }
 }
 

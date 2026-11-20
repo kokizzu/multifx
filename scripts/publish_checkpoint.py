@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency chromatic tuner"
+COMMIT_MESSAGE = "feat: add low-latency polyphonic pitch shifter"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -56,6 +56,7 @@ CHECKPOINT_PATHS = (
     "include/tabletfx/effects/tremolo.hpp",
     "include/tabletfx/effects/volume_pedal.hpp",
     "include/tabletfx/effects/wah.hpp",
+    "include/tabletfx/effects/poly_pitch_shifter.hpp",
     "include/tabletfx/wav.hpp",
     "scripts/audio_fixtures.py",
     "scripts/audio_regression.py",
@@ -69,6 +70,7 @@ CHECKPOINT_PATHS = (
     "scripts/test_offline_cli.py",
     "scripts/validate_docs.py",
     "scripts/web.py",
+    "src/effects/poly_pitch_shifter.cpp",
     "src/effects.cpp",
     "src/channel_conversion.cpp",
     "src/parallel_mixer.cpp",
@@ -94,6 +96,7 @@ CHECKPOINT_PATHS = (
     "tests/test_level_meter.cpp",
     "tests/test_signal_controls.cpp",
     "tests/test_tuner.cpp",
+    "tests/test_poly_pitch_shifter.cpp",
     "tests/wasapi_compile.cpp",
     "web/app.js",
     "web/audio-worklet.js",
@@ -101,6 +104,29 @@ CHECKPOINT_PATHS = (
     "web/style.css",
     "web/wav_decoder.js",
     "web/worklet-smoke.js",
+    "third_party/stft-pitch-shift/Arctangent.h",
+    "third_party/stft-pitch-shift/Cepster.h",
+    "third_party/stft-pitch-shift/FFT.h",
+    "third_party/stft-pitch-shift/LICENSE.txt",
+    "third_party/stft-pitch-shift/Normalizer.h",
+    "third_party/stft-pitch-shift/Pitcher.h",
+    "third_party/stft-pitch-shift/RFFT.h",
+    "third_party/stft-pitch-shift/Resampler.h",
+    "third_party/stft-pitch-shift/STFT.h",
+    "third_party/stft-pitch-shift/StftPitchShiftCore.h",
+    "third_party/stft-pitch-shift/Timer.h",
+    "third_party/stft-pitch-shift/Vocoder.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Arctangent.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Cepster.h",
+    "third_party/stft-pitch-shift/StftPitchShift/FFT.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Normalizer.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Pitcher.h",
+    "third_party/stft-pitch-shift/StftPitchShift/RFFT.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Resampler.h",
+    "third_party/stft-pitch-shift/StftPitchShift/STFT.h",
+    "third_party/stft-pitch-shift/StftPitchShift/StftPitchShiftCore.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Timer.h",
+    "third_party/stft-pitch-shift/StftPitchShift/Vocoder.h",
 )
 
 

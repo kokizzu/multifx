@@ -3,7 +3,8 @@ import createWasmModule from "../build/web/tabletfx_wasm.js";
 const EFFECTS = [
   "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
   "pedal-compressor", "compressor", "wah", "envelope-wah", "clean-boost",
-  "soft-drive", "tremolo", "three-band-eq", "delay", "output-level", "peak-limiter",
+  "soft-drive", "tremolo", "three-band-eq", "delay", "poly-pitch-shifter",
+  "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -57,7 +58,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.tunerGeneration = 0;
     this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     this.enabled = config.enabled || [true, true, false, false, false, false,
-      true, false, false, false, false, false, false, false, true, true];
+      true, false, false, false, false, false, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -105,6 +106,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_eq(this.chain, ...eq);
       const delay = parameters.delay || [350, 0.25, 0.25];
       module._tf_chain_set_delay(this.chain, ...delay);
+      module._tf_chain_set_pitch(this.chain, parameters.pitchSemitones ?? 0);
       const filters = parameters.filters || [80, 12000];
       module._tf_chain_set_filters(this.chain, ...filters);
       const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
@@ -175,6 +177,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_input_gain(this.chain, Number(message.value));
     } else if (message.type === "output-gain" && this.ready) {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
+    } else if (message.type === "pitch-semitones" && this.ready) {
+      this.module._tf_chain_set_pitch(this.chain, Number(message.value));
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

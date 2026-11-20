@@ -117,7 +117,8 @@ def build_web() -> None:
         "_tf_chain_begin", "_tf_chain_process_effect", "_tf_chain_finish",
         "_tf_chain_reset", "_tf_chain_set_compressor", "_tf_chain_set_drive",
         "_tf_chain_set_clean_boost",
-        "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_filters",
+        "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_pitch",
+        "_tf_chain_set_filters",
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
         "_tf_chain_ramp_output_gain", "_tf_chain_process_output_gain",
@@ -139,6 +140,7 @@ def build_web() -> None:
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
         "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow",
         "-I", str(ROOT / "include"),
+        "-isystem", str(ROOT / "third_party" / "stft-pitch-shift"),
         str(ROOT / "src" / "effects.cpp"),
         str(ROOT / "src" / "channel_conversion.cpp"),
         str(ROOT / "src" / "parallel_mixer.cpp"),
@@ -148,6 +150,7 @@ def build_web() -> None:
         str(ROOT / "src" / "signal_controls.cpp"),
         str(ROOT / "src" / "effects" / "filters.cpp"),
         str(ROOT / "src" / "effects" / "peak_limiter.cpp"),
+        str(ROOT / "src" / "effects" / "poly_pitch_shifter.cpp"),
         str(ROOT / "src" / "effects" / "pedal_compressor.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
@@ -455,6 +458,7 @@ def browser_test() -> None:
             "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "1",
             "--eq-band3-q", "0.707",
             "--delay-ms", "180", "--delay-feedback", "0.25", "--delay-mix", "0.2",
+            "--pitch-semitones", "5",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

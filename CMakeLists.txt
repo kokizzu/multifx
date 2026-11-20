@@ -15,6 +15,7 @@ add_library(tabletfx_core
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
+    src/effects/poly_pitch_shifter.cpp
     src/effects/tremolo.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
@@ -23,6 +24,9 @@ add_library(tabletfx_core
     src/signal_controls.cpp
 )
 target_include_directories(tabletfx_core PUBLIC include)
+target_include_directories(tabletfx_core SYSTEM PRIVATE
+    third_party/stft-pitch-shift
+)
 target_compile_definitions(tabletfx_core PUBLIC TABLETFX_BUILD_TYPE="$<CONFIG>")
 if(MSVC)
     target_compile_options(tabletfx_core PRIVATE /W4 /permissive-)
@@ -86,6 +90,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tuner_tests tests/test_tuner.cpp)
     target_link_libraries(tabletfx_tuner_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tuner_tests COMMAND tabletfx_tuner_tests)
+
+    add_executable(tabletfx_poly_pitch_shifter_tests tests/test_poly_pitch_shifter.cpp)
+    target_link_libraries(tabletfx_poly_pitch_shifter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_poly_pitch_shifter_tests COMMAND tabletfx_poly_pitch_shifter_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)
