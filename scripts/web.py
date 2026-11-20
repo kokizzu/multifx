@@ -118,6 +118,8 @@ def build_web() -> None:
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
         "_tf_chain_ramp_output_gain", "_tf_chain_process_output_gain",
+        "_tf_chain_process_output_limiter", "_tf_chain_set_volume_pedal",
+        "_tf_chain_set_limiter",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -125,7 +127,9 @@ def build_web() -> None:
         "-I", str(ROOT / "include"),
         str(ROOT / "src" / "effects.cpp"),
         str(ROOT / "src" / "effects" / "filters.cpp"),
+        str(ROOT / "src" / "effects" / "peak_limiter.cpp"),
         str(ROOT / "src" / "effects" / "pedal_compressor.cpp"),
+        str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "web" / "wasm_chain.cpp"),
         "-o", str(WEB_BUILD_DIR / "tabletfx_wasm.js"),
         "-sMODULARIZE=1", "-sEXPORT_ES6=1", "-sSINGLE_FILE=1",
@@ -159,6 +163,14 @@ class LocalWebHandler(SimpleHTTPRequestHandler):
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def copyfile(self, source, outputfile) -> None:
+        try:
+            super().copyfile(source, outputfile)
+        except (BrokenPipeError, ConnectionResetError):
+            # Headless Chrome may close a completed test response while the
+            # threaded static server is still flushing the last buffered bytes.
+            pass
 
     def do_GET(self) -> None:
         self.request_paths.append(urlsplit(self.path).path)
@@ -369,6 +381,9 @@ def browser_test() -> None:
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
             "--gain-db", "2", "--output-gain-db", "-1",
+            "--volume-position", "0.92", "--volume-min-db", "-96",
+            "--volume-max-db", "0", "--volume-curve", "audio",
+            "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
             "--gate-threshold-db", "-72",
             "--compressor-threshold-db", "-18", "--compressor-ratio", "3",
             "--compressor-knee-db", "6", "--compressor-attack-ms", "8",

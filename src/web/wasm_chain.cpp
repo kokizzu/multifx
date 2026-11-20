@@ -2,8 +2,10 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
+#include "tabletfx/effects/volume_pedal.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -38,11 +40,15 @@ public:
           dry_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           work_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
-          output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F) {
-        effects_.reserve(9);
+          output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
+          output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F) {
+        effects_.reserve(10);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::VolumePedal>(
+                                static_cast<float>(sample_rate)),
+                            true});
         effects_.push_back({std::make_unique<tabletfx::HighPassFilter>(
                                 static_cast<float>(sample_rate), channels, 80.0F),
                             false});
@@ -68,7 +74,7 @@ public:
                             false});
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 1; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -76,6 +82,10 @@ public:
     [[nodiscard]] bool set_enabled(std::uint32_t index, bool enabled) noexcept {
         if (index == effects_.size()) {
             output_gain_enabled_ = enabled;
+            return true;
+        }
+        if (index == effects_.size() + 1) {
+            output_limiter_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -136,18 +146,27 @@ public:
         output_gain_.process(std::span<float>(output_.data(), samples), channels_);
     }
 
+    void process_output_limiter() noexcept {
+        if (frames_ == 0 || !output_limiter_enabled_) {
+            return;
+        }
+        const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        output_limiter_.process(std::span<float>(output_.data(), samples), channels_);
+    }
+
     void reset() noexcept {
         for (EffectEntry& entry : effects_) {
             entry.effect->reset();
         }
         output_gain_.reset();
+        output_limiter_.reset();
         frames_ = 0;
     }
 
     void configure_compressor(float threshold_db, float ratio, float knee_db,
                               float attack_ms, float release_ms,
                               float makeup_db) noexcept {
-        auto* compressor = static_cast<tabletfx::Compressor*>(effects_[5].effect.get());
+        auto* compressor = static_cast<tabletfx::Compressor*>(effects_[6].effect.get());
         tabletfx::CompressorParameters parameters;
         parameters.threshold_db = threshold_db;
         parameters.ratio = ratio;
@@ -159,23 +178,23 @@ public:
     }
 
     void configure_drive(float drive) noexcept {
-        static_cast<tabletfx::SoftDrive*>(effects_[6].effect.get())->set_drive(drive);
+        static_cast<tabletfx::SoftDrive*>(effects_[7].effect.get())->set_drive(drive);
     }
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[7].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[8].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[8].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[9].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
     void configure_filters(float high_pass_hz, float low_pass_hz) noexcept {
-        static_cast<tabletfx::HighPassFilter*>(effects_[1].effect.get())->configure(high_pass_hz);
-        static_cast<tabletfx::LowPassFilter*>(effects_[2].effect.get())->configure(low_pass_hz);
+        static_cast<tabletfx::HighPassFilter*>(effects_[2].effect.get())->configure(high_pass_hz);
+        static_cast<tabletfx::LowPassFilter*>(effects_[3].effect.get())->configure(low_pass_hz);
     }
 
     void configure_input_gain(float gain_db) noexcept {
@@ -201,8 +220,22 @@ public:
         parameters.sustain = sustain;
         parameters.attack = attack;
         parameters.level_db = level_db;
-        static_cast<tabletfx::PedalCompressor*>(effects_[4].effect.get())
+        static_cast<tabletfx::PedalCompressor*>(effects_[5].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_volume_pedal(float position, float minimum_db,
+                                float maximum_db, std::uint32_t taper) noexcept {
+        auto* pedal = static_cast<tabletfx::VolumePedal*>(effects_[1].effect.get());
+        pedal->set_endpoints_db(minimum_db, maximum_db);
+        pedal->set_taper(taper == 0 ? tabletfx::VolumePedalTaper::LinearAmplitude
+                                    : tabletfx::VolumePedalTaper::AudioTaperDb);
+        pedal->set_position(position);
+    }
+
+    void configure_limiter(float ceiling_db, float release_ms) noexcept {
+        output_limiter_.set_ceiling_db(ceiling_db);
+        output_limiter_.set_release_ms(release_ms);
     }
 
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
@@ -210,6 +243,7 @@ public:
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
         bytes += work_.capacity() * sizeof(float) + output_.capacity() * sizeof(float);
         bytes += output_gain_.memory_bytes();
+        bytes += output_limiter_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -221,6 +255,9 @@ public:
     [[nodiscard]] std::uint32_t effect_memory_bytes(std::uint32_t index) const noexcept {
         if (index == effects_.size()) {
             return static_cast<std::uint32_t>(output_gain_.memory_bytes());
+        }
+        if (index == effects_.size() + 1) {
+            return static_cast<std::uint32_t>(output_limiter_.memory_bytes());
         }
         if (index >= effects_.size()) {
             return 0;
@@ -242,7 +279,9 @@ private:
     std::vector<float> work_;
     std::vector<float> output_;
     tabletfx::Gain output_gain_;
+    tabletfx::PeakLimiter output_limiter_;
     bool output_gain_enabled_ = true;
+    bool output_limiter_enabled_ = true;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -351,6 +390,12 @@ TABLETFX_WASM_EXPORT void tf_chain_process_output_gain(void* opaque) noexcept {
     }
 }
 
+TABLETFX_WASM_EXPORT void tf_chain_process_output_limiter(void* opaque) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->process_output_limiter();
+    }
+}
+
 TABLETFX_WASM_EXPORT void tf_chain_reset(void* opaque) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->reset();
@@ -379,6 +424,22 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pedal_compressor(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pedal_compressor(sensitivity, sustain, attack,
                                                      level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_volume_pedal(
+    void* opaque, float position, float minimum_db, float maximum_db,
+    std::uint32_t taper) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_volume_pedal(position, minimum_db,
+                                                 maximum_db, taper);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_limiter(
+    void* opaque, float ceiling_db, float release_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_limiter(ceiling_db, release_ms);
     }
 }
 

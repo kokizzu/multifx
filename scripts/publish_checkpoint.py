@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add smoothed input and output gain"
+COMMIT_MESSAGE = "feat: add volume pedal and peak limiter"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -30,11 +30,15 @@ CHECKPOINT_PATHS = (
     "include/tabletfx/effect.hpp",
     "include/tabletfx/effects.hpp",
     "tests/test_gain.cpp",
+    "tests/test_peak_limiter.cpp",
+    "tests/test_volume_pedal.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",
     "include/tabletfx/effects/compressor.hpp",
     "include/tabletfx/effects/three_band_eq.hpp",
+    "include/tabletfx/effects/peak_limiter.hpp",
+    "include/tabletfx/effects/volume_pedal.hpp",
     "include/tabletfx/wav.hpp",
     "scripts/audio_fixtures.py",
     "scripts/audio_regression.py",
@@ -51,6 +55,8 @@ CHECKPOINT_PATHS = (
     "src/effects.cpp",
     "src/effects/filters.cpp",
     "src/effects/pedal_compressor.cpp",
+    "src/effects/peak_limiter.cpp",
+    "src/effects/volume_pedal.cpp",
     "src/audio/wasapi_backend.cpp",
     "src/web/wasm_chain.cpp",
     "src/wav.cpp",

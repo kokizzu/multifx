@@ -1,8 +1,10 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
+#include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/wav.hpp"
 
 #include <algorithm>
@@ -28,6 +30,11 @@ using Clock = std::chrono::steady_clock;
 struct Options {
     float gain_db = 0.0F;
     float output_gain_db = 0.0F;
+    bool volume_pedal_enabled = false;
+    tabletfx::VolumePedalParameters volume_pedal{};
+    bool limiter_enabled = false;
+    float limiter_ceiling_db = -1.0F;
+    float limiter_release_ms = 80.0F;
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     float gate_threshold_db = -120.0F;
@@ -68,9 +75,41 @@ Options parse_options(int argc, char** argv, int first) {
         if (i + 1 >= argc) {
             throw std::invalid_argument("Missing value for " + std::string(key));
         }
+        if (key == "--volume-curve") {
+            const std::string_view value(argv[++i]);
+            if (value == "linear") {
+                options.volume_pedal.taper = tabletfx::VolumePedalTaper::LinearAmplitude;
+            } else if (value == "audio") {
+                options.volume_pedal.taper = tabletfx::VolumePedalTaper::AudioTaperDb;
+            } else {
+                throw std::invalid_argument("Volume curve must be 'linear' or 'audio'");
+            }
+            options.volume_pedal_enabled = true;
+            continue;
+        }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
         else if (key == "--output-gain-db") options.output_gain_db = value;
+        else if (key == "--volume-position") {
+            options.volume_pedal.position = value;
+            options.volume_pedal_enabled = true;
+        }
+        else if (key == "--volume-min-db") {
+            options.volume_pedal.minimum_db = value;
+            options.volume_pedal_enabled = true;
+        }
+        else if (key == "--volume-max-db") {
+            options.volume_pedal.maximum_db = value;
+            options.volume_pedal_enabled = true;
+        }
+        else if (key == "--limiter-ceiling-db") {
+            options.limiter_ceiling_db = value;
+            options.limiter_enabled = true;
+        }
+        else if (key == "--limiter-release-ms") {
+            options.limiter_release_ms = value;
+            options.limiter_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") options.gate_threshold_db = value;
@@ -167,6 +206,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.gain_db, static_cast<float>(sample_rate)));
     }
+    if (options.volume_pedal_enabled) {
+        effects.push_back(std::make_unique<tabletfx::VolumePedal>(
+            static_cast<float>(sample_rate), options.volume_pedal));
+    }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
             static_cast<float>(sample_rate), channels, options.high_pass_hz));
@@ -206,6 +249,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
+    }
+    if (options.limiter_enabled) {
+        effects.push_back(std::make_unique<tabletfx::PeakLimiter>(
+            static_cast<float>(sample_rate), options.limiter_ceiling_db,
+            options.limiter_release_ms));
     }
     return effects;
 }
@@ -299,6 +347,10 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
 
     std::vector<std::unique_ptr<tabletfx::Effect>> effects;
     effects.push_back(std::make_unique<tabletfx::Gain>(2.0F, static_cast<float>(sample_rate)));
+    tabletfx::VolumePedalParameters volume_parameters;
+    volume_parameters.position = 0.82F;
+    effects.push_back(std::make_unique<tabletfx::VolumePedal>(
+        static_cast<float>(sample_rate), volume_parameters));
     effects.push_back(std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F));
     effects.push_back(std::make_unique<tabletfx::LowPassFilter>(sample_rate, channels, 12000.0F));
     effects.push_back(std::make_unique<tabletfx::NoiseGate>(sample_rate, -72.0F));
@@ -309,6 +361,7 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
 
     std::vector<float> buffer(block_frames * channels);
     std::uint32_t noise = 0x1234567U;
@@ -372,6 +425,11 @@ void run_bench() {
     benchmark_one("output-gain", [=] {
         return std::make_unique<tabletfx::Gain>(-6.0F, static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("volume-pedal", [=] {
+        tabletfx::VolumePedalParameters parameters;
+        parameters.position = 0.72F;
+        return std::make_unique<tabletfx::VolumePedal>(static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("high-pass", [=] {
         return std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
@@ -399,12 +457,17 @@ void run_bench() {
                           5000.0F, 4.0F, 0.707F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("peak-limiter", [=] {
+        return std::make_unique<tabletfx::PeakLimiter>(static_cast<float>(sample_rate), -1.0F, 80.0F);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
 void print_usage() {
     std::cerr << "Usage:\n"
               << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--output-gain-db dB]"
+                 " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
+                 " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB]"
                  " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]\n"

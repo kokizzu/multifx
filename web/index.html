@@ -57,15 +57,17 @@
       </div>
       <div class="effects-list">
         <label class="effect-row"><input type="checkbox" data-effect="0" checked><span class="effect-number">01</span><span class="effect-name">Input trim</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="1"><span class="effect-number">02</span><span class="effect-name">High-pass</span><span class="effect-default">80 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="2"><span class="effect-number">03</span><span class="effect-name">Low-pass</span><span class="effect-default">12 kHz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="3"><span class="effect-number">04</span><span class="effect-name">Noise gate</span><span class="effect-default">−72 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Pedal compressor</span><span class="effect-default">Sens / Sustain / Attack / Level</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="5" checked><span class="effect-number">06</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="6"><span class="effect-number">07</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="9" checked><span class="effect-number">10</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="1" checked><span class="effect-number">02</span><span class="effect-name">Volume pedal</span><span class="effect-default">Audio taper · 0–100%</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="2"><span class="effect-number">03</span><span class="effect-name">High-pass</span><span class="effect-default">80 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="3"><span class="effect-number">04</span><span class="effect-name">Low-pass</span><span class="effect-default">12 kHz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Noise gate</span><span class="effect-default">−72 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="5"><span class="effect-number">06</span><span class="effect-name">Pedal compressor</span><span class="effect-default">Sens / Sustain / Attack / Level</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="6" checked><span class="effect-number">07</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="10" checked><span class="effect-number">11</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="11" checked><span class="effect-number">12</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">
@@ -75,6 +77,34 @@
         <label class="mix-control" for="output-gain-db">
           <span>Output level</span><output id="output-gain-value" for="output-gain-db">0.0 dB</output>
           <input id="output-gain-db" type="range" min="-24" max="12" step="0.5" value="0">
+        </label>
+      </div>
+      <div class="gain-controls">
+        <label class="mix-control" for="volume-position">
+          <span>Expression position</span><output id="volume-position-value" for="volume-position">100%</output>
+          <input id="volume-position" type="range" min="0" max="100" step="1" value="100">
+        </label>
+        <label class="mix-control" for="volume-taper">
+          <span>Expression taper</span>
+          <select id="volume-taper"><option value="audio" selected>Audio / dB</option><option value="linear">Linear amplitude</option></select>
+        </label>
+        <label class="mix-control" for="volume-min-db">
+          <span>Heel endpoint</span><output id="volume-min-value" for="volume-min-db">−96 dB</output>
+          <input id="volume-min-db" type="range" min="-96" max="0" step="1" value="-96">
+        </label>
+        <label class="mix-control" for="volume-max-db">
+          <span>Toe endpoint</span><output id="volume-max-value" for="volume-max-db">0 dB</output>
+          <input id="volume-max-db" type="range" min="-24" max="12" step="0.5" value="0">
+        </label>
+      </div>
+      <div class="gain-controls">
+        <label class="mix-control" for="limiter-ceiling-db">
+          <span>Peak ceiling</span><output id="limiter-ceiling-value" for="limiter-ceiling-db">−1 dBFS</output>
+          <input id="limiter-ceiling-db" type="range" min="-24" max="0" step="0.5" value="-1">
+        </label>
+        <label class="mix-control" for="limiter-release-ms">
+          <span>Limiter release</span><output id="limiter-release-value" for="limiter-release-ms">80 ms</output>
+          <input id="limiter-release-ms" type="range" min="5" max="500" step="5" value="80">
         </label>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>

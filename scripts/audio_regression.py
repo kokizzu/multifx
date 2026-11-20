@@ -74,6 +74,9 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
     command = [
         str(renderer), "render", str(source), str(output),
         "--gain-db", "2", "--output-gain-db", "-1",
+        "--volume-position", "0.92", "--volume-min-db", "-96",
+        "--volume-max-db", "0", "--volume-curve", "audio",
+        "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
         "--high-pass-hz", "80", "--low-pass-hz", "12000",
         "--gate-threshold-db", "-72",
         "--pedal-compressor-sensitivity", "0.45",
@@ -93,8 +96,10 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 10:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 12:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
+    if float(match.group(3)) > 0.8914:
+        raise RuntimeError(f"Peak limiter exceeded its -1 dBFS ceiling for {source}: {report}")
     if not output.is_file() or output.stat().st_size <= 44:
         raise RuntimeError(f"Renderer did not write audio output for {source}: {output}")
     return report
@@ -132,7 +137,7 @@ def main() -> None:
         source = music_files[0]
         report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the ten-effect offline chain.")
+    print("All prerecorded clean guitar inputs rendered through the twelve-effect offline chain.")
 
 
 if __name__ == "__main__":

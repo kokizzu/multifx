@@ -9,7 +9,9 @@ add_library(tabletfx_core
     src/effects.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
+    src/effects/peak_limiter.cpp
     src/wav.cpp
+    src/effects/volume_pedal.cpp
 )
 target_include_directories(tabletfx_core PUBLIC include)
 target_compile_definitions(tabletfx_core PUBLIC TABLETFX_BUILD_TYPE="$<CONFIG>")
@@ -47,6 +49,14 @@ if(BUILD_TESTING)
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_gain_tests COMMAND tabletfx_gain_tests)
+
+    add_executable(tabletfx_peak_limiter_tests tests/test_peak_limiter.cpp)
+    target_link_libraries(tabletfx_peak_limiter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_peak_limiter_tests COMMAND tabletfx_peak_limiter_tests)
+
+    add_executable(tabletfx_volume_pedal_tests tests/test_volume_pedal.cpp)
+    target_link_libraries(tabletfx_volume_pedal_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_volume_pedal_tests COMMAND tabletfx_volume_pedal_tests)
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
         add_test(

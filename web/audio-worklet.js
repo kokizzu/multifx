@@ -1,8 +1,9 @@
 import createWasmModule from "../build/web/tabletfx_wasm.js";
 
 const EFFECTS = [
-  "input-trim", "high-pass", "low-pass", "noise-gate", "pedal-compressor",
-  "compressor", "soft-drive", "three-band-eq", "delay", "output-level",
+  "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
+  "pedal-compressor", "compressor", "soft-drive", "three-band-eq", "delay",
+  "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -38,7 +39,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.captureControl = config.captureControl ? new Int32Array(config.captureControl) : null;
     this.captureOffset = 0;
     this.captureComplete = false;
-    this.enabled = config.enabled || [false, false, false, false, false, true, false, false, false, true];
+    this.enabled = config.enabled || [true, true, false, false, false, false,
+      true, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -69,6 +71,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_filters(this.chain, ...filters);
       const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
       module._tf_chain_set_pedal_compressor(this.chain, ...pedalCompressor);
+      const volumePedal = parameters.volumePedal || [1, -96, 0, 1];
+      module._tf_chain_set_volume_pedal(this.chain, ...volumePedal);
+      const limiter = parameters.limiter || [-1, 80];
+      module._tf_chain_set_limiter(this.chain, ...limiter);
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
         effectMemoryBytes.push(module._tf_chain_effect_memory_bytes(this.chain, i));
@@ -105,6 +111,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_input_gain(this.chain, Number(message.value));
     } else if (message.type === "output-gain" && this.ready) {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
+    } else if (message.type === "volume-pedal" && this.ready) {
+      this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
+    } else if (message.type === "limiter" && this.ready) {
+      this.module._tf_chain_set_limiter(this.chain, ...message.value);
     } else if (message.type === "reset" && this.ready) {
       this.module._tf_chain_reset(this.chain);
     }
@@ -153,7 +163,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     const ringOffset = this.stats
       ? STATS_HEADER_WORDS + ((sequence % STATS_RING_BLOCKS) * STATS_EFFECT_SLOTS)
       : 0;
-    for (let effect = 0; effect < EFFECTS.length - 1; effect += 1) {
+    for (let effect = 0; effect < EFFECTS.length - 2; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
       const elapsedMs = nowMs() - startMs;
@@ -163,9 +173,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;
-    if (this.stats) {
-      this.stats[ringOffset + EFFECTS.length - 1] = Math.round(outputGainElapsedMs * 1000000);
-    }
+    if (this.stats) this.stats[ringOffset + EFFECTS.length - 2] = Math.round(outputGainElapsedMs * 1000000);
+    const limiterStartMs = nowMs();
+    this.module._tf_chain_process_output_limiter(this.chain);
+    const limiterElapsedMs = nowMs() - limiterStartMs;
+    if (this.stats) this.stats[ringOffset + EFFECTS.length - 1] = Math.round(limiterElapsedMs * 1000000);
 
     for (let frame = 0; frame < frames; frame += 1) {
       for (let channel = 0; channel < outputChannels.length; channel += 1) {

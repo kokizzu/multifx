@@ -2,6 +2,7 @@ import { decodePcmWave } from "./wav_decoder.js";
 
 const EFFECT_NAMES = [
   "Input trim",
+  "Volume pedal",
   "High-pass",
   "Low-pass",
   "Noise gate",
@@ -11,10 +12,13 @@ const EFFECT_NAMES = [
   "Three-band parametric EQ",
   "Stereo delay",
   "Output level",
+  "Peak limiter",
 ];
 const DEFAULT_PARAMETERS = {
   inputGainDb: 0,
   outputGainDb: 0,
+  volumePedal: [1, -96, 0, 1],
+  limiter: [-1, 80],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -39,6 +43,17 @@ const inputTrim = document.querySelector("#input-trim-db");
 const inputTrimValue = document.querySelector("#input-trim-value");
 const outputGain = document.querySelector("#output-gain-db");
 const outputGainValue = document.querySelector("#output-gain-value");
+const volumePosition = document.querySelector("#volume-position");
+const volumePositionValue = document.querySelector("#volume-position-value");
+const volumeMinimum = document.querySelector("#volume-min-db");
+const volumeMinimumValue = document.querySelector("#volume-min-value");
+const volumeMaximum = document.querySelector("#volume-max-db");
+const volumeMaximumValue = document.querySelector("#volume-max-value");
+const volumeTaper = document.querySelector("#volume-taper");
+const limiterCeiling = document.querySelector("#limiter-ceiling-db");
+const limiterCeilingValue = document.querySelector("#limiter-ceiling-value");
+const limiterRelease = document.querySelector("#limiter-release-ms");
+const limiterReleaseValue = document.querySelector("#limiter-release-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -415,6 +430,38 @@ outputGain.addEventListener("input", () => {
   if (workletNode) workletNode.port.postMessage({ type: "output-gain", value });
 });
 
+function updateVolumePedal() {
+  const values = [
+    Number(volumePosition.value) / 100,
+    Number(volumeMinimum.value),
+    Number(volumeMaximum.value),
+    volumeTaper.value === "linear" ? 0 : 1,
+  ];
+  DEFAULT_PARAMETERS.volumePedal = values;
+  volumePositionValue.value = `${volumePosition.value}%`;
+  volumeMinimumValue.value = `${volumeMinimum.value} dB`;
+  volumeMaximumValue.value = `${volumeMaximum.value} dB`;
+  if (workletNode) workletNode.port.postMessage({ type: "volume-pedal", value: values });
+}
+
+for (const control of [volumePosition, volumeMinimum, volumeMaximum, volumeTaper]) {
+  control.addEventListener("input", updateVolumePedal);
+  control.addEventListener("change", updateVolumePedal);
+}
+
+function updateLimiter() {
+  const values = [Number(limiterCeiling.value), Number(limiterRelease.value)];
+  DEFAULT_PARAMETERS.limiter = values;
+  limiterCeilingValue.value = `${limiterCeiling.value} dBFS`;
+  limiterReleaseValue.value = `${limiterRelease.value} ms`;
+  if (workletNode) workletNode.port.postMessage({ type: "limiter", value: values });
+}
+
+for (const control of [limiterCeiling, limiterRelease]) {
+  control.addEventListener("input", updateLimiter);
+  control.addEventListener("change", updateLimiter);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -510,10 +557,12 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: [true, true, true, true, true, true, true, true, true, true],
+      enabled: [true, true, true, true, true, true, true, true, true, true, true, true],
       parameters: {
         inputGainDb: 2,
         outputGainDb: -1,
+        volumePedal: [0.92, -96, 0, 1],
+        limiter: [-1, 80],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -524,6 +573,14 @@ async function runBrowserSelfTest() {
       captureBuffer,
       captureControl,
     };
+    volumePosition.value = "92";
+    volumeMinimum.value = "-96";
+    volumeMaximum.value = "0";
+    volumeTaper.value = "audio";
+    limiterCeiling.value = "-1";
+    limiterRelease.value = "80";
+    updateVolumePedal();
+    updateLimiter();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }
