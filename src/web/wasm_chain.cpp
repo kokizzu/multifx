@@ -12,6 +12,7 @@
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
+#include "tabletfx/parallel_mixer.hpp"
 #include "tabletfx/signal_controls.hpp"
 
 #include <algorithm>
@@ -475,6 +476,29 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_channel_conversion_self_test() noexcept {
         mixed != mono) {
         return 2;
     }
+    return 0;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_parallel_mixer_self_test() noexcept {
+    const std::array<float, 1> dry{0.1F};
+    const std::array<float, 1> branch_a{0.2F};
+    const std::array<float, 1> branch_b{0.3F};
+    const std::array<float, 1> input{0.25F};
+    std::array<float, 1> split_a{};
+    std::array<float, 1> split_b{};
+    std::array<float, 1> output{};
+    const auto split = tabletfx::split_to_parallel(input, split_a, split_b, 1);
+    if (!split.succeeded() || split_a != input || split_b != input) return 1;
+
+    tabletfx::ParallelMixer mixer(48000.0F, 0.0F);
+    tabletfx::ParallelMixParameters parameters;
+    parameters.dry_gain = 0.5F;
+    parameters.branch_a_gain = 0.5F;
+    parameters.branch_b_gain = 0.5F;
+    parameters.branch_b_inverted = true;
+    mixer.set_parameters_immediate(parameters);
+    const auto mixed = mixer.process(dry, branch_a, branch_b, output, 1);
+    if (!mixed.succeeded() || std::abs(output[0]) > 1.0e-7F) return 2;
     return 0;
 }
 

@@ -1,5 +1,6 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/channel_conversion.hpp"
+#include "tabletfx/parallel_mixer.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
@@ -652,6 +653,67 @@ void benchmark_channel_conversion(std::uint32_t sample_rate,
     }, mono, stereo);
 }
 
+void benchmark_parallel_routing(std::uint32_t sample_rate,
+                                std::uint16_t channels,
+                                std::size_t block_frames,
+                                std::size_t warmup_blocks,
+                                std::size_t measured_blocks) {
+    const std::size_t samples = block_frames * channels;
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    std::vector<float> input(samples, 0.25F);
+    std::vector<float> branch_a(samples);
+    std::vector<float> branch_b(samples);
+    std::vector<float> dry(samples, 0.125F);
+    std::vector<float> output(samples);
+
+    const auto report = [&](std::string_view name, const auto& operation,
+                            std::size_t memory_bytes, std::span<const float> result_buffer) {
+        for (std::size_t i = 0; i < warmup_blocks; ++i) operation();
+        std::vector<double> percentages;
+        percentages.reserve(measured_blocks);
+        for (std::size_t i = 0; i < measured_blocks; ++i) {
+            const auto start = Clock::now();
+            operation();
+            const auto end = Clock::now();
+            const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+            percentages.push_back(100.0 * elapsed_us / deadline_us);
+        }
+        const Metrics signal = metrics(result_buffer);
+        std::cout << name << "," << std::fixed << std::setprecision(4)
+                  << percentile(percentages, 0.50) << ","
+                  << percentile(percentages, 0.95) << ","
+                  << percentile(percentages, 0.99) << ","
+                  << percentile(percentages, 0.999) << ","
+                  << *std::max_element(percentages.begin(), percentages.end()) << ","
+                  << memory_bytes << "," << signal.rms << '\n';
+    };
+
+    const auto split = [&] {
+        const auto result = tabletfx::split_to_parallel(input, branch_a, branch_b, channels);
+        if (!result.succeeded() || result.frames != block_frames) {
+            throw std::runtime_error("parallel split benchmark failed");
+        }
+    };
+    report("parallel-split", split, 0, branch_b);
+
+    tabletfx::ParallelMixer mixer(static_cast<float>(sample_rate));
+    tabletfx::ParallelMixParameters parameters;
+    parameters.dry_gain = 0.7F;
+    parameters.branch_a_gain = 0.35F;
+    parameters.branch_a_balance = 0.2F;
+    parameters.branch_b_gain = 0.25F;
+    parameters.branch_b_balance = -0.1F;
+    parameters.branch_b_inverted = true;
+    mixer.set_parameters_immediate(parameters);
+    const auto mix = [&] {
+        const auto result = mixer.process(dry, branch_a, branch_b, output, channels);
+        if (!result.succeeded() || result.frames != block_frames) {
+            throw std::runtime_error("parallel mix benchmark failed");
+        }
+    };
+    report("parallel-mix", mix, mixer.memory_bytes(), output);
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -831,6 +893,8 @@ void run_bench() {
                            warmup_blocks, measured_blocks);
     benchmark_channel_conversion(sample_rate, block_frames,
                                  warmup_blocks, measured_blocks);
+    benchmark_parallel_routing(sample_rate, channels, block_frames,
+                               warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;

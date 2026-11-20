@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add mono-stereo channel conversion"
+COMMIT_MESSAGE = "feat: add parallel branch routing utilities"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -30,11 +30,13 @@ CHECKPOINT_PATHS = (
     "cmake/toolchains/mingw-w64.cmake",
     "include/tabletfx/effect.hpp",
     "include/tabletfx/channel_conversion.hpp",
+    "include/tabletfx/parallel_mixer.hpp",
     "include/tabletfx/effects.hpp",
     "include/tabletfx/level_meter.hpp",
     "include/tabletfx/signal_controls.hpp",
     "tests/test_gain.cpp",
     "tests/test_channel_conversion.cpp",
+    "tests/test_parallel_mixer.cpp",
     "tests/test_peak_limiter.cpp",
     "tests/test_tremolo.cpp",
     "tests/test_volume_pedal.cpp",
@@ -68,6 +70,7 @@ CHECKPOINT_PATHS = (
     "scripts/web.py",
     "src/effects.cpp",
     "src/channel_conversion.cpp",
+    "src/parallel_mixer.cpp",
     "src/effects/filters.cpp",
     "src/effects/clean_boost.cpp",
     "src/effects/envelope_wah.cpp",

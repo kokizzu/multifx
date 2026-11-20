@@ -67,6 +67,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      const parallelRoutingTest = module._tf_parallel_mixer_self_test();
+      if (parallelRoutingTest !== 0) {
+        this.port.postMessage({
+          type: "error",
+          message: `WASM parallel routing self-test failed (${parallelRoutingTest}).`,
+        });
+        return;
+      }
       this.inputIndex = module._tf_chain_input_buffer(this.chain) >>> 2;
       this.outputIndex = module._tf_chain_output_buffer(this.chain) >>> 2;
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -115,6 +123,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         wasmMemoryBytes: module.HEAPF32.buffer.byteLength,
         effects: EFFECTS,
         channelConversionTest: true,
+        parallelRoutingTest: true,
         effectMemoryBytes,
         timerResolution: hasHighResolutionTimer ? "high-resolution" : "millisecond-fallback",
       });
