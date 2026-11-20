@@ -2,7 +2,7 @@
 
 **Research date:** 20 November 2026
 **Working project name:** TabletFX
-**Platforms:** Android tablet/phone and Linux desktop
+**Platforms:** Android tablet/phone, Linux desktop, Windows desktop, and a browser/WASM audition/test client
 **Document status:** Researched development specification. Implementation and hardware-test boxes are intentionally unchecked.
 
 ## How to use this document
@@ -17,7 +17,9 @@ Give this entire document to the coding agent as its goal prompt. It is self-con
 
 Act as the product designer, real-time audio engineer, DSP integration engineer, Android/Linux developer, and test engineer for TabletFX.
 
-Build a working, offline guitar multi-effects application that turns an ordinary Android tablet or phone, or a Linux computer, into the audio processor. A USB audio interface supplies the instrument input, analog-to-digital conversion, digital-to-analog conversion, and headphone/line outputs. The app must process the incoming guitar itself.
+Build a working, offline guitar multi-effects application that turns an ordinary Android tablet or phone, a Linux computer, or a Windows computer into the audio processor. A USB audio interface supplies the instrument input, analog-to-digital conversion, digital-to-analog conversion, and headphone/line outputs. The app must process the incoming guitar itself.
+
+Also provide a browser/WASM audition and test client using the shared DSP implementation. It must load local guitar audio without uploading it, then play the selected effect chain's processed result through the browser when Play is pressed. The client supplements native targets and does not establish native hardware latency or device compatibility.
 
 The practical goal is to reduce the need to buy an expensive dedicated multi-FX processor. Provide a configuration experience closely resembling the useful interaction patterns of Melofty Axom Max, Line 6 HX Edit/Helix, HeadRush, BOSS Tone Studio, Zoom, Valeton, and Fender Tone Master Pro: visible blocks, drag-and-drop order, parameter editing, routing, reusable presets, and performance controls. Use original branding, artwork, icons, and implementation.
 

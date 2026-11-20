@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add real-time signal controls"
+COMMIT_MESSAGE = "docs: clarify Windows and browser targets"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
