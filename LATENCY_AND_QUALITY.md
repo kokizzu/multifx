@@ -14,24 +14,27 @@ Measured with `make bench` on an AMD Ryzen 9 5950X 16-Core Processor, GCC 13.3.0
 
 | Processor / chain | Median % | p95 % | p99 % | p99.9 % | Maximum % | Owned memory bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| Input gain | 0.0064 | 0.0075 | 0.0146 | 0.1759 | 0.2603 | 40 |
-| Volume pedal | 0.0049 | 0.0053 | 0.0053 | 0.0053 | 0.2216 | 56 |
-| High-pass | 0.0371 | 0.0375 | 0.0379 | 0.2153 | 0.3278 | 64 |
-| Low-pass | 0.0326 | 0.0409 | 0.0420 | 0.4399 | 4.8106 | 64 |
-| Noise gate | 0.0199 | 0.0206 | 0.0364 | 0.1481 | 0.2764 | 64 |
-| Pedal compressor | 0.1189 | 0.1751 | 0.2888 | 1.1052 | 1.9805 | 72 |
-| Studio compressor | 0.1099 | 0.1455 | 0.1552 | 0.4774 | 1.0433 | 64 |
-| Wah | 0.0540 | 0.0600 | 0.0626 | 0.2603 | 0.3570 | 104 |
-| Envelope wah | 0.1309 | 0.1463 | 0.1526 | 0.4961 | 1.0088 | 616 |
-| Clean boost | 0.0064 | 0.0064 | 0.0064 | 0.0064 | 0.2756 | 48 |
-| Soft drive | 0.1440 | 0.2306 | 0.2547 | 0.8295 | 1.3350 | 16 |
-| Tremolo | 0.0746 | 0.0750 | 0.0754 | 0.2408 | 0.5093 | 96 |
-| Three-band parametric EQ | 0.0664 | 0.0671 | 0.0675 | 0.3338 | 0.4301 | 160 |
-| Delay (2 s stereo allocation) | 0.0240 | 0.0248 | 0.0251 | 0.0364 | 0.3367 | 768,080 |
-| Output gain | 0.0064 | 0.0064 | 0.0064 | 0.0150 | 0.4905 | 40 |
-| Peak limiter | 0.0203 | 0.0206 | 0.0206 | 0.0364 | 0.2288 | 32 |
-| Signal controls (input + dry/wet) | 0.0019 | 0.0026 | 0.0026 | 0.0038 | 0.1647 | 80 |
-| Input + output meters | 0.0180 | 0.0180 | 0.0326 | 0.0398 | 0.3379 | 72 |
-| Full sixteen-effect chain + controls + meters | 0.8438 | 1.0054 | 1.2064 | 3.4692 | 11.0388 | 769,768 |
+| Input gain | 0.0056 | 0.0060 | 0.0060 | 0.0124 | 0.2749 | 40 |
+| Output gain | 0.0049 | 0.0109 | 0.0120 | 0.0146 | 0.0311 | 40 |
+| Volume pedal | 0.0049 | 0.0049 | 0.0113 | 0.0124 | 0.0195 | 56 |
+| High-pass | 0.0293 | 0.0296 | 0.0338 | 0.1714 | 0.2501 | 64 |
+| Low-pass | 0.0293 | 0.0341 | 0.0375 | 0.0420 | 0.2577 | 64 |
+| Noise gate | 0.0180 | 0.0274 | 0.0338 | 0.0364 | 0.4751 | 64 |
+| Pedal compressor | 0.1024 | 0.1279 | 0.1339 | 0.3750 | 0.6132 | 72 |
+| Studio compressor | 0.0866 | 0.0870 | 0.0874 | 0.2985 | 0.3702 | 64 |
+| Wah | 0.0424 | 0.0431 | 0.0488 | 0.2381 | 0.4392 | 104 |
+| Envelope wah | 0.1024 | 0.1174 | 0.1275 | 0.3458 | 1.2135 | 616 |
+| Clean boost | 0.0053 | 0.0056 | 0.0056 | 0.0057 | 0.2014 | 48 |
+| Soft drive | 0.1133 | 0.1560 | 0.1823 | 0.3720 | 1.5304 | 16 |
+| Tremolo | 0.0578 | 0.0581 | 0.0585 | 0.2130 | 0.4718 | 96 |
+| Three-band parametric EQ | 0.0514 | 0.0533 | 0.0814 | 0.2411 | 0.2812 | 160 |
+| Delay (2 s stereo allocation) | 0.0188 | 0.0191 | 0.0195 | 0.0206 | 0.2179 | 768,080 |
+| Peak limiter | 0.0161 | 0.0165 | 0.0210 | 0.0221 | 0.2179 | 32 |
+| Signal controls (input + dry/wet) | 0.0015 | 0.0015 | 0.0015 | 0.0015 | 0.0023 | 80 |
+| Input + output meters | 0.0139 | 0.0143 | 0.0232 | 0.0255 | 0.1819 | 72 |
+| Stereo → mono (average) | 0.0011 | 0.0015 | 0.0015 | 0.0015 | 0.1699 | 0 |
+| Stereo → mono (equal-power) | 0.0011 | 0.0015 | 0.0015 | 0.0015 | 0.0015 | 0 |
+| Mono → stereo | 0.0019 | 0.0019 | 0.0019 | 0.0019 | 0.1485 | 0 |
+| Full sixteen-effect chain + controls + meters | 0.6630 | 0.8929 | 0.9293 | 1.1674 | 2.1814 | 769,768 |
 
-The effect sequence is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Envelope Wah → Clean Boost → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. Input mute and the input meter run before that sequence; the output meter and global dry/wet crossfade run after it. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Timing includes processor calls, both level-meter passes and their status reads, and signal-control/copy work; buffer setup is outside the timed region. Memory is processor objects plus signal controls, two meter objects, and directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, and backend/runtime overhead. Signal controls use 80 B and measured 0.0019% p50 / 0.0026% p95 of the block deadline. Both level meters use 72 B and measured 0.0180% p50 / 0.0180% p95 together. The envelope wah uses 616 B and measured 0.1309% p50 / 0.1463% p95. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.
+The effect sequence is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Envelope Wah → Clean Boost → Soft Drive → Tremolo → Parametric EQ → Delay → Output Gain → Peak Limiter. Input mute and the input meter run before that sequence; the output meter and global dry/wet crossfade run after it. These are the latest `make bench` results on 2026-11-21 using a Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz, 128-frame stereo blocks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Effect timing includes processor calls, both level-meter passes and their status reads, and signal-control/copy work; buffer setup is outside the timed region. The separate converter measurements include channel-count/buffer validation and sample conversion. Memory is processor objects plus signal controls, two meter objects, and directly owned delay storage; it excludes input/output scratch buffers, allocator metadata, UI, backend/runtime overhead, and caller-provided converter buffers. Signal controls use 80 B and measured 0.0015% p50 / 0.0015% p95 of the block deadline. Both level meters use 72 B and measured 0.0139% p50 / 0.0143% p95 together. The envelope wah uses 616 B and measured 0.1024% p50 / 0.1174% p95. The converter has no persistent storage; average downmix measured 0.0011% p50 / 0.0015% p95, equal-power downmix 0.0011% / 0.0015%, and mono upmix 0.0019% / 0.0019%. These are processor-call estimates, not a live callback or physical route. Maximum values include host scheduling noise. Re-run after every DSP change and record Android, Windows, and actual-interface results separately.

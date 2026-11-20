@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(tabletfx_core
     src/effects.cpp
+    src/channel_conversion.cpp
     src/effects/clean_boost.cpp
     src/effects/envelope_wah.cpp
     src/effects/filters.cpp
@@ -71,6 +72,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_level_meter_tests tests/test_level_meter.cpp)
     target_link_libraries(tabletfx_level_meter_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_level_meter_tests COMMAND tabletfx_level_meter_tests)
+
+    add_executable(tabletfx_channel_conversion_tests tests/test_channel_conversion.cpp)
+    target_link_libraries(tabletfx_channel_conversion_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_channel_conversion_tests COMMAND tabletfx_channel_conversion_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)

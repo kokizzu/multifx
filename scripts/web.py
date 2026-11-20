@@ -109,6 +109,7 @@ def build_web() -> None:
         raise SystemExit("Emscripten was not found; run `make web-toolchain-bootstrap` first")
     WEB_BUILD_DIR.mkdir(parents=True, exist_ok=True)
     exports = [
+        "_tf_convert_channels", "_tf_channel_conversion_self_test",
         "_tf_chain_create", "_tf_chain_destroy", "_tf_chain_effect_count",
         "_tf_chain_input_buffer", "_tf_chain_output_buffer", "_tf_chain_memory_bytes",
         "_tf_chain_effect_memory_bytes", "_tf_chain_set_enabled", "_tf_chain_set_mix",
@@ -133,6 +134,7 @@ def build_web() -> None:
         "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow",
         "-I", str(ROOT / "include"),
         str(ROOT / "src" / "effects.cpp"),
+        str(ROOT / "src" / "channel_conversion.cpp"),
         str(ROOT / "src" / "effects" / "clean_boost.cpp"),
         str(ROOT / "src" / "effects" / "envelope_wah.cpp"),
         str(ROOT / "src" / "signal_controls.cpp"),

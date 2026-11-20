@@ -1,4 +1,5 @@
 #include "tabletfx/effects.hpp"
+#include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
@@ -36,6 +37,8 @@ using Clock = std::chrono::steady_clock;
 struct Options {
     float gain_db = 0.0F;
     float output_gain_db = 0.0F;
+    std::uint16_t output_channels = 0;
+    tabletfx::MonoSumPolicy mono_sum_policy = tabletfx::MonoSumPolicy::Average;
     bool volume_pedal_enabled = false;
     tabletfx::VolumePedalParameters volume_pedal{};
     bool limiter_enabled = false;
@@ -89,6 +92,21 @@ Options parse_options(int argc, char** argv, int first) {
         const std::string_view key(argv[i]);
         if (i + 1 >= argc) {
             throw std::invalid_argument("Missing value for " + std::string(key));
+        }
+        if (key == "--output-channels") {
+            const std::string_view value(argv[++i]);
+            if (value == "preserve") options.output_channels = 0;
+            else if (value == "mono" || value == "1") options.output_channels = 1;
+            else if (value == "stereo" || value == "2") options.output_channels = 2;
+            else throw std::invalid_argument("Output channels must be preserve, mono, or stereo");
+            continue;
+        }
+        if (key == "--mono-sum") {
+            const std::string_view value(argv[++i]);
+            if (value == "average") options.mono_sum_policy = tabletfx::MonoSumPolicy::Average;
+            else if (value == "equal-power") options.mono_sum_policy = tabletfx::MonoSumPolicy::EqualPower;
+            else throw std::invalid_argument("Mono sum policy must be average or equal-power");
+            continue;
         }
         if (key == "--volume-curve") {
             const std::string_view value(argv[++i]);
@@ -586,6 +604,54 @@ void benchmark_level_meters(std::uint32_t sample_rate, std::uint16_t channels,
               << memory_bytes << "," << signal.rms << '\n';
 }
 
+void benchmark_channel_conversion(std::uint32_t sample_rate,
+                                  std::size_t block_frames,
+                                  std::size_t warmup_blocks,
+                                  std::size_t measured_blocks) {
+    std::vector<float> stereo(block_frames * 2, 0.25F);
+    std::vector<float> mono(block_frames, 0.0F);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+
+    const auto measure = [&](std::string_view name, const auto& convert,
+                             std::span<const float> input, std::span<float> output) {
+        for (std::size_t i = 0; i < warmup_blocks; ++i) convert(input, output);
+        std::vector<double> percentages;
+        percentages.reserve(measured_blocks);
+        for (std::size_t i = 0; i < measured_blocks; ++i) {
+            const auto start = Clock::now();
+            convert(input, output);
+            const auto end = Clock::now();
+            const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+            percentages.push_back(100.0 * elapsed_us / deadline_us);
+        }
+        const Metrics signal = metrics(output);
+        std::cout << name << "," << std::fixed << std::setprecision(4)
+                  << percentile(percentages, 0.50) << ","
+                  << percentile(percentages, 0.95) << ","
+                  << percentile(percentages, 0.99) << ","
+                  << percentile(percentages, 0.999) << ","
+                  << *std::max_element(percentages.begin(), percentages.end()) << ",0,"
+                  << signal.rms << '\n';
+    };
+
+    measure("stereo-to-mono-average", [&](auto input, auto output) {
+        if (!tabletfx::convert_channels(input, 2, output, 1).succeeded()) {
+            throw std::runtime_error("stereo-to-mono benchmark conversion failed");
+        }
+    }, stereo, mono);
+    measure("stereo-to-mono-equal-power", [&](auto input, auto output) {
+        if (!tabletfx::convert_channels(input, 2, output, 1,
+                                        tabletfx::MonoSumPolicy::EqualPower).succeeded()) {
+            throw std::runtime_error("equal-power benchmark conversion failed");
+        }
+    }, stereo, mono);
+    measure("mono-to-stereo", [&](auto input, auto output) {
+        if (!tabletfx::convert_channels(input, 1, output, 2).succeeded()) {
+            throw std::runtime_error("mono-to-stereo benchmark conversion failed");
+        }
+    }, mono, stereo);
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -763,6 +829,8 @@ void run_bench() {
                               warmup_blocks, measured_blocks);
     benchmark_level_meters(sample_rate, channels, block_frames,
                            warmup_blocks, measured_blocks);
+    benchmark_channel_conversion(sample_rate, block_frames,
+                                 warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;
@@ -775,6 +843,7 @@ void run_bench() {
 void print_usage() {
     std::cerr << "Usage:\n"
               << "  tabletfx_offline render INPUT.wav OUTPUT.wav [--gain-db dB] [--output-gain-db dB]"
+                 " [--output-channels preserve|mono|stereo] [--mono-sum average|equal-power]"
                  " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
                  " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
                  " [--wah-position 0..1] [--wah-min-hz Hz] [--wah-max-hz Hz] [--wah-q Q] [--wah-level-db dB]"
@@ -814,13 +883,27 @@ int main(int argc, char** argv) {
         }
         const Options options = parse_options(argc, argv, 4);
         tabletfx::AudioBuffer input = tabletfx::read_wav(argv[2]);
+        const std::uint16_t input_channels = input.channels;
         const Metrics input_metrics = metrics(input.interleaved);
+        if (options.output_channels != 0 && options.output_channels != input.channels) {
+            const std::size_t frames = input.frames();
+            std::vector<float> converted(frames * options.output_channels);
+            const auto result = tabletfx::convert_channels(
+                input.interleaved, input.channels, converted, options.output_channels,
+                options.mono_sum_policy);
+            if (!result.succeeded() || result.frames != frames) {
+                throw std::runtime_error("Could not convert WAV channel layout");
+            }
+            input.interleaved = std::move(converted);
+            input.channels = options.output_channels;
+        }
         auto effects = make_effects(options, input.sample_rate, input.channels);
         process_in_blocks(input, effects, 256);
         const Metrics output_metrics = metrics(input.interleaved);
         tabletfx::write_wav_float32(argv[3], input);
         std::cout << "rendered frames=" << input.frames() << " sample_rate_hz=" << input.sample_rate
-                  << " channels=" << input.channels << " processors=" << effects.size()
+                  << " input_channels=" << input_channels << " channels=" << input.channels
+                  << " processors=" << effects.size()
                   << " input_peak=" << input_metrics.peak << " input_rms=" << input_metrics.rms
                   << " output_peak=" << output_metrics.peak << " output_rms=" << output_metrics.rms
                   << " output=" << argv[3] << '\n';

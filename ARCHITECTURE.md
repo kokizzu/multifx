@@ -8,6 +8,10 @@ Use a headless C++20 DSP/audio graph as the shared product core, CMake for repro
 
 The Windows backend is an explicit user requirement added to the Android/Linux scope in `GOAL.md`; it is not optional or inferred from cross-platform C++ alone.
 
+## Channel-layout conversion
+
+The shared DSP core provides a stateless mono/stereo converter for 1- and 2-channel interleaved float audio. Mono-to-stereo duplicates each sample; stereo-to-mono defaults to arithmetic average `(L + R) / 2`, with an explicit equal-power option `(L + R) / sqrt(2)`. Equal-power can exceed full scale and does not clip or normalize. Same-layout conversion preserves samples. The converter does not resample, spatialize, or accept layouts above stereo. It performs no allocation or persistent-state work, permits exact-start in-place conversion, and rejects partial buffer overlap. The offline WAV renderer exposes output layout and summing policy; the browser/WASM module compiles and self-checks the same code.
+
 ## Browser/WASM test target
 
 Add a browser test application that reuses the C++ DSP processors compiled to WebAssembly, rather than maintaining a second set of effect algorithms. Use a Web Audio `AudioWorklet` to feed fixed-size blocks into the selected effect chain and send its processed output to the browser's audio destination. Load a user's local guitar audio file in the page; do not upload it. The Play button is a user gesture that starts/resumes audio and must play the processed chain result, not the dry input. Provide stop/rewind and dry/wet comparison controls.

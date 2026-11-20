@@ -11,14 +11,20 @@ import subprocess
 import tempfile
 
 
-def write_pcm16(path: Path, sample_rate: int, samples: list[int]) -> None:
+def write_pcm16_channels(path: Path, sample_rate: int, channels: int, samples: list[int]) -> None:
     payload = struct.pack("<" + "h" * len(samples), *samples)
+    block_align = channels * 2
     header = struct.pack(
         "<4sI4s4sIHHIIHH4sI",
         b"RIFF", 36 + len(payload), b"WAVE", b"fmt ", 16,
-        1, 1, sample_rate, sample_rate * 2, 2, 16, b"data", len(payload),
+        1, channels, sample_rate, sample_rate * block_align, block_align, 16,
+        b"data", len(payload),
     )
     path.write_bytes(header + payload)
+
+
+def write_pcm16(path: Path, sample_rate: int, samples: list[int]) -> None:
+    write_pcm16_channels(path, sample_rate, 1, samples)
 
 
 def write_pcm24(path: Path, sample_rate: int, payload: bytes) -> None:
@@ -235,6 +241,68 @@ def check_malformed_pcm24_rejected(executable: Path) -> None:
                 raise AssertionError(f"Malformed PCM24 alignment was not rejected: {result}")
 
 
+def check_channel_conversion(executable: Path) -> None:
+    sample_rate = 48000
+    stereo_samples = [8192, 16384, -8192, 8192]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-channel-conversion-test-") as directory:
+        root = Path(directory)
+        source = root / "stereo.wav"
+        average_output = root / "mono-average.wav"
+        equal_power_output = root / "mono-equal-power.wav"
+        write_pcm16_channels(source, sample_rate, 2, stereo_samples)
+
+        average_result = subprocess.run(
+            [str(executable), "render", str(source), str(average_output),
+             "--output-channels", "mono"],
+            capture_output=True, text=True, check=True,
+        )
+        if "input_channels=2 channels=1" not in average_result.stdout:
+            raise AssertionError(f"Stereo-to-mono summary is wrong: {average_result.stdout}")
+        average_data = average_output.read_bytes()
+        average_header = struct.unpack("<4sI4s4sIHHIIHH4sI", average_data[:44])
+        if average_header[6] != 1:
+            raise AssertionError(f"Stereo-to-mono output has {average_header[6]} channels")
+        average = struct.unpack("<2f", average_data[44:52])
+        expected_average = (0.375, 0.0)
+        if any(abs(actual - expected) > 1.0e-6
+               for actual, expected in zip(average, expected_average, strict=True)):
+            raise AssertionError(f"Average downmix expected {expected_average}, got {average}")
+
+        subprocess.run(
+            [str(executable), "render", str(source), str(equal_power_output),
+             "--output-channels", "mono", "--mono-sum", "equal-power"],
+            capture_output=True, text=True, check=True,
+        )
+        equal_power_data = equal_power_output.read_bytes()
+        equal_power = struct.unpack("<2f", equal_power_data[44:52])
+        expected_equal_power = (0.375 * math.sqrt(2.0), 0.0)
+        if any(abs(actual - expected) > 1.0e-6
+               for actual, expected in zip(equal_power, expected_equal_power, strict=True)):
+            raise AssertionError(
+                f"Equal-power downmix expected {expected_equal_power}, got {equal_power}"
+            )
+
+        mono_source = root / "mono.wav"
+        stereo_output = root / "stereo-upmix.wav"
+        mono_samples = [8192, -16384, 0]
+        write_pcm16(mono_source, sample_rate, mono_samples)
+        subprocess.run(
+            [str(executable), "render", str(mono_source), str(stereo_output),
+             "--output-channels", "stereo"],
+            capture_output=True, text=True, check=True,
+        )
+        stereo_data = stereo_output.read_bytes()
+        stereo_header = struct.unpack("<4sI4s4sIHHIIHH4sI", stereo_data[:44])
+        if stereo_header[6] != 2:
+            raise AssertionError(f"Mono-to-stereo output has {stereo_header[6]} channels")
+        upmixed = struct.unpack("<6f", stereo_data[44:68])
+        expected_upmixed = tuple(value for sample in mono_samples
+                                 for value in (sample / 32768.0, sample / 32768.0))
+        if any(abs(actual - expected) > 1.0e-6
+               for actual, expected in zip(upmixed, expected_upmixed, strict=True)):
+            raise AssertionError(f"Mono upmix expected {expected_upmixed}, got {upmixed}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -246,7 +314,8 @@ def main() -> None:
     check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah, padded PCM24 input, and malformed alignment rejection.")
+    check_channel_conversion(args.executable.resolve())
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

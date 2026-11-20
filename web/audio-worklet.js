@@ -59,6 +59,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.port.postMessage({ type: "error", message: "Could not allocate the audio chain." });
         return;
       }
+      const channelConversionTest = module._tf_channel_conversion_self_test();
+      if (channelConversionTest !== 0) {
+        this.port.postMessage({
+          type: "error",
+          message: `WASM channel conversion self-test failed (${channelConversionTest}).`,
+        });
+        return;
+      }
       this.inputIndex = module._tf_chain_input_buffer(this.chain) >>> 2;
       this.outputIndex = module._tf_chain_output_buffer(this.chain) >>> 2;
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -106,6 +114,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         memoryBytes: module._tf_chain_memory_bytes(this.chain),
         wasmMemoryBytes: module.HEAPF32.buffer.byteLength,
         effects: EFFECTS,
+        channelConversionTest: true,
         effectMemoryBytes,
         timerResolution: hasHighResolutionTimer ? "high-resolution" : "millisecond-fallback",
       });

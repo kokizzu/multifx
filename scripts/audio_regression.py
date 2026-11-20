@@ -70,7 +70,8 @@ def is_direct_input(path: Path, root: Path) -> bool:
     return bool(re.search(r"(?:^|[_-])di(?:$|[_-])", path.stem, re.IGNORECASE))
 
 
-def run_input(renderer: Path, source: Path, output: Path) -> str:
+def run_input(renderer: Path, source: Path, output: Path,
+              output_channels: str | None = None) -> str:
     command = [
         str(renderer), "render", str(source), str(output),
         "--gain-db", "2", "--output-gain-db", "-1",
@@ -103,6 +104,8 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
         "--eq-band2-frequency-hz", "900", "--eq-band2-gain-db", "-1", "--eq-band2-q", "1",
         "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "0.5", "--eq-band3-q", "0.7",
     ]
+    if output_channels is not None:
+        command.extend(["--output-channels", output_channels])
     result = subprocess.run(command, check=False, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
@@ -110,6 +113,10 @@ def run_input(renderer: Path, source: Path, output: Path) -> str:
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
     if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 16:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
+    if output_channels is not None:
+        layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
+        if not layout or int(layout.group(1)) != 2 or int(layout.group(2)) != 1:
+            raise RuntimeError(f"Stereo-to-mono render did not report 2→1 channels: {report}")
     if float(match.group(3)) > 0.8914:
         raise RuntimeError(f"Peak limiter exceeded its -1 dBFS ceiling for {source}: {report}")
     if not output.is_file() or output.stat().st_size <= 44:
@@ -149,6 +156,8 @@ def main() -> None:
         source = music_files[0]
         report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
+        report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
+        print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
     print("All prerecorded clean guitar inputs rendered through the sixteen-effect offline chain.")
 
 

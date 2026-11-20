@@ -1,4 +1,5 @@
 #include "tabletfx/effect.hpp"
+#include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
@@ -14,6 +15,7 @@
 #include "tabletfx/signal_controls.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -440,6 +442,41 @@ WasmChain* as_chain(void* opaque) noexcept {
 } // namespace
 
 extern "C" {
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_convert_channels(
+    const float* input, std::uint32_t input_samples, std::uint16_t input_channels,
+    float* output, std::uint32_t output_capacity, std::uint16_t output_channels,
+    std::uint32_t sum_policy) noexcept {
+    if ((input_samples != 0 && input == nullptr) ||
+        (output_capacity != 0 && output == nullptr)) {
+        return static_cast<std::uint32_t>(tabletfx::ChannelConversionStatus::InvalidInputLength);
+    }
+    if (sum_policy > static_cast<std::uint32_t>(tabletfx::MonoSumPolicy::EqualPower)) {
+        return static_cast<std::uint32_t>(tabletfx::ChannelConversionStatus::InvalidSummingPolicy);
+    }
+    const auto result = tabletfx::convert_channels(
+        std::span<const float>(input, input_samples), input_channels,
+        std::span<float>(output, output_capacity), output_channels,
+        static_cast<tabletfx::MonoSumPolicy>(sum_policy));
+    return static_cast<std::uint32_t>(result.status);
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_channel_conversion_self_test() noexcept {
+    std::array<float, 2> mono{0.5F, -0.25F};
+    std::array<float, 4> stereo{};
+    std::array<float, 2> mixed{};
+    const auto upmix = tf_convert_channels(mono.data(), 2, 1, stereo.data(), 4, 2, 0);
+    if (upmix != static_cast<std::uint32_t>(tabletfx::ChannelConversionStatus::Success) ||
+        stereo != std::array<float, 4>{0.5F, 0.5F, -0.25F, -0.25F}) {
+        return 1;
+    }
+    const auto downmix = tf_convert_channels(stereo.data(), 4, 2, mixed.data(), 2, 1, 0);
+    if (downmix != static_cast<std::uint32_t>(tabletfx::ChannelConversionStatus::Success) ||
+        mixed != mono) {
+        return 2;
+    }
+    return 0;
+}
 
 TABLETFX_WASM_EXPORT void* tf_chain_create(std::uint32_t sample_rate,
                                          std::uint32_t channels,
