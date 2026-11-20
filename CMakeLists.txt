@@ -9,6 +9,7 @@ add_library(tabletfx_core
     src/effects.cpp
     src/channel_conversion.cpp
     src/parallel_mixer.cpp
+    src/tuner.cpp
     src/effects/clean_boost.cpp
     src/effects/envelope_wah.cpp
     src/effects/filters.cpp
@@ -81,6 +82,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_parallel_mixer_tests tests/test_parallel_mixer.cpp)
     target_link_libraries(tabletfx_parallel_mixer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_parallel_mixer_tests COMMAND tabletfx_parallel_mixer_tests)
+
+    add_executable(tabletfx_tuner_tests tests/test_tuner.cpp)
+    target_link_libraries(tabletfx_tuner_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_tuner_tests COMMAND tabletfx_tuner_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)

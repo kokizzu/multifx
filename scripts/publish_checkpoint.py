@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add parallel branch routing utilities"
+COMMIT_MESSAGE = "feat: add low-latency chromatic tuner"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -34,6 +34,7 @@ CHECKPOINT_PATHS = (
     "include/tabletfx/effects.hpp",
     "include/tabletfx/level_meter.hpp",
     "include/tabletfx/signal_controls.hpp",
+    "include/tabletfx/tuner.hpp",
     "tests/test_gain.cpp",
     "tests/test_channel_conversion.cpp",
     "tests/test_parallel_mixer.cpp",
@@ -81,6 +82,7 @@ CHECKPOINT_PATHS = (
     "src/effects/wah.cpp",
     "src/level_meter.cpp",
     "src/signal_controls.cpp",
+    "src/tuner.cpp",
     "src/audio/wasapi_backend.cpp",
     "src/web/wasm_chain.cpp",
     "src/wav.cpp",
@@ -91,6 +93,7 @@ CHECKPOINT_PATHS = (
     "tests/test_pedal_compressor.cpp",
     "tests/test_level_meter.cpp",
     "tests/test_signal_controls.cpp",
+    "tests/test_tuner.cpp",
     "tests/wasapi_compile.cpp",
     "web/app.js",
     "web/audio-worklet.js",

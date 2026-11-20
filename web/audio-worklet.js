@@ -8,7 +8,7 @@ const EFFECTS = [
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
-const STATS_EFFECT_SLOTS = EFFECTS.length + 9;
+const STATS_EFFECT_SLOTS = EFFECTS.length + 16;
 const METER_INPUT_PEAK = EFFECTS.length + 2;
 const METER_INPUT_RMS = EFFECTS.length + 3;
 const METER_OUTPUT_PEAK = EFFECTS.length + 4;
@@ -16,6 +16,13 @@ const METER_OUTPUT_RMS = EFFECTS.length + 5;
 const METER_FLAGS = EFFECTS.length + 6;
 const METER_INPUT_INVALID = EFFECTS.length + 7;
 const METER_OUTPUT_INVALID = EFFECTS.length + 8;
+const TUNER_GENERATION = EFFECTS.length + 9;
+const TUNER_NOTE = EFFECTS.length + 10;
+const TUNER_VALID = EFFECTS.length + 11;
+const TUNER_FREQUENCY = EFFECTS.length + 12;
+const TUNER_CENTS = EFFECTS.length + 13;
+const TUNER_CONFIDENCE = EFFECTS.length + 14;
+const TUNER_TIME = EFFECTS.length + 15;
 
 const wasmModulePromise = createWasmModule({ noInitialRun: true });
 
@@ -47,6 +54,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.captureControl = config.captureControl ? new Int32Array(config.captureControl) : null;
     this.captureOffset = 0;
     this.captureComplete = false;
+    this.tunerGeneration = 0;
+    this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     this.enabled = config.enabled || [true, true, false, false, false, false,
       true, false, false, false, false, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
@@ -85,6 +94,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_global_bypass(this.chain, config.globalBypass ? 1 : 0);
       module._tf_chain_set_input_mute(this.chain, config.inputMuted ? 1 : 0);
       module._tf_chain_set_panic_mute(this.chain, config.panicMuted ? 1 : 0);
+      module._tf_chain_set_tuner_reference(this.chain, config.tunerReferenceHz ?? 440);
+      module._tf_chain_set_tuner_muted(this.chain, config.tunerMuted ? 1 : 0);
       module._tf_chain_set_input_gain(this.chain, parameters.inputGainDb ?? 0);
       module._tf_chain_set_output_gain(this.chain, parameters.outputGainDb ?? 0);
       const compressor = parameters.compressor || [-18, 3, 6, 8, 100, 0];
@@ -125,6 +136,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         channelConversionTest: true,
         parallelRoutingTest: true,
         effectMemoryBytes,
+        tunerMemoryBytes: module._tf_chain_tuner_memory_bytes(this.chain),
         timerResolution: hasHighResolutionTimer ? "high-resolution" : "millisecond-fallback",
       });
       this.ready = true;
@@ -154,6 +166,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "clear-meter-clips" && this.ready) {
       this.module._tf_chain_clear_meter_clip(this.chain, 0);
       this.module._tf_chain_clear_meter_clip(this.chain, 1);
+    } else if (message.type === "tuner-settings" && this.ready) {
+      if (Number.isFinite(message.referenceHz)) {
+        this.module._tf_chain_set_tuner_reference(this.chain, Number(message.referenceHz));
+      }
+      this.module._tf_chain_set_tuner_muted(this.chain, message.muted ? 1 : 0);
     } else if (message.type === "input-gain" && this.ready) {
       this.module._tf_chain_ramp_input_gain(this.chain, Number(message.value));
     } else if (message.type === "output-gain" && this.ready) {
@@ -174,6 +191,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_limiter(this.chain, ...message.value);
     } else if (message.type === "reset" && this.ready) {
       this.module._tf_chain_reset(this.chain);
+      this.tunerGeneration = 0;
+      this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     }
   }
 
@@ -220,6 +239,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     const ringOffset = this.stats
       ? STATS_HEADER_WORDS + ((sequence % STATS_RING_BLOCKS) * STATS_EFFECT_SLOTS)
       : 0;
+    const tunerStartMs = nowMs();
+    this.module._tf_chain_process_tuner(this.chain);
+    const tunerElapsedMs = nowMs() - tunerStartMs;
+    if (this.stats) this.stats[ringOffset + TUNER_TIME] = Math.round(tunerElapsedMs * 1000000);
     for (let effect = 0; effect < EFFECTS.length - 2; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
@@ -235,6 +258,18 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_output_limiter(this.chain);
     const limiterElapsedMs = nowMs() - limiterStartMs;
     if (this.stats) this.stats[ringOffset + EFFECTS.length - 1] = Math.round(limiterElapsedMs * 1000000);
+
+    const tunerGeneration = this.module._tf_chain_tuner_generation(this.chain) >>> 0;
+    if (tunerGeneration !== this.tunerGeneration) {
+      this.tunerGeneration = tunerGeneration;
+      this.tunerReading = {
+        valid: this.module._tf_chain_tuner_valid(this.chain) !== 0,
+        midiNote: this.module._tf_chain_tuner_note(this.chain),
+        frequencyHz: this.module._tf_chain_tuner_frequency(this.chain),
+        cents: this.module._tf_chain_tuner_cents(this.chain),
+        confidence: this.module._tf_chain_tuner_confidence(this.chain),
+      };
+    }
 
     for (let frame = 0; frame < frames; frame += 1) {
       for (let channel = 0; channel < outputChannels.length; channel += 1) {
@@ -256,6 +291,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.stats[ringOffset + METER_FLAGS] = (inputFlags & 0x3) | ((outputFlags & 0x3) << 2);
       this.stats[ringOffset + METER_INPUT_INVALID] = this.module._tf_chain_meter_invalid_samples(this.chain, 0);
       this.stats[ringOffset + METER_OUTPUT_INVALID] = this.module._tf_chain_meter_invalid_samples(this.chain, 1);
+      this.stats[ringOffset + TUNER_GENERATION] = this.tunerGeneration;
+      this.stats[ringOffset + TUNER_NOTE] = this.tunerReading.midiNote;
+      this.stats[ringOffset + TUNER_VALID] = this.tunerReading.valid ? 1 : 0;
+      this.statsFloats[ringOffset + TUNER_FREQUENCY] = this.tunerReading.frequencyHz;
+      this.statsFloats[ringOffset + TUNER_CENTS] = this.tunerReading.cents;
+      this.statsFloats[ringOffset + TUNER_CONFIDENCE] = this.tunerReading.confidence;
       Atomics.store(this.stats, 0, sequence + 1);
     }
 

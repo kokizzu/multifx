@@ -14,6 +14,7 @@
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
 #include "tabletfx/signal_controls.hpp"
+#include "tabletfx/tuner.hpp"
 
 #include <algorithm>
 #include <array>
@@ -51,7 +52,8 @@ public:
           output_(static_cast<std::size_t>(channels) * max_frames, 0.0F),
           output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
-          signal_controls_(static_cast<float>(sample_rate)) {
+          signal_controls_(static_cast<float>(sample_rate)),
+          tuner_(static_cast<float>(sample_rate)) {
         effects_.reserve(14);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -100,6 +102,12 @@ public:
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
+
+    void process_tuner() noexcept {
+        if (frames_ == 0) return;
+        const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        tuner_.analyze(std::span<const float>(input_.data(), samples), channels_);
+    }
 
     [[nodiscard]] bool set_enabled(std::uint32_t index, bool enabled) noexcept {
         if (index == effects_.size()) {
@@ -183,6 +191,7 @@ public:
         if (output_limiter_enabled_) {
             output_limiter_.process(std::span<float>(output_.data(), samples), channels_);
         }
+        tuner_.apply_output_mute(std::span<float>(output_.data(), samples), channels_);
         output_meter_.process(std::span<const float>(output_.data(), samples), channels_);
     }
 
@@ -193,6 +202,7 @@ public:
         output_gain_.reset();
         output_limiter_.reset();
         signal_controls_.reset();
+        tuner_.reset();
         input_meter_.reset();
         output_meter_.reset();
         frames_ = 0;
@@ -244,6 +254,22 @@ public:
         } else if (index == 1) {
             output_meter_.clear_clip_latch();
         }
+    }
+
+    void set_tuner_reference(float frequency_hz) noexcept {
+        tuner_.set_reference_a4_hz(frequency_hz);
+    }
+
+    void set_tuner_muted(bool muted) noexcept {
+        tuner_.set_muted_output(muted);
+    }
+
+    [[nodiscard]] tabletfx::TunerReading tuner_reading() const noexcept {
+        return tuner_.reading();
+    }
+
+    [[nodiscard]] std::uint32_t tuner_memory_bytes() const noexcept {
+        return static_cast<std::uint32_t>(tuner_.memory_bytes());
     }
 
     void configure_compressor(float threshold_db, float ratio, float knee_db,
@@ -430,6 +456,7 @@ private:
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
+    tabletfx::ChromaticTuner tuner_;
     tabletfx::LevelMeter input_meter_;
     tabletfx::LevelMeter output_meter_;
     bool output_gain_enabled_ = true;
@@ -530,6 +557,10 @@ TABLETFX_WASM_EXPORT std::uintptr_t tf_chain_input_buffer(void* opaque) noexcept
 
 TABLETFX_WASM_EXPORT std::uintptr_t tf_chain_output_buffer(void* opaque) noexcept {
     return opaque == nullptr ? 0U : reinterpret_cast<std::uintptr_t>(as_chain(opaque)->output_data());
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_process_tuner(void* opaque) noexcept {
+    if (opaque != nullptr) as_chain(opaque)->process_tuner();
 }
 
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_memory_bytes(void* opaque) noexcept {
@@ -657,6 +688,44 @@ TABLETFX_WASM_EXPORT void tf_chain_clear_meter_clip(void* opaque,
     if (opaque != nullptr) {
         as_chain(opaque)->clear_meter_clip(index);
     }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_tuner_reference(void* opaque,
+                                                       float frequency_hz) noexcept {
+    if (opaque != nullptr) as_chain(opaque)->set_tuner_reference(frequency_hz);
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_tuner_muted(void* opaque,
+                                                   std::uint32_t muted) noexcept {
+    if (opaque != nullptr) as_chain(opaque)->set_tuner_muted(muted != 0);
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_tuner_generation(void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->tuner_reading().generation;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_tuner_memory_bytes(void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->tuner_memory_bytes();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_tuner_valid(void* opaque) noexcept {
+    return opaque != nullptr && as_chain(opaque)->tuner_reading().valid ? 1U : 0U;
+}
+
+TABLETFX_WASM_EXPORT std::int32_t tf_chain_tuner_note(void* opaque) noexcept {
+    return opaque == nullptr ? -1 : as_chain(opaque)->tuner_reading().midi_note;
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_tuner_frequency(void* opaque) noexcept {
+    return opaque == nullptr ? 0.0F : as_chain(opaque)->tuner_reading().frequency_hz;
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_tuner_cents(void* opaque) noexcept {
+    return opaque == nullptr ? 0.0F : as_chain(opaque)->tuner_reading().cents;
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_tuner_confidence(void* opaque) noexcept {
+    return opaque == nullptr ? 0.0F : as_chain(opaque)->tuner_reading().confidence;
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_reset(void* opaque) noexcept {

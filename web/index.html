@@ -208,6 +208,17 @@
           <input id="clean-boost-db" type="range" min="0" max="24" step="0.5" value="0">
         </label>
       </div>
+      <div class="gain-controls tuner-controls" aria-label="Chromatic tuner">
+        <label class="mix-control" for="tuner-reference-hz">
+          <span>Tuning reference (A4)</span><output id="tuner-reference-value" for="tuner-reference-hz">440.0 Hz</output>
+          <input id="tuner-reference-hz" type="range" min="400" max="480" step="0.5" value="440">
+        </label>
+        <label class="mix-control tuner-mute-control" for="tuner-mute-output">
+          <span>Mute output while tuning</span>
+          <input id="tuner-mute-output" type="checkbox">
+        </label>
+        <output id="tuner-reading" class="tuner-reading" aria-live="polite">Play guitar audio to detect a note.</output>
+      </div>
       <div class="gain-controls">
         <label class="mix-control" for="tremolo-rate-hz">
           <span>Tremolo rate</span><output id="tremolo-rate-value" for="tremolo-rate-hz">5.00 Hz</output>

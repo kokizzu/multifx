@@ -129,6 +129,11 @@ def build_web() -> None:
         "_tf_chain_set_panic_mute",
         "_tf_chain_meter_peak", "_tf_chain_meter_rms", "_tf_chain_meter_flags",
         "_tf_chain_meter_invalid_samples", "_tf_chain_clear_meter_clip",
+        "_tf_chain_set_tuner_reference", "_tf_chain_set_tuner_muted",
+        "_tf_chain_tuner_generation", "_tf_chain_tuner_valid",
+        "_tf_chain_tuner_note", "_tf_chain_tuner_frequency",
+        "_tf_chain_tuner_cents", "_tf_chain_tuner_confidence",
+        "_tf_chain_process_tuner", "_tf_chain_tuner_memory_bytes",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -137,6 +142,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects.cpp"),
         str(ROOT / "src" / "channel_conversion.cpp"),
         str(ROOT / "src" / "parallel_mixer.cpp"),
+        str(ROOT / "src" / "tuner.cpp"),
         str(ROOT / "src" / "effects" / "clean_boost.cpp"),
         str(ROOT / "src" / "effects" / "envelope_wah.cpp"),
         str(ROOT / "src" / "signal_controls.cpp"),
@@ -223,6 +229,23 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
             + 0.12 * math.sin(2.0 * math.pi * 220.0 * time_seconds)
         )
         value = max(-32768, min(32767, round(signal * 32767.0)))
+        samples.extend(struct.pack("<h", value))
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(samples)
+    return frames
+
+
+def make_tuner_test_audio(destination: Path, sample_rate: int = 48000,
+                          duration_seconds: float = 0.5) -> int:
+    frames = int(sample_rate * duration_seconds)
+    samples = bytearray()
+    for frame in range(frames):
+        value = max(-32768, min(32767, round(
+            0.35 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate) * 32767.0
+        )))
         samples.extend(struct.pack("<h", value))
     with wave.open(str(destination), "wb") as output:
         output.setnchannels(1)
@@ -394,7 +417,9 @@ def browser_test() -> None:
         temp_dir = Path(temp_name)
         input_path = temp_dir / "guitar-fixture.wav"
         reference_path = temp_dir / "native-reference.wav"
+        tuner_path = temp_dir / "tuner-a4.wav"
         make_test_audio(input_path)
+        make_tuner_test_audio(tuner_path)
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
             "--gain-db", "2", "--output-gain-db", "-1",
@@ -435,6 +460,7 @@ def browser_test() -> None:
         LocalWebHandler.test_files = {
             "/__test_input.wav": input_path,
             "/__test_expected.wav": reference_path,
+            "/__test_tuner.wav": tuner_path,
         }
         server = ThreadingHTTPServer(("127.0.0.1", 0), LocalWebHandler)
         server.daemon_threads = True

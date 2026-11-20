@@ -37,7 +37,7 @@ const DEFAULT_PARAMETERS = {
 };
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
-const STATS_EFFECT_SLOTS = EFFECT_NAMES.length + 9;
+const STATS_EFFECT_SLOTS = EFFECT_NAMES.length + 16;
 const METER_INPUT_PEAK = EFFECT_NAMES.length + 2;
 const METER_INPUT_RMS = EFFECT_NAMES.length + 3;
 const METER_OUTPUT_PEAK = EFFECT_NAMES.length + 4;
@@ -45,6 +45,13 @@ const METER_OUTPUT_RMS = EFFECT_NAMES.length + 5;
 const METER_FLAGS = EFFECT_NAMES.length + 6;
 const METER_INPUT_INVALID = EFFECT_NAMES.length + 7;
 const METER_OUTPUT_INVALID = EFFECT_NAMES.length + 8;
+const TUNER_GENERATION = EFFECT_NAMES.length + 9;
+const TUNER_NOTE = EFFECT_NAMES.length + 10;
+const TUNER_VALID = EFFECT_NAMES.length + 11;
+const TUNER_FREQUENCY = EFFECT_NAMES.length + 12;
+const TUNER_CENTS = EFFECT_NAMES.length + 13;
+const TUNER_CONFIDENCE = EFFECT_NAMES.length + 14;
+const TUNER_TIME = EFFECT_NAMES.length + 15;
 
 const fileInput = document.querySelector("#audio-file");
 const playButton = document.querySelector("#play-button");
@@ -125,6 +132,10 @@ const touchWahSmoothing = document.querySelector("#touch-wah-smoothing-ms");
 const touchWahSmoothingValue = document.querySelector("#touch-wah-smoothing-value");
 const cleanBoost = document.querySelector("#clean-boost-db");
 const cleanBoostValue = document.querySelector("#clean-boost-value");
+const tunerReference = document.querySelector("#tuner-reference-hz");
+const tunerReferenceValue = document.querySelector("#tuner-reference-value");
+const tunerMuteOutput = document.querySelector("#tuner-mute-output");
+const tunerReadingOutput = document.querySelector("#tuner-reading");
 const tremoloRate = document.querySelector("#tremolo-rate-hz");
 const tremoloRateValue = document.querySelector("#tremolo-rate-value");
 const tremoloDepth = document.querySelector("#tremolo-depth");
@@ -151,6 +162,7 @@ let statsBuffer = null;
 let stats = null;
 let statsFloats = null;
 let effectMemory = [];
+let tunerMemoryBytes = 0;
 let chainMemoryBytes = 0;
 let wasmMemoryBytes = 0;
 let timerResolution = "unknown";
@@ -162,6 +174,7 @@ let loadTask = Promise.resolve();
 let playTask = Promise.resolve();
 let preparedChannels = 0;
 let pendingProcessorOptions = null;
+let lastTunerGeneration = 0;
 
 function setAudioStatus(text, state = "") {
   audioStatus.textContent = text;
@@ -278,6 +291,8 @@ async function setupProcessor(testOptions = null) {
     inputMuted: testOptions?.inputMuted ?? inputMute.checked,
     globalBypass: testOptions?.globalBypass ?? globalBypass.checked,
     panicMuted: testOptions?.panicMuted ?? panicMute.getAttribute("aria-pressed") === "true",
+    tunerReferenceHz: testOptions?.tunerReferenceHz ?? Number(tunerReference.value),
+    tunerMuted: testOptions?.tunerMuted ?? tunerMuteOutput.checked,
     parameters: testOptions?.parameters || DEFAULT_PARAMETERS,
   };
   if (statsBuffer) processorOptions.statsBuffer = statsBuffer;
@@ -305,6 +320,7 @@ async function setupProcessor(testOptions = null) {
       chainMemoryBytes = message.memoryBytes;
       wasmMemoryBytes = message.wasmMemoryBytes;
       effectMemory = message.effectMemoryBytes;
+      tunerMemoryBytes = message.tunerMemoryBytes || 0;
       timerResolution = message.timerResolution || "unknown";
       timerResolutionNote.hidden = timerResolution === "high-resolution";
       document.querySelector("#sample-rate").textContent = `${message.sampleRate} Hz`;
@@ -312,8 +328,11 @@ async function setupProcessor(testOptions = null) {
       document.querySelector("#wasm-memory-use").textContent = bytesLabel(wasmMemoryBytes);
       document.querySelector("#memory-use").textContent = bytesLabel(chainMemoryBytes);
       setAudioStatus("Chain ready", "ready");
+      lastTunerGeneration = 0;
       renderLoadRows(null);
       resolveReady(message);
+    } else if (message?.type === "tuner-reading") {
+      renderTunerReading(message);
     } else if (message?.type === "error") {
       setAudioStatus(message.message || "Audio processor failed", "error");
       rejectReady(new Error(message.message || "Audio processor failed"));
@@ -414,8 +433,8 @@ function readLoadWindow() {
   if (end <= 0) return null;
   const start = Math.max(0, end - STATS_RING_BLOCKS);
   const count = end - start;
-  const sums = new Float64Array(EFFECT_NAMES.length + 1);
-  const peaks = new Float64Array(EFFECT_NAMES.length + 1);
+  const sums = new Float64Array(EFFECT_NAMES.length + 2);
+  const peaks = new Float64Array(EFFECT_NAMES.length + 2);
   let sampleRate = audioContext?.sampleRate || 48000;
   let blockFrames = 128;
   for (let sequence = start; sequence < end; sequence += 1) {
@@ -423,11 +442,17 @@ function readLoadWindow() {
     const frames = Math.max(1, stats[slot + EFFECT_NAMES.length + 1]);
     blockFrames = frames;
     const deadlineMs = frames * 1000 / sampleRate;
-    for (let effect = 0; effect < sums.length; effect += 1) {
+    for (let effect = 0; effect < EFFECT_NAMES.length; effect += 1) {
       const percent = (stats[slot + effect] / 1000000) / deadlineMs * 100;
       sums[effect] += percent;
       peaks[effect] = Math.max(peaks[effect], percent);
     }
+    const callbackPercent = (stats[slot + EFFECT_NAMES.length] / 1000000) / deadlineMs * 100;
+    const tunerPercent = (stats[slot + TUNER_TIME] / 1000000) / deadlineMs * 100;
+    sums[EFFECT_NAMES.length] += tunerPercent;
+    peaks[EFFECT_NAMES.length] = Math.max(peaks[EFFECT_NAMES.length], tunerPercent);
+    sums[EFFECT_NAMES.length + 1] += callbackPercent;
+    peaks[EFFECT_NAMES.length + 1] = Math.max(peaks[EFFECT_NAMES.length + 1], callbackPercent);
   }
   return { count, sums, peaks, sampleRate, blockFrames };
 }
@@ -437,6 +462,39 @@ function readLatestMeters() {
   const end = Atomics.load(stats, 0);
   if (end <= 0) return null;
   return readMetersAtSequence(end - 1);
+}
+
+function readLatestTuner() {
+  if (!stats || !statsFloats) return null;
+  const end = Atomics.load(stats, 0);
+  if (end <= 0) return null;
+  const slot = STATS_HEADER_WORDS + (((end - 1) % STATS_RING_BLOCKS) * STATS_EFFECT_SLOTS);
+  return {
+    generation: Math.max(0, stats[slot + TUNER_GENERATION]),
+    midiNote: stats[slot + TUNER_NOTE],
+    valid: stats[slot + TUNER_VALID] !== 0,
+    frequencyHz: statsFloats[slot + TUNER_FREQUENCY],
+    cents: statsFloats[slot + TUNER_CENTS],
+    confidence: statsFloats[slot + TUNER_CONFIDENCE],
+  };
+}
+
+function renderTunerReading(reading) {
+  if (!reading || reading.generation === 0) {
+    tunerReadingOutput.textContent = "Play guitar audio to detect a note.";
+    return;
+  }
+  if (!reading.valid) {
+    tunerReadingOutput.textContent = "No stable note detected.";
+    return;
+  }
+  const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+  const noteNumber = reading.midiNote;
+  const note = `${names[((noteNumber % 12) + 12) % 12]}${Math.floor(noteNumber / 12) - 1}`;
+  const cents = Number(reading.cents);
+  const direction = Math.abs(cents) < 5 ? "in tune" : cents > 0 ? "sharp" : "flat";
+  const signedCents = `${cents > 0 ? "+" : ""}${cents.toFixed(1)} cents`;
+  tunerReadingOutput.textContent = `${note} · ${signedCents} (${direction}) · ${Number(reading.frequencyHz).toFixed(1)} Hz`;
 }
 
 function readMetersAtSequence(sequence) {
@@ -514,9 +572,15 @@ function renderLoadRows(load) {
   if (load) {
     const total = EFFECT_NAMES.length;
     rows.push([
-      "Whole callback",
+      "Chromatic tuner analysis",
       `${(load.sums[total] / load.count).toFixed(3)}%`,
       `${load.peaks[total].toFixed(3)}%`,
+      bytesLabel(tunerMemoryBytes),
+    ]);
+    rows.push([
+      "Whole callback",
+      `${(load.sums[total + 1] / load.count).toFixed(3)}%`,
+      `${load.peaks[total + 1].toFixed(3)}%`,
       bytesLabel(chainMemoryBytes),
     ]);
     document.querySelector("#block-size").textContent = `${load.blockFrames} frames`;
@@ -746,10 +810,31 @@ setInterval(() => {
     const load = readLoadWindow();
     if (load) renderLoadRows(load);
     renderLevelMeters(readLatestMeters());
+    const tuner = readLatestTuner();
+    if (tuner && tuner.generation !== lastTunerGeneration) {
+      lastTunerGeneration = tuner.generation;
+      renderTunerReading(tuner);
+    }
     const error = Atomics.load(stats, 1);
     if (error) setAudioStatus("Audio block exceeded the prepared processor capacity", "error");
   }
 }, 500);
+
+function updateTunerSettings() {
+  const referenceHz = Number(tunerReference.value);
+  tunerReferenceValue.value = `${referenceHz.toFixed(1)} Hz`;
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "tuner-settings",
+      referenceHz,
+      muted: tunerMuteOutput.checked,
+    });
+  }
+}
+
+tunerReference.addEventListener("input", updateTunerSettings);
+tunerReference.addEventListener("change", updateTunerSettings);
+tunerMuteOutput.addEventListener("change", updateTunerSettings);
 
 clearMeterClips.addEventListener("click", () => {
   if (workletNode) workletNode.port.postMessage({ type: "clear-meter-clips" });
@@ -832,9 +917,13 @@ async function runBrowserSelfTest() {
     ]);
     testResult.textContent = "Reading local guitar fixture and native reference…";
     if (!inputResponse.ok || !referenceResponse.ok) throw new Error("Browser test fixtures were not served.");
-    const [inputBytes, referenceBytes] = await Promise.all([
+    const [inputBytes, referenceBytes, tunerBytes] = await Promise.all([
       inputResponse.arrayBuffer(),
       referenceResponse.arrayBuffer(),
+      fetch("/__test_tuner.wav").then((response) => {
+        if (!response.ok) throw new Error("Browser tuner fixture was not served.");
+        return response.arrayBuffer();
+      }),
     ]);
     const reference = readFloatWave(referenceBytes);
     const captureBuffer = new SharedArrayBuffer(reference.samples.length * Float32Array.BYTES_PER_ELEMENT);
@@ -1001,6 +1090,49 @@ async function runBrowserSelfTest() {
         Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
       throw new Error("Output meter does not match the final processed audio block.");
     }
+    const localFileDecoded = fileName.textContent === file.name;
+    const tunerFile = new File([tunerBytes], "browser-tuner-a4.wav", { type: "audio/wav" });
+    const tunerTransfer = new DataTransfer();
+    tunerTransfer.items.add(tunerFile);
+    fileInput.files = tunerTransfer.files;
+    testResult.textContent = "Checking WASM tuner analysis and A4 reference control…";
+    await loadFile(tunerFile);
+    tunerReference.value = "432";
+    updateTunerSettings();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const tunerStartSequence = Atomics.load(stats, 0);
+    const tunerDetectionStartedMs = performance.now();
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting the browser tuner fixture.")), 5000,
+      )),
+    ]);
+    let tunerReading = null;
+    const tunerDeadline = performance.now() + 1500;
+    while (performance.now() < tunerDeadline) {
+      tunerReading = readLatestTuner();
+      if (Atomics.load(stats, 0) > tunerStartSequence &&
+          tunerReading?.generation > 0 && tunerReading.valid) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const tunerDetectionMs = performance.now() - tunerDetectionStartedMs;
+    if (!tunerReading?.valid || tunerReading.midiNote !== 69 ||
+        Math.abs(tunerReading.frequencyHz - 440) > 2 ||
+        Math.abs(tunerReading.cents - 31.77) > 2 || tunerDetectionMs > 300) {
+      throw new Error(`WASM tuner did not report A4 against A=432 Hz: ${JSON.stringify(tunerReading)}`);
+    }
+    const tunerUiDeadline = performance.now() + 1000;
+    while (performance.now() < tunerUiDeadline && !tunerReadingOutput.textContent.startsWith("A4")) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    if (!tunerReadingOutput.textContent.startsWith("A4")) {
+      throw new Error(`Browser tuner UI did not display A4: ${tunerReadingOutput.textContent}`);
+    }
+    stopSource(false);
+    tunerReference.value = "440";
+    updateTunerSettings();
     const report = {
       result: "passed",
       browser: navigator.userAgent,
@@ -1012,6 +1144,7 @@ async function runBrowserSelfTest() {
       maxAbsoluteTolerance: maxAbsTolerance,
       rmsTolerance,
       processorMemoryBytes: chainMemoryBytes,
+      tunerMemoryBytes,
       wasmLinearMemoryBytes: wasmMemoryBytes,
       timingResolution: timerResolution,
       callbackLoad: load ? {
@@ -1020,8 +1153,11 @@ async function runBrowserSelfTest() {
         peakPercentByProcessor: [...load.peaks],
       } : null,
       levelMeters: { capturedBlock: meters, latestBlock: readLatestMeters() },
-      localFileDecode: fileName.textContent === file.name,
+      localFileDecode: localFileDecoded,
       playOutputCaptured: nonZeroSamples > 0,
+      tuner: tunerReading,
+      tunerDetectionMs,
+      tunerUi: tunerReadingOutput.textContent,
     };
     testResult.dataset.status = "passed";
     testResult.textContent = JSON.stringify(report);

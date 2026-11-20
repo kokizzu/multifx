@@ -1,6 +1,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/parallel_mixer.hpp"
+#include "tabletfx/tuner.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
@@ -714,6 +715,52 @@ void benchmark_parallel_routing(std::uint32_t sample_rate,
     report("parallel-mix", mix, mixer.memory_bytes(), output);
 }
 
+void benchmark_chromatic_tuner(std::uint32_t sample_rate,
+                               std::uint16_t channels,
+                               std::size_t block_frames,
+                               std::size_t warmup_blocks,
+                               std::size_t measured_blocks) {
+    const std::size_t samples = block_frames * channels;
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    std::vector<float> source(samples);
+    std::vector<float> buffer(samples);
+    constexpr double frequency = 93.75;
+    for (std::size_t frame = 0; frame < block_frames; ++frame) {
+        const float value = 0.35F * static_cast<float>(
+            std::sin(2.0 * 3.14159265358979323846 * frequency *
+                     static_cast<double>(frame) / static_cast<double>(sample_rate)));
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            source[frame * channels + channel] = value;
+        }
+    }
+    tabletfx::ChromaticTuner tuner(static_cast<float>(sample_rate));
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const auto operation = [&] {
+        std::copy(source.begin(), source.end(), buffer.begin());
+        const auto start = Clock::now();
+        tuner.process(buffer, channels);
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        return 100.0 * elapsed_us / deadline_us;
+    };
+    for (std::size_t index = 0; index < warmup_blocks; ++index) {
+        (void)operation();
+    }
+    tuner.reset();
+    for (std::size_t index = 0; index < measured_blocks; ++index) {
+        percentages.push_back(operation());
+    }
+    const auto signal = metrics(buffer);
+    std::cout << "chromatic-tuner-monitor," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << tuner.memory_bytes() << "," << signal.rms << '\n';
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -895,6 +942,8 @@ void run_bench() {
                                  warmup_blocks, measured_blocks);
     benchmark_parallel_routing(sample_rate, channels, block_frames,
                                warmup_blocks, measured_blocks);
+    benchmark_chromatic_tuner(sample_rate, channels, block_frames,
+                              warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;
