@@ -16,6 +16,7 @@ add_library(tabletfx_core
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
+    src/level_meter.cpp
     src/signal_controls.cpp
 )
 target_include_directories(tabletfx_core PUBLIC include)
@@ -66,6 +67,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_signal_controls_tests tests/test_signal_controls.cpp)
     target_link_libraries(tabletfx_signal_controls_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_signal_controls_tests COMMAND tabletfx_signal_controls_tests)
+
+    add_executable(tabletfx_level_meter_tests tests/test_level_meter.cpp)
+    target_link_libraries(tabletfx_level_meter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_level_meter_tests COMMAND tabletfx_level_meter_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)

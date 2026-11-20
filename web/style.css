@@ -70,6 +70,18 @@ h2 { margin-bottom: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
 .runtime-grid > div { min-width: 0; padding: 12px; border: 1px solid #293442; border-radius: 11px; background: #111821; }
 .metric-label { display: block; margin-bottom: 7px; color: #91a0b2; font-size: 0.7rem; }
 .runtime-grid strong { font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.meter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 10px; }
+.meter-card { min-width: 0; padding: 12px; border: 1px solid #344152; border-radius: 11px; background: #111821; }
+.meter-heading, .meter-values { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.meter-heading h3 { margin: 0; font-size: 0.9rem; }
+.meter-status { color: #9caaba; font-size: 0.68rem; font-weight: 700; }
+.meter-status[data-clipped="true"] { color: #ff8793; }
+.meter-card progress { display: block; width: 100%; height: 12px; margin: 12px 0 8px; accent-color: #6ad7bd; }
+.meter-card progress::-webkit-progress-bar { border-radius: 8px; background: #2a3745; }
+.meter-card progress::-webkit-progress-value { border-radius: 8px; background: linear-gradient(90deg, #5abf9a, #e5be67 82%, #e16d78); }
+.meter-values { color: #d7e1ec; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.meter-card small { display: block; margin-top: 8px; color: #8292a4; font-size: 0.65rem; }
+.meter-actions { margin: 10px 0 14px; text-align: right; }
 .load-table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 th, td { padding: 9px 6px; border-bottom: 1px solid #293442; text-align: left; }
@@ -83,6 +95,7 @@ code { padding: 2px 5px; border-radius: 5px; background: #222b38; color: #d7e2ee
   .panel { padding: 16px; border-radius: 15px; }
   .section-heading { align-items: flex-start; flex-direction: column; }
   .runtime-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meter-grid { grid-template-columns: 1fr; }
   .mix-control { width: 100%; grid-template-columns: auto auto; }
   .mix-control input { width: 100%; }
   .gain-controls { grid-template-columns: 1fr; gap: 12px; }

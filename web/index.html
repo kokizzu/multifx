@@ -252,6 +252,27 @@
         <div><span class="metric-label">WASM linear memory</span><strong id="wasm-memory-use">—</strong></div>
         <div><span class="metric-label">Chain state within heap</span><strong id="memory-use">—</strong></div>
       </div>
+      <div class="meter-grid" aria-label="Audio level meters">
+        <section class="meter-card" aria-labelledby="input-meter-title">
+          <div class="meter-heading">
+            <h3 id="input-meter-title">Input</h3>
+            <span id="input-meter-status" class="meter-status" data-clipped="false" role="status">No blocks yet</span>
+          </div>
+          <progress id="input-peak-bar" max="1" value="0" aria-label="Input sample peak"></progress>
+          <div class="meter-values"><strong id="input-peak-value">Peak —</strong><span id="input-rms-value">RMS —</span></div>
+          <small id="input-meter-diagnostics">Waiting for audio blocks.</small>
+        </section>
+        <section class="meter-card" aria-labelledby="output-meter-title">
+          <div class="meter-heading">
+            <h3 id="output-meter-title">Output</h3>
+            <span id="output-meter-status" class="meter-status" data-clipped="false" role="status">No blocks yet</span>
+          </div>
+          <progress id="output-peak-bar" max="1" value="0" aria-label="Output sample peak"></progress>
+          <div class="meter-values"><strong id="output-peak-value">Peak —</strong><span id="output-rms-value">RMS —</span></div>
+          <small id="output-meter-diagnostics">Waiting for audio blocks.</small>
+        </section>
+      </div>
+      <div class="meter-actions"><button id="clear-meter-clips" class="button" type="button">Clear clip indicators</button></div>
       <p id="timer-resolution-note" class="hint" hidden>Per-effect CPU percentages use a 1 ms timer in this browser and are coarse. Use the native benchmark for precise processor comparisons.</p>
       <div class="load-table-wrap">
         <table>
@@ -259,7 +280,7 @@
           <tbody id="load-rows"><tr><td colspan="4" class="muted">Load is measured while audio is playing.</td></tr></tbody>
         </table>
       </div>
-      <p id="isolation-note" class="hint" hidden>Per-effect CPU reporting needs a local server with cross-origin isolation. Use <code>make web-serve</code>.</p>
+      <p id="isolation-note" class="hint" hidden>Level meters and per-effect CPU reporting need a local server with cross-origin isolation. Use <code>make web-serve</code>.</p>
     </section>
 
     <footer>Browser prototype · Shared C++ DSP · No microphone access · No audio upload</footer>

@@ -8,7 +8,14 @@ const EFFECTS = [
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
-const STATS_EFFECT_SLOTS = EFFECTS.length + 2;
+const STATS_EFFECT_SLOTS = EFFECTS.length + 9;
+const METER_INPUT_PEAK = EFFECTS.length + 2;
+const METER_INPUT_RMS = EFFECTS.length + 3;
+const METER_OUTPUT_PEAK = EFFECTS.length + 4;
+const METER_OUTPUT_RMS = EFFECTS.length + 5;
+const METER_FLAGS = EFFECTS.length + 6;
+const METER_INPUT_INVALID = EFFECTS.length + 7;
+const METER_OUTPUT_INVALID = EFFECTS.length + 8;
 
 const wasmModulePromise = createWasmModule({ noInitialRun: true });
 
@@ -35,6 +42,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.inputIndex = 0;
     this.outputIndex = 0;
     this.stats = config.statsBuffer ? new Int32Array(config.statsBuffer) : null;
+    this.statsFloats = config.statsBuffer ? new Float32Array(config.statsBuffer) : null;
     this.capture = config.captureBuffer ? new Float32Array(config.captureBuffer) : null;
     this.captureControl = config.captureControl ? new Int32Array(config.captureControl) : null;
     this.captureOffset = 0;
@@ -125,6 +133,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_input_mute(this.chain, message.value ? 1 : 0);
     } else if (message.type === "panic-mute" && this.ready) {
       this.module._tf_chain_set_panic_mute(this.chain, message.value ? 1 : 0);
+    } else if (message.type === "clear-meter-clips" && this.ready) {
+      this.module._tf_chain_clear_meter_clip(this.chain, 0);
+      this.module._tf_chain_clear_meter_clip(this.chain, 1);
     } else if (message.type === "input-gain" && this.ready) {
       this.module._tf_chain_ramp_input_gain(this.chain, Number(message.value));
     } else if (message.type === "output-gain" && this.ready) {
@@ -218,6 +229,15 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     if (this.stats) {
       this.stats[ringOffset + EFFECTS.length] = Math.round(callbackMs * 1000000);
       this.stats[ringOffset + EFFECTS.length + 1] = frames;
+      this.statsFloats[ringOffset + METER_INPUT_PEAK] = this.module._tf_chain_meter_peak(this.chain, 0);
+      this.statsFloats[ringOffset + METER_INPUT_RMS] = this.module._tf_chain_meter_rms(this.chain, 0);
+      this.statsFloats[ringOffset + METER_OUTPUT_PEAK] = this.module._tf_chain_meter_peak(this.chain, 1);
+      this.statsFloats[ringOffset + METER_OUTPUT_RMS] = this.module._tf_chain_meter_rms(this.chain, 1);
+      const inputFlags = this.module._tf_chain_meter_flags(this.chain, 0);
+      const outputFlags = this.module._tf_chain_meter_flags(this.chain, 1);
+      this.stats[ringOffset + METER_FLAGS] = (inputFlags & 0x3) | ((outputFlags & 0x3) << 2);
+      this.stats[ringOffset + METER_INPUT_INVALID] = this.module._tf_chain_meter_invalid_samples(this.chain, 0);
+      this.stats[ringOffset + METER_OUTPUT_INVALID] = this.module._tf_chain_meter_invalid_samples(this.chain, 1);
       Atomics.store(this.stats, 0, sequence + 1);
     }
 

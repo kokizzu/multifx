@@ -9,6 +9,7 @@
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
+#include "tabletfx/level_meter.hpp"
 #include "tabletfx/signal_controls.hpp"
 #include "tabletfx/wav.hpp"
 
@@ -538,6 +539,53 @@ void benchmark_signal_controls(std::uint32_t sample_rate, std::uint16_t channels
               << controls.memory_bytes() << "," << signal.rms << '\n';
 }
 
+void benchmark_level_meters(std::uint32_t sample_rate, std::uint16_t channels,
+                            std::size_t block_frames, std::size_t warmup_blocks,
+                            std::size_t measured_blocks) {
+    tabletfx::LevelMeter input_meter;
+    tabletfx::LevelMeter output_meter;
+    std::vector<float> samples(block_frames * channels);
+    std::uint32_t noise = 0x7654321U;
+    float meter_readback = 0.0F;
+    for (float& sample : samples) {
+        noise = noise * 1664525U + 1013904223U;
+        sample = static_cast<float>((noise >> 8U) & 0xffffU) / 65536.0F - 0.5F;
+    }
+    const auto process = [&] {
+        input_meter.process(samples, channels);
+        output_meter.process(samples, channels);
+        meter_readback = input_meter.peak() + input_meter.rms() +
+                         static_cast<float>(input_meter.clip_flags()) +
+                         static_cast<float>(input_meter.invalid_samples()) +
+                         output_meter.peak() + output_meter.rms() +
+                         static_cast<float>(output_meter.clip_flags()) +
+                         static_cast<float>(output_meter.invalid_samples());
+    };
+    for (std::size_t i = 0; i < warmup_blocks; ++i) process();
+    input_meter.reset();
+    output_meter.reset();
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    for (std::size_t i = 0; i < measured_blocks; ++i) {
+        const auto start = Clock::now();
+        process();
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        percentages.push_back(100.0 * elapsed_us / deadline_us);
+    }
+    if (meter_readback < 0.0F) std::terminate();
+    const Metrics signal = metrics(samples);
+    const std::size_t memory_bytes = input_meter.memory_bytes() + output_meter.memory_bytes();
+    std::cout << "level-meters-input-output," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << memory_bytes << "," << signal.rms << '\n';
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -578,6 +626,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
+    tabletfx::LevelMeter input_meter;
+    tabletfx::LevelMeter output_meter;
 
     std::vector<float> buffer(block_frames * channels);
     std::vector<float> dry_buffer(block_frames * channels);
@@ -589,14 +639,24 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
     }
     const std::vector<float> source_buffer = buffer;
-    const auto process_chain = [&effects, &signal_controls, &dry_buffer, &wet_buffer,
-                                &output_buffer, channels](std::span<const float> input) noexcept {
+    const auto process_chain = [&effects, &signal_controls, &input_meter, &output_meter,
+                                &dry_buffer, &wet_buffer, &output_buffer,
+                                channels](std::span<const float> input) noexcept {
+        input_meter.process(input, channels);
         signal_controls.process_input(input, dry_buffer, channels);
         std::copy(dry_buffer.begin(), dry_buffer.end(), wet_buffer.begin());
         for (const auto& effect : effects) {
             effect->process(wet_buffer, channels);
         }
         signal_controls.process_output(dry_buffer, wet_buffer, output_buffer, channels);
+        output_meter.process(output_buffer, channels);
+        const float telemetry = input_meter.peak() + input_meter.rms() +
+                                static_cast<float>(input_meter.clip_flags()) +
+                                static_cast<float>(input_meter.invalid_samples()) +
+                                output_meter.peak() + output_meter.rms() +
+                                static_cast<float>(output_meter.clip_flags()) +
+                                static_cast<float>(output_meter.invalid_samples());
+        if (telemetry < 0.0F) std::terminate();
     };
     for (std::size_t i = 0; i < warmup_blocks; ++i) {
         std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
@@ -620,7 +680,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     for (const auto& effect : effects) {
         memory_bytes += effect->memory_bytes();
     }
-    memory_bytes += signal_controls.memory_bytes();
+    memory_bytes += signal_controls.memory_bytes() + input_meter.memory_bytes() +
+                    output_meter.memory_bytes();
     const Metrics signal = metrics(output_buffer);
     std::cout << "full-chain," << std::fixed << std::setprecision(4)
               << percentile(percentages, 0.50) << ","
@@ -700,6 +761,8 @@ void run_bench() {
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_signal_controls(sample_rate, channels, block_frames,
                               warmup_blocks, measured_blocks);
+    benchmark_level_meters(sample_rate, channels, block_frames,
+                           warmup_blocks, measured_blocks);
     benchmark_one("tremolo", [=] {
         tabletfx::TremoloParameters parameters;
         parameters.rate_hz = 5.0F;

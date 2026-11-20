@@ -125,6 +125,8 @@ def build_web() -> None:
         "_tf_chain_set_envelope_wah",
         "_tf_chain_set_global_bypass", "_tf_chain_set_input_mute",
         "_tf_chain_set_panic_mute",
+        "_tf_chain_meter_peak", "_tf_chain_meter_rms", "_tf_chain_meter_flags",
+        "_tf_chain_meter_invalid_samples", "_tf_chain_clear_meter_clip",
     ]
     command = [
         str(compiler), "-std=c++20", "-O3", "-flto", "-fno-rtti", "-fexceptions",
@@ -140,6 +142,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
+        str(ROOT / "src" / "level_meter.cpp"),
         str(ROOT / "src" / "web" / "wasm_chain.cpp"),
         "-o", str(WEB_BUILD_DIR / "tabletfx_wasm.js"),
         "-sMODULARIZE=1", "-sEXPORT_ES6=1", "-sSINGLE_FILE=1",

@@ -37,13 +37,31 @@ const DEFAULT_PARAMETERS = {
 };
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
-const STATS_EFFECT_SLOTS = EFFECT_NAMES.length + 2;
+const STATS_EFFECT_SLOTS = EFFECT_NAMES.length + 9;
+const METER_INPUT_PEAK = EFFECT_NAMES.length + 2;
+const METER_INPUT_RMS = EFFECT_NAMES.length + 3;
+const METER_OUTPUT_PEAK = EFFECT_NAMES.length + 4;
+const METER_OUTPUT_RMS = EFFECT_NAMES.length + 5;
+const METER_FLAGS = EFFECT_NAMES.length + 6;
+const METER_INPUT_INVALID = EFFECT_NAMES.length + 7;
+const METER_OUTPUT_INVALID = EFFECT_NAMES.length + 8;
 
 const fileInput = document.querySelector("#audio-file");
 const playButton = document.querySelector("#play-button");
 const stopButton = document.querySelector("#stop-button");
 const rewindButton = document.querySelector("#rewind-button");
 const audioStatus = document.querySelector("#audio-status");
+const inputPeakBar = document.querySelector("#input-peak-bar");
+const inputPeakValue = document.querySelector("#input-peak-value");
+const inputRmsValue = document.querySelector("#input-rms-value");
+const inputMeterStatus = document.querySelector("#input-meter-status");
+const inputMeterDiagnostics = document.querySelector("#input-meter-diagnostics");
+const outputPeakBar = document.querySelector("#output-peak-bar");
+const outputPeakValue = document.querySelector("#output-peak-value");
+const outputRmsValue = document.querySelector("#output-rms-value");
+const outputMeterStatus = document.querySelector("#output-meter-status");
+const outputMeterDiagnostics = document.querySelector("#output-meter-diagnostics");
+const clearMeterClips = document.querySelector("#clear-meter-clips");
 const fileName = document.querySelector("#file-name");
 const fileDetails = document.querySelector("#file-details");
 const wetMix = document.querySelector("#wet-mix");
@@ -131,6 +149,7 @@ let processorReady = Promise.resolve();
 let processorSetupTask = null;
 let statsBuffer = null;
 let stats = null;
+let statsFloats = null;
 let effectMemory = [];
 let chainMemoryBytes = 0;
 let wasmMemoryBytes = 0;
@@ -251,6 +270,7 @@ async function setupProcessor(testOptions = null) {
 
   statsBuffer = buildStatsBuffer();
   stats = statsBuffer ? new Int32Array(statsBuffer) : null;
+  statsFloats = statsBuffer ? new Float32Array(statsBuffer) : null;
   const processorOptions = {
     channels,
     enabled: testOptions?.enabled || enabledEffects(),
@@ -394,8 +414,8 @@ function readLoadWindow() {
   if (end <= 0) return null;
   const start = Math.max(0, end - STATS_RING_BLOCKS);
   const count = end - start;
-  const sums = new Float64Array(STATS_EFFECT_SLOTS - 1);
-  const peaks = new Float64Array(STATS_EFFECT_SLOTS - 1);
+  const sums = new Float64Array(EFFECT_NAMES.length + 1);
+  const peaks = new Float64Array(EFFECT_NAMES.length + 1);
   let sampleRate = audioContext?.sampleRate || 48000;
   let blockFrames = 128;
   for (let sequence = start; sequence < end; sequence += 1) {
@@ -410,6 +430,77 @@ function readLoadWindow() {
     }
   }
   return { count, sums, peaks, sampleRate, blockFrames };
+}
+
+function readLatestMeters() {
+  if (!stats || !statsFloats) return null;
+  const end = Atomics.load(stats, 0);
+  if (end <= 0) return null;
+  return readMetersAtSequence(end - 1);
+}
+
+function readMetersAtSequence(sequence) {
+  if (!stats || !statsFloats) return null;
+  const slot = STATS_HEADER_WORDS + ((sequence % STATS_RING_BLOCKS) * STATS_EFFECT_SLOTS);
+  return {
+    sequence,
+    frames: Math.max(0, stats[slot + EFFECT_NAMES.length + 1]),
+    input: {
+      peak: statsFloats[slot + METER_INPUT_PEAK],
+      rms: statsFloats[slot + METER_INPUT_RMS],
+      clipped: (stats[slot + METER_FLAGS] & 0x3) !== 0,
+      invalidSamples: Math.max(0, stats[slot + METER_INPUT_INVALID]),
+    },
+    output: {
+      peak: statsFloats[slot + METER_OUTPUT_PEAK],
+      rms: statsFloats[slot + METER_OUTPUT_RMS],
+      clipped: ((stats[slot + METER_FLAGS] >>> 2) & 0x3) !== 0,
+      invalidSamples: Math.max(0, stats[slot + METER_OUTPUT_INVALID]),
+    },
+  };
+}
+
+function findLastNonSilentInputMeter() {
+  if (!stats || !statsFloats) return null;
+  const end = Atomics.load(stats, 0);
+  const start = Math.max(0, end - STATS_RING_BLOCKS);
+  for (let sequence = end - 1; sequence >= start; sequence -= 1) {
+    const meter = readMetersAtSequence(sequence);
+    if (meter?.input.peak > 0) return meter;
+  }
+  return null;
+}
+
+function dbfs(value) {
+  if (!Number.isFinite(value) || value <= 0) return "−∞ dBFS";
+  const level = 20 * Math.log10(value);
+  return `${level > 0 ? "+" : ""}${level.toFixed(1)} dBFS`;
+}
+
+function renderOneMeter(reading, frames, peakBar, peakText, rmsText, status, diagnostics) {
+  if (!reading) {
+    peakBar.value = 0;
+    peakText.textContent = "Peak —";
+    rmsText.textContent = "RMS —";
+    status.textContent = "No blocks yet";
+    status.dataset.clipped = "false";
+    diagnostics.textContent = "Waiting for audio blocks.";
+    return;
+  }
+  peakBar.value = Math.min(1, Math.max(0, reading.peak));
+  peakText.textContent = `Peak ${dbfs(reading.peak)}`;
+  rmsText.textContent = `RMS ${dbfs(reading.rms)}`;
+  status.textContent = reading.clipped ? "CLIP latched" : "No clip";
+  status.dataset.clipped = String(reading.clipped);
+  const invalid = reading.invalidSamples;
+  diagnostics.textContent = `${frames} frames · ${invalid} invalid sample${invalid === 1 ? "" : "s"} in latest block`;
+}
+
+function renderLevelMeters(meters) {
+  renderOneMeter(meters?.input, meters?.frames || 0,
+    inputPeakBar, inputPeakValue, inputRmsValue, inputMeterStatus, inputMeterDiagnostics);
+  renderOneMeter(meters?.output, meters?.frames || 0,
+    outputPeakBar, outputPeakValue, outputRmsValue, outputMeterStatus, outputMeterDiagnostics);
 }
 
 function renderLoadRows(load) {
@@ -654,10 +745,15 @@ setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
     if (load) renderLoadRows(load);
+    renderLevelMeters(readLatestMeters());
     const error = Atomics.load(stats, 1);
     if (error) setAudioStatus("Audio block exceeded the prepared processor capacity", "error");
   }
 }, 500);
+
+clearMeterClips.addEventListener("click", () => {
+  if (workletNode) workletNode.port.postMessage({ type: "clear-meter-clips" });
+});
 
 function readFloatWave(bytes) {
   const view = new DataView(bytes);
@@ -856,6 +952,55 @@ async function runBrowserSelfTest() {
     }
     if (audioContext.state !== "running") throw new Error("Play did not start the browser audio context.");
     const load = readLoadWindow();
+    const meters = findLastNonSilentInputMeter();
+    if (!meters || meters.frames < 1 || meters.input.peak <= 0 || meters.output.peak <= 0) {
+      throw new Error(`Input/output level meters did not report a non-silent processed block: ${JSON.stringify(meters)}`);
+    }
+    if (meters.input.invalidSamples !== 0 || meters.output.invalidSamples !== 0) {
+      throw new Error("Level meters reported invalid samples for the finite guitar fixture.");
+    }
+    const lastBlockSamples = meters.frames * reference.channels;
+    const inputChannels = Array.from({ length: decodedAudio.numberOfChannels }, (_, channel) =>
+      decodedAudio.getChannelData(channel));
+    let inputStartFrame = -1;
+    for (let start = 0; start + meters.frames <= inputChannels[0].length; start += 1) {
+      let candidatePeak = 0;
+      let candidateSquares = 0;
+      let candidateSamples = 0;
+      for (let frame = start; frame < start + meters.frames; frame += 1) {
+        for (const channel of inputChannels) {
+          const sample = channel[frame];
+          candidatePeak = Math.max(candidatePeak, Math.abs(sample));
+          candidateSquares += sample * sample;
+          candidateSamples += 1;
+        }
+      }
+      const candidateRms = Math.sqrt(candidateSquares / Math.max(1, candidateSamples));
+      if (Math.abs(meters.input.peak - candidatePeak) <= 1e-6 &&
+          Math.abs(meters.input.rms - candidateRms) <= 1e-6) {
+        inputStartFrame = start;
+        break;
+      }
+    }
+    if (inputStartFrame < 0) {
+      throw new Error("Input meter did not match any block in the decoded local audio file.");
+    }
+    const outputStart = inputStartFrame * reference.channels;
+    if (outputStart + lastBlockSamples > actual.length) {
+      throw new Error("Metered output block was outside the captured audio range.");
+    }
+    let measuredOutputPeak = 0;
+    let measuredOutputSquares = 0;
+    for (let i = outputStart; i < actual.length; i += 1) {
+      const magnitude = Math.abs(actual[i]);
+      measuredOutputPeak = Math.max(measuredOutputPeak, magnitude);
+      measuredOutputSquares += actual[i] * actual[i];
+    }
+    const measuredOutputRms = Math.sqrt(measuredOutputSquares / Math.max(1, actual.length - outputStart));
+    if (Math.abs(meters.output.peak - measuredOutputPeak) > 1e-6 ||
+        Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
+      throw new Error("Output meter does not match the final processed audio block.");
+    }
     const report = {
       result: "passed",
       browser: navigator.userAgent,
@@ -874,6 +1019,7 @@ async function runBrowserSelfTest() {
         averagePercentByProcessor: [...load.sums].map((value) => value / load.count),
         peakPercentByProcessor: [...load.peaks],
       } : null,
+      levelMeters: { capturedBlock: meters, latestBlock: readLatestMeters() },
       localFileDecode: fileName.textContent === file.name,
       playOutputCaptured: nonZeroSamples > 0,
     };

@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "docs: clarify Windows and browser targets"
+COMMIT_MESSAGE = "feat: add input and output level meters"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -30,6 +30,7 @@ CHECKPOINT_PATHS = (
     "cmake/toolchains/mingw-w64.cmake",
     "include/tabletfx/effect.hpp",
     "include/tabletfx/effects.hpp",
+    "include/tabletfx/level_meter.hpp",
     "include/tabletfx/signal_controls.hpp",
     "tests/test_gain.cpp",
     "tests/test_peak_limiter.cpp",
@@ -72,6 +73,7 @@ CHECKPOINT_PATHS = (
     "src/effects/tremolo.cpp",
     "src/effects/volume_pedal.cpp",
     "src/effects/wah.cpp",
+    "src/level_meter.cpp",
     "src/signal_controls.cpp",
     "src/audio/wasapi_backend.cpp",
     "src/web/wasm_chain.cpp",
@@ -81,6 +83,7 @@ CHECKPOINT_PATHS = (
     "tests/test_three_band_eq.cpp",
     "tests/test_filters.cpp",
     "tests/test_pedal_compressor.cpp",
+    "tests/test_level_meter.cpp",
     "tests/test_signal_controls.cpp",
     "tests/wasapi_compile.cpp",
     "web/app.js",

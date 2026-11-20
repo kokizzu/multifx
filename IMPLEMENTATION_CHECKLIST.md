@@ -13,7 +13,7 @@ Mark an implementation and automated-test box only after the code and relevant a
 | [ ] | `UTL-05` | P0 | Splitter, parallel mixer, branch gains, pan/balance, and phase inversion. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-06` | P1 | A/B route switching and crossfade. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-07` | P1 | Frequency-crossover and level/envelope-dependent split. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `UTL-08` | P0 | Input/output peak/RMS meters, clip indication, and per-block diagnostics. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `UTL-08` | P0 | Input/output peak/RMS meters, clip indication, and per-block diagnostics. | [x] | [x] | [ ] | Shared `LevelMeter` reports per-block peak, RMS, frames, channels, invalid-sample count, clip state/latch, and clipped-block count with lock-free 32-bit atomics and no allocation. Input is measured before trim/mute; output after gain and optional limiter. Linux pair cost is 0.0180% p50 / 0.0180% p95 of a 2.667 ms deadline and 72 B total. Browser shows dBFS meters, latched clipping, and latest-block diagnostics; `make web-test` compares a metered non-silent block against decoded input and captured processed output. Analog interface clipping and live-device behavior remain unverified. |
 | [ ] | `UTL-09` | P0 | Chromatic tuner, adjustable reference, muted and audible modes. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-10` | P1 | Global output EQ and selectable destination profiles. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `UTL-11` | P1 | Delay alignment/sample delay for branches and external routes. | [ ] | [ ] | [ ] | Not started |

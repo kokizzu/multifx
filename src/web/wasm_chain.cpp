@@ -10,6 +10,7 @@
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
+#include "tabletfx/level_meter.hpp"
 #include "tabletfx/signal_controls.hpp"
 
 #include <algorithm>
@@ -120,6 +121,7 @@ public:
         }
         frames_ = frames;
         const std::size_t samples = static_cast<std::size_t>(frames) * channels_;
+        input_meter_.process(std::span<const float>(input_.data(), samples), channels_);
         signal_controls_.process_input(
             std::span<const float>(input_.data(), samples),
             std::span<float>(work_.data(), samples), channels_);
@@ -171,11 +173,14 @@ public:
     }
 
     void process_output_limiter() noexcept {
-        if (frames_ == 0 || !output_limiter_enabled_) {
+        if (frames_ == 0) {
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
-        output_limiter_.process(std::span<float>(output_.data(), samples), channels_);
+        if (output_limiter_enabled_) {
+            output_limiter_.process(std::span<float>(output_.data(), samples), channels_);
+        }
+        output_meter_.process(std::span<const float>(output_.data(), samples), channels_);
     }
 
     void reset() noexcept {
@@ -185,7 +190,57 @@ public:
         output_gain_.reset();
         output_limiter_.reset();
         signal_controls_.reset();
+        input_meter_.reset();
+        output_meter_.reset();
         frames_ = 0;
+    }
+
+    [[nodiscard]] float meter_peak(std::uint32_t index) const noexcept {
+        if (index == 0) {
+            return input_meter_.peak();
+        }
+        if (index == 1) {
+            return output_meter_.peak();
+        }
+        return 0.0F;
+    }
+
+    [[nodiscard]] float meter_rms(std::uint32_t index) const noexcept {
+        if (index == 0) {
+            return input_meter_.rms();
+        }
+        if (index == 1) {
+            return output_meter_.rms();
+        }
+        return 0.0F;
+    }
+
+    [[nodiscard]] std::uint32_t meter_flags(std::uint32_t index) const noexcept {
+        if (index == 0) {
+            return input_meter_.clip_flags();
+        }
+        if (index == 1) {
+            return output_meter_.clip_flags();
+        }
+        return 0;
+    }
+
+    [[nodiscard]] std::uint32_t meter_invalid_samples(std::uint32_t index) const noexcept {
+        if (index == 0) {
+            return input_meter_.invalid_samples();
+        }
+        if (index == 1) {
+            return output_meter_.invalid_samples();
+        }
+        return 0;
+    }
+
+    void clear_meter_clip(std::uint32_t index) noexcept {
+        if (index == 0) {
+            input_meter_.clear_clip_latch();
+        } else if (index == 1) {
+            output_meter_.clear_clip_latch();
+        }
     }
 
     void configure_compressor(float threshold_db, float ratio, float knee_db,
@@ -372,6 +427,8 @@ private:
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
+    tabletfx::LevelMeter input_meter_;
+    tabletfx::LevelMeter output_meter_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
 };
@@ -506,6 +563,38 @@ TABLETFX_WASM_EXPORT void tf_chain_process_output_gain(void* opaque) noexcept {
 TABLETFX_WASM_EXPORT void tf_chain_process_output_limiter(void* opaque) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->process_output_limiter();
+    }
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_meter_peak(void* opaque,
+                                               std::uint32_t index) noexcept {
+    return opaque == nullptr ? 0.0F : as_chain(opaque)->meter_peak(index);
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_meter_rms(void* opaque,
+                                              std::uint32_t index) noexcept {
+    return opaque == nullptr ? 0.0F : as_chain(opaque)->meter_rms(index);
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_meter_flags(
+    void* opaque, std::uint32_t index) noexcept {
+    if (opaque == nullptr) {
+        return 0;
+    }
+    return as_chain(opaque)->meter_flags(index);
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_meter_invalid_samples(
+    void* opaque, std::uint32_t index) noexcept {
+    return opaque == nullptr
+               ? 0U
+               : as_chain(opaque)->meter_invalid_samples(index);
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_clear_meter_clip(void* opaque,
+                                                    std::uint32_t index) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->clear_meter_clip(index);
     }
 }
 
