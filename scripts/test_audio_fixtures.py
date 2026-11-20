@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -174,6 +175,35 @@ class AudioFixtureSafetyTests(unittest.TestCase):
             amp_file.touch()
             self.assertTrue(audio_regression.is_direct_input(di_file, root))
             self.assertFalse(audio_regression.is_direct_input(amp_file, root))
+
+    def test_extracts_archive_and_places_marker_inside_promoted_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archive_path = root / "audio.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("Clean/Bridge/1-0.wav", b"wav fixture")
+            destination = root / "extracted"
+            audio_fixtures.extract_archive(archive_path, destination)
+            self.assertEqual((destination / "Clean/Bridge/1-0.wav").read_bytes(), b"wav fixture")
+            self.assertTrue((destination / ".tabletfx-fixture-verified").is_file())
+            self.assertFalse(destination.with_name("extracted.extracting").exists())
+
+    def test_recovers_staging_only_after_matching_archive_contents(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archive_path = root / "audio.zip"
+            payload = b"verified wav fixture"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("Clean/Bridge/1-0.wav", payload)
+            destination = root / "extracted"
+            staging = destination.with_name("extracted.extracting")
+            staged_file = staging / "Clean/Bridge/1-0.wav"
+            staged_file.parent.mkdir(parents=True)
+            staged_file.write_bytes(payload)
+            audio_fixtures.extract_archive(archive_path, destination)
+            self.assertEqual((destination / "Clean/Bridge/1-0.wav").read_bytes(), payload)
+            self.assertTrue((destination / ".tabletfx-fixture-verified").is_file())
+            self.assertFalse(staging.exists())
 
 
 if __name__ == "__main__":

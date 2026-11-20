@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "test: add prerecorded guitar audio regression"
+COMMIT_MESSAGE = "fix: verify and recover external audio extraction"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",

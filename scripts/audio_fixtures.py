@@ -271,8 +271,57 @@ def download(asset: dict[str, object], archive_path: Path) -> None:
     print(f"Downloaded and verified: {archive_path}")
 
 
+def archive_members(archive: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+    members = archive.infolist()
+    for info in members:
+        if not safe_archive_member(info.filename):
+            raise ValueError(f"Unsafe archive path: {info.filename!r}")
+        if (info.external_attr >> 16) & 0o170000 == 0o120000:
+            raise ValueError(f"Symbolic links are not accepted in the data archive: {info.filename!r}")
+    return members
+
+
+def verify_staging_contents(
+    archive: zipfile.ZipFile, members: list[zipfile.ZipInfo], staging: Path
+) -> int:
+    expected = {info.filename for info in members if not info.is_dir()}
+    actual: set[str] = set()
+    for item in staging.rglob("*"):
+        if item.is_symlink():
+            raise ValueError(f"Unexpected symbolic link in extraction staging directory: {item}")
+        if item.is_file() and item.name != ".tabletfx-fixture-verified":
+            actual.add(item.relative_to(staging).as_posix())
+    if actual != expected:
+        missing = sorted(expected - actual)[:5]
+        unexpected = sorted(actual - expected)[:5]
+        raise ValueError(f"Staging file list differs from archive; missing={missing}, unexpected={unexpected}")
+
+    for info in members:
+        if info.is_dir():
+            continue
+        target = staging / PurePosixPath(info.filename)
+        if not target.is_file() or target.stat().st_size != info.file_size:
+            raise ValueError(f"Staged file size mismatch: {target}")
+        with archive.open(info) as source, target.open("rb") as extracted:
+            while True:
+                source_chunk = source.read(1024 * 1024)
+                extracted_chunk = extracted.read(1024 * 1024)
+                if source_chunk != extracted_chunk:
+                    raise ValueError(f"Staged file content differs from verified archive: {target}")
+                if not source_chunk:
+                    break
+    count = sum(
+        1 for item in staging.rglob("*")
+        if item.is_file() and item.suffix.lower() in {".wav", ".flac"}
+    )
+    if count == 0:
+        raise ValueError(f"No WAV or FLAC audio found after extracting {archive.filename}")
+    return count
+
+
 def extract_archive(archive_path: Path, destination: Path) -> None:
-    marker = destination / ".tabletfx-fixture-verified"
+    marker_name = ".tabletfx-fixture-verified"
+    marker = destination / marker_name
     if marker.is_file():
         print(f"Verified extracted fixture already exists: {destination}")
         return
@@ -281,16 +330,22 @@ def extract_archive(archive_path: Path, destination: Path) -> None:
 
     staging = destination.with_name(destination.name + ".extracting")
     if staging.exists():
-        raise FileExistsError(f"Refusing to reuse existing extraction staging directory: {staging}")
+        if staging.is_symlink() or not staging.is_dir():
+            raise FileExistsError(f"Refusing to reuse non-directory extraction staging path: {staging}")
+        print(f"Verifying preserved extraction staging directory against {archive_path}")
+        with zipfile.ZipFile(archive_path) as archive:
+            members = archive_members(archive)
+            wave_count = verify_staging_contents(archive, members, staging)
+        (staging / marker_name).write_text(
+            f"archive={archive_path.name}\naudio_files={wave_count}\n", encoding="utf-8"
+        )
+        staging.rename(destination)
+        print(f"Recovered and verified {wave_count} staged audio files: {destination}")
+        return
     staging.mkdir(parents=True)
     try:
         with zipfile.ZipFile(archive_path) as archive:
-            members = archive.infolist()
-            for info in members:
-                if not safe_archive_member(info.filename):
-                    raise ValueError(f"Unsafe archive path: {info.filename!r}")
-                if (info.external_attr >> 16) & 0o170000 == 0o120000:
-                    raise ValueError(f"Symbolic links are not accepted in the data archive: {info.filename!r}")
+            members = archive_members(archive)
             for info in members:
                 if info.is_dir():
                     (staging / PurePosixPath(info.filename)).mkdir(parents=True, exist_ok=True)
@@ -302,7 +357,9 @@ def extract_archive(archive_path: Path, destination: Path) -> None:
         wave_count = sum(1 for item in staging.rglob("*") if item.is_file() and item.suffix.lower() in {".wav", ".flac"})
         if wave_count == 0:
             raise ValueError(f"No WAV or FLAC audio found after extracting {archive_path}")
-        marker.write_text(f"archive={archive_path.name}\naudio_files={wave_count}\n", encoding="utf-8")
+        (staging / marker_name).write_text(
+            f"archive={archive_path.name}\naudio_files={wave_count}\n", encoding="utf-8"
+        )
         staging.rename(destination)
         print(f"Extracted {wave_count} audio files: {destination}")
     except Exception:
@@ -350,15 +407,21 @@ def inspect(data_dir: Path) -> None:
     found_any = False
     for asset in ASSETS:
         extracted = data_dir / str(asset["folder"])
-        if not extracted.is_dir():
+        staging = extracted.with_name(extracted.name + ".extracting")
+        candidate = extracted if extracted.is_dir() else staging if staging.is_dir() else None
+        if candidate is None:
             print(f"- {asset['key']}: not extracted yet")
             continue
         files = sorted(
-            item for item in extracted.rglob("*")
+            item for item in candidate.rglob("*")
             if item.is_file() and item.suffix.lower() in {".wav", ".flac"}
         )
         found_any = found_any or bool(files)
-        print(f"- {asset['key']}: {len(files)} audio files")
+        state = "verified extraction" if candidate == extracted and (extracted / ".tabletfx-fixture-verified").is_file() else (
+            "unpromoted extraction staging; fetch will validate it against the archive" if candidate == staging else
+            "unverified extraction"
+        )
+        print(f"- {asset['key']}: {len(files)} audio files ({state})")
         for item in files[:12]:
             print(f"  {item.relative_to(data_dir)}")
         if len(files) > 12:
