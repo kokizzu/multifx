@@ -240,9 +240,14 @@ def download(asset: dict[str, object], archive_path: Path) -> None:
                     output.flush()
                     os.fsync(output.fileno())
                 if expected_chunk is not None and received != expected_chunk:
-                    raise RuntimeError(
-                        f"Incomplete HTTP response for {asset['key']}: received {received} of "
-                        f"{expected_chunk} bytes"
+                    if received == 0:
+                        raise RuntimeError(
+                            f"Empty HTTP response for {asset['key']}: expected {expected_chunk} bytes"
+                        )
+                    print(
+                        f"Short HTTP response for {asset['key']}: received {received} of "
+                        f"{expected_chunk} bytes; resuming at {temporary_path.stat().st_size}",
+                        flush=True,
                     )
             if expected_total is not None and temporary_path.stat().st_size > expected_total:
                 raise RuntimeError(

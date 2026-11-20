@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""Exercise the offline DSP chain with licensed, prerecorded DI guitar audio."""
+
+from __future__ import annotations
+
+import argparse
+from collections import defaultdict
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audio_fixtures  # noqa: E402
+
+
+PICKUP_ORDER = ("bridge", "bridge-middle", "middle", "middle-neck", "neck")
+PICKUP_ALIASES = {
+    "bridge-middle": ("bridgemiddle", "bridge_mid", "bridge-mid"),
+    "middle-neck": ("middleneck", "middle_neck", "mid-neck"),
+    "bridge": ("bridge",),
+    "middle": ("middle",),
+    "neck": ("neck",),
+}
+PICKUP_SUFFIXES = {
+    "1": "bridge-middle",
+    "2": "middle",
+    "3": "middle-neck",
+    "4": "neck",
+}
+
+
+def pickup_for(path: Path, root: Path) -> str | None:
+    parent_text = " ".join(part.casefold() for part in path.relative_to(root).parts[:-1])
+    compact = re.sub(r"[^a-z0-9]", "", parent_text)
+    for label in ("bridge-middle", "middle-neck", "bridge", "middle", "neck"):
+        if any(re.sub(r"[^a-z0-9]", "", alias.casefold()) in compact for alias in PICKUP_ALIASES[label]):
+            return label
+
+    suffix = re.search(r"_([1-4])$", path.stem)
+    if suffix:
+        return PICKUP_SUFFIXES[suffix.group(1)]
+    if re.search(r"(?:^|[_-])bridge(?:$|[_-])", path.stem, re.IGNORECASE):
+        return "bridge"
+    return None
+
+
+def matching_pickup_set(root: Path) -> tuple[str, dict[str, Path]]:
+    groups: dict[str, dict[str, Path]] = defaultdict(dict)
+    for path in sorted(root.rglob("*.wav")):
+        label = pickup_for(path, root)
+        if label is None:
+            continue
+        stem = re.sub(r"_[1-4]$", "", path.stem)
+        groups[stem].setdefault(label, path)
+
+    candidates = [(stem, values) for stem, values in groups.items() if all(label in values for label in PICKUP_ORDER)]
+    if not candidates:
+        counts = {label: sum(label in values for values in groups.values()) for label in PICKUP_ORDER}
+        raise RuntimeError(f"Could not find the same recorded note for all five pickup settings; candidates={counts}")
+    stem, values = sorted(candidates, key=lambda item: item[0])[0]
+    return stem, values
+
+
+def is_direct_input(path: Path, root: Path) -> bool:
+    parts = [part.casefold() for part in path.relative_to(root).parts]
+    if any(re.sub(r"[^a-z0-9]", "", part) in {"di", "directinput", "directin"} for part in parts):
+        return True
+    return bool(re.search(r"(?:^|[_-])di(?:$|[_-])", path.stem, re.IGNORECASE))
+
+
+def run_input(renderer: Path, source: Path, output: Path) -> str:
+    command = [
+        str(renderer), "render", str(source), str(output),
+        "--gain-db", "2", "--gate-threshold-db", "-72",
+        "--drive", "3", "--delay-ms", "125", "--delay-feedback", "0.2", "--delay-mix", "0.1",
+    ]
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
+    report = result.stdout.strip()
+    match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 4:
+        raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
+    if not output.is_file() or output.stat().st_size <= 44:
+        raise RuntimeError(f"Renderer did not write audio output for {source}: {output}")
+    return report
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument("--data-dir", default="auto")
+    parser.add_argument("--link", default="testdata/reference_audio")
+    parser.add_argument("--renderer", type=Path, required=True)
+    args = parser.parse_args()
+
+    repo_root = args.repo_root.resolve()
+    data_dir, selection = audio_fixtures.resolve_data_dir(args.data_dir, repo_root, args.link)
+    audio_fixtures.verify(repo_root, data_dir, args.link)
+    print(f"Audio regression storage: {data_dir} ({selection})")
+
+    clean_root = data_dir / "egfxset-clean"
+    music_root = data_dir / "guitar-techs-p3-music"
+    note, pickups = matching_pickup_set(clean_root)
+    music_files = sorted(path for path in music_root.rglob("*.wav") if is_direct_input(path, music_root))
+    if not music_files:
+        raise RuntimeError(f"No Guitar-TECHS P3 music file is clearly labeled as direct input under {music_root}")
+
+    renderer = args.renderer.resolve()
+    if not renderer.is_file():
+        raise FileNotFoundError(f"Offline renderer not found: {renderer}")
+    with tempfile.TemporaryDirectory(prefix="tabletfx-audio-regression-", dir=data_dir) as temp_dir:
+        output_root = Path(temp_dir)
+        for label in PICKUP_ORDER:
+            source = pickups[label]
+            report = run_input(renderer, source, output_root / f"{label.replace('-', '_')}.wav")
+            print(f"OK EGFxSet note {note}, {label}: {source.relative_to(clean_root)}; {report}")
+        source = music_files[0]
+        report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
+        print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
+    print("All prerecorded clean guitar inputs rendered through the four-effect offline chain.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print(f"audio_regression: {error}", file=sys.stderr)
+        raise SystemExit(1) from error

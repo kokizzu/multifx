@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audio_fixtures  # noqa: E402
+import audio_regression  # noqa: E402
 
 
 class AudioFixtureSafetyTests(unittest.TestCase):
@@ -96,6 +97,83 @@ class AudioFixtureSafetyTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
+
+    def test_retries_after_server_closes_a_range_early(self) -> None:
+        payload = b"longer fixture payload" * 20000
+        offset = 1024
+        first_range = True
+
+        class EarlyCloseHandler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:  # noqa: N802
+                nonlocal first_range
+                requested = self.headers.get("Range", "")
+                start = int(requested.removeprefix("bytes=").removesuffix("-"))
+                body = payload[start:]
+                self.send_response(206)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Content-Range", f"bytes {start}-{len(payload) - 1}/{len(payload)}")
+                self.end_headers()
+                if first_range:
+                    first_range = False
+                    self.wfile.write(body[:4096])
+                    self.wfile.flush()
+                    self.close_connection = True
+                else:
+                    self.wfile.write(body)
+
+            def log_message(self, format: str, *args: object) -> None:
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), EarlyCloseHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as temp:
+                archive_path = Path(temp) / "fixture.zip"
+                partial = Path(temp) / "fixture.zip.resume.part"
+                partial.write_bytes(payload[:offset])
+                asset = {
+                    "key": "local-short-range-test",
+                    "url": f"http://127.0.0.1:{server.server_port}/fixture.zip",
+                    "md5": hashlib.md5(payload).hexdigest(),
+                }
+                audio_fixtures.download(asset, archive_path)
+                self.assertEqual(archive_path.read_bytes(), payload)
+                self.assertFalse(partial.exists())
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_matches_same_egfx_note_across_all_pickup_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "egfxset-clean"
+            folder_names = (
+                "Clean_Bridge",
+                "Clean_Bridge-Middle",
+                "Clean_Middle",
+                "Clean_Middle-Neck",
+                "Clean_Neck",
+            )
+            for folder in folder_names:
+                directory = root / folder
+                directory.mkdir(parents=True)
+                (directory / "1-0.wav").write_bytes(b"")
+            note, paths = audio_regression.matching_pickup_set(root)
+            self.assertEqual(note, "1-0")
+            self.assertEqual(set(paths), set(audio_regression.PICKUP_ORDER))
+
+    def test_direct_input_detection_excludes_amp_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "music"
+            di_file = root / "Player3" / "DI" / "excerpt.wav"
+            amp_file = root / "Player3" / "Amp" / "excerpt.wav"
+            di_file.parent.mkdir(parents=True)
+            amp_file.parent.mkdir(parents=True)
+            di_file.touch()
+            amp_file.touch()
+            self.assertTrue(audio_regression.is_direct_input(di_file, root))
+            self.assertFalse(audio_regression.is_direct_input(amp_file, root))
 
 
 if __name__ == "__main__":

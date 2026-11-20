@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench \
+.PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench audio-regression \
 	audio-fixtures-plan audio-fixtures-fetch audio-fixtures-verify audio-fixtures-inspect \
 	test-audio-fixtures diff-check publish-plan publish-checkpoint
 
@@ -32,6 +32,9 @@ test:
 
 bench:
 	$(PYTHON) scripts/run_cmake.py bench
+
+audio-regression: build
+	$(PYTHON) scripts/audio_regression.py --repo-root . --data-dir "$(DATA_DIR)" --link "$(FIXTURE_LINK)" --renderer build/native/tabletfx_offline
 
 audio-fixtures-plan:
 	$(PYTHON) scripts/audio_fixtures.py plan --repo-root . --data-dir "$(DATA_DIR)" --link "$(FIXTURE_LINK)"

@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add offline DSP core and external audio fixture workflow"
+COMMIT_MESSAGE = "test: add prerecorded guitar audio regression"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -30,6 +30,7 @@ CHECKPOINT_PATHS = (
     "include/tabletfx/effects.hpp",
     "include/tabletfx/wav.hpp",
     "scripts/audio_fixtures.py",
+    "scripts/audio_regression.py",
     "scripts/bootstrap_docs.py",
     "scripts/check_repo_diff.py",
     "scripts/doctor.py",
