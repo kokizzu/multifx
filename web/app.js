@@ -15,6 +15,7 @@ const EFFECT_NAMES = [
   "Tremolo",
   "Chorus",
   "Flanger",
+  "Phaser",
   "Three-band parametric EQ",
   "Stereo delay",
   "Polyphonic pitch shifter",
@@ -33,6 +34,7 @@ const DEFAULT_PARAMETERS = {
   tremolo: [5, 0.5, 0, 0, 120, 1],
   chorus: [0.8, 15, 7, 0.3],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
+  phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -172,6 +174,17 @@ const flangerFeedbackValue = document.querySelector("#flanger-feedback-value");
 const flangerPolarity = document.querySelector("#flanger-feedback-polarity");
 const flangerMix = document.querySelector("#flanger-mix");
 const flangerMixValue = document.querySelector("#flanger-mix-value");
+const phaserRate = document.querySelector("#phaser-rate-hz");
+const phaserRateValue = document.querySelector("#phaser-rate-value");
+const phaserMinimum = document.querySelector("#phaser-min-hz");
+const phaserMinimumValue = document.querySelector("#phaser-min-value");
+const phaserMaximum = document.querySelector("#phaser-max-hz");
+const phaserMaximumValue = document.querySelector("#phaser-max-value");
+const phaserFeedback = document.querySelector("#phaser-feedback");
+const phaserFeedbackValue = document.querySelector("#phaser-feedback-value");
+const phaserStages = document.querySelector("#phaser-stages");
+const phaserMix = document.querySelector("#phaser-mix");
+const phaserMixValue = document.querySelector("#phaser-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -888,6 +901,31 @@ for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
   control.addEventListener("change", updateFlanger);
 }
 
+function updatePhaser() {
+  let minimumHz = Number(phaserMinimum.value);
+  let maximumHz = Number(phaserMaximum.value);
+  if (minimumHz > maximumHz) [minimumHz, maximumHz] = [maximumHz, minimumHz];
+  phaserMinimum.value = String(minimumHz);
+  phaserMaximum.value = String(maximumHz);
+  const values = [
+    Number(phaserRate.value), minimumHz, maximumHz,
+    Number(phaserFeedback.value), Number(phaserStages.value), Number(phaserMix.value),
+  ];
+  DEFAULT_PARAMETERS.phaser = values;
+  phaserRateValue.value = `${Number(phaserRate.value).toFixed(2)} Hz`;
+  phaserMinimumValue.value = `${minimumHz.toFixed(0)} Hz`;
+  phaserMaximumValue.value = `${maximumHz.toFixed(0)} Hz`;
+  phaserFeedbackValue.value = `${Number(phaserFeedback.value).toFixed(2)}`;
+  phaserMixValue.value = `${Math.round(Number(phaserMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "phaser", value: values });
+}
+
+for (const control of [phaserRate, phaserMinimum, phaserMaximum,
+  phaserFeedback, phaserStages, phaserMix]) {
+  control.addEventListener("input", updatePhaser);
+  control.addEventListener("change", updatePhaser);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -1013,7 +1051,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: Array.from({ length: 19 }, () => true),
+      enabled: Array.from({ length: 20 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1029,6 +1067,7 @@ async function runBrowserSelfTest() {
         tremolo: [4, 0.2, 0, 0, 120, 1],
         chorus: [0.8, 15, 7, 0.2],
         flanger: [0.25, 2, 1, 0.35, 1, 0.2],
+        phaser: [0.5, 250, 1600, 0.15, 6, 0.2],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -1086,6 +1125,12 @@ async function runBrowserSelfTest() {
     flangerFeedback.value = "0.35";
     flangerPolarity.value = "negative";
     flangerMix.value = "0.2";
+    phaserRate.value = "0.5";
+    phaserMinimum.value = "250";
+    phaserMaximum.value = "1600";
+    phaserFeedback.value = "0.15";
+    phaserStages.value = "6";
+    phaserMix.value = "0.2";
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();
@@ -1094,6 +1139,7 @@ async function runBrowserSelfTest() {
     updateTremolo();
     updateChorus();
     updateFlanger();
+    updatePhaser();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

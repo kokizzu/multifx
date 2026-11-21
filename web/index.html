@@ -75,11 +75,12 @@
         <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="17" checked><span class="effect-number">18</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="18" checked><span class="effect-number">19</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="18" checked><span class="effect-number">19</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="19" checked><span class="effect-number">20</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
@@ -296,6 +297,32 @@
         <label class="mix-control" for="flanger-mix">
           <span>Flanger wet mix</span><output id="flanger-mix-value" for="flanger-mix">35%</output>
           <input id="flanger-mix" type="range" min="0" max="1" step="0.01" value="0.35">
+        </label>
+      </div>
+      <div class="gain-controls" aria-label="Phaser controls">
+        <label class="mix-control" for="phaser-rate-hz">
+          <span>Phaser rate</span><output id="phaser-rate-value" for="phaser-rate-hz">0.50 Hz</output>
+          <input id="phaser-rate-hz" type="range" min="0.05" max="8" step="0.05" value="0.5">
+        </label>
+        <label class="mix-control" for="phaser-min-hz">
+          <span>Sweep minimum</span><output id="phaser-min-value" for="phaser-min-hz">250 Hz</output>
+          <input id="phaser-min-hz" type="range" min="40" max="6000" step="10" value="250">
+        </label>
+        <label class="mix-control" for="phaser-max-hz">
+          <span>Sweep maximum</span><output id="phaser-max-value" for="phaser-max-hz">1600 Hz</output>
+          <input id="phaser-max-hz" type="range" min="40" max="6000" step="10" value="1600">
+        </label>
+        <label class="mix-control" for="phaser-feedback">
+          <span>Feedback</span><output id="phaser-feedback-value" for="phaser-feedback">0.20</output>
+          <input id="phaser-feedback" type="range" min="-0.7" max="0.7" step="0.01" value="0.2">
+        </label>
+        <label class="mix-control" for="phaser-stages">
+          <span>All-pass stages</span>
+          <select id="phaser-stages"><option value="4" selected>4 stages</option><option value="6">6 stages</option><option value="8">8 stages</option></select>
+        </label>
+        <label class="mix-control" for="phaser-mix">
+          <span>Phaser wet mix</span><output id="phaser-mix-value" for="phaser-mix">50%</output>
+          <input id="phaser-mix" type="range" min="0" max="1" step="0.01" value="0.5">
         </label>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>

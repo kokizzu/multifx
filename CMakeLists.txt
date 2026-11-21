@@ -14,6 +14,7 @@ add_library(tabletfx_core
     src/effects/chorus.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
+    src/effects/phaser.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
@@ -76,6 +77,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_flanger_tests tests/test_flanger.cpp)
     target_link_libraries(tabletfx_flanger_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_flanger_tests COMMAND tabletfx_flanger_tests)
+
+    add_executable(tabletfx_phaser_tests tests/test_phaser.cpp)
+    target_link_libraries(tabletfx_phaser_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_phaser_tests COMMAND tabletfx_phaser_tests)
 
     add_executable(tabletfx_envelope_wah_tests tests/test_envelope_wah.cpp)
     target_link_libraries(tabletfx_envelope_wah_tests PRIVATE tabletfx_core)

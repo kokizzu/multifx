@@ -7,10 +7,10 @@
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
-#include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
+#include "tabletfx/effects/phaser.hpp"
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
@@ -62,6 +62,8 @@ struct Options {
     tabletfx::ChorusParameters chorus{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
+    bool phaser_enabled = false;
+    tabletfx::PhaserParameters phaser{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     bool noise_gate_enabled = false;
@@ -130,6 +132,15 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Flanger feedback polarity must be positive or negative");
             }
             options.flanger_enabled = true;
+            continue;
+        }
+        if (key == "--phaser-stages") {
+            const std::string_view value(argv[++i]);
+            if (value == "4") options.phaser.stages = 4;
+            else if (value == "6") options.phaser.stages = 6;
+            else if (value == "8") options.phaser.stages = 8;
+            else throw std::invalid_argument("Phaser stages must be 4, 6, or 8");
+            options.phaser_enabled = true;
             continue;
         }
         if (key == "--volume-curve") {
@@ -309,6 +320,26 @@ Options parse_options(int argc, char** argv, int first) {
             options.flanger.mix = value;
             options.flanger_enabled = true;
         }
+        else if (key == "--phaser-rate-hz") {
+            options.phaser.rate_hz = value;
+            options.phaser_enabled = true;
+        }
+        else if (key == "--phaser-min-hz") {
+            options.phaser.minimum_hz = value;
+            options.phaser_enabled = true;
+        }
+        else if (key == "--phaser-max-hz") {
+            options.phaser.maximum_hz = value;
+            options.phaser_enabled = true;
+        }
+        else if (key == "--phaser-feedback") {
+            options.phaser.feedback = value;
+            options.phaser_enabled = true;
+        }
+        else if (key == "--phaser-mix") {
+            options.phaser.mix = value;
+            options.phaser_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -486,6 +517,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.flanger_enabled) {
         effects.push_back(std::make_unique<tabletfx::Flanger>(
             static_cast<float>(sample_rate), channels, options.flanger));
+    }
+    if (options.phaser_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Phaser>(
+            static_cast<float>(sample_rate), channels, options.phaser));
     }
     if (options.eq_enabled) {
         auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -886,6 +921,11 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     flanger_parameters.mix = 0.25F;
     effects.push_back(std::make_unique<tabletfx::Flanger>(
         static_cast<float>(sample_rate), channels, flanger_parameters));
+    tabletfx::PhaserParameters phaser_parameters;
+    phaser_parameters.feedback = 0.15F;
+    phaser_parameters.mix = 0.2F;
+    effects.push_back(std::make_unique<tabletfx::Phaser>(
+        static_cast<float>(sample_rate), channels, phaser_parameters));
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
@@ -1076,6 +1116,12 @@ void run_bench() {
         return std::make_unique<tabletfx::Flanger>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("phaser", [=] {
+        tabletfx::PhaserParameters parameters;
+        parameters.feedback = 0.15F;
+        return std::make_unique<tabletfx::Phaser>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
@@ -1098,6 +1144,8 @@ void print_usage() {
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
+                   " [--phaser-rate-hz Hz] [--phaser-min-hz Hz] [--phaser-max-hz Hz]"
+                   " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

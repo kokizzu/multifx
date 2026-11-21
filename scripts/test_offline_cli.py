@@ -168,6 +168,31 @@ def check_flanger(executable: Path) -> None:
             )
 
 
+def check_phaser(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [32767] + [0] * 1023
+    with tempfile.TemporaryDirectory(prefix="tabletfx-phaser-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "phaser.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--phaser-rate-hz", "0.5", "--phaser-min-hz", "250",
+             "--phaser-max-hz", "1600", "--phaser-feedback", "0.2",
+             "--phaser-stages", "8", "--phaser-mix", "0.5"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Phaser options did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<1024f", data[44:44 + 1024 * 4])
+        if not all(math.isfinite(sample) for sample in samples):
+            raise AssertionError("Phaser CLI produced a non-finite sample")
+        if not 0.1 < samples[0] < 0.99:
+            raise AssertionError(f"Phaser CLI did not apply the selected wet chain: {samples[0]}")
+
+
 def check_compressor(executable: Path) -> None:
     sample_rate = 48000
     input_samples = [16384] * sample_rate
@@ -413,6 +438,7 @@ def main() -> None:
     check_pitch_shifter(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
+    check_phaser(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
@@ -420,7 +446,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/phaser/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

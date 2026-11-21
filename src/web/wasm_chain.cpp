@@ -9,6 +9,7 @@
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
+#include "tabletfx/effects/phaser.hpp"
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/tremolo.hpp"
@@ -57,7 +58,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(17);
+        effects_.reserve(18);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -96,6 +97,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::Flanger>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::Phaser>(
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -308,17 +312,17 @@ public:
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[14].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[15].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[15].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[16].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
     void configure_pitch(float semitones) noexcept {
-        static_cast<tabletfx::PolyPitchShifter*>(effects_[16].effect.get())
+        static_cast<tabletfx::PolyPitchShifter*>(effects_[17].effect.get())
             ->set_pitch_semitones(semitones);
     }
 
@@ -449,6 +453,20 @@ public:
             : tabletfx::FlangerFeedbackPolarity::Positive;
         parameters.mix = mix;
         static_cast<tabletfx::Flanger*>(effects_[13].effect.get())
+            ->set_parameters(parameters);
+    }
+
+    void configure_phaser(float rate_hz, float minimum_hz, float maximum_hz,
+                          float feedback, std::uint32_t stages,
+                          float mix) noexcept {
+        tabletfx::PhaserParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.minimum_hz = minimum_hz;
+        parameters.maximum_hz = maximum_hz;
+        parameters.feedback = feedback;
+        parameters.stages = static_cast<std::uint8_t>(stages);
+        parameters.mix = mix;
+        static_cast<tabletfx::Phaser*>(effects_[14].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -874,6 +892,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_flanger(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_flanger(rate_hz, base_delay_ms, depth_ms,
                                             feedback, feedback_polarity, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_phaser(
+    void* opaque, float rate_hz, float minimum_hz, float maximum_hz,
+    float feedback, std::uint32_t stages, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_phaser(rate_hz, minimum_hz, maximum_hz,
+                                           feedback, stages, mix);
     }
 }
 

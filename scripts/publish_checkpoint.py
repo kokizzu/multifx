@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency flanger with feedback polarity"
+COMMIT_MESSAGE = "feat: add low-latency selectable-stage phaser"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -131,6 +131,9 @@ CHECKPOINT_PATHS = (
     "third_party/stft-pitch-shift/StftPitchShift/Timer.h",
     "third_party/stft-pitch-shift/StftPitchShift/Vocoder.h",
     "include/tabletfx/effects/flanger.hpp",
+    "include/tabletfx/effects/phaser.hpp",
+    "src/effects/phaser.cpp",
+    "tests/test_phaser.cpp",
     "src/effects/flanger.cpp",
     "tests/test_flanger.cpp",
 )
