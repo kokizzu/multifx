@@ -200,6 +200,39 @@ def check_plate_reverb(executable: Path) -> None:
             raise AssertionError("Plate reverb impulse response did not produce an audible tail")
 
 
+def check_spring_reverb(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    impulse = [26214] + [0] * (frame_count - 1)
+    with tempfile.TemporaryDirectory(prefix="tabletfx-spring-reverb-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        dry_output = root / "impulse-dry.wav"
+        wet_output = root / "impulse-spring.wav"
+        write_pcm16(source, sample_rate, impulse)
+        subprocess.run(
+            [str(executable), "render", str(source), str(dry_output)],
+            capture_output=True, text=True, check=True,
+        )
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output), "--spring-reverb",
+             "--spring-decay-s", "4", "--spring-pre-delay-ms", "2",
+             "--spring-damping-hz", "2200", "--spring-dwell", "0.7",
+             "--spring-mix", "1", "--spring-level-db", "-3"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Spring reverb controls did not enable one processor: {result.stdout}")
+        dry = struct.unpack("<" + "f" * frame_count, dry_output.read_bytes()[44:])
+        wet = struct.unpack("<" + "f" * frame_count, wet_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in wet):
+            raise AssertionError("Spring reverb produced non-finite output")
+        if max(abs(a - b) for a, b in zip(dry, wet, strict=True)) < 1.0e-3:
+            raise AssertionError("Spring reverb parameters did not change the rendered impulse")
+        if not any(abs(value) > 1.0e-5 for value in wet[100:]):
+            raise AssertionError("Spring reverb impulse response did not produce an audible tail")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1014,6 +1047,7 @@ def main() -> None:
     check_room_reverb(args.executable.resolve())
     check_hall_reverb(args.executable.resolve())
     check_plate_reverb(args.executable.resolve())
+    check_spring_reverb(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1038,7 +1072,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

@@ -182,6 +182,15 @@ FEATURE_MODULE_PATHS = (
     "include/tabletfx/effects/shelf_tilt_eq.hpp",
     "src/effects/shelf_tilt_eq.cpp",
     "tests/test_shelf_tilt_eq.cpp",
+    "include/tabletfx/effects/auto_swell.hpp",
+    "src/effects/auto_swell.cpp",
+    "tests/test_auto_swell.cpp",
+    "include/tabletfx/effects/ring_modulator.hpp",
+    "src/effects/ring_modulator.cpp",
+    "tests/test_ring_modulator.cpp",
+    "include/tabletfx/effects/rotary_speaker.hpp",
+    "src/effects/rotary_speaker.cpp",
+    "tests/test_rotary_speaker.cpp",
 )
 
 CHECKPOINT_PATHS = CHECKPOINT_PATHS + FEATURE_MODULE_PATHS
@@ -284,6 +293,29 @@ PLATE_REVERB_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+SPRING_REVERB_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/spring_reverb.hpp",
+    "src/effects/spring_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_spring_reverb.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -313,6 +345,8 @@ CHECKPOINTS = {
                     "feat: add project-authored hall reverb"),
     "plate-reverb": (PLATE_REVERB_CHECKPOINT_PATHS,
                      "feat: add project-authored plate reverb"),
+    "spring-reverb": (SPRING_REVERB_CHECKPOINT_PATHS,
+                      "feat: add project-authored spring reverb"),
 }
 
 

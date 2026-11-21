@@ -32,6 +32,7 @@ const EFFECT_NAMES = [
   "Room reverb",
   "Hall reverb",
   "Plate reverb",
+  "Spring reverb",
   "Output level",
   "Peak limiter",
 ];
@@ -62,6 +63,7 @@ const DEFAULT_PARAMETERS = {
   roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
   hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
   plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
+  springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -377,6 +379,18 @@ const plateReverbMix = document.querySelector("#plate-reverb-mix");
 const plateReverbMixValue = document.querySelector("#plate-reverb-mix-value");
 const plateReverbLevel = document.querySelector("#plate-reverb-level-db");
 const plateReverbLevelValue = document.querySelector("#plate-reverb-level-value");
+const springReverbDecay = document.querySelector("#spring-reverb-decay-seconds");
+const springReverbDecayValue = document.querySelector("#spring-reverb-decay-value");
+const springReverbPreDelay = document.querySelector("#spring-reverb-pre-delay-ms");
+const springReverbPreDelayValue = document.querySelector("#spring-reverb-pre-delay-value");
+const springReverbDamping = document.querySelector("#spring-reverb-damping-hz");
+const springReverbDampingValue = document.querySelector("#spring-reverb-damping-value");
+const springReverbDwell = document.querySelector("#spring-reverb-dwell");
+const springReverbDwellValue = document.querySelector("#spring-reverb-dwell-value");
+const springReverbMix = document.querySelector("#spring-reverb-mix");
+const springReverbMixValue = document.querySelector("#spring-reverb-mix-value");
+const springReverbLevel = document.querySelector("#spring-reverb-level-db");
+const springReverbLevelValue = document.querySelector("#spring-reverb-level-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1500,6 +1514,27 @@ function updatePlateReverb() {
   }
 }
 
+function updateSpringReverb() {
+  const values = [
+    Number(springReverbDecay.value),
+    Number(springReverbPreDelay.value),
+    Number(springReverbDamping.value),
+    Number(springReverbDwell.value) / 100,
+    Number(springReverbMix.value) / 100,
+    Number(springReverbLevel.value),
+  ];
+  springReverbDecayValue.value = `${values[0].toFixed(2)} s`;
+  springReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
+  springReverbDampingValue.value = `${values[2].toFixed(0)} Hz`;
+  springReverbDwellValue.value = `${Math.round(values[3] * 100)}%`;
+  springReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
+  springReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.springReverb = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "spring-reverb", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1535,6 +1570,11 @@ for (const input of [plateReverbDecay, plateReverbPreDelay, plateReverbDamping,
   input.addEventListener("input", updatePlateReverb);
   input.addEventListener("change", updatePlateReverb);
 }
+for (const input of [springReverbDecay, springReverbPreDelay, springReverbDamping,
+  springReverbDwell, springReverbMix, springReverbLevel]) {
+  input.addEventListener("input", updateSpringReverb);
+  input.addEventListener("change", updateSpringReverb);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1543,6 +1583,7 @@ updateShelfTiltEQ();
 updateRoomReverb();
 updateHallReverb();
 updatePlateReverb();
+updateSpringReverb();
 
 function updateDelayDual() {
   const values = [
@@ -1693,20 +1734,20 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 33 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 33 || effectRows.length !== 33 ||
+    const expectedEffectIds = Array.from({ length: 34 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 34 || effectRows.length !== 34 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
-        initialEffectState[29] || initialEffectState[30] ||
+        initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 33 ordered effects (IDs 0–32) with Room, Hall, and Plate Reverb disabled by default.");
+      throw new Error("The effect picker must list 34 ordered effects (IDs 0–33) with Room, Hall, Plate, and Spring Reverb disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 33" ||
+        effectCount.value !== "5 of 34" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1714,9 +1755,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30" || effectCount.value !== "3 of 33" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 34" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Reverb filter must return Room, Hall, and Plate Reverb without changing enabled state.");
+      throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
     effectCategoryFilter.value = "all";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1724,12 +1765,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 33") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 34") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "33 of 33" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "34 of 34" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1797,6 +1838,7 @@ async function runBrowserSelfTest() {
         roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
         hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
         plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
+        springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -1906,6 +1948,10 @@ async function runBrowserSelfTest() {
       roomReverbDamping.value, roomReverbMix.value, roomReverbLevel.value] =
       ["0", "0.8", "10", "6000", "20", "0"];
     updateRoomReverb();
+    [springReverbDecay.value, springReverbPreDelay.value, springReverbDamping.value,
+      springReverbDwell.value, springReverbMix.value, springReverbLevel.value] =
+      ["2.4", "0", "8000", "35", "20", "0"];
+    updateSpringReverb();
     delayPreset.value = "slapback";
     applyDelayPreset();
     if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||
