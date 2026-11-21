@@ -43,6 +43,7 @@ add_library(tabletfx_core
     src/effects/formant_filter.cpp
     src/effects/harmonic_resonator.cpp
     src/effects/multiband_compressor.cpp
+    src/effects/bit_crusher.cpp
     src/effects/reverse_delay.cpp
     src/effects/ducking_delay.cpp
     src/effects/modulated_delay.cpp
@@ -249,6 +250,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_multiband_compressor_tests tests/test_multiband_compressor.cpp)
     target_link_libraries(tabletfx_multiband_compressor_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_multiband_compressor_tests COMMAND tabletfx_multiband_compressor_tests)
+
+    add_executable(tabletfx_bit_crusher_tests tests/test_bit_crusher.cpp)
+    target_link_libraries(tabletfx_bit_crusher_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_bit_crusher_tests COMMAND tabletfx_bit_crusher_tests)
 
     add_executable(tabletfx_reverse_delay_tests tests/test_reverse_delay.cpp)
     target_link_libraries(tabletfx_reverse_delay_tests PRIVATE tabletfx_core)

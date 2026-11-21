@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -229,6 +229,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         -24, 2, 6, 10, 100, 0, 1, 0,
         -24, 2, 6, 10, 100, 0, 1, 0];
       this.configureMultiband(multiband);
+      const bitCrusher = parameters.bitCrusher || [16, 1, 1];
+      module._tf_chain_set_bit_crusher(this.chain, ...bitCrusher);
       const vibrato = parameters.vibrato || [5, 0.35, 1];
       module._tf_chain_set_vibrato(this.chain, ...vibrato);
       const limiter = parameters.limiter || [-1, 80];
@@ -268,6 +270,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         values[offset + 3], values[offset + 4], values[offset + 5],
         values[offset + 6], values[offset + 7]);
     }
+  }
+
+  configureBitCrusher(values) {
+    if (!this.chain || !Array.isArray(values) || values.length !== 3) return;
+    this.module._tf_chain_set_bit_crusher(this.chain, ...values);
   }
 
   onMessage(message) {
@@ -338,6 +345,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_harmonic_resonator(this.chain, ...message.value);
     } else if (message.type === "multiband-compressor" && this.ready) {
       this.configureMultiband(message.value);
+    } else if (message.type === "bit-crusher" && this.ready) {
+      this.configureBitCrusher(message.value);
     } else if (message.type === "reverse-delay" && this.ready) {
       this.module._tf_chain_set_reverse_delay(this.chain, ...message.value);
     } else if (message.type === "reverse-delay-run" && this.ready) {

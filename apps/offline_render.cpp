@@ -12,6 +12,7 @@
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
+#include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
@@ -47,6 +48,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -183,6 +185,8 @@ struct Options {
     tabletfx::RotarySpeakerParameters rotary_speaker{};
     bool ring_modulator_enabled = false;
     tabletfx::RingModulatorParameters ring_modulator{};
+    bool bit_crusher_enabled = false;
+    tabletfx::BitCrusherParameters bit_crusher{};
     bool rhythmic_slicer_enabled = false;
     tabletfx::RhythmicSlicerParameters rhythmic_slicer{};
     bool step_filter_enabled = false;
@@ -214,6 +218,17 @@ float parse_float(std::string_view name, const char* raw) {
     const float value = std::stof(text, &parsed);
     if (parsed != text.size() || !std::isfinite(value)) {
         throw std::invalid_argument("Invalid numeric argument for " + std::string(name) + ": " + text);
+    }
+    return value;
+}
+
+std::uint32_t parse_unsigned_integer(std::string_view name, const char* raw) {
+    const std::string_view text(raw);
+    std::uint32_t value = 0;
+    const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (result.ec != std::errc{} || result.ptr != text.data() + text.size()) {
+        throw std::invalid_argument("Invalid integer argument for " +
+                                    std::string(name) + ": " + std::string(text));
     }
     return value;
 }
@@ -399,6 +414,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--ring-mod") {
             options.ring_modulator_enabled = true;
+            continue;
+        }
+        if (key == "--bit-crusher") {
+            options.bit_crusher_enabled = true;
             continue;
         }
         if (key == "--rhythmic-slicer") {
@@ -703,6 +722,27 @@ Options parse_options(int argc, char** argv, int first) {
             else if (value == "mono" || value == "1") options.output_channels = 1;
             else if (value == "stereo" || value == "2") options.output_channels = 2;
             else throw std::invalid_argument("Output channels must be preserve, mono, or stereo");
+            continue;
+        }
+        if (key == "--bit-crusher-bit-depth" ||
+            key == "--bit-crusher-sample-rate-divisor") {
+            const std::uint32_t value = parse_unsigned_integer(key, argv[++i]);
+            if (key == "--bit-crusher-bit-depth") {
+                if (value < 2U || value > 24U) {
+                    throw std::invalid_argument(
+                        "Bit crusher bit depth must be an integer from 2 to 24");
+                }
+                options.bit_crusher.bit_depth =
+                    static_cast<std::uint8_t>(value);
+            } else {
+                if (value < 1U || value > 128U) {
+                    throw std::invalid_argument(
+                        "Bit crusher sample-rate divisor must be an integer from 1 to 128");
+                }
+                options.bit_crusher.sample_rate_divisor =
+                    static_cast<std::uint16_t>(value);
+            }
+            options.bit_crusher_enabled = true;
             continue;
         }
         if (key == "--guitar-eq-layout") {
@@ -1487,6 +1527,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.ring_modulator.mix = value;
             options.ring_modulator_enabled = true;
         }
+        else if (key == "--bit-crusher-mix") {
+            options.bit_crusher.mix = value;
+            options.bit_crusher_enabled = true;
+        }
         else if (key == "--rhythmic-slicer-tempo-bpm") {
             options.rhythmic_slicer.tempo_bpm = value;
             options.rhythmic_slicer_enabled = true;
@@ -2156,6 +2200,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.multiband_compressor_enabled) {
         effects.push_back(std::make_unique<tabletfx::MultibandCompressor>(
             static_cast<float>(sample_rate), options.multiband_compressor));
+    }
+    if (options.bit_crusher_enabled) {
+        effects.push_back(std::make_unique<tabletfx::BitCrusher>(
+            static_cast<float>(sample_rate), channels, options.bit_crusher));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2840,6 +2888,13 @@ void run_bench() {
         return std::make_unique<tabletfx::RingModulator>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("bit-crusher", [=] {
+        tabletfx::BitCrusherParameters parameters;
+        parameters.bit_depth = 8;
+        parameters.sample_rate_divisor = 4;
+        return std::make_unique<tabletfx::BitCrusher>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3171,6 +3226,9 @@ void print_usage() {
                << "                 [--ring-mod] [--ring-mod-frequency-hz 2..2000]"
                   " [--ring-mod-multiplier 0.25..4] [--ring-mod-high-cut-hz 20..20000]"
                   " [--ring-mod-mix 0..1]\n"
+                 << "                 [--bit-crusher] [--bit-crusher-bit-depth 2..24]"
+                    " [--bit-crusher-sample-rate-divisor 1..128]"
+                    " [--bit-crusher-mix 0..1]\n"
                 << "                 [--rhythmic-slicer] [--rhythmic-slicer-tempo-sync on|off]"
                    " [--rhythmic-slicer-tempo-bpm 30..300]"
                    " [--rhythmic-slicer-division whole|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth|dotted-sixteenth|sixteenth-triplet|thirty-second|thirty-second-triplet]"

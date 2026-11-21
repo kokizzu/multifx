@@ -151,6 +151,7 @@ def build_web() -> None:
         "_tf_chain_set_harmonic_resonator",
         "_tf_chain_set_multiband_crossover",
         "_tf_chain_set_multiband_band",
+        "_tf_chain_set_bit_crusher",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -213,6 +214,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "formant_filter.cpp"),
         str(ROOT / "src" / "effects" / "harmonic_resonator.cpp"),
         str(ROOT / "src" / "effects" / "multiband_compressor.cpp"),
+        str(ROOT / "src" / "effects" / "bit_crusher.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -687,6 +689,8 @@ def browser_test() -> None:
                  "--multiband-high-knee-db", "3", "--multiband-high-attack-ms", "5",
                  "--multiband-high-release-ms", "250", "--multiband-high-level-db", "-2",
                  "--multiband-high-detector", "rms", "--multiband-high-mute", "off",
+                 "--bit-crusher", "--bit-crusher-bit-depth", "8",
+                 "--bit-crusher-sample-rate-divisor", "4", "--bit-crusher-mix", "0.65",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

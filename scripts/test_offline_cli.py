@@ -1505,6 +1505,46 @@ def check_harmonic_resonator(executable: Path) -> None:
             raise AssertionError("Harmonic Resonator did not change the rendered signal")
 
 
+def check_bit_crusher(executable: Path) -> None:
+    sample_rate = 48000
+    source_values = [6554, 19661, -6554, -19661]
+    expected_held = [0.25, 0.25, -0.25, -0.25]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-bit-crusher-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "quantizer-input.wav"
+        output = root / "crushed.wav"
+        write_pcm16(source, sample_rate, source_values)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--bit-crusher", "--bit-crusher-bit-depth", "3",
+             "--bit-crusher-sample-rate-divisor", "2",
+             "--bit-crusher-mix", "0.5"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Bit Crusher options did not enable one processor")
+
+        rendered = struct.unpack("<" + "f" * len(source_values),
+                                 output.read_bytes()[44:])
+        dry = [sample / 32768.0 for sample in source_values]
+        expected = [sample + (held - sample) * 0.5
+                    for sample, held in zip(dry, expected_held, strict=True)]
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Bit Crusher produced non-finite output")
+        if any(abs(actual - target) > 1.0e-4
+               for actual, target in zip(rendered, expected, strict=True)):
+            raise AssertionError(
+                f"Bit Crusher depth/divisor/mix settings expected {expected}, got {rendered}")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--bit-crusher-bit-depth", "3.5"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0 or "Invalid integer argument" not in invalid.stderr:
+            raise AssertionError("Bit Crusher accepted a fractional bit-depth value")
+
+
 def check_multiband_compressor(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 12000
@@ -1562,6 +1602,7 @@ def main() -> None:
     check_sweep_delay(args.executable.resolve())
     check_formant_filter(args.executable.resolve())
     check_harmonic_resonator(args.executable.resolve())
+    check_bit_crusher(args.executable.resolve())
     check_multiband_compressor(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())

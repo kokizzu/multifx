@@ -83,7 +83,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(46);
+          effects_.reserve(47);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -221,6 +221,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::MultibandCompressor>(
                                 static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::BitCrusher>(
+                                static_cast<float>(sample_rate), channels),
                             false});
     }
 
@@ -1000,6 +1003,20 @@ public:
         compressor->set_parameters(parameters);
     }
 
+    void configure_bit_crusher(std::uint32_t bit_depth,
+                               std::uint32_t sample_rate_divisor,
+                               float mix) noexcept {
+        auto* crusher = static_cast<tabletfx::BitCrusher*>(
+            effects_[46].effect.get());
+        auto parameters = crusher->parameters();
+        parameters.bit_depth = static_cast<std::uint8_t>(
+            std::clamp(bit_depth, 2U, 24U));
+        parameters.sample_rate_divisor = static_cast<std::uint16_t>(
+            std::clamp(sample_rate_divisor, 1U, 128U));
+        parameters.mix = mix;
+        crusher->set_parameters(parameters);
+    }
+
     void configure_reverse_delay(float time_ms, float feedback, float mix,
                                  float crossfade_ms, std::uint32_t time_mode,
                                  std::uint32_t division, float tempo_bpm,
@@ -1638,6 +1655,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_multiband_band(
         as_chain(opaque)->configure_multiband_band(
             band, threshold_db, ratio, knee_db, attack_ms, release_ms,
             level_db, detector, mute);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_bit_crusher(
+    void* opaque, std::uint32_t bit_depth,
+    std::uint32_t sample_rate_divisor, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_bit_crusher(
+            bit_depth, sample_rate_divisor, mix);
     }
 }
 
