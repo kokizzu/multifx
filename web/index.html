@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">49 of 49</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">50 of 50</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -129,8 +129,9 @@
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="44"><span class="effect-number">45</span><span class="effect-name">Harmonic Resonator</span><span class="effect-default">8 tuned partials · 110 Hz root</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="45"><span class="effect-number">46</span><span class="effect-name">Three-band compressor</span><span class="effect-default">250 / 2500 Hz · linked Peak/RMS</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="46"><span class="effect-number">47</span><span class="effect-name">Bit Crusher</span><span class="effect-default">16-bit · sample hold ÷1</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="47" checked><span class="effect-number">48</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="48" checked><span class="effect-number">49</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="47"><span class="effect-number">48</span><span class="effect-name">Dimension Chorus</span><span class="effect-default">Version C · Mode 1 · 50% mix · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="48" checked><span class="effect-number">49</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="49" checked><span class="effect-number">50</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -741,6 +742,31 @@
         <label class="mix-control" for="chorus-mix">
           <span>Chorus wet mix</span><output id="chorus-mix-value" for="chorus-mix">30%</output>
           <input id="chorus-mix" type="range" min="0" max="1" step="0.01" value="0.3">
+        </label>
+      </div>
+      <div class="gain-controls" aria-label="Dimension Chorus controls">
+        <h3>Dimension Chorus · project-authored DSP</h3>
+        <label class="mix-control" for="dimension-chorus-version">
+          <span>Version</span>
+          <select id="dimension-chorus-version"><option value="0" selected>C</option><option value="1">D</option></select>
+        </label>
+        <label class="mix-control" for="dimension-chorus-mode">
+          <span>Mode</span>
+          <select id="dimension-chorus-mode">
+            <option value="0" selected>1</option><option value="1">2</option>
+            <option value="2">3</option><option value="3">4</option>
+            <option value="4">1+2</option><option value="5">1+3</option>
+            <option value="6">1+4</option><option value="7">2+3</option>
+            <option value="8">2+4</option><option value="9">3+4</option>
+          </select>
+        </label>
+        <label class="mix-control" for="dimension-chorus-mix">
+          <span>Mix</span><output id="dimension-chorus-mix-value" for="dimension-chorus-mix">50%</output>
+          <input id="dimension-chorus-mix" type="range" min="0" max="100" step="1" value="50">
+        </label>
+        <label class="mix-control" for="dimension-chorus-level-db">
+          <span>Level · project-authored range</span><output id="dimension-chorus-level-value" for="dimension-chorus-level-db">0.0 dB</output>
+          <input id="dimension-chorus-level-db" type="range" min="-24" max="12" step="0.5" value="0">
         </label>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">

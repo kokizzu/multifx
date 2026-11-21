@@ -4,6 +4,7 @@
 #include "tabletfx/tuner.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
+#include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
@@ -96,6 +97,8 @@ struct Options {
     tabletfx::TremoloParameters tremolo{};
     bool chorus_enabled = false;
     tabletfx::ChorusParameters chorus{};
+    bool dimension_chorus_enabled = false;
+    tabletfx::DimensionChorusParameters dimension_chorus{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -344,6 +347,21 @@ tabletfx::DelayDivision parse_delay_division(std::string_view value) {
     throw std::invalid_argument("Unsupported delay division: " + std::string(value));
 }
 
+tabletfx::DimensionChorusMode parse_dimension_chorus_mode(std::string_view value) {
+    if (value == "1") return tabletfx::DimensionChorusMode::Mode1;
+    if (value == "2") return tabletfx::DimensionChorusMode::Mode2;
+    if (value == "3") return tabletfx::DimensionChorusMode::Mode3;
+    if (value == "4") return tabletfx::DimensionChorusMode::Mode4;
+    if (value == "1+2") return tabletfx::DimensionChorusMode::Modes12;
+    if (value == "1+3") return tabletfx::DimensionChorusMode::Modes13;
+    if (value == "1+4") return tabletfx::DimensionChorusMode::Modes14;
+    if (value == "2+3") return tabletfx::DimensionChorusMode::Modes23;
+    if (value == "2+4") return tabletfx::DimensionChorusMode::Modes24;
+    if (value == "3+4") return tabletfx::DimensionChorusMode::Modes34;
+    throw std::invalid_argument(
+        "Dimension Chorus Mode must be 1, 2, 3, 4, 1+2, 1+3, 1+4, 2+3, 2+4, or 3+4");
+}
+
 Options parse_options(int argc, char** argv, int first) {
     Options options;
     for (int i = first; i < argc; ++i) {
@@ -418,6 +436,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--bit-crusher") {
             options.bit_crusher_enabled = true;
+            continue;
+        }
+        if (key == "--dimension-chorus") {
+            options.dimension_chorus_enabled = true;
             continue;
         }
         if (key == "--rhythmic-slicer") {
@@ -596,6 +618,30 @@ Options parse_options(int argc, char** argv, int first) {
             else if (value == "off") options.reverse_delay.spillover = false;
             else throw std::invalid_argument("Reverse-delay spillover must be on or off");
             options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--dimension-chorus-version") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --dimension-chorus-version");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "C") {
+                options.dimension_chorus.version = tabletfx::DimensionChorusVersion::C;
+            } else if (value == "D") {
+                options.dimension_chorus.version = tabletfx::DimensionChorusVersion::D;
+            } else {
+                throw std::invalid_argument("Dimension Chorus Version must be C or D");
+            }
+            options.dimension_chorus_enabled = true;
+            continue;
+        }
+        if (key == "--dimension-chorus-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --dimension-chorus-mode");
+            }
+            options.dimension_chorus.mode =
+                parse_dimension_chorus_mode(argv[++i]);
+            options.dimension_chorus_enabled = true;
             continue;
         }
         if (key == "--rotary-tempo-sync") {
@@ -1062,6 +1108,14 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--chorus-mix") {
             options.chorus.mix = value;
             options.chorus_enabled = true;
+        }
+        else if (key == "--dimension-chorus-mix") {
+            options.dimension_chorus.mix = value;
+            options.dimension_chorus_enabled = true;
+        }
+        else if (key == "--dimension-chorus-level-db") {
+            options.dimension_chorus.level_db = value;
+            options.dimension_chorus_enabled = true;
         }
         else if (key == "--flanger-rate-hz") {
             options.flanger.rate_hz = value;
@@ -2205,6 +2259,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::BitCrusher>(
             static_cast<float>(sample_rate), channels, options.bit_crusher));
     }
+    if (options.dimension_chorus_enabled) {
+        effects.push_back(std::make_unique<tabletfx::DimensionChorus>(
+            static_cast<float>(sample_rate), channels, options.dimension_chorus));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -2895,6 +2953,15 @@ void run_bench() {
         return std::make_unique<tabletfx::BitCrusher>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("dimension-chorus", [=] {
+        tabletfx::DimensionChorusParameters parameters;
+        parameters.version = tabletfx::DimensionChorusVersion::C;
+        parameters.mode = tabletfx::DimensionChorusMode::Mode1;
+        parameters.mix = 0.5F;
+        parameters.level_db = 0.0F;
+        return std::make_unique<tabletfx::DimensionChorus>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3142,6 +3209,9 @@ void print_usage() {
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
                   " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
                   " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
+                  " [--dimension-chorus] [--dimension-chorus-version C|D]"
+                  " [--dimension-chorus-mode 1|2|3|4|1+2|1+3|1+4|2+3|2+4|3+4]"
+                  " [--dimension-chorus-mix 0..1] [--dimension-chorus-level-db dB]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"

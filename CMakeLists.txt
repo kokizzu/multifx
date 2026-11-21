@@ -12,6 +12,7 @@ add_library(tabletfx_core
     src/tuner.cpp
     src/effects/clean_boost.cpp
     src/effects/chorus.cpp
+    src/effects/dimension_chorus.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
     src/effects/phaser.cpp
@@ -122,6 +123,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_chorus_tests tests/test_chorus.cpp)
     target_link_libraries(tabletfx_chorus_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_chorus_tests COMMAND tabletfx_chorus_tests)
+
+    add_executable(tabletfx_dimension_chorus_tests tests/test_dimension_chorus.cpp)
+    target_link_libraries(tabletfx_dimension_chorus_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_dimension_chorus_tests COMMAND tabletfx_dimension_chorus_tests)
 
     add_executable(tabletfx_flanger_tests tests/test_flanger.cpp)
     target_link_libraries(tabletfx_flanger_tests PRIVATE tabletfx_core)

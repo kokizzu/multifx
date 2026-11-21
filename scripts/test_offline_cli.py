@@ -622,6 +622,41 @@ def check_chorus(executable: Path) -> None:
             )
 
 
+def check_dimension_chorus(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(9000 * math.sin(2.0 * math.pi * 330.0 * frame / sample_rate))
+        for frame in range(256)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-dimension-chorus-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "sine.wav"
+        output = root / "dimension-chorus.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--dimension-chorus", "--dimension-chorus-version", "D",
+             "--dimension-chorus-mode", "3+4", "--dimension-chorus-mix", "0.65",
+             "--dimension-chorus-level-db", "-3"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Dimension Chorus options did not instantiate one processor")
+        rendered = struct.unpack("<256f", output.read_bytes()[44:44 + 256 * 4])
+        if not all(math.isfinite(sample) for sample in rendered) or max(map(abs, rendered)) < 0.1:
+            raise AssertionError("Dimension Chorus returned invalid or silent audio")
+
+        for selector, value in (("--dimension-chorus-version", "W"),
+                                ("--dimension-chorus-mode", "2+4+1")):
+            invalid = subprocess.run(
+                [str(executable), "render", str(source), str(root / "invalid.wav"),
+                 selector, value],
+                capture_output=True, text=True, check=False,
+            )
+            if invalid.returncode == 0:
+                raise AssertionError(f"Dimension Chorus accepted invalid {selector} {value}")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -1613,6 +1648,7 @@ def main() -> None:
     check_multitap_delay(args.executable.resolve())
     check_tape_heads_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
+    check_dimension_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())
@@ -1628,7 +1664,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

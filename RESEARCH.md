@@ -37,6 +37,12 @@ Research baseline: `GOAL.md` was supplied with a source bibliography dated 20 No
 
 Record retrieved date, version/tag/commit, relevant files or manual sections, exact claim supported, and limitations. Keep hardware/editor capability distinct from desktop-editor capability. Keep channel count distinct from musical polyphony.
 
+### Line 6 Helix Stadium XL — Dimension W (checked 2026-11-22)
+
+The official [Helix Stadium 1.4 Release Notes](https://kb.line6.com/helix-stadium-1-4-release-notes) identify the model as Dimension W, based on BOSS DC-2W, and introduce it in release 1.4 (2026-10-13). The note lists Version C/D, Mode 1–4 and the six two-mode combinations, Mix with 0% dry-only and 100% effect-only endpoints, and overall Level. It says larger single-mode numbers give more effect and paired modes provide deeper modulation. The source publishes no internal DSP/profile settings or numeric Level range. Hardware 1.4.2 is listed as released 2026-10-27; that current hardware revision is separate from the model-introduction version.
+
+TabletFX `dimension-chorus` exposes the documented labels and Mix/Level concepts under Modulation. Its mode profiles, defaults and DSP remain project-authored; the Stage 1.4 control names are not a claim of Line 6/BOSS algorithm or sound parity. See [`FLAGSHIP_EFFECT_COMPARISON.md`](FLAGSHIP_EFFECT_COMPARISON.md), [`IMPLEMENTATION_CHECKLIST.md`](IMPLEMENTATION_CHECKLIST.md), and [`EFFECTS_MATRIX.md`](EFFECTS_MATRIX.md) for remaining coverage and implementation evidence.
+
 The workstation diagnostic on 2026-11-20 found C++ compiler 13.3.0, Ninja 1.11.1, JACK 1.9.21, Java 21, and MinGW-w64 13-win32. Qt 6 packages, Android SDK environment variables, and Android devices were not detected. The `cmake` found first on PATH is a broken user-local Python wrapper (`~/.local/bin/cmake`, missing the `cmake` Python module); `/usr/bin/cmake` exists and is the intended build tool. This is environment evidence, not platform support evidence.
 
 ## Prerecorded clean-guitar audio candidates (checked 2026-11-20)

@@ -152,6 +152,7 @@ def build_web() -> None:
         "_tf_chain_set_multiband_crossover",
         "_tf_chain_set_multiband_band",
         "_tf_chain_set_bit_crusher",
+        "_tf_chain_set_dimension_chorus",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -215,6 +216,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "harmonic_resonator.cpp"),
         str(ROOT / "src" / "effects" / "multiband_compressor.cpp"),
         str(ROOT / "src" / "effects" / "bit_crusher.cpp"),
+        str(ROOT / "src" / "effects" / "dimension_chorus.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -691,6 +693,9 @@ def browser_test() -> None:
                  "--multiband-high-detector", "rms", "--multiband-high-mute", "off",
                  "--bit-crusher", "--bit-crusher-bit-depth", "8",
                  "--bit-crusher-sample-rate-divisor", "4", "--bit-crusher-mix", "0.65",
+            "--dimension-chorus", "--dimension-chorus-version", "C",
+            "--dimension-chorus-mode", "1", "--dimension-chorus-mix", "0.5",
+            "--dimension-chorus-level-db", "0",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

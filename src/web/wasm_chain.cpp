@@ -3,6 +3,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
+#include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
@@ -83,7 +84,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(47);
+          effects_.reserve(48);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -223,6 +224,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::BitCrusher>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::DimensionChorus>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -658,6 +662,17 @@ public:
         parameters.depth_ms = depth_ms;
         parameters.mix = mix;
         static_cast<tabletfx::Chorus*>(effects_[16].effect.get())
+            ->set_parameters(parameters);
+    }
+
+    void configure_dimension_chorus(std::uint32_t version, std::uint32_t mode,
+                                    float mix, float level_db) noexcept {
+        tabletfx::DimensionChorusParameters parameters;
+        parameters.version = static_cast<tabletfx::DimensionChorusVersion>(version);
+        parameters.mode = static_cast<tabletfx::DimensionChorusMode>(mode);
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        static_cast<tabletfx::DimensionChorus*>(effects_[47].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -1767,6 +1782,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_chorus(
     float depth_ms, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_chorus(rate_hz, base_delay_ms, depth_ms, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_dimension_chorus(
+    void* opaque, std::uint32_t version, std::uint32_t mode,
+    float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_dimension_chorus(version, mode, mix, level_db);
     }
 }
 

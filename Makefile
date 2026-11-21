@@ -22,6 +22,7 @@ PYTHON ?= python3
 	publish-harmonic-resonator-plan publish-harmonic-resonator \
 	publish-multiband-compressor-plan publish-multiband-compressor \
 	publish-bit-crusher-plan publish-bit-crusher \
+	publish-dimension-chorus-plan publish-dimension-chorus \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -222,6 +223,12 @@ publish-bit-crusher-plan:
 
 publish-bit-crusher:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint bit-crusher
+
+publish-dimension-chorus-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint dimension-chorus
+
+publish-dimension-chorus:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint dimension-chorus
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog
