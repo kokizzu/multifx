@@ -412,6 +412,26 @@ def check_high_gain_distortion(executable: Path) -> None:
             )
 
 
+def check_round_fuzz(executable: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="tabletfx-round-fuzz-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        output = root / "output.wav"
+        write_pcm16(source, 48000, [16384] * 2400)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--round-fuzz", "1", "--round-fuzz-level-db", "0", "--round-fuzz-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Round fuzz was not constructed: {result.stdout}")
+        samples = struct.unpack("<" + "f" * 2400, output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in samples):
+            raise AssertionError("Round fuzz CLI produced non-finite audio")
+        if not 0.99 < samples[-1] <= 1.0:
+            raise AssertionError(f"Round fuzz did not reach bounded saturation: {samples[-1]}")
+
+
 def check_envelope_wah(executable: Path) -> None:
     sample_rate = 48000
     samples = [round(16384 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
@@ -565,11 +585,12 @@ def main() -> None:
     check_overdrive(args.executable.resolve())
     check_mid_overdrive(args.executable.resolve())
     check_high_gain_distortion(args.executable.resolve())
+    check_round_fuzz(args.executable.resolve())
     check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused and high-gain distortion/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused and high-gain distortion/round fuzz/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ const EFFECT_NAMES = [
   "Transparent overdrive",
   "Mid-focused overdrive",
   "High-gain distortion",
+  "Round fuzz",
   "Soft drive",
   "Tremolo",
   "Chorus",
@@ -35,6 +36,7 @@ const DEFAULT_PARAMETERS = {
   overdrive: [0.15, -3, 0.35],
   midOverdrive: [0.18, 6, -4, 0.4],
   highGainDistortion: [0.75, 100, 9000, 5200, -9, 1],
+  roundFuzz: [0.55, -6, 0.85],
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -176,6 +178,12 @@ const highGainLevel = document.querySelector("#high-gain-level-db");
 const highGainLevelValue = document.querySelector("#high-gain-level-value");
 const highGainMix = document.querySelector("#high-gain-mix");
 const highGainMixValue = document.querySelector("#high-gain-mix-value");
+const roundFuzzAmount = document.querySelector("#round-fuzz-amount");
+const roundFuzzAmountValue = document.querySelector("#round-fuzz-amount-value");
+const roundFuzzLevel = document.querySelector("#round-fuzz-level-db");
+const roundFuzzLevelValue = document.querySelector("#round-fuzz-level-value");
+const roundFuzzMix = document.querySelector("#round-fuzz-mix");
+const roundFuzzMixValue = document.querySelector("#round-fuzz-mix-value");
 const tunerReference = document.querySelector("#tuner-reference-hz");
 const tunerReferenceValue = document.querySelector("#tuner-reference-value");
 const tunerMuteOutput = document.querySelector("#tuner-mute-output");
@@ -921,6 +929,21 @@ for (const control of [highGainDrive, highGainPreLowCut, highGainPreHighCut,
   control.addEventListener("change", updateHighGainDistortion);
 }
 
+function updateRoundFuzz() {
+  const values = [Number(roundFuzzAmount.value), Number(roundFuzzLevel.value),
+    Number(roundFuzzMix.value)];
+  DEFAULT_PARAMETERS.roundFuzz = values;
+  roundFuzzAmountValue.value = Number(roundFuzzAmount.value).toFixed(2);
+  roundFuzzLevelValue.value = `${Number(roundFuzzLevel.value).toFixed(1)} dB`;
+  roundFuzzMixValue.value = `${Math.round(Number(roundFuzzMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "round-fuzz", value: values });
+}
+
+for (const control of [roundFuzzAmount, roundFuzzLevel, roundFuzzMix]) {
+  control.addEventListener("input", updateRoundFuzz);
+  control.addEventListener("change", updateRoundFuzz);
+}
+
 function updateTremolo() {
   const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
   const values = [
@@ -1158,7 +1181,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-        enabled: Array.from({ length: 24 }, () => true),
+        enabled: Array.from({ length: 25 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1171,6 +1194,7 @@ async function runBrowserSelfTest() {
         overdrive: [0.15, -3, 0.35],
         midOverdrive: [0.18, 6, -4, 0.4],
         highGainDistortion: [0.75, 100, 9000, 5200, -9, 1],
+        roundFuzz: [0.55, -6, 0.85],
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],

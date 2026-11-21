@@ -18,6 +18,7 @@ add_library(tabletfx_core
     src/effects/overdrive.cpp
     src/effects/mid_overdrive.cpp
     src/effects/high_gain_distortion.cpp
+    src/effects/round_fuzz.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
@@ -145,6 +146,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_high_gain_distortion_tests tests/test_high_gain_distortion.cpp)
     target_link_libraries(tabletfx_high_gain_distortion_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_high_gain_distortion_tests COMMAND tabletfx_high_gain_distortion_tests)
+
+    add_executable(tabletfx_round_fuzz_tests tests/test_round_fuzz.cpp)
+    target_link_libraries(tabletfx_round_fuzz_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_round_fuzz_tests COMMAND tabletfx_round_fuzz_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)
