@@ -234,6 +234,7 @@ const vibratoDepth = document.querySelector("#vibrato-depth-ms");
 const vibratoDepthValue = document.querySelector("#vibrato-depth-value");
 const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
+const delayPreset = document.querySelector("#delay-preset");
 const delayMode = document.querySelector("#delay-time-mode");
 const delayMs = document.querySelector("#delay-time-ms");
 const delayMsValue = document.querySelector("#delay-time-ms-value");
@@ -1067,7 +1068,8 @@ for (const control of [vibratoRate, vibratoDepth, vibratoMix]) {
   control.addEventListener("change", updateVibrato);
 }
 
-function updateDelay() {
+function updateDelay(keepPreset = false) {
+  if (!keepPreset) delayPreset.value = "custom";
   const tempoSync = delayMode.value === "tempo";
   delayMs.disabled = tempoSync;
   delayBpm.disabled = !tempoSync;
@@ -1091,9 +1093,22 @@ function updateDelay() {
   }
 }
 
+function applyDelayPreset() {
+  if (delayPreset.value === "slapback") {
+    delayMode.value = "free";
+    delayMs.value = "110";
+    delayBpm.value = "120";
+    delayDivision.value = "4";
+    delayFeedback.value = "0.12";
+    delayMix.value = "0.25";
+  }
+  updateDelay(true);
+}
+
+delayPreset.addEventListener("change", applyDelayPreset);
 for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
-  control.addEventListener("input", updateDelay);
-  control.addEventListener("change", updateDelay);
+  control.addEventListener("input", () => updateDelay());
+  control.addEventListener("change", () => updateDelay());
 }
 
 setInterval(() => {
@@ -1317,6 +1332,18 @@ async function runBrowserSelfTest() {
     vibratoRate.value = "5";
     vibratoDepth.value = "0.35";
     vibratoMix.value = "0.35";
+    delayPreset.value = "slapback";
+    applyDelayPreset();
+    if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||
+        DEFAULT_PARAMETERS.delay[2] !== 0.25 || delayMode.value !== "free") {
+      throw new Error("The slapback preset did not set its advertised delay controls.");
+    }
+    delayMs.value = "120";
+    delayMs.dispatchEvent(new Event("input", { bubbles: true }));
+    if (delayPreset.value !== "custom" || DEFAULT_PARAMETERS.delay[0] !== 120) {
+      throw new Error("Editing a Slapback control did not switch it to a custom delay.");
+    }
+    delayPreset.value = "custom";
     delayMode.value = "tempo";
     delayMs.value = "180";
     delayBpm.value = "120";

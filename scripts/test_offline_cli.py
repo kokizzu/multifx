@@ -196,6 +196,25 @@ def check_delay_time_modes(executable: Path) -> None:
                     f"{label} delay impulse should appear at frame {expected_frame}; got {samples[expected_frame]}"
                 )
 
+        slapback_output = root / "slapback.wav"
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(slapback_output),
+             "--delay-preset", "slapback"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"slapback preset did not instantiate one processor: {result.stdout}")
+        data = slapback_output.read_bytes()
+        samples = struct.unpack("<2050f", data[44:44 + 2050 * 4])
+        input_peak = 32767 / 32768.0
+        expected = (input_peak * 0.75, input_peak * 0.25, input_peak * 0.03)
+        actual = (samples[0], samples[880], samples[1760])
+        if any(abs(got - want) > 1.0e-6 for got, want in zip(actual, expected)):
+            raise AssertionError(
+                "slapback preset should use 110 ms, 12% feedback, and 25% wet; "
+                f"got dry/first echo/second echo {actual}, expected {expected}"
+            )
+
 
 def check_phaser(executable: Path) -> None:
     sample_rate = 48000

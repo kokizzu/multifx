@@ -149,6 +149,23 @@ Options parse_options(int argc, char** argv, int first) {
             else throw std::invalid_argument("Output channels must be preserve, mono, or stereo");
             continue;
         }
+        if (key == "--delay-preset") {
+            const std::string_view value(argv[++i]);
+            if (value == "digital") {
+                options.delay_ms = 350.0F;
+                options.delay_feedback = 0.25F;
+                options.delay_mix = 0.25F;
+                options.delay_tempo_enabled = false;
+            } else if (value == "slapback") {
+                options.delay_ms = 110.0F;
+                options.delay_feedback = 0.12F;
+                options.delay_mix = 0.25F;
+                options.delay_tempo_enabled = false;
+            } else {
+                throw std::invalid_argument("Delay preset must be digital or slapback");
+            }
+            continue;
+        }
         if (key == "--delay-division") {
             options.delay_division = parse_delay_division(argv[++i]);
             options.delay_tempo_enabled = true;
@@ -1337,7 +1354,7 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                  " [--drive 1..20] [--delay-ms ms] [--delay-sync-bpm 20..300]"
+                   " [--drive 1..20] [--delay-preset digital|slapback] [--delay-ms ms] [--delay-sync-bpm 20..300]"
                   " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
                   " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
                  " [--pitch-semitones -12..12]\n"
