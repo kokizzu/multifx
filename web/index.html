@@ -72,13 +72,14 @@
             <option value="eq">Equalizer</option>
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
+            <option value="resonator">Resonator</option>
             <option value="reverb">Reverb</option>
           </select>
         </label>
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">51 of 51</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">52 of 52</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -126,13 +127,14 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="41"><span class="effect-number">42</span><span class="effect-name">Filtered Delay</span><span class="effect-default">120 Hz low cut · 6 kHz high cut on repeats</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="42"><span class="effect-number">43</span><span class="effect-name">Sweep Delay</span><span class="effect-default">LFO-swept band-pass · 250 Hz–6 kHz</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="43"><span class="effect-number">44</span><span class="effect-name">Formant Filter</span><span class="effect-default">A–E–I–O–U vowel profile · Q 4</span><span class="effect-category-tag">Filters &amp; wah</span></label>
-        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="44"><span class="effect-number">45</span><span class="effect-name">Harmonic Resonator</span><span class="effect-default">8 tuned partials · 110 Hz root</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="resonator"><input type="checkbox" data-effect="44"><span class="effect-number">45</span><span class="effect-name">Harmonic Resonator</span><span class="effect-default">8 tuned partials · 110 Hz root</span><span class="effect-category-tag">Resonator</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="45"><span class="effect-number">46</span><span class="effect-name">Three-band compressor</span><span class="effect-default">250 / 2500 Hz · linked Peak/RMS</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="46"><span class="effect-number">47</span><span class="effect-name">Bit Crusher</span><span class="effect-default">16-bit · sample hold ÷1</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="47"><span class="effect-number">48</span><span class="effect-name">Dimension Chorus</span><span class="effect-default">Version C · Mode 1 · 50% mix · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="48"><span class="effect-number">49</span><span class="effect-name">Triple-Double Chorus</span><span class="effect-default">Three L/C/R voices · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="49" checked><span class="effect-number">50</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="50" checked><span class="effect-number">51</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="resonator"><input type="checkbox" data-effect="49"><span class="effect-number">50</span><span class="effect-name">Four-band resonator</span><span class="effect-default">Manual or chord mode · project-authored DSP</span><span class="effect-category-tag">Resonator</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="50" checked><span class="effect-number">51</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="51" checked><span class="effect-number">52</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -784,6 +786,11 @@
           <label class="mix-control" for="triple-double-chorus-stereo-switch"><span>Stereo Switch</span><select id="triple-double-chorus-stereo-switch"><option value="1" selected>Stereo spread</option><option value="0">Dual mono</option></select></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 lists Preset Switch, Manual Switch, Rate, L/C/R Depth, Feedback, Sparkle, and Stereo Switch, but gives no numeric ranges or DSP details. This project’s rate/depth/feedback/sparkle bounds, Classic/Wide values, fixed 72/28 dry/wet blend, and stereo behavior are project-authored. No Fender sound or preset parity is claimed. Manual Switch uses the numeric controls; when it is off, Preset Switch selects a project-authored profile. The project exposes no separate Mix control because the guide does not list one.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Four-band resonator controls">
+        <h3>Four-band resonator · project-authored DSP</h3>
+        <div id="four-band-resonator-controls" class="gain-controls"></div>
+        <p class="hint">Fractal’s November 2026 Blocks Guide describes a four-path feedback resonator with Manual and Chord modes, per-band Frequency, Feedback, Filter Location, Filter Q, Level and Pan, plus Master Freq, Level, Pan, Feedback and Q. The guide gives 100–10,000 Hz for Manual frequencies and 50–5,000 Hz for Chord-mode Frequency; other ranges and this implementation’s DSP are project-authored. Mono sums stereo input to all bands; Stereo routes left to bands 1–2 and right to bands 3–4. No Fractal sound parity is claimed.</p>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">
         <label class="mix-control" for="flanger-rate-hz">

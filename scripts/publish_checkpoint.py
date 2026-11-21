@@ -759,6 +759,28 @@ TRIPLE_DOUBLE_CHORUS_CHECKPOINT_PATHS = (
     "RESEARCH.md",
     "scripts/publish_checkpoint.py",
 )
+FOUR_BAND_RESONATOR_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/four_band_resonator.hpp",
+    "src/effects/four_band_resonator.cpp",
+    "tests/test_four_band_resonator.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "scripts/publish_checkpoint.py",
+)
 FLAGSHIP_CATALOG_CHECKPOINT_PATHS = (
     "Makefile",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -816,6 +838,8 @@ CHECKPOINTS = {
                           "feat: add project-authored dimension chorus"),
     "triple-double-chorus": (TRIPLE_DOUBLE_CHORUS_CHECKPOINT_PATHS,
                               "feat: add categorized triple-double chorus"),
+    "four-band-resonator": (FOUR_BAND_RESONATOR_CHECKPOINT_PATHS,
+                            "feat: add categorized four-band resonator"),
     "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,
                          "docs: expand flagship effects catalog"),
 }

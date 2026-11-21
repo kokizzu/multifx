@@ -18,6 +18,7 @@
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
+#include "tabletfx/effects/four_band_resonator.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
@@ -84,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(49);
+          effects_.reserve(50);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -232,6 +233,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::TripleDoubleChorus>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::FourBandResonator>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -261,6 +265,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 32U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 49U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         if (index == 38U) {
@@ -696,6 +703,49 @@ public:
         config.stereo_switch = stereo_switch != 0;
         static_cast<tabletfx::effects::TripleDoubleChorus*>(
             effects_[48].effect.get())->configure(config);
+    }
+
+    void configure_four_band_resonator(const float* values,
+                                       std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 34U;
+        if (values == nullptr || value_count != kParameterCount) {
+            return;
+        }
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) {
+                return 0U;
+            }
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        tabletfx::FourBandResonatorParameters parameters;
+        parameters.mode = static_cast<tabletfx::FourBandResonatorMode>(
+            selector(values[0], 1U));
+        parameters.chord = static_cast<tabletfx::FourBandResonatorChord>(
+            selector(values[1], 8U));
+        parameters.master_frequency = values[2];
+        for (std::size_t band = 0; band < 4U; ++band) {
+            parameters.manual_frequency_hz[band] = values[3U + band];
+        }
+        parameters.chord_root_frequency_hz = values[7];
+        for (std::size_t band = 0; band < 4U; ++band) {
+            parameters.feedback[band] = values[8U + band];
+            parameters.q[band] = values[12U + band];
+            parameters.level[band] = values[16U + band];
+            parameters.pan[band] = values[20U + band];
+            parameters.filter_location[band] =
+                static_cast<tabletfx::FourBandResonatorFilterLocation>(
+                    selector(values[24U + band], 1U));
+        }
+        parameters.input_mode = static_cast<tabletfx::FourBandResonatorInputMode>(
+            selector(values[28], 1U));
+        parameters.master_level = values[29];
+        parameters.master_pan = values[30];
+        parameters.master_feedback = values[31];
+        parameters.master_q = values[32];
+        parameters.mix = values[33];
+        static_cast<tabletfx::FourBandResonator*>(effects_[49].effect.get())
+            ->set_parameters(parameters);
     }
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
@@ -1825,6 +1875,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_triple_double_chorus(
             preset_switch, manual_switch, rate_hz, left_depth_ms,
             center_depth_ms, right_depth_ms, feedback, sparkle,
             stereo_switch);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_four_band_resonator(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_four_band_resonator(values, value_count);
     }
 }
 

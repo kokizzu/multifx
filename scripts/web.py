@@ -109,6 +109,7 @@ def build_web() -> None:
         raise SystemExit("Emscripten was not found; run `make web-toolchain-bootstrap` first")
     WEB_BUILD_DIR.mkdir(parents=True, exist_ok=True)
     exports = [
+        "_malloc", "_free",
         "_tf_convert_channels", "_tf_channel_conversion_self_test",
         "_tf_parallel_mixer_self_test",
         "_tf_chain_create", "_tf_chain_destroy", "_tf_chain_effect_count",
@@ -154,6 +155,7 @@ def build_web() -> None:
         "_tf_chain_set_bit_crusher",
         "_tf_chain_set_dimension_chorus",
         "_tf_chain_set_triple_double_chorus",
+        "_tf_chain_set_four_band_resonator",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -219,6 +221,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "bit_crusher.cpp"),
         str(ROOT / "src" / "effects" / "dimension_chorus.cpp"),
         str(ROOT / "src" / "effects" / "triple_double_chorus.cpp"),
+        str(ROOT / "src" / "effects" / "four_band_resonator.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -707,6 +710,22 @@ def browser_test() -> None:
              "--triple-double-chorus-feedback", "0.1",
              "--triple-double-chorus-sparkle", "0.2",
              "--triple-double-chorus-stereo-switch", "on",
+             "--four-band-resonator-mode", "chord",
+             "--four-band-resonator-chord", "dominant7",
+             "--four-band-resonator-master-frequency", "1.1",
+             "--four-band-resonator-frequencies-hz", "220,330,440,660",
+             "--four-band-resonator-frequency-hz", "220",
+             "--four-band-resonator-feedback", "0.65,0.55,0.45,0.35",
+             "--four-band-resonator-q", "2,2.5,3,3.5",
+             "--four-band-resonator-levels", "0.8,0.7,0.6,0.5",
+             "--four-band-resonator-pans", "-0.75,-0.25,0.25,0.75",
+             "--four-band-resonator-filter-locations", "pre,post,pre,post",
+             "--four-band-resonator-input-mode", "mono",
+             "--four-band-resonator-master-level", "0.9",
+             "--four-band-resonator-master-pan", "-0.25",
+             "--four-band-resonator-master-feedback", "0.75",
+             "--four-band-resonator-master-q", "1.2",
+             "--four-band-resonator-mix", "0.65",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

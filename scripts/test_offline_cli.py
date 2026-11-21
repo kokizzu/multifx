@@ -696,6 +696,43 @@ def check_triple_double_chorus(executable: Path) -> None:
             raise AssertionError("Triple-Double Chorus accepted an invalid switch value")
 
 
+def check_four_band_resonator(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(4096)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-four-band-resonator-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-like.wav"
+        output = root / "four-band-resonator.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--four-band-resonator-mode", "chord",
+             "--four-band-resonator-chord", "dominant7",
+             "--four-band-resonator-frequency-hz", "220",
+             "--four-band-resonator-feedback", "0.65,0.55,0.45,0.35",
+             "--four-band-resonator-q", "2,2.5,3,3.5",
+             "--four-band-resonator-filter-locations", "pre,post,pre,post",
+             "--four-band-resonator-input-mode", "mono"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Four-band resonator options did not instantiate one processor")
+        rendered = struct.unpack("<4096f", output.read_bytes()[44:44 + 4096 * 4])
+        if not all(math.isfinite(sample) for sample in rendered) or max(map(abs, rendered)) < 0.01:
+            raise AssertionError("Four-band resonator returned invalid or silent audio")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--four-band-resonator-frequencies-hz", "110,220"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Four-band resonator accepted an incomplete frequency list")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -1689,6 +1726,7 @@ def main() -> None:
     check_chorus(args.executable.resolve())
     check_dimension_chorus(args.executable.resolve())
     check_triple_double_chorus(args.executable.resolve())
+    check_four_band_resonator(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

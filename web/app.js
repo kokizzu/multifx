@@ -50,6 +50,7 @@ const EFFECT_NAMES = [
   "Bit Crusher",
   "Dimension Chorus",
   "Triple-Double Chorus",
+  "Four-band resonator",
   "Output level",
   "Peak limiter",
 ];
@@ -70,6 +71,9 @@ const DEFAULT_PARAMETERS = {
   chorus: [0.8, 15, 7, 0.3],
   dimensionChorus: [0, 0, 0.5, 0],
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
+  fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
+    0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
+    -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -147,6 +151,110 @@ const effectSearch = document.querySelector("#effect-search");
 const effectsList = document.querySelector("#effects-list");
 const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
+const fourBandResonatorControls = document.querySelector("#four-band-resonator-controls");
+
+function appendResonatorControl(parent, labelText, index, options) {
+  const label = document.createElement("label");
+  label.className = "mix-control";
+  const id = `four-band-resonator-${options.id}`;
+  label.htmlFor = id;
+  const title = document.createElement("span");
+  title.textContent = labelText;
+  const output = document.createElement("output");
+  output.htmlFor = id;
+  const control = options.choices ? document.createElement("select") : document.createElement("input");
+  control.id = id;
+  control.dataset.resonatorIndex = String(index);
+  control.dataset.displayFormat = options.format;
+  if (options.choices) {
+    for (const [value, text] of options.choices) {
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = text;
+      control.append(option);
+    }
+  } else {
+    control.type = "range";
+    control.min = String(options.min);
+    control.max = String(options.max);
+    control.step = String(options.step);
+  }
+  control.value = String(DEFAULT_PARAMETERS.fourBandResonator[index]);
+  label.append(title, output, control);
+  parent.append(label);
+  return control;
+}
+
+function buildFourBandResonatorControls() {
+  const modeGroup = document.createElement("div");
+  modeGroup.className = "gain-controls";
+  appendResonatorControl(modeGroup, "Mode", 0, {
+    id: "mode", format: "choice", choices: [[0, "Manual"], [1, "Chord"]],
+  });
+  appendResonatorControl(modeGroup, "Chord", 1, {
+    id: "chord", format: "choice",
+    choices: [[0, "Major"], [1, "Major 6"], [2, "Dominant 7"], [3, "Major 7"],
+      [4, "Minor"], [5, "Minor 6"], [6, "Minor 7"], [7, "Diminished"], [8, "Augmented"]],
+  });
+  appendResonatorControl(modeGroup, "Master Freq · project-authored range", 2, {
+    id: "master-frequency", format: "factor", min: 0.1, max: 10, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Chord-mode Frequency · project-authored range", 7, {
+    id: "frequency-hz", format: "hz", min: 50, max: 5000, step: 0.1,
+  });
+  appendResonatorControl(modeGroup, "Input routing", 28, {
+    id: "input-mode", format: "choice", choices: [[0, "Mono sum to all bands"], [1, "Stereo pairs"]],
+  });
+  appendResonatorControl(modeGroup, "Master Level · project-authored range", 29, {
+    id: "master-level", format: "factor", min: 0, max: 2, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Master Pan · project-authored range", 30, {
+    id: "master-pan", format: "pan", min: -1, max: 1, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Master Feedback · project-authored range", 31, {
+    id: "master-feedback", format: "ratio", min: 0, max: 1, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Master Q · project-authored range", 32, {
+    id: "master-q", format: "ratio", min: 0.1, max: 4, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Mix · project-authored range", 33, {
+    id: "mix", format: "percent", min: 0, max: 1, step: 0.01,
+  });
+  fourBandResonatorControls.append(modeGroup);
+
+  for (let band = 0; band < 4; band += 1) {
+    const details = document.createElement("details");
+    details.className = "resonator-band-controls";
+    const summary = document.createElement("summary");
+    summary.textContent = `Band ${band + 1}`;
+    details.append(summary);
+    const group = document.createElement("div");
+    group.className = "gain-controls";
+    appendResonatorControl(group, `Frequency · project-authored range`, 3 + band, {
+      id: `band-${band + 1}-frequency-hz`, format: "hz", min: 100, max: 10000, step: 0.01,
+    });
+    appendResonatorControl(group, "Feedback · project-authored range", 8 + band, {
+      id: `band-${band + 1}-feedback`, format: "ratio", min: 0, max: 0.98, step: 0.01,
+    });
+    appendResonatorControl(group, "Filter Q · project-authored range", 12 + band, {
+      id: `band-${band + 1}-q`, format: "ratio", min: 0.5, max: 12, step: 0.01,
+    });
+    appendResonatorControl(group, "Level · project-authored range", 16 + band, {
+      id: `band-${band + 1}-level`, format: "factor", min: 0, max: 2, step: 0.01,
+    });
+    appendResonatorControl(group, "Pan · project-authored range", 20 + band, {
+      id: `band-${band + 1}-pan`, format: "pan", min: -1, max: 1, step: 0.01,
+    });
+    appendResonatorControl(group, "Filter Location", 24 + band, {
+      id: `band-${band + 1}-filter-location`, format: "choice",
+      choices: [[0, "Pre resonator"], [1, "Post resonator"]],
+    });
+    details.append(group);
+    fourBandResonatorControls.append(details);
+  }
+}
+
+buildFourBandResonatorControls();
 const playButton = document.querySelector("#play-button");
 const stopButton = document.querySelector("#stop-button");
 const rewindButton = document.querySelector("#rewind-button");
@@ -1560,6 +1668,35 @@ for (const control of [tripleDoubleChorusPresetSwitch,
   control.addEventListener("change", updateTripleDoubleChorus);
 }
 
+function updateFourBandResonator() {
+  const controls = [...fourBandResonatorControls.querySelectorAll("[data-resonator-index]")];
+  const values = Array(34).fill(0);
+  for (const control of controls) {
+    const index = Number(control.dataset.resonatorIndex);
+    const value = Number(control.value);
+    values[index] = value;
+    const output = control.parentElement.querySelector("output");
+    switch (control.dataset.displayFormat) {
+      case "hz": output.value = `${value.toFixed(1)} Hz`; break;
+      case "factor": output.value = `${value.toFixed(2)}×`; break;
+      case "ratio": output.value = value.toFixed(2); break;
+      case "percent": output.value = `${Math.round(value * 100)}%`; break;
+      case "pan": output.value = value.toFixed(2); break;
+      default: output.value = control.selectedOptions[0].textContent;
+    }
+  }
+  DEFAULT_PARAMETERS.fourBandResonator = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "four-band-resonator", value: values });
+  }
+}
+
+for (const control of fourBandResonatorControls.querySelectorAll("[data-resonator-index]")) {
+  control.addEventListener("input", updateFourBandResonator);
+  control.addEventListener("change", updateFourBandResonator);
+}
+updateFourBandResonator();
+
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
@@ -2622,8 +2759,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 51 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 51 || effectRows.length !== 51 ||
+    const expectedEffectIds = Array.from({ length: 52 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 52 || effectRows.length !== 52 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -2631,10 +2768,10 @@ async function runBrowserSelfTest() {
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
         initialEffectState[44] || initialEffectState[45] || initialEffectState[46] ||
-        initialEffectState[47] || initialEffectState[48] ||
+        initialEffectState[47] || initialEffectState[48] || initialEffectState[49] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 51 ordered, categorized effects (IDs 0–50), with optional effects disabled by default.");
+      throw new Error("The effect picker must list 52 ordered, categorized effects (IDs 0–51), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -2671,6 +2808,23 @@ async function runBrowserSelfTest() {
       tripleDoubleChorusSparkle.value, tripleDoubleChorusStereoSwitch.value] =
       defaultTripleDoubleChorus.map(String);
     tripleDoubleChorusManualSwitch.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultFourBandResonator = [...DEFAULT_PARAMETERS.fourBandResonator];
+    const testFourBandResonator = [1, 2, 1.1, 220, 330, 440, 660, 220,
+      0.65, 0.55, 0.45, 0.35, 2, 2.5, 3, 3.5, 0.8, 0.7, 0.6, 0.5,
+      -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65];
+    const fourBandControls = [...fourBandResonatorControls.querySelectorAll("[data-resonator-index]")];
+    for (const control of fourBandControls) {
+      control.value = String(testFourBandResonator[Number(control.dataset.resonatorIndex)]);
+    }
+    fourBandControls[0].dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.fourBandResonator.join(",") !== testFourBandResonator.join(",") ||
+        fourBandResonatorControls.querySelector("#four-band-resonator-band-2-filter-location").selectedOptions[0].textContent !== "Post resonator") {
+      throw new Error("Four-band resonator controls must update every parameter and display the selected filter location.");
+    }
+    for (const control of fourBandControls) {
+      control.value = String(defaultFourBandResonator[Number(control.dataset.resonatorIndex)]);
+    }
+    fourBandControls[0].dispatchEvent(new Event("input", { bubbles: true }));
     if (DEFAULT_PARAMETERS.dimensionChorus.join(",") !== "1,9,0.65,-3" ||
         dimensionChorusMixValue.value !== "65%" ||
         dimensionChorusLevelValue.value !== "-3.0 dB") {
@@ -2734,7 +2888,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-         effectCount.value !== "10 of 51" ||
+         effectCount.value !== "10 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2742,8 +2896,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,50" ||
-        effectCount.value !== "8 of 51" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,51" ||
+        effectCount.value !== "8 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2752,7 +2906,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 51" ||
+        effectCount.value !== "7 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -2760,16 +2914,24 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (filterIds.join(",") !== "2,3,7,8,36,37,43,44" ||
-        effectCount.value !== "8 of 51" ||
+    if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
+        effectCount.value !== "7 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Filters category must include Step Filter, Notch Filter, Formant Filter, and Harmonic Resonator and preserve the current chain state.");
+      throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
+    }
+    effectCategoryFilter.value = "resonator";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const resonatorIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 52" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
     effectCategoryFilter.value = "delay";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 51" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2777,7 +2939,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 51" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 52" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2787,12 +2949,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 51") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 52") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "51 of 51" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "52 of 52" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2881,6 +3043,9 @@ async function runBrowserSelfTest() {
          bitCrusher: [8, 4, 0.65],
         dimensionChorus: [0, 0, 0.5, 0],
         tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
+        fourBandResonator: [1, 2, 1.1, 220, 330, 440, 660, 220,
+          0.65, 0.55, 0.45, 0.35, 2, 2.5, 3, 3.5, 0.8, 0.7, 0.6, 0.5,
+          -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],

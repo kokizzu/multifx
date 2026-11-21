@@ -3,6 +3,7 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/effects/delay_timing.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
+#include "tabletfx/effects/four_band_resonator.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"

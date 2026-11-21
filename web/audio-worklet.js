@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -205,6 +205,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const tripleDoubleChorus = parameters.tripleDoubleChorus ||
         [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1];
       module._tf_chain_set_triple_double_chorus(this.chain, ...tripleDoubleChorus);
+      this.configureFourBandResonator(parameters.fourBandResonator ||
+        [0, 0, 1, 110, 164.81, 220, 329.63, 110,
+          0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
+          -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5]);
       const flanger = parameters.flanger || [0.25, 2, 1, 0.35, 0, 0.35];
       module._tf_chain_set_flanger(this.chain, ...flanger);
       const phaser = parameters.phaser || [0.5, 250, 1600, 0.2, 4, 0.5];
@@ -280,6 +284,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
   configureBitCrusher(values) {
     if (!this.chain || !Array.isArray(values) || values.length !== 3) return;
     this.module._tf_chain_set_bit_crusher(this.chain, ...values);
+  }
+
+  configureFourBandResonator(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_four_band_resonator(this.chain, pointer, values.length);
+    this.module._free(pointer);
   }
 
   onMessage(message) {
@@ -392,6 +407,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_dimension_chorus(this.chain, ...message.value);
     } else if (message.type === "triple-double-chorus" && this.ready) {
       this.module._tf_chain_set_triple_double_chorus(this.chain, ...message.value);
+    } else if (message.type === "four-band-resonator" && this.ready) {
+      this.configureFourBandResonator(message.value);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

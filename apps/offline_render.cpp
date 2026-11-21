@@ -101,6 +101,8 @@ struct Options {
     tabletfx::DimensionChorusParameters dimension_chorus{};
     bool triple_double_chorus_enabled = false;
     tabletfx::effects::TripleDoubleChorusConfig triple_double_chorus{};
+    bool four_band_resonator_enabled = false;
+    tabletfx::FourBandResonatorParameters four_band_resonator{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -225,6 +227,77 @@ float parse_float(std::string_view name, const char* raw) {
         throw std::invalid_argument("Invalid numeric argument for " + std::string(name) + ": " + text);
     }
     return value;
+}
+
+template <std::size_t Count>
+std::array<float, Count> parse_float_array(std::string_view name,
+                                          std::string_view text) {
+    std::array<float, Count> values{};
+    std::size_t start = 0;
+    for (std::size_t index = 0; index < Count; ++index) {
+        const std::size_t separator = text.find(',', start);
+        if ((index + 1U < Count && separator == std::string_view::npos) ||
+            (index + 1U == Count && separator != std::string_view::npos)) {
+            throw std::invalid_argument(std::string(name) +
+                                        " requires exactly " +
+                                        std::to_string(Count) +
+                                        " comma-separated values");
+        }
+        const std::string_view item = text.substr(
+            start, separator == std::string_view::npos ? text.size() - start
+                                                       : separator - start);
+        const std::string item_string(item);
+        values[index] = parse_float(name, item_string.c_str());
+        if (separator != std::string_view::npos) {
+            start = separator + 1U;
+        }
+    }
+    return values;
+}
+
+std::array<tabletfx::FourBandResonatorFilterLocation, 4>
+parse_four_band_resonator_filter_locations(std::string_view text) {
+    std::array<tabletfx::FourBandResonatorFilterLocation, 4> locations{};
+    std::size_t start = 0;
+    for (std::size_t index = 0; index < locations.size(); ++index) {
+        const std::size_t separator = text.find(',', start);
+        if ((index + 1U < locations.size() && separator == std::string_view::npos) ||
+            (index + 1U == locations.size() && separator != std::string_view::npos)) {
+            throw std::invalid_argument(
+                "Four-band resonator filter locations require four comma-separated pre/post values");
+        }
+        const std::string_view item = text.substr(
+            start, separator == std::string_view::npos ? text.size() - start
+                                                       : separator - start);
+        if (item == "pre") {
+            locations[index] = tabletfx::FourBandResonatorFilterLocation::Pre;
+        } else if (item == "post") {
+            locations[index] = tabletfx::FourBandResonatorFilterLocation::Post;
+        } else {
+            throw std::invalid_argument(
+                "Four-band resonator filter locations must be pre or post");
+        }
+        if (separator != std::string_view::npos) {
+            start = separator + 1U;
+        }
+    }
+    return locations;
+}
+
+tabletfx::FourBandResonatorChord parse_four_band_resonator_chord(
+    std::string_view value) {
+    using Chord = tabletfx::FourBandResonatorChord;
+    if (value == "major") return Chord::Major;
+    if (value == "major6") return Chord::Major6;
+    if (value == "dominant7") return Chord::Dominant7;
+    if (value == "major7") return Chord::Major7;
+    if (value == "minor") return Chord::Minor;
+    if (value == "minor6") return Chord::Minor6;
+    if (value == "minor7") return Chord::Minor7;
+    if (value == "diminished") return Chord::Diminished;
+    if (value == "augmented") return Chord::Augmented;
+    throw std::invalid_argument(
+        "Four-band resonator chord must be major, major6, dominant7, major7, minor, minor6, minor7, diminished, or augmented");
 }
 
 std::uint32_t parse_unsigned_integer(std::string_view name, const char* raw) {
@@ -446,6 +519,73 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--triple-double-chorus") {
             options.triple_double_chorus_enabled = true;
+            continue;
+        }
+        if (key == "--four-band-resonator") {
+            options.four_band_resonator_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--four-band-resonator-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.four_band_resonator;
+            const std::string_view setting = key.substr(
+                std::string_view("--four-band-resonator-").size());
+            if (setting == "mode") {
+                if (value == "manual") {
+                    parameters.mode = tabletfx::FourBandResonatorMode::Manual;
+                } else if (value == "chord") {
+                    parameters.mode = tabletfx::FourBandResonatorMode::Chord;
+                } else {
+                    throw std::invalid_argument(
+                        "Four-band resonator mode must be manual or chord");
+                }
+            } else if (setting == "chord") {
+                parameters.chord = parse_four_band_resonator_chord(value);
+            } else if (setting == "master-frequency") {
+                parameters.master_frequency = parse_float(key, argv[i]);
+            } else if (setting == "frequencies-hz") {
+                parameters.manual_frequency_hz = parse_float_array<4>(key, value);
+            } else if (setting == "frequency-hz") {
+                parameters.chord_root_frequency_hz = parse_float(key, argv[i]);
+            } else if (setting == "feedback") {
+                parameters.feedback = parse_float_array<4>(key, value);
+            } else if (setting == "q") {
+                parameters.q = parse_float_array<4>(key, value);
+            } else if (setting == "levels") {
+                parameters.level = parse_float_array<4>(key, value);
+            } else if (setting == "pans") {
+                parameters.pan = parse_float_array<4>(key, value);
+            } else if (setting == "filter-locations") {
+                parameters.filter_location =
+                    parse_four_band_resonator_filter_locations(value);
+            } else if (setting == "input-mode") {
+                if (value == "mono") {
+                    parameters.input_mode =
+                        tabletfx::FourBandResonatorInputMode::Mono;
+                } else if (value == "stereo") {
+                    parameters.input_mode =
+                        tabletfx::FourBandResonatorInputMode::Stereo;
+                } else {
+                    throw std::invalid_argument(
+                        "Four-band resonator input mode must be mono or stereo");
+                }
+            } else if (setting == "master-level") {
+                parameters.master_level = parse_float(key, argv[i]);
+            } else if (setting == "master-pan") {
+                parameters.master_pan = parse_float(key, argv[i]);
+            } else if (setting == "master-feedback") {
+                parameters.master_feedback = parse_float(key, argv[i]);
+            } else if (setting == "master-q") {
+                parameters.master_q = parse_float(key, argv[i]);
+            } else if (setting == "mix") {
+                parameters.mix = parse_float(key, argv[i]);
+            } else {
+                throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.four_band_resonator_enabled = true;
             continue;
         }
         if (key == "--rhythmic-slicer") {
@@ -2320,6 +2460,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         chorus->configure(options.triple_double_chorus);
         effects.push_back(std::move(chorus));
     }
+    if (options.four_band_resonator_enabled) {
+        effects.push_back(std::make_unique<tabletfx::FourBandResonator>(
+            static_cast<float>(sample_rate), options.four_band_resonator));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -2705,6 +2849,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate));
     triple_double->configure(triple_double_parameters);
     effects.push_back(std::move(triple_double));
+    effects.push_back(std::make_unique<tabletfx::FourBandResonator>(
+        static_cast<float>(sample_rate)));
     tabletfx::FlangerParameters flanger_parameters;
     flanger_parameters.rate_hz = 0.25F;
     flanger_parameters.base_delay_ms = 2.0F;
@@ -3030,6 +3176,10 @@ void run_bench() {
         effect->configure({});
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("four-band-resonator", [=] {
+        return std::make_unique<tabletfx::FourBandResonator>(
+            static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3289,6 +3439,20 @@ void print_usage() {
                    " [--triple-double-chorus-feedback -0.8..0.8]"
                    " [--triple-double-chorus-sparkle 0..1]"
                    " [--triple-double-chorus-stereo-switch on|off]"
+                   " [--four-band-resonator] [--four-band-resonator-mode manual|chord]"
+                   " [--four-band-resonator-chord major|major6|dominant7|major7|minor|minor6|minor7|diminished|augmented]"
+                   " [--four-band-resonator-master-frequency 0.1..10]"
+                   " [--four-band-resonator-frequencies-hz f1,f2,f3,f4]"
+                   " [--four-band-resonator-frequency-hz 50..5000]"
+                   " [--four-band-resonator-feedback f1,f2,f3,f4]"
+                   " [--four-band-resonator-q q1,q2,q3,q4]"
+                   " [--four-band-resonator-levels l1,l2,l3,l4]"
+                   " [--four-band-resonator-pans p1,p2,p3,p4]"
+                   " [--four-band-resonator-filter-locations pre,post,pre,post]"
+                   " [--four-band-resonator-input-mode mono|stereo]"
+                   " [--four-band-resonator-master-level value] [--four-band-resonator-master-pan -1..1]"
+                   " [--four-band-resonator-master-feedback 0..1] [--four-band-resonator-master-q 0.1..4]"
+                   " [--four-band-resonator-mix 0..1]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
