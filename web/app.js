@@ -24,6 +24,11 @@ const EFFECT_NAMES = [
   "Three-band parametric EQ",
   "Stereo delay",
   "Polyphonic pitch shifter",
+  "Optical-style compressor",
+  "FET-style compressor",
+  "Guitar graphic EQ",
+  "Bass graphic EQ",
+  "Shelf / tilt EQ",
   "Output level",
   "Peak limiter",
 ];
@@ -46,6 +51,11 @@ const DEFAULT_PARAMETERS = {
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
+  opticalCompressor: [-24, 3, 6, 10, 80, 600, 10, 0],
+  fetCompressor: [-24, 8, 2, 0.1, 50, 0],
+  guitarGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
+  bassGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
+  shelfTiltEQ: [0, 1000, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -58,6 +68,8 @@ const DEFAULT_PARAMETERS = {
   delayMultiTapEnabled: false,
   delayMultiTap: [250, 0.65, -0.55, 500, 0.45, 0.55,
     750, 0.30, -0.25, 1000, 0.20, 0.25],
+  delayTapeHeadsEnabled: false,
+  delayTapeHeads: [110, 15],
   pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -278,6 +290,11 @@ const delayMultiTapInputs = Array.from({ length: 4 }, (_, index) => {
     panValue: document.querySelector(`#delay-tap-${tap}-pan-value`),
   };
 });
+const delayTapeHeadControls = document.querySelector("#delay-tape-head-controls");
+const delayTapeHeadSpacing = document.querySelector("#delay-tape-head-spacing");
+const delayTapeHeadSpacingValue = document.querySelector("#delay-tape-head-spacing-value");
+const delayTapeHeadInputs = Array.from({ length: 4 }, (_, index) =>
+  document.querySelector(`#delay-tape-head-${index + 1}`));
 const delayMode = document.querySelector("#delay-time-mode");
 const delayMs = document.querySelector("#delay-time-ms");
 const delayMsValue = document.querySelector("#delay-time-ms-value");
@@ -288,6 +305,30 @@ const delayFeedback = document.querySelector("#delay-feedback");
 const delayFeedbackValue = document.querySelector("#delay-feedback-value");
 const delayMix = document.querySelector("#delay-mix");
 const delayMixValue = document.querySelector("#delay-mix-value");
+const opticalCompressorControls = [
+  "optical-threshold-db", "optical-ratio", "optical-knee-db", "optical-attack-ms",
+  "optical-release-ms", "optical-program-release-ms", "optical-rms-window-ms",
+  "optical-makeup-db",
+].map((id) => ({ input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) }));
+const fetCompressorControls = [
+  "fet-threshold-db", "fet-ratio", "fet-knee-db", "fet-attack-ms",
+  "fet-release-ms", "fet-makeup-db",
+].map((id) => ({ input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) }));
+const guitarGraphicLayout = document.querySelector("#guitar-eq-layout");
+const guitarGraphicBands = Array.from({ length: 7 }, (_, index) => {
+  const id = `guitar-eq-band-${index + 1}`;
+  return { input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) };
+});
+const bassGraphicLayout = document.querySelector("#bass-eq-layout");
+const bassGraphicBands = Array.from({ length: 7 }, (_, index) => {
+  const id = `bass-eq-band-${index + 1}`;
+  return { input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) };
+});
+const shelfTiltMode = document.querySelector("#shelf-tilt-mode");
+const shelfTiltFrequency = document.querySelector("#shelf-tilt-frequency-hz");
+const shelfTiltFrequencyValue = document.querySelector("#shelf-tilt-frequency-value");
+const shelfTiltGain = document.querySelector("#shelf-tilt-gain-db");
+const shelfTiltGainValue = document.querySelector("#shelf-tilt-gain-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1152,6 +1193,18 @@ function applyDelayPreset() {
     delayFeedback.value = "0.35";
     delayMix.value = "0.25";
     delayCharacter.value = "tape";
+  } else if (delayPreset.value === "tape-heads") {
+    delayRouting.value = "tape-heads";
+    delayMode.value = "free";
+    delayMs.value = "110";
+    delayBpm.value = "120";
+    delayDivision.value = "4";
+    delayFeedback.value = "0.28";
+    delayMix.value = "0.25";
+    delayTapeHeadSpacing.value = "110";
+    for (const input of delayTapeHeadInputs) input.checked = true;
+    delayCharacter.value = "tape";
+    updateDelayRouting();
   }
   updateDelayCharacter();
   updateDelay(true);
@@ -1191,26 +1244,155 @@ function updateDelayRouting() {
   const pingPong = mode === "ping-pong";
   const dual = mode === "dual";
   const multiTap = mode === "multi-tap";
+  const tapeHeads = mode === "tape-heads";
   DEFAULT_PARAMETERS.delayPingPong = pingPong;
   DEFAULT_PARAMETERS.delayDualEnabled = dual;
   DEFAULT_PARAMETERS.delayMultiTapEnabled = multiTap;
+  DEFAULT_PARAMETERS.delayTapeHeadsEnabled = tapeHeads;
   delayDualControls.hidden = !dual;
   delayMultiTapControls.hidden = !multiTap;
+  delayTapeHeadControls.hidden = !tapeHeads;
   for (const control of [delayPreset, delayMode, delayMs, delayBpm, delayDivision]) {
-    control.disabled = dual || multiTap;
+    control.disabled = dual || multiTap || tapeHeads;
   }
   delayFeedback.disabled = dual;
   delayMix.disabled = dual;
+  if (!tapeHeads) updateDelayTapeHeads();
   if (dual) {
     updateDelayDual();
   } else if (multiTap) {
     updateDelayMultiTap();
+  } else if (tapeHeads) {
+    updateDelayTapeHeads();
   } else if (workletNode) {
     workletNode.port.postMessage({ type: "delay-routing", value: pingPong });
   }
 }
 
 delayRouting.addEventListener("change", updateDelayRouting);
+function updateDelayTapeHeads() {
+  const spacing = Number(delayTapeHeadSpacing.value);
+  const selectedHeads = delayTapeHeadInputs.reduce(
+    (mask, input, index) => mask | (input.checked ? (1 << index) : 0), 0,
+  );
+  const enabled = delayRouting.value === "tape-heads";
+  DEFAULT_PARAMETERS.delayTapeHeadsEnabled = enabled;
+  DEFAULT_PARAMETERS.delayTapeHeads = [spacing, selectedHeads];
+  delayTapeHeadSpacingValue.value = `${spacing.toFixed(0)} ms`;
+  if (delayPreset.value === "tape-heads" &&
+      (spacing !== 110 || selectedHeads !== 15)) delayPreset.value = "custom";
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "delay-tape-heads",
+      value: { enabled, spacingMs: spacing, selectedHeads },
+    });
+  }
+}
+delayTapeHeadSpacing.addEventListener("input", updateDelayTapeHeads);
+delayTapeHeadSpacing.addEventListener("change", updateDelayTapeHeads);
+for (const input of delayTapeHeadInputs) {
+  input.addEventListener("input", updateDelayTapeHeads);
+  input.addEventListener("change", updateDelayTapeHeads);
+}
+
+function updateCompressorControls(controls, parameterKey, messageType, formats) {
+  const values = controls.map(({ input }) => Number(input.value));
+  controls.forEach(({ output }, index) => {
+    const value = values[index];
+    output.value = formats[index] === "ratio"
+      ? `${value.toFixed(1)}:1`
+      : `${value.toFixed(1)}${formats[index]}`;
+  });
+  DEFAULT_PARAMETERS[parameterKey] = values;
+  if (workletNode) workletNode.port.postMessage({ type: messageType, value: values });
+}
+
+function updateOpticalCompressor() {
+  updateCompressorControls(
+    opticalCompressorControls, "opticalCompressor", "optical-compressor",
+    [" dB", "ratio", " dB", " ms", " ms", " ms", " ms", " dB"],
+  );
+}
+
+function updateFetCompressor() {
+  updateCompressorControls(
+    fetCompressorControls, "fetCompressor", "fet-compressor",
+    [" dB", "ratio", " dB", " ms", " ms", " dB"],
+  );
+}
+
+const GUITAR_EQ_FIVE_HZ = [100, 250, 630, 1600, 4000];
+const GUITAR_EQ_SEVEN_HZ = [100, 200, 400, 800, 1600, 3200, 6400];
+const BASS_EQ_FOUR_HZ = [50, 250, 1000, 4000];
+const BASS_EQ_SEVEN_HZ = [40, 80, 160, 320, 640, 1600, 5000];
+
+function updateGraphicEQ(layoutInput, bands, parameterKey, messageType, kind) {
+  const layout = layoutInput.value;
+  const bandCenters = kind === "guitar"
+    ? (layout === "five" ? GUITAR_EQ_FIVE_HZ : GUITAR_EQ_SEVEN_HZ)
+    : (layout === "four" ? BASS_EQ_FOUR_HZ : BASS_EQ_SEVEN_HZ);
+  const gains = bands.map(({ input }, index) => {
+    input.disabled = index >= bandCenters.length;
+    return Number(input.value);
+  });
+  bands.forEach(({ output }, index) => {
+    output.value = index < bandCenters.length
+      ? `${bandCenters[index]} Hz · ${gains[index].toFixed(1)} dB`
+      : "—";
+  });
+  const layoutCode = kind === "guitar" ? (layout === "five" ? 0 : 1)
+    : (layout === "four" ? 0 : 1);
+  const values = [layoutCode, ...gains];
+  DEFAULT_PARAMETERS[parameterKey] = values;
+  if (workletNode) workletNode.port.postMessage({ type: messageType, value: values });
+}
+
+function updateGuitarGraphicEQ() {
+  updateGraphicEQ(guitarGraphicLayout, guitarGraphicBands,
+    "guitarGraphicEQ", "guitar-graphic-eq", "guitar");
+}
+
+function updateBassGraphicEQ() {
+  updateGraphicEQ(bassGraphicLayout, bassGraphicBands,
+    "bassGraphicEQ", "bass-graphic-eq", "bass");
+}
+
+function updateShelfTiltEQ() {
+  const frequency = Number(shelfTiltFrequency.value);
+  const gain = Number(shelfTiltGain.value);
+  const values = [Number(shelfTiltMode.value), frequency, gain];
+  shelfTiltFrequencyValue.value = `${frequency.toFixed(0)} Hz`;
+  shelfTiltGainValue.value = `${gain.toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.shelfTiltEQ = values;
+  if (workletNode) workletNode.port.postMessage({ type: "shelf-tilt-eq", value: values });
+}
+
+for (const controls of [opticalCompressorControls, fetCompressorControls]) {
+  for (const { input } of controls) {
+    input.addEventListener("input", controls === opticalCompressorControls
+      ? updateOpticalCompressor : updateFetCompressor);
+    input.addEventListener("change", controls === opticalCompressorControls
+      ? updateOpticalCompressor : updateFetCompressor);
+  }
+}
+guitarGraphicLayout.addEventListener("change", updateGuitarGraphicEQ);
+bassGraphicLayout.addEventListener("change", updateBassGraphicEQ);
+for (const { input } of [...guitarGraphicBands, ...bassGraphicBands]) {
+  input.addEventListener("input", input.id.startsWith("guitar-")
+    ? updateGuitarGraphicEQ : updateBassGraphicEQ);
+  input.addEventListener("change", input.id.startsWith("guitar-")
+    ? updateGuitarGraphicEQ : updateBassGraphicEQ);
+}
+for (const input of [shelfTiltMode, shelfTiltFrequency, shelfTiltGain]) {
+  input.addEventListener("input", updateShelfTiltEQ);
+  input.addEventListener("change", updateShelfTiltEQ);
+}
+updateOpticalCompressor();
+updateFetCompressor();
+updateGuitarGraphicEQ();
+updateBassGraphicEQ();
+updateShelfTiltEQ();
+
 function updateDelayDual() {
   const values = [
     Number(delayDualAms.value), Number(delayDualAFeedback.value), Number(delayDualAMix.value),
@@ -1390,7 +1572,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-        enabled: Array.from({ length: 25 }, () => true),
+      enabled: Array.from({ length: EFFECT_NAMES.length }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1413,6 +1595,11 @@ async function runBrowserSelfTest() {
         phaser: [0.5, 250, 1600, 0.15, 6, 0.2],
         vibrato: [5, 0.35, 0.35],
         compressor: [-18, 3, 6, 8, 100, 0],
+        opticalCompressor: [-24, 3, 6, 10, 80, 600, 10, 0],
+        fetCompressor: [-30, 5, 2, 0.1, 50, 0],
+        guitarGraphicEQ: [1, 1.5, -1, 0, 1, 0.5, -0.5, 1],
+        bassGraphicEQ: [1, -1, 0.5, 2, -2, 0.5, 1, -0.5],
+        shelfTiltEQ: [2, 1200, 2],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -1422,9 +1609,11 @@ async function runBrowserSelfTest() {
         delayPingPong: false,
         delayDualEnabled: false,
         delayDual: [180, 0.25, 0.35, 240, 0.15, 0.25],
-        delayMultiTapEnabled: true,
+        delayMultiTapEnabled: false,
         delayMultiTap: [180, 0.65, -1, 240, 0.45, 1,
           360, 0.3, -0.25, 480, 0.2, 0.25],
+        delayTapeHeadsEnabled: true,
+        delayTapeHeads: [180, 15],
         pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -1494,6 +1683,28 @@ async function runBrowserSelfTest() {
     vibratoRate.value = "5";
     vibratoDepth.value = "0.35";
     vibratoMix.value = "0.35";
+    opticalCompressorControls.forEach(({ input }, index) => {
+      input.value = String(testOptions.parameters.opticalCompressor[index]);
+    });
+    updateOpticalCompressor();
+    fetCompressorControls.forEach(({ input }, index) => {
+      input.value = String(testOptions.parameters.fetCompressor[index]);
+    });
+    updateFetCompressor();
+    guitarGraphicLayout.value = "seven";
+    guitarGraphicBands.forEach(({ input }, index) => {
+      input.value = String(testOptions.parameters.guitarGraphicEQ[index + 1]);
+    });
+    updateGuitarGraphicEQ();
+    bassGraphicLayout.value = "seven";
+    bassGraphicBands.forEach(({ input }, index) => {
+      input.value = String(testOptions.parameters.bassGraphicEQ[index + 1]);
+    });
+    updateBassGraphicEQ();
+    shelfTiltMode.value = String(testOptions.parameters.shelfTiltEQ[0]);
+    shelfTiltFrequency.value = String(testOptions.parameters.shelfTiltEQ[1]);
+    shelfTiltGain.value = String(testOptions.parameters.shelfTiltEQ[2]);
+    updateShelfTiltEQ();
     delayPreset.value = "slapback";
     applyDelayPreset();
     if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||
@@ -1546,6 +1757,17 @@ async function runBrowserSelfTest() {
     delayDivision.value = "7";
     delayFeedback.value = "0.25";
     delayMix.value = "0.2";
+    delayCharacter.value = "tape";
+    updateDelayCharacter();
+    delayMode.value = "free";
+    delayRouting.value = "tape-heads";
+    delayTapeHeadSpacing.value = "180";
+    for (const input of delayTapeHeadInputs) input.checked = true;
+    updateDelayRouting();
+    if (delayTapeHeadControls.hidden || DEFAULT_PARAMETERS.delayTapeHeads[0] !== 180 ||
+        DEFAULT_PARAMETERS.delayTapeHeads[1] !== 15) {
+      throw new Error("The multi-head delay controls did not select all four heads at 180 ms spacing.");
+    }
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();

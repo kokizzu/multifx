@@ -59,13 +59,20 @@ h2 { margin-bottom: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
 .mix-control input { grid-column: 1 / span 2; width: 150px; accent-color: #6ad7bd; }
 .mix-control select { grid-column: 1 / span 2; min-height: 30px; color: #e7edf4; background: #111821; border: 1px solid #344354; border-radius: 7px; }
 .effects-list { display: grid; gap: 7px; }
+.effect-parameter-group { margin-top: 18px; padding: 14px; border: 1px solid #293442; border-radius: 12px; background: #141b24; }
+.effect-parameter-group h3 { margin: 0 0 12px; color: #dce5ef; font-size: 0.88rem; }
+.effect-parameter-group .gain-controls { margin-top: 0; }
+.effect-parameter-group .hint { margin-bottom: 0; }
 .gain-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 14px; }
 #delay-dual-controls[hidden] { display: none; }
 #delay-multitap-controls[hidden] { display: none; }
+#delay-tape-head-controls[hidden] { display: none; }
 #delay-tape-controls[hidden] { display: none; }
 .delay-pattern-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .delay-tap-heading { grid-column: 1 / -1; margin-top: 4px; color: #cbd5e1; font-size: 0.86rem; font-weight: 700; }
 .delay-pan-note { grid-column: 1 / -1; }
+.delay-head-option { display: flex; align-items: center; gap: 8px; color: #cbd5e1; }
+.delay-head-option input { width: 18px; height: 18px; accent-color: #5dd9c1; }
 .tuner-mute-control input { grid-column: 1 / span 2; width: auto; justify-self: start; }
 .tuner-reading { grid-column: 1 / -1; color: #f1f5f9; font-size: 1.05rem; font-variant-numeric: tabular-nums; padding-top: 4px; }
 .effect-row { min-height: 52px; gap: 12px; padding: 9px 12px; border: 1px solid #2a3543; border-radius: 11px; background: #111821; cursor: pointer; }

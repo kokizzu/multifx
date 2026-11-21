@@ -21,6 +21,11 @@ add_library(tabletfx_core
     src/effects/round_fuzz.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
+    src/effects/optical_compressor.cpp
+    src/effects/fet_compressor.cpp
+    src/effects/guitar_graphic_eq.cpp
+    src/effects/bass_graphic_eq.cpp
+    src/effects/shelf_tilt_eq.cpp
     src/effects/peak_limiter.cpp
     src/effects/poly_pitch_shifter.cpp
     src/effects/tremolo.cpp
@@ -66,6 +71,26 @@ if(BUILD_TESTING)
     add_executable(tabletfx_pedal_compressor_tests tests/test_pedal_compressor.cpp)
     target_link_libraries(tabletfx_pedal_compressor_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pedal_compressor_tests COMMAND tabletfx_pedal_compressor_tests)
+
+    add_executable(tabletfx_optical_compressor_tests tests/test_optical_compressor.cpp)
+    target_link_libraries(tabletfx_optical_compressor_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_optical_compressor_tests COMMAND tabletfx_optical_compressor_tests)
+
+    add_executable(tabletfx_fet_compressor_tests tests/test_fet_compressor.cpp)
+    target_link_libraries(tabletfx_fet_compressor_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_fet_compressor_tests COMMAND tabletfx_fet_compressor_tests)
+
+    add_executable(tabletfx_guitar_graphic_eq_tests tests/test_guitar_graphic_eq.cpp)
+    target_link_libraries(tabletfx_guitar_graphic_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_guitar_graphic_eq_tests COMMAND tabletfx_guitar_graphic_eq_tests)
+
+    add_executable(tabletfx_bass_graphic_eq_tests tests/test_bass_graphic_eq.cpp)
+    target_link_libraries(tabletfx_bass_graphic_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_bass_graphic_eq_tests COMMAND tabletfx_bass_graphic_eq_tests)
+
+    add_executable(tabletfx_shelf_tilt_eq_tests tests/test_shelf_tilt_eq.cpp)
+    target_link_libraries(tabletfx_shelf_tilt_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_shelf_tilt_eq_tests COMMAND tabletfx_shelf_tilt_eq_tests)
 
     add_executable(tabletfx_noise_gate_tests tests/test_noise_gate.cpp)
     target_link_libraries(tabletfx_noise_gate_tests PRIVATE tabletfx_core)

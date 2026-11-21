@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add tape echo delay"
+DEFAULT_CHECKPOINT = "all"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -154,6 +154,68 @@ CHECKPOINT_PATHS = (
     "tests/test_flanger.cpp",
 )
 
+FEATURE_MODULE_PATHS = (
+    "include/tabletfx/effects/optical_compressor.hpp",
+    "src/effects/optical_compressor.cpp",
+    "tests/test_optical_compressor.cpp",
+    "include/tabletfx/effects/fet_compressor.hpp",
+    "src/effects/fet_compressor.cpp",
+    "tests/test_fet_compressor.cpp",
+    "include/tabletfx/effects/guitar_graphic_eq.hpp",
+    "src/effects/guitar_graphic_eq.cpp",
+    "tests/test_guitar_graphic_eq.cpp",
+    "include/tabletfx/effects/bass_graphic_eq.hpp",
+    "src/effects/bass_graphic_eq.cpp",
+    "tests/test_bass_graphic_eq.cpp",
+    "include/tabletfx/effects/shelf_tilt_eq.hpp",
+    "src/effects/shelf_tilt_eq.cpp",
+    "tests/test_shelf_tilt_eq.cpp",
+)
+
+CHECKPOINT_PATHS = CHECKPOINT_PATHS + FEATURE_MODULE_PATHS
+DLY08_CHECKPOINT_PATHS = (
+    "Makefile",
+    "scripts/publish_checkpoint.py",
+    "apps/offline_render.cpp",
+    "scripts/audio_regression.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "include/tabletfx/effects.hpp",
+    "src/effects.cpp",
+    "tests/test_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+    "RESEARCH.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "EFFECTS_MATRIX.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+)
+EFFECT_MODULE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+    "EFFECTS_MATRIX.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+) + FEATURE_MODULE_PATHS
+CHECKPOINTS = {
+    "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
+    "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
+    "effect-modules": (EFFECT_MODULE_CHECKPOINT_PATHS,
+                       "feat: add optical, FET and graphic EQ processors"),
+}
+
 
 def git(*args: str, capture: bool = True) -> str:
     result = subprocess.run(
@@ -165,7 +227,11 @@ def git(*args: str, capture: bool = True) -> str:
     return result.stdout if capture else ""
 
 
-def inspect() -> tuple[list[str], str, str]:
+def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
+    if checkpoint not in CHECKPOINTS:
+        raise SystemExit("Unknown checkpoint: " + checkpoint)
+    checkpoint_paths, _ = CHECKPOINTS[checkpoint]
+    checkpoint_paths = set(checkpoint_paths)
     branch = git("branch", "--show-current").strip()
     remote_url = git("remote", "get-url", "origin").strip()
     normalized = remote_url.lower().removesuffix(".git")
@@ -200,10 +266,10 @@ def inspect() -> tuple[list[str], str, str]:
         paths.append(path)
         if code[0] not in (" ", "?"):
             staged.append(path)
-    unexpected_staged = sorted(set(staged) - set(CHECKPOINT_PATHS))
+    unexpected_staged = sorted(set(staged) - checkpoint_paths)
     if unexpected_staged:
         raise SystemExit(
-            "Refusing to publish with staged changes outside the reviewed checkpoint: "
+            "Refusing to publish with staged changes outside the selected checkpoint: "
             + ", ".join(unexpected_staged)
         )
     unexpected = sorted(set(paths) - set(CHECKPOINT_PATHS))
@@ -212,22 +278,25 @@ def inspect() -> tuple[list[str], str, str]:
     workflows = [path for path in paths if path.startswith(".github/workflows/")]
     if workflows:
         raise SystemExit("Refusing to publish workflow changes: " + ", ".join(workflows))
-    if not paths:
-        raise SystemExit("No changed checkpoint files to publish")
-    return sorted(set(paths)), branch, remote_url
+    selected = sorted(set(paths) & checkpoint_paths)
+    deferred = sorted(set(paths) - checkpoint_paths)
+    if not selected:
+        raise SystemExit("No changed files for checkpoint " + checkpoint)
+    return selected, deferred, branch, remote_url
 
 
-def plan() -> list[str]:
-    paths, branch, remote_url = inspect()
+def plan(checkpoint: str) -> list[str]:
+    paths, deferred, branch, remote_url = inspect(checkpoint)
     git("diff", "--check")
     git("diff", "--cached", "--check")
     print(f"Repository: {remote_url}")
     print(f"Branch: {branch} (verified upstream default; local HEAD matches origin/main)")
-    print("Commit message: " + COMMIT_MESSAGE)
+    print("Checkpoint: " + checkpoint)
+    print("Commit message: " + CHECKPOINTS[checkpoint][1])
     print("Exact changed paths:")
     for path in paths:
         print("  " + path)
-    stat = git("diff", "--stat")
+    stat = git("diff", "--stat", "--", *paths)
     print(stat.rstrip() or "Untracked files are listed above; no tracked diff stat yet.")
     status = git("status", "--porcelain=v1", "--untracked-files=all")
     untracked = {line[3:] for line in status.splitlines() if line.startswith("?? ")}
@@ -242,13 +311,17 @@ def plan() -> list[str]:
             contents = (ROOT / path).read_text(encoding="utf-8").splitlines(keepends=True)
             print("".join(unified_diff([], contents, fromfile="/dev/null", tofile="b/" + path)), end="")
     print("No workflow files are included. Only the paths above will be staged.")
+    if deferred:
+        print("Deferred changed paths for other checkpoints:")
+        for path in deferred:
+            print("  " + path)
     return paths
 
 
-def publish() -> None:
-    paths, _, _ = inspect()
+def publish(checkpoint: str) -> None:
+    paths, _, _, _ = inspect(checkpoint)
     git("add", "--", *paths, capture=False)
-    planned_paths = plan()
+    planned_paths = plan(checkpoint)
     if planned_paths != paths:
         raise SystemExit("Checkpoint paths changed while preparing publication; stopping before commit")
     git("diff", "--cached", "--check")
@@ -257,7 +330,7 @@ def publish() -> None:
     staged = set(git("diff", "--cached", "--name-only").splitlines())
     if staged != set(paths):
         raise SystemExit("Staged paths differ from reviewed checkpoint; stopping before commit")
-    git("commit", "-m", COMMIT_MESSAGE, capture=False)
+    git("commit", "-m", CHECKPOINTS[checkpoint][1], capture=False)
     commit = git("rev-parse", "HEAD").strip()
     git("push", "origin", "main", capture=False)
     remote_main = next(
@@ -272,11 +345,13 @@ def publish() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("plan", "publish"))
-    mode = parser.parse_args().mode
-    if mode == "plan":
-        plan()
+    parser.add_argument("--checkpoint", choices=tuple(CHECKPOINTS),
+                        default=DEFAULT_CHECKPOINT)
+    args = parser.parse_args()
+    if args.mode == "plan":
+        plan(args.checkpoint)
     else:
-        publish()
+        publish(args.checkpoint)
 
 
 if __name__ == "__main__":

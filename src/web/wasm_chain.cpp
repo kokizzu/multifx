@@ -7,6 +7,11 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/optical_compressor.hpp"
+#include "tabletfx/effects/fet_compressor.hpp"
+#include "tabletfx/effects/guitar_graphic_eq.hpp"
+#include "tabletfx/effects/bass_graphic_eq.hpp"
+#include "tabletfx/effects/shelf_tilt_eq.hpp"
 #include "tabletfx/effects/high_gain_distortion.hpp"
 #include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
@@ -63,7 +68,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(23);
+        effects_.reserve(28);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -130,6 +135,21 @@ public:
                                 350.0F, 0.25F, 0.25F, true),
                             false});
         effects_.push_back({std::make_unique<tabletfx::PolyPitchShifter>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::OpticalCompressor>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::FetCompressor>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::GuitarGraphicEQ>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::BassGraphicEQ>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::ShelfTiltEQ>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -431,6 +451,13 @@ public:
             ->configure_multitap_tap(tap, delay_ms, level, pan);
     }
 
+    void configure_delay_tape_heads(bool enabled, float spacing_ms,
+                                    std::uint32_t selected_heads) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_tape_heads(enabled, spacing_ms,
+                                   static_cast<std::uint8_t>(selected_heads));
+    }
+
     void configure_pitch(float semitones) noexcept {
         static_cast<tabletfx::PolyPitchShifter*>(effects_[22].effect.get())
             ->set_pitch_semitones(semitones);
@@ -587,6 +614,73 @@ public:
         parameters.mix = mix;
         static_cast<tabletfx::Vibrato*>(effects_[19].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_optical_compressor(float threshold_db, float ratio, float knee_db,
+                                      float attack_ms, float release_ms,
+                                      float program_release_ms, float rms_window_ms,
+                                      float makeup_db) noexcept {
+        tabletfx::OpticalCompressorParameters parameters;
+        parameters.threshold_db = threshold_db;
+        parameters.ratio = ratio;
+        parameters.knee_db = knee_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.program_release_ms = program_release_ms;
+        parameters.rms_window_ms = rms_window_ms;
+        parameters.makeup_db = makeup_db;
+        static_cast<tabletfx::OpticalCompressor*>(effects_[23].effect.get())
+            ->set_parameters(parameters);
+    }
+
+    void configure_fet_compressor(float threshold_db, float ratio, float knee_db,
+                                  float attack_ms, float release_ms,
+                                  float makeup_db) noexcept {
+        tabletfx::FetCompressorParameters parameters;
+        parameters.threshold_db = threshold_db;
+        parameters.ratio = ratio;
+        parameters.knee_db = knee_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.makeup_db = makeup_db;
+        static_cast<tabletfx::FetCompressor*>(effects_[24].effect.get())
+            ->set_parameters(parameters);
+    }
+
+    void configure_guitar_graphic_eq(std::uint32_t layout, float gain_1_db,
+                                     float gain_2_db, float gain_3_db,
+                                     float gain_4_db, float gain_5_db,
+                                     float gain_6_db, float gain_7_db) noexcept {
+        auto* eq = static_cast<tabletfx::GuitarGraphicEQ*>(effects_[25].effect.get());
+        eq->set_layout(layout == 0U ? tabletfx::GuitarGraphicEQLayout::FiveBand
+                                    : tabletfx::GuitarGraphicEQLayout::SevenBand);
+        const std::array<float, 7> gains{
+            gain_1_db, gain_2_db, gain_3_db, gain_4_db,
+            gain_5_db, gain_6_db, gain_7_db};
+        for (std::size_t band = 0; band < gains.size(); ++band) {
+            static_cast<void>(eq->set_band_gain_db(band, gains[band]));
+        }
+    }
+
+    void configure_bass_graphic_eq(std::uint32_t layout, float gain_1_db,
+                                   float gain_2_db, float gain_3_db,
+                                   float gain_4_db, float gain_5_db,
+                                   float gain_6_db, float gain_7_db) noexcept {
+        auto* eq = static_cast<tabletfx::BassGraphicEQ*>(effects_[26].effect.get());
+        eq->set_layout(layout == 0U ? tabletfx::BassGraphicEQLayout::FourBand
+                                    : tabletfx::BassGraphicEQLayout::SevenBand);
+        const std::array<float, 7> gains{
+            gain_1_db, gain_2_db, gain_3_db, gain_4_db,
+            gain_5_db, gain_6_db, gain_7_db};
+        for (std::size_t band = 0; band < gains.size(); ++band) {
+            static_cast<void>(eq->set_band_gain_db(band, gains[band]));
+        }
+    }
+
+    void configure_shelf_tilt_eq(std::uint32_t mode, float frequency_hz,
+                                 float gain_db) noexcept {
+        auto* eq = static_cast<tabletfx::ShelfTiltEQ*>(effects_[27].effect.get());
+        eq->configure(static_cast<tabletfx::ShelfTiltMode>(mode), frequency_hz, gain_db);
     }
 
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
@@ -924,6 +1018,55 @@ TABLETFX_WASM_EXPORT void tf_chain_set_compressor(
     }
 }
 
+TABLETFX_WASM_EXPORT void tf_chain_set_optical_compressor(
+    void* opaque, float threshold_db, float ratio, float knee_db,
+    float attack_ms, float release_ms, float program_release_ms,
+    float rms_window_ms, float makeup_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_optical_compressor(
+            threshold_db, ratio, knee_db, attack_ms, release_ms,
+            program_release_ms, rms_window_ms, makeup_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fet_compressor(
+    void* opaque, float threshold_db, float ratio, float knee_db,
+    float attack_ms, float release_ms, float makeup_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fet_compressor(
+            threshold_db, ratio, knee_db, attack_ms, release_ms, makeup_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_guitar_graphic_eq(
+    void* opaque, std::uint32_t layout, float gain_1_db, float gain_2_db,
+    float gain_3_db, float gain_4_db, float gain_5_db, float gain_6_db,
+    float gain_7_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_guitar_graphic_eq(
+            layout, gain_1_db, gain_2_db, gain_3_db, gain_4_db, gain_5_db,
+            gain_6_db, gain_7_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_bass_graphic_eq(
+    void* opaque, std::uint32_t layout, float gain_1_db, float gain_2_db,
+    float gain_3_db, float gain_4_db, float gain_5_db, float gain_6_db,
+    float gain_7_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_bass_graphic_eq(
+            layout, gain_1_db, gain_2_db, gain_3_db, gain_4_db, gain_5_db,
+            gain_6_db, gain_7_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_shelf_tilt_eq(
+    void* opaque, std::uint32_t mode, float frequency_hz, float gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_shelf_tilt_eq(mode, frequency_hz, gain_db);
+    }
+}
+
 TABLETFX_WASM_EXPORT void tf_chain_set_filters(void* opaque, float high_pass_hz,
                                               float low_pass_hz) noexcept {
     if (opaque != nullptr) {
@@ -1140,6 +1283,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_multitap_tap(
     void* opaque, std::uint32_t tap, float delay_ms, float level, float pan) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_multitap_tap(tap, delay_ms, level, pan);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_tape_heads(
+    void* opaque, std::uint32_t enabled, float spacing_ms,
+    std::uint32_t selected_heads) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_tape_heads(enabled != 0U, spacing_ms,
+                                                     selected_heads);
     }
 }
 

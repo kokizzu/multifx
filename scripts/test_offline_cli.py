@@ -375,6 +375,34 @@ def check_multitap_delay(executable: Path) -> None:
             raise AssertionError("hard-right second tap has the wrong time, level, or pan")
 
 
+def check_tape_heads_delay(executable: Path) -> None:
+    sample_rate = 8000
+    frames = 40
+    source_samples = [0] * (frames * 2)
+    source_samples[0] = 32767
+    with tempfile.TemporaryDirectory(prefix="tabletfx-tape-heads-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "stereo-impulse.wav"
+        output = root / "tape-heads.wav"
+        write_pcm16_channels(source, sample_rate, 2, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--delay-head-spacing-ms", "1", "--delay-heads", "1,2",
+             "--delay-feedback", "0", "--delay-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"tape-head delay CLI did not instantiate one delay: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<" + "f" * (frames * 2), data[44:44 + frames * 8])
+        if abs(samples[8 * 2]) <= abs(samples[8 * 2 + 1]):
+            raise AssertionError("first tape head was not placed left of the second channel")
+        if abs(samples[16 * 2]) >= abs(samples[16 * 2 + 1]):
+            raise AssertionError("second tape head was not placed right of the first channel")
+        if any(abs(sample) > 1.0e-7 for sample in samples[24 * 2:]):
+            raise AssertionError("unselected third/fourth tape heads produced echoes")
+
+
 def check_phaser(executable: Path) -> None:
     sample_rate = 48000
     source_samples = [32767] + [0] * 1023
@@ -463,6 +491,74 @@ def check_compressor(executable: Path) -> None:
             )
         if not abs(values[-1]) < 0.5:
             raise AssertionError("Compressor did not reduce a signal above threshold")
+
+
+def check_new_effect_modules(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 4096
+    cases = (
+        ("optical compressor", 440.0, [
+            "--optical-compressor", "--optical-compressor-threshold-db", "-30",
+            "--optical-compressor-ratio", "4", "--optical-compressor-knee-db", "0",
+        ]),
+        ("FET compressor", 440.0, [
+            "--fet-compressor", "--fet-compressor-threshold-db", "-30",
+            "--fet-compressor-ratio", "8", "--fet-compressor-knee-db", "0",
+        ]),
+        ("guitar graphic EQ", 800.0, [
+            "--guitar-graphic-eq", "--guitar-eq-layout", "seven",
+            "--guitar-eq-band4-gain-db", "6",
+        ]),
+        ("bass graphic EQ", 160.0, [
+            "--bass-graphic-eq", "--bass-eq-layout", "seven",
+            "--bass-eq-band3-gain-db", "6",
+        ]),
+        ("shelf/tilt EQ", 1000.0, [
+            "--shelf-tilt-eq", "--shelf-tilt-mode", "tilt",
+            "--shelf-tilt-frequency-hz", "1000", "--shelf-tilt-gain-db", "6",
+        ]),
+    )
+    with tempfile.TemporaryDirectory(prefix="tabletfx-new-effects-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "tone.wav"
+        source_samples = [
+            round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+            for frame in range(frame_count)
+        ]
+        write_pcm16(source, sample_rate, source_samples)
+        for index, (label, frequency, options) in enumerate(cases):
+            source_samples = [
+                round(12000 * math.sin(2.0 * math.pi * frequency * frame / sample_rate))
+                for frame in range(frame_count)
+            ]
+            write_pcm16(source, sample_rate, source_samples)
+            output = root / f"effect-{index}.wav"
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output), *options],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"{label} CLI did not instantiate one processor: {result.stdout}")
+            data = output.read_bytes()
+            values = struct.unpack("<" + "f" * frame_count, data[44:])
+            reference = [sample / 32768.0 for sample in source_samples]
+            if not all(math.isfinite(value) for value in values):
+                raise AssertionError(f"{label} CLI produced a non-finite sample")
+            if max(abs(actual - expected) for actual, expected in zip(values, reference, strict=True)) < 1.0e-5:
+                raise AssertionError(f"{label} CLI did not affect its input tone")
+
+        invalid_output = root / "invalid-layout.wav"
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(invalid_output),
+             "--guitar-graphic-eq", "--guitar-eq-layout", "five",
+             "--guitar-eq-band6-gain-db", "6"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0 or "does not include band 6" not in invalid.stderr:
+            raise AssertionError(
+                "Five-band guitar EQ should reject a nonzero sixth-band gain; "
+                f"status={invalid.returncode}, stderr={invalid.stderr!r}"
+            )
 
 
 def check_noise_gate(executable: Path) -> None:
@@ -788,11 +884,13 @@ def main() -> None:
     check_ping_pong_delay(args.executable.resolve())
     check_independent_dual_delay(args.executable.resolve())
     check_multitap_delay(args.executable.resolve())
+    check_tape_heads_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())
     check_compressor(args.executable.resolve())
+    check_new_effect_modules(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
     check_overdrive(args.executable.resolve())
@@ -803,7 +901,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, free/tempo-synced/ping-pong/independent dual/multi-tap delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

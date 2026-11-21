@@ -5,6 +5,7 @@ const EFFECTS = [
   "pedal-compressor", "compressor", "wah", "envelope-wah", "clean-boost",
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
+  "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
   "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
@@ -58,9 +59,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.captureComplete = false;
     this.tunerGeneration = 0;
     this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
-    this.enabled = config.enabled || [true, true, false, false, false, false,
-      true, false, false, false, false, false, false, false, false, false,
-      false, false, false, false, false, true, true];
+    this.enabled = config.enabled || Array.from(
+      { length: EFFECTS.length }, (_, index) => [0, 1, 6, EFFECTS.length - 2,
+        EFFECTS.length - 1].includes(index),
+    );
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -103,6 +105,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_output_gain(this.chain, parameters.outputGainDb ?? 0);
       const compressor = parameters.compressor || [-18, 3, 6, 8, 100, 0];
       module._tf_chain_set_compressor(this.chain, ...compressor);
+      const opticalCompressor = parameters.opticalCompressor || [-24, 3, 6, 10, 80, 600, 10, 0];
+      module._tf_chain_set_optical_compressor(this.chain, ...opticalCompressor);
+      const fetCompressor = parameters.fetCompressor || [-24, 8, 2, 0.1, 50, 0];
+      module._tf_chain_set_fet_compressor(this.chain, ...fetCompressor);
+      const guitarGraphicEQ = parameters.guitarGraphicEQ || [1, 0, 0, 0, 0, 0, 0, 0];
+      module._tf_chain_set_guitar_graphic_eq(this.chain, ...guitarGraphicEQ);
+      const bassGraphicEQ = parameters.bassGraphicEQ || [1, 0, 0, 0, 0, 0, 0, 0];
+      module._tf_chain_set_bass_graphic_eq(this.chain, ...bassGraphicEQ);
+      const shelfTiltEQ = parameters.shelfTiltEQ || [0, 1000, 0];
+      module._tf_chain_set_shelf_tilt_eq(this.chain, ...shelfTiltEQ);
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
@@ -131,6 +143,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       }
       if (parameters.delayPingPong) {
         module._tf_chain_set_delay_ping_pong(this.chain, 1);
+      }
+      const tapeHeads = parameters.delayTapeHeads || [110, 15];
+      if (parameters.delayTapeHeadsEnabled) {
+        module._tf_chain_set_delay_tape_heads(this.chain, 1, tapeHeads[0], tapeHeads[1]);
       }
       module._tf_chain_set_pitch(this.chain, parameters.pitchSemitones ?? 0);
       const filters = parameters.filters || [80, 12000];
@@ -221,6 +237,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
     } else if (message.type === "pitch-semitones" && this.ready) {
       this.module._tf_chain_set_pitch(this.chain, Number(message.value));
+    } else if (message.type === "optical-compressor" && this.ready) {
+      this.module._tf_chain_set_optical_compressor(this.chain, ...message.value);
+    } else if (message.type === "fet-compressor" && this.ready) {
+      this.module._tf_chain_set_fet_compressor(this.chain, ...message.value);
+    } else if (message.type === "guitar-graphic-eq" && this.ready) {
+      this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
+    } else if (message.type === "bass-graphic-eq" && this.ready) {
+      this.module._tf_chain_set_bass_graphic_eq(this.chain, ...message.value);
+    } else if (message.type === "shelf-tilt-eq" && this.ready) {
+      this.module._tf_chain_set_shelf_tilt_eq(this.chain, ...message.value);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {
@@ -271,6 +297,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           this.chain, tap, taps[offset], taps[offset + 1], taps[offset + 2]);
       }
       this.module._tf_chain_set_delay_multitap(this.chain, 1, feedback, mix);
+    } else if (message.type === "delay-tape-heads" && this.ready) {
+      const { enabled, spacingMs, selectedHeads } = message.value;
+      this.module._tf_chain_set_delay_tape_heads(
+        this.chain, enabled ? 1 : 0, spacingMs, selectedHeads);
     } else if (message.type === "phaser" && this.ready) {
       this.module._tf_chain_set_phaser(this.chain, ...message.value);
     } else if (message.type === "vibrato" && this.ready) {

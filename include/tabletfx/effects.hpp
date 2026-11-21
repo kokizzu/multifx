@@ -145,6 +145,13 @@ public:
     void configure_multitap(bool enabled, float feedback, float mix) noexcept;
     void configure_multitap_tap(std::size_t tap, float delay_ms,
                                 float level, float pan) noexcept;
+    // Selects up to four project-authored tape playback heads using the existing
+    // multitap ring; this is not a model of a specific tape machine. Bit i selects
+    // a head at (i + 1) times the spacing; selected
+    // heads share normalized level and alternate stereo pan. This controls head
+    // routing only; tape coloration remains independently controlled above.
+    void configure_tape_heads(bool enabled, float head_spacing_ms = 110.0F,
+                              std::uint8_t selected_heads = 0x0FU) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;

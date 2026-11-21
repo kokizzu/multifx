@@ -84,14 +84,79 @@
         <label class="effect-row"><input type="checkbox" data-effect="20"><span class="effect-number">21</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="21"><span class="effect-number">22</span><span class="effect-name">Digital delay</span><span class="effect-default">350 ms · 25% feedback · 25% wet</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="23" checked><span class="effect-number">24</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="24" checked><span class="effect-number">25</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="23"><span class="effect-number">24</span><span class="effect-name">Optical-style compressor</span><span class="effect-default">Linked RMS · program-dependent release</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="24"><span class="effect-number">25</span><span class="effect-name">FET-style compressor</span><span class="effect-default">Fast peak detector · fixed release</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="26"><span class="effect-number">27</span><span class="effect-name">Bass graphic EQ</span><span class="effect-default">4- or 7-band</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="27"><span class="effect-number">28</span><span class="effect-name">Shelf / tilt EQ</span><span class="effect-default">Low shelf · high shelf · complementary tilt</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="28" checked><span class="effect-number">29</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="29" checked><span class="effect-number">30</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
           <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
           <input id="pitch-semitones" type="range" min="-12" max="12" step="0.5" value="0">
         </label>
+      </div>
+      <div class="effect-parameter-group" aria-label="Optical-style compressor controls">
+        <h3>Optical-style compressor · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="optical-threshold-db"><span>Threshold</span><output id="optical-threshold-db-value" for="optical-threshold-db">−24.0 dB</output><input id="optical-threshold-db" type="range" min="-60" max="0" step="0.5" value="-24"></label>
+          <label class="mix-control" for="optical-ratio"><span>Ratio</span><output id="optical-ratio-value" for="optical-ratio">3.0:1</output><input id="optical-ratio" type="range" min="1" max="20" step="0.1" value="3"></label>
+          <label class="mix-control" for="optical-knee-db"><span>Knee</span><output id="optical-knee-db-value" for="optical-knee-db">6.0 dB</output><input id="optical-knee-db" type="range" min="0" max="18" step="0.5" value="6"></label>
+          <label class="mix-control" for="optical-attack-ms"><span>Attack</span><output id="optical-attack-ms-value" for="optical-attack-ms">10 ms</output><input id="optical-attack-ms" type="range" min="0.1" max="200" step="0.1" value="10"></label>
+          <label class="mix-control" for="optical-release-ms"><span>Release</span><output id="optical-release-ms-value" for="optical-release-ms">80 ms</output><input id="optical-release-ms" type="range" min="5" max="2000" step="1" value="80"></label>
+          <label class="mix-control" for="optical-program-release-ms"><span>Program release</span><output id="optical-program-release-ms-value" for="optical-program-release-ms">600 ms</output><input id="optical-program-release-ms" type="range" min="5" max="5000" step="5" value="600"></label>
+          <label class="mix-control" for="optical-rms-window-ms"><span>RMS window</span><output id="optical-rms-window-ms-value" for="optical-rms-window-ms">10 ms</output><input id="optical-rms-window-ms" type="range" min="1" max="100" step="1" value="10"></label>
+          <label class="mix-control" for="optical-makeup-db"><span>Makeup gain</span><output id="optical-makeup-db-value" for="optical-makeup-db">0.0 dB</output><input id="optical-makeup-db" type="range" min="-12" max="18" step="0.5" value="0"></label>
+        </div>
+        <p class="hint">The RMS detector and program-dependent release are this project’s DSP design; this is not a specific compressor emulation.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="FET-style compressor controls">
+        <h3>FET-style compressor · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="fet-threshold-db"><span>Threshold</span><output id="fet-threshold-db-value" for="fet-threshold-db">−24.0 dB</output><input id="fet-threshold-db" type="range" min="-60" max="0" step="0.5" value="-24"></label>
+          <label class="mix-control" for="fet-ratio"><span>Ratio</span><output id="fet-ratio-value" for="fet-ratio">8.0:1</output><input id="fet-ratio" type="range" min="1" max="20" step="0.1" value="8"></label>
+          <label class="mix-control" for="fet-knee-db"><span>Knee</span><output id="fet-knee-db-value" for="fet-knee-db">2.0 dB</output><input id="fet-knee-db" type="range" min="0" max="18" step="0.5" value="2"></label>
+          <label class="mix-control" for="fet-attack-ms"><span>Attack</span><output id="fet-attack-ms-value" for="fet-attack-ms">0.1 ms</output><input id="fet-attack-ms" type="range" min="0.1" max="200" step="0.1" value="0.1"></label>
+          <label class="mix-control" for="fet-release-ms"><span>Release</span><output id="fet-release-ms-value" for="fet-release-ms">50 ms</output><input id="fet-release-ms" type="range" min="5" max="2000" step="1" value="50"></label>
+          <label class="mix-control" for="fet-makeup-db"><span>Makeup gain</span><output id="fet-makeup-db-value" for="fet-makeup-db">0.0 dB</output><input id="fet-makeup-db" type="range" min="-12" max="18" step="0.5" value="0"></label>
+        </div>
+        <p class="hint">Fast peak detection with a soft knee and fixed release; this is not a particular FET circuit or product emulation.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
+        <h3>Guitar graphic EQ</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="guitar-eq-layout"><span>Band layout</span><select id="guitar-eq-layout"><option value="five">5 bands</option><option value="seven" selected>7 bands</option></select></label>
+          <label class="mix-control" for="guitar-eq-band-1"><span>Band 1</span><output id="guitar-eq-band-1-value" for="guitar-eq-band-1">100 Hz · 0.0 dB</output><input id="guitar-eq-band-1" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-2"><span>Band 2</span><output id="guitar-eq-band-2-value" for="guitar-eq-band-2">200 Hz · 0.0 dB</output><input id="guitar-eq-band-2" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-3"><span>Band 3</span><output id="guitar-eq-band-3-value" for="guitar-eq-band-3">400 Hz · 0.0 dB</output><input id="guitar-eq-band-3" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-4"><span>Band 4</span><output id="guitar-eq-band-4-value" for="guitar-eq-band-4">800 Hz · 0.0 dB</output><input id="guitar-eq-band-4" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-5"><span>Band 5</span><output id="guitar-eq-band-5-value" for="guitar-eq-band-5">1600 Hz · 0.0 dB</output><input id="guitar-eq-band-5" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-6"><span>Band 6</span><output id="guitar-eq-band-6-value" for="guitar-eq-band-6">3200 Hz · 0.0 dB</output><input id="guitar-eq-band-6" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="guitar-eq-band-7"><span>Band 7</span><output id="guitar-eq-band-7-value" for="guitar-eq-band-7">6400 Hz · 0.0 dB</output><input id="guitar-eq-band-7" type="range" min="-12" max="12" step="0.5" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Bass graphic equalizer controls">
+        <h3>Bass graphic EQ</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="bass-eq-layout"><span>Band layout</span><select id="bass-eq-layout"><option value="four">4 bands</option><option value="seven" selected>7 bands</option></select></label>
+          <label class="mix-control" for="bass-eq-band-1"><span>Band 1</span><output id="bass-eq-band-1-value" for="bass-eq-band-1">40 Hz · 0.0 dB</output><input id="bass-eq-band-1" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-2"><span>Band 2</span><output id="bass-eq-band-2-value" for="bass-eq-band-2">80 Hz · 0.0 dB</output><input id="bass-eq-band-2" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-3"><span>Band 3</span><output id="bass-eq-band-3-value" for="bass-eq-band-3">160 Hz · 0.0 dB</output><input id="bass-eq-band-3" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-4"><span>Band 4</span><output id="bass-eq-band-4-value" for="bass-eq-band-4">320 Hz · 0.0 dB</output><input id="bass-eq-band-4" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-5"><span>Band 5</span><output id="bass-eq-band-5-value" for="bass-eq-band-5">640 Hz · 0.0 dB</output><input id="bass-eq-band-5" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-6"><span>Band 6</span><output id="bass-eq-band-6-value" for="bass-eq-band-6">1600 Hz · 0.0 dB</output><input id="bass-eq-band-6" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="bass-eq-band-7"><span>Band 7</span><output id="bass-eq-band-7-value" for="bass-eq-band-7">5000 Hz · 0.0 dB</output><input id="bass-eq-band-7" type="range" min="-12" max="12" step="0.5" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Shelf and tilt equalizer controls">
+        <h3>Shelf / tilt EQ</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="shelf-tilt-mode"><span>Mode</span><select id="shelf-tilt-mode"><option value="0">Low shelf</option><option value="1">High shelf</option><option value="2">Tilt</option></select></label>
+          <label class="mix-control" for="shelf-tilt-frequency-hz"><span>Pivot frequency</span><output id="shelf-tilt-frequency-value" for="shelf-tilt-frequency-hz">1000 Hz</output><input id="shelf-tilt-frequency-hz" type="range" min="20" max="8000" step="10" value="1000"></label>
+          <label class="mix-control" for="shelf-tilt-gain-db"><span>Gain</span><output id="shelf-tilt-gain-value" for="shelf-tilt-gain-db">0.0 dB</output><input id="shelf-tilt-gain-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+        </div>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">
@@ -424,6 +489,7 @@
             <option value="ping-pong">Ping-pong stereo</option>
             <option value="dual">Independent dual</option>
             <option value="multi-tap">Multi-tap pattern</option>
+            <option value="tape-heads">Multi-head tape echo</option>
           </select>
         </label>
         <label class="mix-control" for="delay-preset">
@@ -432,6 +498,7 @@
             <option value="custom" selected>Custom</option>
             <option value="slapback">Slapback · 110 ms</option>
             <option value="tape">Tape echo · 300 ms</option>
+            <option value="tape-heads">Multi-head tape · four heads</option>
           </select>
         </label>
         <label class="mix-control" for="delay-character">
@@ -535,6 +602,15 @@
         <label class="mix-control" for="delay-tap-4-level"><span>Level</span><output id="delay-tap-4-level-value" for="delay-tap-4-level">20%</output><input id="delay-tap-4-level" type="range" min="0" max="1" step="0.01" value="0.2"></label>
         <label class="mix-control" for="delay-tap-4-pan"><span>Pan</span><output id="delay-tap-4-pan-value" for="delay-tap-4-pan">R 25%</output><input id="delay-tap-4-pan" type="range" min="-1" max="1" step="0.01" value="0.25"></label>
         <p class="hint delay-pan-note">Stereo input is summed for the echo taps, then each tap is placed with equal-power panning; dry stereo stays wide. Mono input stays centered.</p>
+      </div>
+      <div id="delay-tape-head-controls" class="gain-controls delay-pattern-controls" hidden aria-label="Multi-head tape echo controls">
+        <label class="mix-control" for="delay-tape-head-spacing"><span>Head spacing</span><output id="delay-tape-head-spacing-value" for="delay-tape-head-spacing">110 ms</output><input id="delay-tape-head-spacing" type="range" min="1" max="500" step="1" value="110"></label>
+        <div class="delay-tap-heading">Active playback heads</div>
+        <label class="delay-head-option"><input id="delay-tape-head-1" type="checkbox" checked> Head 1 · 1×</label>
+        <label class="delay-head-option"><input id="delay-tape-head-2" type="checkbox" checked> Head 2 · 2×</label>
+        <label class="delay-head-option"><input id="delay-tape-head-3" type="checkbox" checked> Head 3 · 3×</label>
+        <label class="delay-head-option"><input id="delay-tape-head-4" type="checkbox" checked> Head 4 · 4×</label>
+        <p class="hint delay-pan-note">The project-authored pattern spaces four playback heads at 1×–4× the base interval, with alternating stereo placement. Tape saturation and wow/flutter remain separate controls.</p>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>
     </section>

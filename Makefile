@@ -7,6 +7,7 @@ PYTHON ?= python3
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
+CHECKPOINT ?= all
 
 bootstrap-docs:
 	$(PYTHON) scripts/bootstrap_docs.py
@@ -78,7 +79,7 @@ diff-check:
 	$(PYTHON) scripts/check_repo_diff.py
 
 publish-plan:
-	$(PYTHON) scripts/publish_checkpoint.py plan
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "$(CHECKPOINT)"
 
 publish-checkpoint:
-	$(PYTHON) scripts/publish_checkpoint.py publish
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "$(CHECKPOINT)"

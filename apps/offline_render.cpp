@@ -8,6 +8,11 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/optical_compressor.hpp"
+#include "tabletfx/effects/fet_compressor.hpp"
+#include "tabletfx/effects/guitar_graphic_eq.hpp"
+#include "tabletfx/effects/bass_graphic_eq.hpp"
+#include "tabletfx/effects/shelf_tilt_eq.hpp"
 #include "tabletfx/effects/high_gain_distortion.hpp"
 #include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
@@ -114,10 +119,17 @@ struct Options {
     std::array<float, tabletfx::maximum_delay_taps> delay_multitap_pan{
         -0.55F, 0.55F, -0.25F, 0.25F};
     std::size_t delay_multitap_custom_count = 0;
+    bool delay_tape_heads_enabled = false;
+    float delay_tape_head_spacing_ms = 110.0F;
+    std::uint8_t delay_tape_head_mask = 0x0FU;
     bool pitch_enabled = false;
     float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
     tabletfx::CompressorParameters compressor{};
+    bool optical_compressor_enabled = false;
+    tabletfx::OpticalCompressorParameters optical_compressor{};
+    bool fet_compressor_enabled = false;
+    tabletfx::FetCompressorParameters fet_compressor{};
     bool pedal_compressor_enabled = false;
     tabletfx::PedalCompressorParameters pedal_compressor{};
     bool eq_enabled = false;
@@ -130,6 +142,18 @@ struct Options {
     float eq_band3_frequency_hz = 5000.0F;
     float eq_band3_gain_db = 0.0F;
     float eq_band3_q = 0.707F;
+    bool guitar_graphic_eq_enabled = false;
+    tabletfx::GuitarGraphicEQLayout guitar_graphic_eq_layout =
+        tabletfx::GuitarGraphicEQLayout::SevenBand;
+    std::array<float, tabletfx::GuitarGraphicEQ::kMaximumBands> guitar_graphic_eq_gains{};
+    bool bass_graphic_eq_enabled = false;
+    tabletfx::BassGraphicEQLayout bass_graphic_eq_layout =
+        tabletfx::BassGraphicEQLayout::SevenBand;
+    std::array<float, tabletfx::BassGraphicEQ::kMaximumBands> bass_graphic_eq_gains{};
+    bool shelf_tilt_eq_enabled = false;
+    tabletfx::ShelfTiltMode shelf_tilt_eq_mode = tabletfx::ShelfTiltMode::LowShelf;
+    float shelf_tilt_eq_frequency_hz = 200.0F;
+    float shelf_tilt_eq_gain_db = 0.0F;
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -140,6 +164,48 @@ float parse_float(std::string_view name, const char* raw) {
         throw std::invalid_argument("Invalid numeric argument for " + std::string(name) + ": " + text);
     }
     return value;
+}
+
+std::uint8_t parse_delay_head_mask(std::string_view value) {
+    if (value == "all") return 0x0FU;
+    if (value == "none") return 0U;
+    std::uint8_t mask = 0U;
+    std::size_t start = 0;
+    while (start < value.size()) {
+        const std::size_t separator = value.find(',', start);
+        const std::string_view item = value.substr(
+            start, separator == std::string_view::npos ? value.size() - start
+                                                       : separator - start);
+        if (item.size() != 1 || item[0] < '1' || item[0] > '4') {
+            throw std::invalid_argument("Delay heads must be all, none, or a comma-separated list from 1 to 4");
+        }
+        const unsigned int head = static_cast<unsigned int>(item[0] - '1');
+        mask = static_cast<std::uint8_t>(mask | static_cast<std::uint8_t>(1U << head));
+        if (separator == std::string_view::npos) break;
+        start = separator + 1;
+    }
+    if (value.empty() || value.back() == ',') {
+        throw std::invalid_argument("Delay heads must be all, none, or a comma-separated list from 1 to 4");
+    }
+    return mask;
+}
+
+bool set_graphic_eq_band_gain(std::string_view key, std::string_view prefix,
+                              std::array<float, 7>& gains, bool& enabled,
+                              float value) {
+    constexpr std::string_view suffix = "-gain-db";
+    if (!key.starts_with(prefix) || !key.ends_with(suffix)) {
+        return false;
+    }
+    const std::string_view band_text = key.substr(
+        prefix.size(), key.size() - prefix.size() - suffix.size());
+    if (band_text.size() != 1 || band_text.front() < '1' || band_text.front() > '7') {
+        throw std::invalid_argument("Graphic EQ band gain options must use a band number from 1 to 7");
+    }
+    const std::size_t band = static_cast<std::size_t>(band_text.front() - '1');
+    gains[band] = value;
+    enabled = true;
+    return true;
 }
 
 tabletfx::DelayDivision parse_delay_division(std::string_view value) {
@@ -164,6 +230,12 @@ Options parse_options(int argc, char** argv, int first) {
         const std::string_view key(argv[i]);
         if (key == "--delay-multitap") {
             options.delay_multitap_enabled = true;
+            options.delay_tape_heads_enabled = false;
+            continue;
+        }
+        if (key == "--delay-tape-heads") {
+            options.delay_tape_heads_enabled = true;
+            options.delay_multitap_enabled = false;
             continue;
         }
         if (key == "--delay-bbd") {
@@ -174,6 +246,26 @@ Options parse_options(int argc, char** argv, int first) {
         if (key == "--delay-tape") {
             options.delay_tape_enabled = true;
             options.delay_bbd_style = false;
+            continue;
+        }
+        if (key == "--optical-compressor") {
+            options.optical_compressor_enabled = true;
+            continue;
+        }
+        if (key == "--fet-compressor") {
+            options.fet_compressor_enabled = true;
+            continue;
+        }
+        if (key == "--guitar-graphic-eq") {
+            options.guitar_graphic_eq_enabled = true;
+            continue;
+        }
+        if (key == "--bass-graphic-eq") {
+            options.bass_graphic_eq_enabled = true;
+            continue;
+        }
+        if (key == "--shelf-tilt-eq") {
+            options.shelf_tilt_eq_enabled = true;
             continue;
         }
         if (i + 1 >= argc) {
@@ -187,6 +279,44 @@ Options parse_options(int argc, char** argv, int first) {
             else throw std::invalid_argument("Output channels must be preserve, mono, or stereo");
             continue;
         }
+        if (key == "--guitar-eq-layout") {
+            const std::string_view value(argv[++i]);
+            if (value == "5" || value == "five") {
+                options.guitar_graphic_eq_layout = tabletfx::GuitarGraphicEQLayout::FiveBand;
+            } else if (value == "7" || value == "seven") {
+                options.guitar_graphic_eq_layout = tabletfx::GuitarGraphicEQLayout::SevenBand;
+            } else {
+                throw std::invalid_argument("Guitar EQ layout must be 5/five or 7/seven");
+            }
+            options.guitar_graphic_eq_enabled = true;
+            continue;
+        }
+        if (key == "--bass-eq-layout") {
+            const std::string_view value(argv[++i]);
+            if (value == "4" || value == "four") {
+                options.bass_graphic_eq_layout = tabletfx::BassGraphicEQLayout::FourBand;
+            } else if (value == "7" || value == "seven") {
+                options.bass_graphic_eq_layout = tabletfx::BassGraphicEQLayout::SevenBand;
+            } else {
+                throw std::invalid_argument("Bass EQ layout must be 4/four or 7/seven");
+            }
+            options.bass_graphic_eq_enabled = true;
+            continue;
+        }
+        if (key == "--shelf-tilt-mode") {
+            const std::string_view value(argv[++i]);
+            if (value == "low-shelf") {
+                options.shelf_tilt_eq_mode = tabletfx::ShelfTiltMode::LowShelf;
+            } else if (value == "high-shelf") {
+                options.shelf_tilt_eq_mode = tabletfx::ShelfTiltMode::HighShelf;
+            } else if (value == "tilt") {
+                options.shelf_tilt_eq_mode = tabletfx::ShelfTiltMode::Tilt;
+            } else {
+                throw std::invalid_argument("Shelf/tilt EQ mode must be low-shelf, high-shelf, or tilt");
+            }
+            options.shelf_tilt_eq_enabled = true;
+            continue;
+        }
         if (key == "--delay-preset") {
             const std::string_view value(argv[++i]);
             if (value == "digital") {
@@ -196,6 +326,7 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = false;
                 options.delay_tape_enabled = false;
+                options.delay_tape_heads_enabled = false;
             } else if (value == "slapback") {
                 options.delay_ms = 110.0F;
                 options.delay_feedback = 0.12F;
@@ -203,6 +334,7 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = false;
                 options.delay_tape_enabled = false;
+                options.delay_tape_heads_enabled = false;
             } else if (value == "bbd") {
                 options.delay_ms = 280.0F;
                 options.delay_feedback = 0.28F;
@@ -210,6 +342,7 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = true;
                 options.delay_tape_enabled = false;
+                options.delay_tape_heads_enabled = false;
             } else if (value == "tape") {
                 options.delay_ms = 300.0F;
                 options.delay_feedback = 0.35F;
@@ -217,9 +350,26 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = false;
                 options.delay_tape_enabled = true;
+                options.delay_tape_heads_enabled = false;
+            } else if (value == "tape-heads") {
+                options.delay_ms = 110.0F;
+                options.delay_feedback = 0.28F;
+                options.delay_mix = 0.25F;
+                options.delay_tempo_enabled = false;
+                options.delay_bbd_style = false;
+                options.delay_tape_enabled = true;
+                options.delay_tape_heads_enabled = true;
+                options.delay_tape_head_spacing_ms = 110.0F;
+                options.delay_tape_head_mask = 0x0FU;
             } else {
-                throw std::invalid_argument("Delay preset must be digital, slapback, bbd, or tape");
+                throw std::invalid_argument("Delay preset must be digital, slapback, bbd, tape, or tape-heads");
             }
+            continue;
+        }
+        if (key == "--delay-heads") {
+            options.delay_tape_head_mask = parse_delay_head_mask(argv[++i]);
+            options.delay_tape_heads_enabled = true;
+            options.delay_multitap_enabled = false;
             continue;
         }
         if (key == "--delay-tap") {
@@ -583,6 +733,11 @@ Options parse_options(int argc, char** argv, int first) {
             options.clean_boost_enabled = true;
         }
         else if (key == "--delay-ms") options.delay_ms = value;
+        else if (key == "--delay-head-spacing-ms") {
+            options.delay_tape_head_spacing_ms = value;
+            options.delay_tape_heads_enabled = true;
+            options.delay_multitap_enabled = false;
+        }
         else if (key == "--delay-tape-saturation") options.delay_tape_saturation = value;
         else if (key == "--delay-tape-wow-depth-ms") options.delay_tape_wow_depth_ms = value;
         else if (key == "--delay-tape-wow-rate-hz") options.delay_tape_wow_rate_hz = value;
@@ -646,6 +801,62 @@ Options parse_options(int argc, char** argv, int first) {
             options.compressor.makeup_db = value;
             options.compressor_enabled = true;
         }
+        else if (key == "--optical-compressor-threshold-db") {
+            options.optical_compressor.threshold_db = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-ratio") {
+            options.optical_compressor.ratio = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-knee-db") {
+            options.optical_compressor.knee_db = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-attack-ms") {
+            options.optical_compressor.attack_ms = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-release-ms") {
+            options.optical_compressor.release_ms = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-program-release-ms") {
+            options.optical_compressor.program_release_ms = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-rms-window-ms") {
+            options.optical_compressor.rms_window_ms = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--optical-compressor-makeup-db") {
+            options.optical_compressor.makeup_db = value;
+            options.optical_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-threshold-db") {
+            options.fet_compressor.threshold_db = value;
+            options.fet_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-ratio") {
+            options.fet_compressor.ratio = value;
+            options.fet_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-knee-db") {
+            options.fet_compressor.knee_db = value;
+            options.fet_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-attack-ms") {
+            options.fet_compressor.attack_ms = value;
+            options.fet_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-release-ms") {
+            options.fet_compressor.release_ms = value;
+            options.fet_compressor_enabled = true;
+        }
+        else if (key == "--fet-compressor-makeup-db") {
+            options.fet_compressor.makeup_db = value;
+            options.fet_compressor_enabled = true;
+        }
         else if (key == "--pedal-compressor-sensitivity") {
             options.pedal_compressor.sensitivity = value;
             options.pedal_compressor_enabled = true;
@@ -698,6 +909,20 @@ Options parse_options(int argc, char** argv, int first) {
             options.eq_band3_q = value;
             options.eq_enabled = true;
         }
+        else if (key == "--shelf-tilt-frequency-hz") {
+            options.shelf_tilt_eq_frequency_hz = value;
+            options.shelf_tilt_eq_enabled = true;
+        }
+        else if (key == "--shelf-tilt-gain-db") {
+            options.shelf_tilt_eq_gain_db = value;
+            options.shelf_tilt_eq_enabled = true;
+        }
+        else if (set_graphic_eq_band_gain(key, "--guitar-eq-band",
+                                          options.guitar_graphic_eq_gains,
+                                          options.guitar_graphic_eq_enabled, value)) {}
+        else if (set_graphic_eq_band_gain(key, "--bass-eq-band",
+                                          options.bass_graphic_eq_gains,
+                                          options.bass_graphic_eq_enabled, value)) {}
         else throw std::invalid_argument("Unknown option: " + std::string(key));
     }
     return options;
@@ -794,7 +1019,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                       options.eq_band3_frequency_hz, options.eq_band3_gain_db, options.eq_band3_q);
         effects.push_back(std::move(eq));
     }
-    if (options.delay_multitap_enabled || options.delay_dual_enabled ||
+    if (options.delay_tape_heads_enabled || options.delay_multitap_enabled || options.delay_dual_enabled ||
         options.delay_bbd_style || options.delay_tape_enabled ||
         ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F)) {
         auto delay = std::make_unique<tabletfx::Delay>(
@@ -812,7 +1037,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                                    options.delay_tape_wow_rate_hz,
                                    options.delay_tape_flutter_depth_ms,
                                    options.delay_tape_flutter_rate_hz);
-        if (options.delay_multitap_enabled) {
+        if (options.delay_tape_heads_enabled) {
+            delay->configure_tape_heads(true, options.delay_tape_head_spacing_ms,
+                                        options.delay_tape_head_mask);
+            delay->reset();
+        } else if (options.delay_multitap_enabled) {
             for (std::size_t tap = 0; tap < tabletfx::maximum_delay_taps; ++tap) {
                 delay->configure_multitap_tap(tap, options.delay_multitap_ms[tap],
                                               options.delay_multitap_level[tap],
@@ -836,6 +1065,44 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate), channels);
         pitch->set_pitch_semitones(options.pitch_semitones);
         effects.push_back(std::move(pitch));
+    }
+    // Keep this suffix aligned with the stable effect-slot order in the WASM chain.
+    if (options.optical_compressor_enabled) {
+        effects.push_back(std::make_unique<tabletfx::OpticalCompressor>(
+            static_cast<float>(sample_rate), options.optical_compressor));
+    }
+    if (options.fet_compressor_enabled) {
+        effects.push_back(std::make_unique<tabletfx::FetCompressor>(
+            static_cast<float>(sample_rate), options.fet_compressor));
+    }
+    if (options.guitar_graphic_eq_enabled) {
+        auto eq = std::make_unique<tabletfx::GuitarGraphicEQ>(
+            static_cast<float>(sample_rate), channels, options.guitar_graphic_eq_layout);
+        for (std::size_t band = 0; band < options.guitar_graphic_eq_gains.size(); ++band) {
+            const float gain_db = options.guitar_graphic_eq_gains[band];
+            if (gain_db != 0.0F && !eq->set_band_gain_db(band, gain_db)) {
+                throw std::invalid_argument("Selected guitar graphic EQ layout does not include band " +
+                                            std::to_string(band + 1));
+            }
+        }
+        effects.push_back(std::move(eq));
+    }
+    if (options.bass_graphic_eq_enabled) {
+        auto eq = std::make_unique<tabletfx::BassGraphicEQ>(
+            static_cast<float>(sample_rate), channels, options.bass_graphic_eq_layout);
+        for (std::size_t band = 0; band < options.bass_graphic_eq_gains.size(); ++band) {
+            const float gain_db = options.bass_graphic_eq_gains[band];
+            if (gain_db != 0.0F && !eq->set_band_gain_db(band, gain_db)) {
+                throw std::invalid_argument("Selected bass graphic EQ layout does not include band " +
+                                            std::to_string(band + 1));
+            }
+        }
+        effects.push_back(std::move(eq));
+    }
+    if (options.shelf_tilt_eq_enabled) {
+        effects.push_back(std::make_unique<tabletfx::ShelfTiltEQ>(
+            static_cast<float>(sample_rate), channels, options.shelf_tilt_eq_mode,
+            options.shelf_tilt_eq_frequency_hz, options.shelf_tilt_eq_gain_db));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -1241,6 +1508,39 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels);
     pitch->set_pitch_semitones(5.0F);
     effects.push_back(std::move(pitch));
+    tabletfx::OpticalCompressorParameters optical_parameters;
+    optical_parameters.threshold_db = -24.0F;
+    optical_parameters.ratio = 3.0F;
+    effects.push_back(std::make_unique<tabletfx::OpticalCompressor>(
+        static_cast<float>(sample_rate), optical_parameters));
+    tabletfx::FetCompressorParameters fet_parameters;
+    fet_parameters.threshold_db = -30.0F;
+    fet_parameters.ratio = 5.0F;
+    effects.push_back(std::make_unique<tabletfx::FetCompressor>(
+        static_cast<float>(sample_rate), fet_parameters));
+    auto guitar_eq = std::make_unique<tabletfx::GuitarGraphicEQ>(
+        static_cast<float>(sample_rate), channels,
+        tabletfx::GuitarGraphicEQLayout::SevenBand);
+    static_cast<void>(guitar_eq->set_band_gain_db(0, 1.5F));
+    static_cast<void>(guitar_eq->set_band_gain_db(1, -1.0F));
+    static_cast<void>(guitar_eq->set_band_gain_db(3, 1.0F));
+    static_cast<void>(guitar_eq->set_band_gain_db(5, -0.5F));
+    static_cast<void>(guitar_eq->set_band_gain_db(6, 1.0F));
+    effects.push_back(std::move(guitar_eq));
+    auto bass_eq = std::make_unique<tabletfx::BassGraphicEQ>(
+        static_cast<float>(sample_rate), channels,
+        tabletfx::BassGraphicEQLayout::SevenBand);
+    static_cast<void>(bass_eq->set_band_gain_db(0, -1.0F));
+    static_cast<void>(bass_eq->set_band_gain_db(1, 0.5F));
+    static_cast<void>(bass_eq->set_band_gain_db(2, 2.0F));
+    static_cast<void>(bass_eq->set_band_gain_db(3, -2.0F));
+    static_cast<void>(bass_eq->set_band_gain_db(4, 0.5F));
+    static_cast<void>(bass_eq->set_band_gain_db(5, 1.0F));
+    static_cast<void>(bass_eq->set_band_gain_db(6, -0.5F));
+    effects.push_back(std::move(bass_eq));
+    effects.push_back(std::make_unique<tabletfx::ShelfTiltEQ>(
+        static_cast<float>(sample_rate), channels, tabletfx::ShelfTiltMode::Tilt,
+        1200.0F, 2.0F));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -1365,6 +1665,12 @@ void run_bench() {
         delay->configure_tape_echo(true, 0.45F, 0.35F, 0.3F, 0.08F, 6.0F);
         return delay;
     }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-tape-heads", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
+        delay->configure_tape_heads(true, 110.0F, 0x0FU);
+        delay->reset();
+        return delay;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-ping-pong", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
         delay->configure_ping_pong(true);
@@ -1430,11 +1736,48 @@ void run_bench() {
     benchmark_one("pedal-compressor", [=] {
         return std::make_unique<tabletfx::PedalCompressor>(sample_rate);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("optical-compressor", [=] {
+        tabletfx::OpticalCompressorParameters parameters;
+        parameters.threshold_db = -24.0F;
+        parameters.ratio = 3.0F;
+        return std::make_unique<tabletfx::OpticalCompressor>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fet-compressor", [=] {
+        tabletfx::FetCompressorParameters parameters;
+        parameters.threshold_db = -30.0F;
+        parameters.ratio = 5.0F;
+        return std::make_unique<tabletfx::FetCompressor>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("three-band-parametric-eq", [=] {
         auto effect = std::make_unique<tabletfx::ThreeBandParametricEQ>(sample_rate, channels);
         effect->configure(120.0F, 3.0F, 0.707F, 800.0F, -2.0F, 0.8F,
                           5000.0F, 4.0F, 0.707F);
         return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("guitar-graphic-eq", [=] {
+        auto effect = std::make_unique<tabletfx::GuitarGraphicEQ>(
+            static_cast<float>(sample_rate), channels,
+            tabletfx::GuitarGraphicEQLayout::SevenBand);
+        static_cast<void>(effect->set_band_gain_db(0, 3.0F));
+        static_cast<void>(effect->set_band_gain_db(3, -2.0F));
+        static_cast<void>(effect->set_band_gain_db(6, 1.5F));
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("bass-graphic-eq", [=] {
+        auto effect = std::make_unique<tabletfx::BassGraphicEQ>(
+            static_cast<float>(sample_rate), channels,
+            tabletfx::BassGraphicEQLayout::SevenBand);
+        static_cast<void>(effect->set_band_gain_db(0, -2.0F));
+        static_cast<void>(effect->set_band_gain_db(3, 3.0F));
+        static_cast<void>(effect->set_band_gain_db(6, 1.5F));
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("shelf-tilt-eq", [=] {
+        return std::make_unique<tabletfx::ShelfTiltEQ>(
+            static_cast<float>(sample_rate), channels,
+            tabletfx::ShelfTiltMode::Tilt, 1200.0F, 4.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("peak-limiter", [=] {
         return std::make_unique<tabletfx::PeakLimiter>(static_cast<float>(sample_rate), -1.0F, 80.0F);
@@ -1552,7 +1895,7 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                   " [--drive 1..20] [--delay-preset digital|slapback|bbd|tape] [--delay-bbd|--delay-tape] [--delay-ms ms] [--delay-tape-saturation 0..1] [--delay-tape-wow-depth-ms 0..5] [--delay-tape-wow-rate-hz 0.05..2] [--delay-tape-flutter-depth-ms 0..1] [--delay-tape-flutter-rate-hz 1..20] [--delay-sync-bpm 20..300]"
+                   " [--drive 1..20] [--delay-preset digital|slapback|bbd|tape|tape-heads] [--delay-bbd|--delay-tape|--delay-tape-heads] [--delay-head-spacing-ms ms] [--delay-heads all|none|1,2,3,4] [--delay-ms ms] [--delay-tape-saturation 0..1] [--delay-tape-wow-depth-ms 0..5] [--delay-tape-wow-rate-hz 0.05..2] [--delay-tape-flutter-depth-ms 0..1] [--delay-tape-flutter-rate-hz 1..20] [--delay-sync-bpm 20..300]"
                    " [--delay-ping-pong]"
                     " [--delay-dual] [--delay-dual-a-ms ms] [--delay-dual-a-feedback 0..0.95]"
                     " [--delay-dual-a-mix 0..1] [--delay-dual-b-ms ms]"
@@ -1565,7 +1908,20 @@ void print_usage() {
               << "                 [--compressor-threshold-db dB] [--compressor-ratio 1..20]"
                  " [--compressor-knee-db dB] [--compressor-attack-ms ms]"
                  " [--compressor-release-ms ms] [--compressor-makeup-db dB]\n"
+              << "                 [--optical-compressor] [--optical-compressor-threshold-db dB]"
+                 " [--optical-compressor-ratio 1..20] [--optical-compressor-knee-db dB]"
+                 " [--optical-compressor-attack-ms ms] [--optical-compressor-release-ms ms]"
+                 " [--optical-compressor-program-release-ms ms] [--optical-compressor-rms-window-ms ms]"
+                 " [--optical-compressor-makeup-db dB]\n"
+              << "                 [--fet-compressor] [--fet-compressor-threshold-db dB]"
+                 " [--fet-compressor-ratio 1..20] [--fet-compressor-knee-db dB]"
+                 " [--fet-compressor-attack-ms ms] [--fet-compressor-release-ms ms]"
+                 " [--fet-compressor-makeup-db dB]\n"
               << "                 [--eq-bandN-frequency-hz Hz] [--eq-bandN-gain-db dB] [--eq-bandN-q Q] (N=1..3)\n"
+              << "                 [--guitar-graphic-eq] [--guitar-eq-layout 5|7] [--guitar-eq-bandN-gain-db dB] (N=1..7)\n"
+              << "                 [--bass-graphic-eq] [--bass-eq-layout 4|7] [--bass-eq-bandN-gain-db dB] (N=1..7)\n"
+              << "                 [--shelf-tilt-eq] [--shelf-tilt-mode low-shelf|high-shelf|tilt]"
+                 " [--shelf-tilt-frequency-hz Hz] [--shelf-tilt-gain-db dB]\n"
               << "  tabletfx_offline --bench\n";
 }
 

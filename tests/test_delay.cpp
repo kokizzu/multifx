@@ -505,6 +505,103 @@ void test_tape_echo_character_changes_are_smoothed() {
             "tape saturation exit did not return to the clean digital echo");
 }
 
+void test_tape_heads_select_spacing_and_mono_combinations() {
+    tabletfx::Delay delay(1000.0F, 1, 40.0F, 4.0F, 0.0F, 1.0F);
+    delay.configure_tape_heads(true, 4.0F, 0b0101);
+    delay.reset();
+
+    std::array<float, 18> impulse{};
+    impulse[0] = 1.0F;
+    delay.process(impulse, 1);
+    require(near(impulse[4], 0.5F) && near(impulse[12], 0.5F),
+            "selected tape heads must echo at their 1x and 3x spacing with normalized level");
+    require(near(impulse[8], 0.0F) && near(impulse[16], 0.0F),
+            "unselected tape heads must not produce echoes");
+}
+
+void test_tape_heads_stereo_timing_and_alternating_pan() {
+    tabletfx::Delay delay(1000.0F, 2, 40.0F, 4.0F, 0.0F, 1.0F);
+    std::array<float, 4> settle{};
+    delay.process(settle, 2);
+    delay.configure_tape_heads(true, 4.0F, 0b0001);
+    delay.reset();
+
+    std::array<float, 12> left_head{};
+    left_head[0] = 1.0F;
+    delay.process(left_head, 2);
+    require(near(left_head[8], 0.5F * std::sqrt(0.775F), 1.0e-4F) &&
+                near(left_head[9], 0.5F * std::sqrt(0.225F), 1.0e-4F),
+            "the first selected head must echo at 4 ms with its documented stereo pan");
+
+    delay.configure_tape_heads(true, 4.0F, 0b0010);
+    delay.reset();
+    std::array<float, 20> right_head{};
+    right_head[0] = 1.0F;
+    delay.process(right_head, 2);
+    require(near(right_head[16], 0.5F * std::sqrt(0.225F), 1.0e-4F) &&
+                near(right_head[17], 0.5F * std::sqrt(0.775F), 1.0e-4F),
+            "the second selected head must echo at 8 ms with the opposite stereo pan");
+}
+
+void test_tape_heads_bound_controls_reset_and_allocate_nothing() {
+    tabletfx::Delay delay(1000.0F, 1, 12.0F, 4.0F, 0.0F, 1.0F);
+    delay.configure_tape_heads(true, std::numeric_limits<float>::infinity(), 0xFFU);
+    delay.reset();
+
+    std::array<float, 30> impulse{};
+    impulse[0] = 1.0F;
+    delay.process(impulse, 1);
+    for (std::size_t frame : {3U, 6U, 9U, 12U}) {
+        require(near(impulse[frame], 0.25F),
+                "oversized head spacing must remain bounded by the allocated delay ring");
+    }
+    for (std::size_t frame : {1U, 2U, 4U, 5U, 7U, 8U, 10U, 11U}) {
+        require(near(impulse[frame], 0.0F),
+                "bounded tape-head times must not alias intermediate samples");
+    }
+
+    delay.reset();
+    std::array<float, 24> after_reset{};
+    delay.process(after_reset, 1);
+    require(std::all_of(after_reset.begin(), after_reset.end(),
+                        [](float sample) { return near(sample, 0.0F); }),
+            "reset must clear tape-head echoes while retaining safe configuration");
+
+    std::array<float, 512> audio{};
+    audio.fill(0.1F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) delay.process(audio, 1);
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "tape-head processing must not allocate");
+
+    delay.configure_tape_heads(true, 4.0F, 0U);
+    delay.reset();
+    std::array<float, 8> no_heads{};
+    no_heads[0] = 1.0F;
+    delay.process(no_heads, 1);
+    require(near(no_heads[4], 1.0F),
+            "an empty head mask must fall back to the existing single-delay route");
+}
+
+void test_tape_head_reconfiguration_is_smoothed() {
+    tabletfx::Delay delay(1000.0F, 1, 40.0F, 4.0F, 0.0F, 1.0F);
+    delay.configure_tape_heads(true, 4.0F, 0b0001);
+    std::array<float, 100> steady{};
+    steady.fill(0.25F);
+    delay.process(steady, 1);
+
+    delay.configure_tape_heads(true, 5.0F, 0b1010);
+    std::array<float, 24> transition{};
+    transition.fill(0.25F);
+    delay.process(transition, 1);
+    for (std::size_t frame = 1; frame < transition.size(); ++frame) {
+        require(std::abs(transition[frame] - transition[frame - 1]) < 0.04F,
+                "changing selected heads and spacing must ramp without an abrupt level jump");
+    }
+    require(near(transition.back(), 0.25F, 0.01F),
+            "tape-head transition did not reach the normalized selected-head level");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -610,6 +707,10 @@ int main() {
         test_bbd_style_colors_echoes_without_allocating();
         test_tape_echo_modulation_saturation_and_no_allocation();
         test_tape_echo_character_changes_are_smoothed();
+        test_tape_heads_select_spacing_and_mono_combinations();
+        test_tape_heads_stereo_timing_and_alternating_pan();
+        test_tape_heads_bound_controls_reset_and_allocate_nothing();
+        test_tape_head_reconfiguration_is_smoothed();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

@@ -72,7 +72,8 @@ def is_direct_input(path: Path, root: Path) -> bool:
 
 def run_input(renderer: Path, source: Path, output: Path,
               output_channels: str | None = None,
-              delay_character: str = "digital") -> str:
+              delay_character: str = "digital",
+              delay_tape_heads: bool = False) -> str:
     command = [
         str(renderer), "render", str(source), str(output),
         "--gain-db", "2", "--output-gain-db", "-1",
@@ -119,11 +120,21 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--compressor-threshold-db", "-24", "--compressor-ratio", "3",
         "--compressor-knee-db", "6", "--compressor-attack-ms", "8",
         "--compressor-release-ms", "100",
+        "--optical-compressor", "--optical-compressor-threshold-db", "-30",
+        "--optical-compressor-ratio", "2.5", "--optical-compressor-knee-db", "6",
+        "--fet-compressor", "--fet-compressor-threshold-db", "-30",
+        "--fet-compressor-ratio", "2.5", "--fet-compressor-knee-db", "4",
         "--drive", "3", "--delay-ms", "125", "--delay-feedback", "0.2", "--delay-mix", "0.1",
         "--pitch-semitones", "5",
         "--eq-band1-frequency-hz", "120", "--eq-band1-gain-db", "1.5", "--eq-band1-q", "0.7",
         "--eq-band2-frequency-hz", "900", "--eq-band2-gain-db", "-1", "--eq-band2-q", "1",
         "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "0.5", "--eq-band3-q", "0.7",
+        "--guitar-graphic-eq", "--guitar-eq-layout", "seven",
+        "--guitar-eq-band3-gain-db", "1.5", "--guitar-eq-band5-gain-db", "-1",
+        "--bass-graphic-eq", "--bass-eq-layout", "seven",
+        "--bass-eq-band1-gain-db", "-1.5",
+        "--shelf-tilt-eq", "--shelf-tilt-mode", "tilt",
+        "--shelf-tilt-frequency-hz", "1200", "--shelf-tilt-gain-db", "1.5",
     ]
     if delay_character == "tape":
         command.extend([
@@ -133,6 +144,12 @@ def run_input(renderer: Path, source: Path, output: Path,
         ])
     elif delay_character != "digital":
         raise ValueError(f"Unsupported delay regression character: {delay_character}")
+    if delay_tape_heads:
+        command.extend([
+            "--delay-tape-heads",
+            "--delay-head-spacing-ms", "110",
+            "--delay-heads", "all",
+        ])
     if output_channels is not None:
         command.extend(["--output-channels", output_channels])
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -140,7 +157,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 25:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 30:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -187,6 +204,11 @@ def main() -> None:
                 delay_character="tape",
             )
             print(f"OK EGFxSet Tape Echo note {note}, {label}: {tape_report}")
+            heads_report = run_input(
+                renderer, source, output_root / f"{label.replace('-', '_')}-multi-head.wav",
+                delay_tape_heads=True,
+            )
+            print(f"OK EGFxSet Multi-head Echo note {note}, {label}: {heads_report}")
         source = music_files[0]
         report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
@@ -195,9 +217,14 @@ def main() -> None:
             delay_character="tape",
         )
         print(f"OK Guitar-TECHS DI Tape Echo performance: {tape_report}")
+        heads_report = run_input(
+            renderer, source, output_root / "guitar-techs-music-multi-head.wav",
+            delay_tape_heads=True,
+        )
+        print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 25-effect chain, including Tape Echo pickup and music passes.")
+    print("All prerecorded clean guitar inputs rendered through the 30-effect chain, including five pickup positions and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

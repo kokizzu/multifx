@@ -528,6 +528,43 @@ void Delay::configure_multitap_tap(std::size_t tap, float delay_ms,
     }
 }
 
+void Delay::configure_tape_heads(bool enabled, float head_spacing_ms,
+                                 std::uint8_t selected_heads) noexcept {
+    constexpr std::uint8_t head_mask = 0x0FU;
+    constexpr std::array<float, maximum_delay_taps> head_pans{
+        -0.55F, 0.55F, -0.55F, 0.55F};
+    const std::uint8_t selected = static_cast<std::uint8_t>(selected_heads & head_mask);
+    std::size_t selected_count = 0;
+    for (std::size_t head = 0; head < maximum_delay_taps; ++head) {
+        if ((selected & static_cast<std::uint8_t>(1U << head)) != 0) ++selected_count;
+    }
+
+    const bool active = enabled && selected_count != 0;
+    configure_multitap(active, target_feedback_, target_mix_);
+
+    const float requested_spacing_ms = std::isfinite(head_spacing_ms)
+                                           ? head_spacing_ms
+                                           : 110.0F;
+    const float maximum_delay_ms = static_cast<float>(capacity_frames_ - 1) *
+                                  1000.0F / sample_rate_;
+    const float maximum_spacing_ms = std::max(maximum_delay_ms /
+                                                  static_cast<float>(maximum_delay_taps),
+                                              1000.0F / sample_rate_);
+    const float spacing_ms = std::clamp(requested_spacing_ms, 1000.0F / sample_rate_,
+                                        maximum_spacing_ms);
+    const float level = selected_count == 0
+                            ? 0.0F
+                            : 1.0F / static_cast<float>(selected_count);
+    for (std::size_t head = 0; head < maximum_delay_taps; ++head) {
+        const bool selected_head =
+            (selected & static_cast<std::uint8_t>(1U << head)) != 0;
+        const float head_delay_ms = spacing_ms * static_cast<float>(head + 1);
+        configure_multitap_tap(head, head_delay_ms,
+                               active && selected_head ? level : 0.0F,
+                               head_pans[head]);
+    }
+}
+
 void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
                             float mix) noexcept {
     tempo_bpm_ = std::isfinite(bpm) ? std::clamp(bpm, 20.0F, 300.0F) : 120.0F;
