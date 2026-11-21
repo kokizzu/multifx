@@ -8,6 +8,7 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/high_gain_distortion.hpp"
 #include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
@@ -63,6 +64,8 @@ struct Options {
     tabletfx::TransparentOverdriveParameters overdrive{};
     bool mid_overdrive_enabled = false;
     tabletfx::MidFocusedOverdriveParameters mid_overdrive{};
+    bool high_gain_distortion_enabled = false;
+    tabletfx::HighGainDistortionParameters high_gain_distortion{};
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
     bool chorus_enabled = false;
@@ -389,6 +392,30 @@ Options parse_options(int argc, char** argv, int first) {
             options.mid_overdrive.mix = value;
             options.mid_overdrive_enabled = true;
         }
+        else if (key == "--high-gain-drive") {
+            options.high_gain_distortion.drive = value;
+            options.high_gain_distortion_enabled = true;
+        }
+        else if (key == "--high-gain-pre-low-cut-hz") {
+            options.high_gain_distortion.pre_low_cut_hz = value;
+            options.high_gain_distortion_enabled = true;
+        }
+        else if (key == "--high-gain-pre-high-cut-hz") {
+            options.high_gain_distortion.pre_high_cut_hz = value;
+            options.high_gain_distortion_enabled = true;
+        }
+        else if (key == "--high-gain-post-tone-hz") {
+            options.high_gain_distortion.post_tone_hz = value;
+            options.high_gain_distortion_enabled = true;
+        }
+        else if (key == "--high-gain-level-db") {
+            options.high_gain_distortion.level_db = value;
+            options.high_gain_distortion_enabled = true;
+        }
+        else if (key == "--high-gain-mix") {
+            options.high_gain_distortion.mix = value;
+            options.high_gain_distortion_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -559,6 +586,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.mid_overdrive_enabled) {
         effects.push_back(std::make_unique<tabletfx::MidFocusedOverdrive>(
             static_cast<float>(sample_rate), options.mid_overdrive));
+    }
+    if (options.high_gain_distortion_enabled) {
+        effects.push_back(std::make_unique<tabletfx::HighGainDistortion>(
+            static_cast<float>(sample_rate), options.high_gain_distortion));
     }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
@@ -966,6 +997,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::MidFocusedOverdrive>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::HighGainDistortion>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     tabletfx::TremoloParameters tremolo_parameters;
     tremolo_parameters.rate_hz = 4.0F;
@@ -1156,6 +1189,9 @@ void run_bench() {
     benchmark_one("mid-focused-overdrive", [=] {
         return std::make_unique<tabletfx::MidFocusedOverdrive>(static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("high-gain-distortion", [=] {
+        return std::make_unique<tabletfx::HighGainDistortion>(static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_signal_controls(sample_rate, channels, block_frames,
                               warmup_blocks, measured_blocks);
     benchmark_level_meters(sample_rate, channels, block_frames,
@@ -1232,6 +1268,10 @@ void print_usage() {
                     " [--overdrive-mix 0..1]"
                  " [--mid-overdrive-drive 0..0.5] [--mid-overdrive-boost-db 0..12]"
                     " [--mid-overdrive-level-db -24..12] [--mid-overdrive-mix 0..1]"
+                  " [--high-gain-drive 0..1] [--high-gain-pre-low-cut-hz 20..1000]"
+                  " [--high-gain-pre-high-cut-hz 1000..18000]"
+                  " [--high-gain-post-tone-hz 500..18000]"
+                  " [--high-gain-level-db -24..12] [--high-gain-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

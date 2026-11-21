@@ -4,7 +4,7 @@ const EFFECTS = [
   "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
   "pedal-compressor", "compressor", "wah", "envelope-wah", "clean-boost",
   "transparent-overdrive",
-  "mid-focused-overdrive", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
+  "mid-focused-overdrive", "high-gain-distortion", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
@@ -126,6 +126,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_overdrive(this.chain, ...overdrive);
       const midOverdrive = parameters.midOverdrive || [0.18, 6, -4, 0.4];
       module._tf_chain_set_mid_overdrive(this.chain, ...midOverdrive);
+      const highGainDistortion = parameters.highGainDistortion || [0.75, 100, 9000, 5200, -9, 1];
+      module._tf_chain_set_high_gain_distortion(this.chain, ...highGainDistortion);
       const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1];
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
@@ -207,6 +209,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_overdrive(this.chain, ...message.value);
     } else if (message.type === "mid-overdrive" && this.ready) {
       this.module._tf_chain_set_mid_overdrive(this.chain, ...message.value);
+    } else if (message.type === "high-gain-distortion" && this.ready) {
+      this.module._tf_chain_set_high_gain_distortion(this.chain, ...message.value);
     } else if (message.type === "tremolo" && this.ready) {
       this.module._tf_chain_set_tremolo(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {

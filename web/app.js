@@ -13,6 +13,7 @@ const EFFECT_NAMES = [
   "Clean boost",
   "Transparent overdrive",
   "Mid-focused overdrive",
+  "High-gain distortion",
   "Soft drive",
   "Tremolo",
   "Chorus",
@@ -33,6 +34,7 @@ const DEFAULT_PARAMETERS = {
   cleanBoostDb: 0,
   overdrive: [0.15, -3, 0.35],
   midOverdrive: [0.18, 6, -4, 0.4],
+  highGainDistortion: [0.75, 100, 9000, 5200, -9, 1],
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -162,6 +164,18 @@ const midOverdriveLevel = document.querySelector("#mid-overdrive-level-db");
 const midOverdriveLevelValue = document.querySelector("#mid-overdrive-level-value");
 const midOverdriveMix = document.querySelector("#mid-overdrive-mix");
 const midOverdriveMixValue = document.querySelector("#mid-overdrive-mix-value");
+const highGainDrive = document.querySelector("#high-gain-drive");
+const highGainDriveValue = document.querySelector("#high-gain-drive-value");
+const highGainPreLowCut = document.querySelector("#high-gain-pre-low-cut-hz");
+const highGainPreLowCutValue = document.querySelector("#high-gain-pre-low-cut-value");
+const highGainPreHighCut = document.querySelector("#high-gain-pre-high-cut-hz");
+const highGainPreHighCutValue = document.querySelector("#high-gain-pre-high-cut-value");
+const highGainPostTone = document.querySelector("#high-gain-post-tone-hz");
+const highGainPostToneValue = document.querySelector("#high-gain-post-tone-value");
+const highGainLevel = document.querySelector("#high-gain-level-db");
+const highGainLevelValue = document.querySelector("#high-gain-level-value");
+const highGainMix = document.querySelector("#high-gain-mix");
+const highGainMixValue = document.querySelector("#high-gain-mix-value");
 const tunerReference = document.querySelector("#tuner-reference-hz");
 const tunerReferenceValue = document.querySelector("#tuner-reference-value");
 const tunerMuteOutput = document.querySelector("#tuner-mute-output");
@@ -887,6 +901,26 @@ for (const control of [midOverdriveDrive, midOverdriveBoost,
   control.addEventListener("change", updateMidOverdrive);
 }
 
+function updateHighGainDistortion() {
+  const values = [Number(highGainDrive.value), Number(highGainPreLowCut.value),
+    Number(highGainPreHighCut.value), Number(highGainPostTone.value),
+    Number(highGainLevel.value), Number(highGainMix.value)];
+  DEFAULT_PARAMETERS.highGainDistortion = values;
+  highGainDriveValue.value = Number(highGainDrive.value).toFixed(2);
+  highGainPreLowCutValue.value = `${Math.round(Number(highGainPreLowCut.value))} Hz`;
+  highGainPreHighCutValue.value = `${Math.round(Number(highGainPreHighCut.value))} Hz`;
+  highGainPostToneValue.value = `${Math.round(Number(highGainPostTone.value))} Hz`;
+  highGainLevelValue.value = `${Number(highGainLevel.value).toFixed(1)} dB`;
+  highGainMixValue.value = `${Math.round(Number(highGainMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "high-gain-distortion", value: values });
+}
+
+for (const control of [highGainDrive, highGainPreLowCut, highGainPreHighCut,
+  highGainPostTone, highGainLevel, highGainMix]) {
+  control.addEventListener("input", updateHighGainDistortion);
+  control.addEventListener("change", updateHighGainDistortion);
+}
+
 function updateTremolo() {
   const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
   const values = [
@@ -1124,7 +1158,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-        enabled: Array.from({ length: 23 }, () => true),
+        enabled: Array.from({ length: 24 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1136,6 +1170,7 @@ async function runBrowserSelfTest() {
         cleanBoostDb: 3,
         overdrive: [0.15, -3, 0.35],
         midOverdrive: [0.18, 6, -4, 0.4],
+        highGainDistortion: [0.75, 100, 9000, 5200, -9, 1],
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],

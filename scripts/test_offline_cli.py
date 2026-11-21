@@ -376,6 +376,42 @@ def check_mid_overdrive(executable: Path) -> None:
             )
 
 
+def check_high_gain_distortion(executable: Path) -> None:
+    sample_rate = 48000
+    with tempfile.TemporaryDirectory(prefix="tabletfx-high-gain-distortion-test-") as directory:
+        root = Path(directory)
+        rms_values = []
+        for label, frequency in (("bass", 90.0), ("mids", 1000.0)):
+            source = root / f"{label}.wav"
+            output = root / f"{label}-processed.wav"
+            frames = sample_rate
+            values = [round(512 * math.sin(2.0 * math.pi * frequency * frame / sample_rate))
+                      for frame in range(frames)]
+            write_pcm16(source, sample_rate, values)
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output),
+                 "--high-gain-drive", "0.8",
+                 "--high-gain-pre-low-cut-hz", "300",
+                 "--high-gain-pre-high-cut-hz", "12000",
+                 "--high-gain-post-tone-hz", "12000",
+                 "--high-gain-level-db", "0",
+                 "--high-gain-mix", "1"],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"High-gain distortion was not constructed: {result.stdout}")
+            data = output.read_bytes()
+            samples = struct.unpack("<" + "f" * frames, data[44:])
+            if not all(math.isfinite(sample) for sample in samples):
+                raise AssertionError(f"High-gain distortion produced non-finite {label} audio")
+            tail = samples[sample_rate // 2:]
+            rms_values.append(math.sqrt(sum(sample * sample for sample in tail) / len(tail)))
+        if rms_values[0] >= rms_values[1] * 0.75:
+            raise AssertionError(
+                f"High-gain pre low-cut should reduce 90 Hz relative to 1 kHz: bass={rms_values[0]}, mids={rms_values[1]}"
+            )
+
+
 def check_envelope_wah(executable: Path) -> None:
     sample_rate = 48000
     samples = [round(16384 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
@@ -528,11 +564,12 @@ def main() -> None:
     check_clean_boost(args.executable.resolve())
     check_overdrive(args.executable.resolve())
     check_mid_overdrive(args.executable.resolve())
+    check_high_gain_distortion(args.executable.resolve())
     check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent and mid-focused overdrive/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused and high-gain distortion/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

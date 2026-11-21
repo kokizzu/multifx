@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add mid-focused overdrive"
+COMMIT_MESSAGE = "feat: add high-gain distortion"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -45,10 +45,12 @@ CHECKPOINT_PATHS = (
     "tests/test_noise_gate.cpp",
     "tests/test_clean_boost.cpp",
     "tests/test_mid_overdrive.cpp",
+    "tests/test_high_gain_distortion.cpp",
     "tests/test_chorus.cpp",
     "tests/test_envelope_wah.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/mid_overdrive.hpp",
+    "include/tabletfx/effects/high_gain_distortion.hpp",
     "include/tabletfx/effects/clean_boost.hpp",
     "include/tabletfx/effects/chorus.hpp",
     "include/tabletfx/effects/envelope_wah.hpp",
@@ -76,6 +78,7 @@ CHECKPOINT_PATHS = (
     "scripts/web.py",
     "src/effects/poly_pitch_shifter.cpp",
     "src/effects/mid_overdrive.cpp",
+    "src/effects/high_gain_distortion.cpp",
     "src/effects.cpp",
     "src/channel_conversion.cpp",
     "src/parallel_mixer.cpp",

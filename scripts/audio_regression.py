@@ -90,6 +90,9 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--overdrive-mix", "0.35",
         "--mid-overdrive-drive", "0.18", "--mid-overdrive-boost-db", "6",
         "--mid-overdrive-level-db", "-4", "--mid-overdrive-mix", "0.4",
+        "--high-gain-drive", "0.72", "--high-gain-pre-low-cut-hz", "100",
+        "--high-gain-pre-high-cut-hz", "9000", "--high-gain-post-tone-hz", "5200",
+        "--high-gain-level-db", "-9", "--high-gain-mix", "0.8",
         "--tremolo-rate-hz", "4", "--tremolo-depth", "0.2",
         "--tremolo-waveform", "sine", "--tremolo-sync", "off",
         "--chorus-rate-hz", "0.8", "--chorus-delay-ms", "15",
@@ -126,7 +129,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 23:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 24:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -173,7 +176,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 23-effect offline chain.")
+    print("All prerecorded clean guitar inputs rendered through the 24-effect offline chain.")
 
 
 if __name__ == "__main__":
