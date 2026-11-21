@@ -38,6 +38,7 @@ const EFFECT_NAMES = [
   "Ring Modulator",
   "Rhythmic Slicer",
   "Step Filter",
+  "Notch Filter",
   "Output level",
   "Peak limiter",
 ];
@@ -78,6 +79,7 @@ const DEFAULT_PARAMETERS = {
   stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
     0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
+  notchFilter: [1000, 4, 1],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -542,6 +544,12 @@ const stepFilterSteps = Array.from({ length: 16 }, (_, index) => {
   stepFilterStepsRoot.append(label);
   return { input, output };
 });
+const notchFilterFrequency = document.querySelector("#notch-filter-frequency-hz");
+const notchFilterFrequencyValue = document.querySelector("#notch-filter-frequency-hz-value");
+const notchFilterQ = document.querySelector("#notch-filter-q");
+const notchFilterQValue = document.querySelector("#notch-filter-q-value");
+const notchFilterMix = document.querySelector("#notch-filter-mix");
+const notchFilterMixValue = document.querySelector("#notch-filter-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1840,6 +1848,21 @@ function updateStepFilter() {
   }
 }
 
+function updateNotchFilter() {
+  const values = [
+    Number(notchFilterFrequency.value),
+    Number(notchFilterQ.value),
+    Number(notchFilterMix.value) / 100,
+  ];
+  notchFilterFrequencyValue.value = `${values[0].toFixed(0)} Hz`;
+  notchFilterQValue.value = values[1].toFixed(2);
+  notchFilterMixValue.value = `${Math.round(values[2] * 100)}%`;
+  DEFAULT_PARAMETERS.notchFilter = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "notch-filter", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1920,6 +1943,10 @@ for (const input of [stepFilterTempoBpm, stepFilterRate, stepFilterMinimumCutoff
 for (const input of [stepFilterTempoSync, stepFilterDivision, stepFilterMode]) {
   input.addEventListener("change", updateStepFilter);
 }
+for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
+  input.addEventListener("input", updateNotchFilter);
+  input.addEventListener("change", updateNotchFilter);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1934,6 +1961,7 @@ updateRotarySpeaker();
 updateRingModulator();
 updateRhythmicSlicer();
 updateStepFilter();
+updateNotchFilter();
 
 function updateDelayDual() {
   const values = [
@@ -2084,22 +2112,22 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 39 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 39 || effectRows.length !== 39 ||
+    const expectedEffectIds = Array.from({ length: 40 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 40 || effectRows.length !== 40 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
-        initialEffectState[35] || initialEffectState[36] ||
+        initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 39 ordered effects (IDs 0–38) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, and Step Filter disabled by default.");
+      throw new Error("The effect picker must list 40 ordered effects (IDs 0–39) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, and Notch Filter disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 39" ||
+        effectCount.value !== "8 of 40" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2107,8 +2135,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,38" ||
-        effectCount.value !== "7 of 39" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,39" ||
+        effectCount.value !== "7 of 40" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2116,16 +2144,16 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (filterIds.join(",") !== "2,3,7,8,36" ||
-        effectCount.value !== "5 of 39" ||
+    if (filterIds.join(",") !== "2,3,7,8,36,37" ||
+        effectCount.value !== "6 of 40" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Filters category must include Step Filter and preserve the current chain state.");
+      throw new Error("The Filters category must include Step Filter and Notch Filter and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 39" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 40" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2135,12 +2163,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 39") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 40") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "39 of 39" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "40 of 40" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2219,6 +2247,7 @@ async function runBrowserSelfTest() {
          stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 0.65, 0.4, 3, 0.7, 0,
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
+        notchFilter: [713, 6, 0.72],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -2272,6 +2301,11 @@ async function runBrowserSelfTest() {
       input.value = String(stepFilterParameters[index + 13]);
     });
     updateStepFilter();
+    const notchFilterParameters = testOptions.parameters.notchFilter;
+    notchFilterFrequency.value = String(notchFilterParameters[0]);
+    notchFilterQ.value = String(notchFilterParameters[1]);
+    notchFilterMix.value = String(notchFilterParameters[2] * 100);
+    updateNotchFilter();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";
     volumeMaximum.value = "0";

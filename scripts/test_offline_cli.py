@@ -412,6 +412,42 @@ def check_step_filter(executable: Path) -> None:
             )
 
 
+def check_notch_filter(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 1000.0 * frame / sample_rate))
+        for frame in range(sample_rate)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-notch-filter-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "tone.wav"
+        wet_output = root / "notched.wav"
+        dry_output = root / "dry.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        common = ["--notch-filter", "--notch-filter-frequency-hz", "1000",
+                  "--notch-filter-q", "4"]
+        wet_result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output),
+             *common, "--notch-filter-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        dry_result = subprocess.run(
+            [str(executable), "render", str(source), str(dry_output),
+             *common, "--notch-filter-mix", "0"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in wet_result.stdout or "processors=1" not in dry_result.stdout:
+            raise AssertionError("Notch Filter CLI controls did not enable one processor")
+        wet = struct.unpack("<" + "f" * len(source_samples), wet_output.read_bytes()[44:])
+        dry = struct.unpack("<" + "f" * len(source_samples), dry_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in wet):
+            raise AssertionError("Notch Filter produced non-finite output")
+        wet_rms = math.sqrt(sum(value * value for value in wet[12000:]) / (len(wet) - 12000))
+        dry_rms = math.sqrt(sum(value * value for value in dry[12000:]) / (len(dry) - 12000))
+        if wet_rms >= 0.01 or abs(dry_rms - 12000 / 32768 / math.sqrt(2)) > 0.002:
+            raise AssertionError(f"Notch Filter response or dry mix is wrong: wet={wet_rms} dry={dry_rms}")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1232,6 +1268,7 @@ def main() -> None:
     check_ring_modulator(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
+    check_notch_filter(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1256,7 +1293,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

@@ -438,6 +438,28 @@ STEP_FILTER_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+NOTCH_FILTER_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/notch_filter.hpp",
+    "src/effects/notch_filter.cpp",
+    "tests/test_notch_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -479,6 +501,8 @@ CHECKPOINTS = {
                         "feat: add project-authored rhythmic slicer"),
     "step-filter": (STEP_FILTER_CHECKPOINT_PATHS,
                     "feat: add project-authored step filter"),
+    "notch-filter": (NOTCH_FILTER_CHECKPOINT_PATHS,
+                     "feat: add project-authored notch filter"),
 }
 
 
@@ -537,7 +561,7 @@ def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
             "Refusing to publish with staged changes outside the selected checkpoint: "
             + ", ".join(unexpected_staged)
         )
-    unexpected = sorted(set(paths) - set(CHECKPOINT_PATHS))
+    unexpected = sorted(set(paths) - (set(CHECKPOINT_PATHS) | checkpoint_paths))
     if unexpected:
         raise SystemExit("Dirty files outside the reviewed checkpoint: " + ", ".join(unexpected))
     workflows = [path for path in paths if path.startswith(".github/workflows/")]

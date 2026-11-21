@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">39 of 39</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">40 of 40</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -119,8 +119,9 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="34"><span class="effect-number">35</span><span class="effect-name">Ring Modulator</span><span class="effect-default">440 Hz · 1× · 20 kHz high cut · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="35"><span class="effect-number">36</span><span class="effect-name">Rhythmic Slicer</span><span class="effect-default">16 steps · 120 BPM · sixteenth</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="36"><span class="effect-number">37</span><span class="effect-name">Step Filter</span><span class="effect-default">16 steps · resonant low-pass</span><span class="effect-category-tag">Filters &amp; wah</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="37" checked><span class="effect-number">38</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="38" checked><span class="effect-number">39</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="37"><span class="effect-number">38</span><span class="effect-name">Notch Filter</span><span class="effect-default">1 kHz · Q 4 · 100% wet</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="38" checked><span class="effect-number">39</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="39" checked><span class="effect-number">40</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -240,6 +241,15 @@
         </div>
         <div id="step-filter-steps" class="slicer-step-grid" aria-label="16-step filter cutoff pattern"></div>
         <p class="hint">Pattern values sweep logarithmically between the minimum and maximum cutoff. Choose low-pass, band-pass, high-pass, or notch response. This sequenced filter is distinct from the amplitude-gate Rhythmic Slicer, and uses project-authored controls rather than a manufacturer parameter match.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Notch Filter controls">
+        <h3>Notch Filter · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="notch-filter-frequency-hz"><span>Center frequency</span><output id="notch-filter-frequency-hz-value" for="notch-filter-frequency-hz">1000 Hz</output><input id="notch-filter-frequency-hz" type="range" min="20" max="18000" step="1" value="1000"></label>
+          <label class="mix-control" for="notch-filter-q"><span>Q</span><output id="notch-filter-q-value" for="notch-filter-q">4.00</output><input id="notch-filter-q" type="range" min="0.5" max="12" step="0.01" value="4"></label>
+          <label class="mix-control" for="notch-filter-mix"><span>Wet mix</span><output id="notch-filter-mix-value" for="notch-filter-mix">100%</output><input id="notch-filter-mix" type="range" min="0" max="100" step="1" value="100"></label>
+        </div>
+        <p class="hint">A stationary narrow cut, separate from Step Filter’s moving Notch response. Frequency, Q, mix, defaults, and smoothing are project-authored; they are not copied from Fender or Fractal controls.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

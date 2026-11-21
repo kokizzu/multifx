@@ -15,6 +15,7 @@
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
+#include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -185,6 +186,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::StepFilter>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::NotchFilter>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -895,6 +899,12 @@ public:
         }
     }
 
+    void configure_notch_filter(float frequency_hz, float q, float mix) noexcept {
+        auto* notch_filter = static_cast<tabletfx::NotchFilter*>(
+            effects_[37].effect.get());
+        notch_filter->set_parameters({frequency_hz, q, mix});
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1431,6 +1441,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_limiter(
     void* opaque, float ceiling_db, float release_ms) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_limiter(ceiling_db, release_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_notch_filter(
+    void* opaque, float frequency_hz, float q, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_notch_filter(frequency_hz, q, mix);
     }
 }
 

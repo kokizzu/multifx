@@ -10,7 +10,9 @@ PYTHON ?= python3
 	publish-auto-swell-plan publish-auto-swell \
 	publish-rotary-speaker-plan publish-rotary-speaker \
 	publish-ring-mod-plan publish-ring-mod \
-	publish-rhythmic-slicer-plan publish-rhythmic-slicer
+	publish-rhythmic-slicer-plan publish-rhythmic-slicer \
+	publish-step-filter-plan publish-step-filter \
+	publish-notch-filter-plan publish-notch-filter
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -150,3 +152,9 @@ publish-step-filter-plan:
 
 publish-step-filter:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint step-filter
+
+publish-notch-filter-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint notch-filter
+
+publish-notch-filter:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint notch-filter

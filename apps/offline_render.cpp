@@ -16,6 +16,7 @@
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
+#include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -180,6 +181,8 @@ struct Options {
     tabletfx::RhythmicSlicerParameters rhythmic_slicer{};
     bool step_filter_enabled = false;
     tabletfx::StepFilterParameters step_filter{};
+    bool notch_filter_enabled = false;
+    tabletfx::NotchFilterParameters notch_filter{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -381,6 +384,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--step-filter") {
             options.step_filter_enabled = true;
+            continue;
+        }
+        if (key == "--notch-filter") {
+            options.notch_filter_enabled = true;
             continue;
         }
         if (key == "--rotary-tempo-sync") {
@@ -1359,6 +1366,18 @@ Options parse_options(int argc, char** argv, int first) {
             options.step_filter.phase = value;
             options.step_filter_enabled = true;
         }
+        else if (key == "--notch-filter-frequency-hz") {
+            options.notch_filter.frequency_hz = value;
+            options.notch_filter_enabled = true;
+        }
+        else if (key == "--notch-filter-q") {
+            options.notch_filter.q = value;
+            options.notch_filter_enabled = true;
+        }
+        else if (key == "--notch-filter-mix") {
+            options.notch_filter.mix = value;
+            options.notch_filter_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1657,6 +1676,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.step_filter_enabled) {
         effects.push_back(std::make_unique<tabletfx::StepFilter>(
             static_cast<float>(sample_rate), options.step_filter));
+    }
+    if (options.notch_filter_enabled) {
+        effects.push_back(std::make_unique<tabletfx::NotchFilter>(
+            static_cast<float>(sample_rate), options.notch_filter));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2136,6 +2159,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), slicer_parameters));
     effects.push_back(std::make_unique<tabletfx::StepFilter>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::NotchFilter>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2298,6 +2323,10 @@ void run_bench() {
         tabletfx::StepFilterParameters parameters;
         return std::make_unique<tabletfx::StepFilter>(
             static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("notch-filter", [=] {
+        return std::make_unique<tabletfx::NotchFilter>(
+            static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
@@ -2626,6 +2655,8 @@ void print_usage() {
                    " [--step-filter-depth 0..1] [--step-filter-shape 0..1]"
                    " [--step-filter-smoothing-ms 0..100] [--step-filter-mix 0..1]"
                    " [--step-filter-phase 0..1] [--step-filter-steps 16 values in 0..1]\n"
+                << "                 [--notch-filter] [--notch-filter-frequency-hz 20..18000]"
+                   " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
                << "  tabletfx_offline --bench\n";
 }
 
