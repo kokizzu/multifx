@@ -17,6 +17,7 @@
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
+#include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -183,6 +184,9 @@ struct Options {
     tabletfx::StepFilterParameters step_filter{};
     bool notch_filter_enabled = false;
     tabletfx::NotchFilterParameters notch_filter{};
+    bool reverse_delay_enabled = false;
+    tabletfx::ReverseDelayParameters reverse_delay{};
+    bool reverse_delay_running = true;
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -388,6 +392,21 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--notch-filter") {
             options.notch_filter_enabled = true;
+            continue;
+        }
+        if (key == "--reverse-delay") {
+            options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--reverse-delay-run") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --reverse-delay-run");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.reverse_delay_running = true;
+            else if (value == "off") options.reverse_delay_running = false;
+            else throw std::invalid_argument("Reverse-delay Run must be on or off");
+            options.reverse_delay_enabled = true;
             continue;
         }
         if (key == "--rotary-tempo-sync") {
@@ -1378,6 +1397,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.notch_filter.mix = value;
             options.notch_filter_enabled = true;
         }
+        else if (key == "--reverse-delay-time-ms") {
+            options.reverse_delay.time_ms = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-feedback") {
+            options.reverse_delay.feedback = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-mix") {
+            options.reverse_delay.mix = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-crossfade-ms") {
+            options.reverse_delay.crossfade_ms = value;
+            options.reverse_delay_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1680,6 +1715,13 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.notch_filter_enabled) {
         effects.push_back(std::make_unique<tabletfx::NotchFilter>(
             static_cast<float>(sample_rate), options.notch_filter));
+    }
+    if (options.reverse_delay_enabled) {
+        auto reverse_delay = std::make_unique<tabletfx::ReverseDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.reverse_delay);
+        reverse_delay->set_running(options.reverse_delay_running);
+        effects.push_back(std::move(reverse_delay));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2161,6 +2203,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::NotchFilter>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::ReverseDelay>(
+        static_cast<float>(sample_rate), channels));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2327,6 +2371,10 @@ void run_bench() {
     benchmark_one("notch-filter", [=] {
         return std::make_unique<tabletfx::NotchFilter>(
             static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("reverse-delay", [=] {
+        return std::make_unique<tabletfx::ReverseDelay>(
+            static_cast<float>(sample_rate), channels);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
@@ -2657,6 +2705,9 @@ void print_usage() {
                    " [--step-filter-phase 0..1] [--step-filter-steps 16 values in 0..1]\n"
                 << "                 [--notch-filter] [--notch-filter-frequency-hz 20..18000]"
                    " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
+                 << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
+                    " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
+                    " [--reverse-delay-crossfade-ms 0..50] [--reverse-delay-run on|off]\n"
                << "  tabletfx_offline --bench\n";
 }
 

@@ -120,8 +120,9 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="35"><span class="effect-number">36</span><span class="effect-name">Rhythmic Slicer</span><span class="effect-default">16 steps · 120 BPM · sixteenth</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="36"><span class="effect-number">37</span><span class="effect-name">Step Filter</span><span class="effect-default">16 steps · resonant low-pass</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="37"><span class="effect-number">38</span><span class="effect-name">Notch Filter</span><span class="effect-default">1 kHz · Q 4 · 100% wet</span><span class="effect-category-tag">Filters &amp; wah</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="38" checked><span class="effect-number">39</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="39" checked><span class="effect-number">40</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="38"><span class="effect-number">39</span><span class="effect-name">Reverse Delay</span><span class="effect-default">350 ms · 25% feedback · 35% wet</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="39" checked><span class="effect-number">40</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="40" checked><span class="effect-number">41</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -250,6 +251,20 @@
           <label class="mix-control" for="notch-filter-mix"><span>Wet mix</span><output id="notch-filter-mix-value" for="notch-filter-mix">100%</output><input id="notch-filter-mix" type="range" min="0" max="100" step="1" value="100"></label>
         </div>
         <p class="hint">A stationary narrow cut, separate from Step Filter’s moving Notch response. Frequency, Q, mix, defaults, and smoothing are project-authored; they are not copied from Fender or Fractal controls.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Reverse Delay controls">
+        <h3>Reverse Delay · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="reverse-delay-time-ms"><span>Time</span><output id="reverse-delay-time-ms-value" for="reverse-delay-time-ms">350 ms</output><input id="reverse-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="reverse-delay-feedback"><span>Feedback</span><output id="reverse-delay-feedback-value" for="reverse-delay-feedback">25%</output><input id="reverse-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
+          <label class="mix-control" for="reverse-delay-mix"><span>Mix</span><output id="reverse-delay-mix-value" for="reverse-delay-mix">35%</output><input id="reverse-delay-mix" type="range" min="0" max="100" step="1" value="35"></label>
+          <label class="mix-control" for="reverse-delay-crossfade-ms"><span>Crossfade</span><output id="reverse-delay-crossfade-ms-value" for="reverse-delay-crossfade-ms">10.0 ms</output><input id="reverse-delay-crossfade-ms" type="range" min="0" max="50" step="0.1" value="10"></label>
+        </div>
+        <div class="slicer-global-controls">
+          <label class="slicer-sync" for="reverse-delay-run"><input id="reverse-delay-run" type="checkbox" checked><span>Run reverse playback</span></label>
+          <button id="reverse-delay-restart" class="button" type="button">Trigger restart</button>
+        </div>
+        <p class="hint">Project-authored rolling reversed snippets. Time, feedback, mix, crossfade and defaults are project-specific; crossfade is additionally capped below half of Time. The general effect checkbox bypasses this chain stage.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

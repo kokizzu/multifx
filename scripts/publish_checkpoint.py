@@ -460,6 +460,30 @@ NOTCH_FILTER_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+REVERSE_DELAY_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "README.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/reverse_delay.hpp",
+    "src/effects/reverse_delay.cpp",
+    "tests/test_reverse_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -503,6 +527,8 @@ CHECKPOINTS = {
                     "feat: add project-authored step filter"),
     "notch-filter": (NOTCH_FILTER_CHECKPOINT_PATHS,
                      "feat: add project-authored notch filter"),
+    "reverse-delay": (REVERSE_DELAY_CHECKPOINT_PATHS,
+                      "feat: add project-authored reverse delay"),
 }
 
 

@@ -39,6 +39,7 @@ const EFFECT_NAMES = [
   "Rhythmic Slicer",
   "Step Filter",
   "Notch Filter",
+  "Reverse Delay",
   "Output level",
   "Peak limiter",
 ];
@@ -80,6 +81,8 @@ const DEFAULT_PARAMETERS = {
     0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   notchFilter: [1000, 4, 1],
+  reverseDelay: [350, 0.25, 0.35, 10],
+  reverseDelayRun: true,
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -550,6 +553,16 @@ const notchFilterQ = document.querySelector("#notch-filter-q");
 const notchFilterQValue = document.querySelector("#notch-filter-q-value");
 const notchFilterMix = document.querySelector("#notch-filter-mix");
 const notchFilterMixValue = document.querySelector("#notch-filter-mix-value");
+const reverseDelayTime = document.querySelector("#reverse-delay-time-ms");
+const reverseDelayTimeValue = document.querySelector("#reverse-delay-time-ms-value");
+const reverseDelayFeedback = document.querySelector("#reverse-delay-feedback");
+const reverseDelayFeedbackValue = document.querySelector("#reverse-delay-feedback-value");
+const reverseDelayMix = document.querySelector("#reverse-delay-mix");
+const reverseDelayMixValue = document.querySelector("#reverse-delay-mix-value");
+const reverseDelayCrossfade = document.querySelector("#reverse-delay-crossfade-ms");
+const reverseDelayCrossfadeValue = document.querySelector("#reverse-delay-crossfade-ms-value");
+const reverseDelayRun = document.querySelector("#reverse-delay-run");
+const reverseDelayRestart = document.querySelector("#reverse-delay-restart");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1863,6 +1876,40 @@ function updateNotchFilter() {
   }
 }
 
+function updateReverseDelay() {
+  const timeMs = Number(reverseDelayTime.value);
+  const maximumCrossfade = Math.min(50, timeMs / 2);
+  reverseDelayCrossfade.max = String(maximumCrossfade);
+  if (Number(reverseDelayCrossfade.value) > maximumCrossfade) {
+    reverseDelayCrossfade.value = String(maximumCrossfade);
+  }
+  const values = [
+    timeMs,
+    Number(reverseDelayFeedback.value) / 100,
+    Number(reverseDelayMix.value) / 100,
+    Number(reverseDelayCrossfade.value),
+  ];
+  reverseDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  reverseDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
+  reverseDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
+  reverseDelayCrossfadeValue.value = `${values[3].toFixed(1)} ms`;
+  DEFAULT_PARAMETERS.reverseDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "reverse-delay", value: values });
+  }
+}
+
+function updateReverseDelayRun() {
+  DEFAULT_PARAMETERS.reverseDelayRun = reverseDelayRun.checked;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "reverse-delay-run", value: reverseDelayRun.checked });
+  }
+}
+
+function restartReverseDelay() {
+  if (workletNode) workletNode.port.postMessage({ type: "reverse-delay-restart" });
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1947,6 +1994,13 @@ for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
   input.addEventListener("change", updateNotchFilter);
 }
+for (const input of [reverseDelayTime, reverseDelayFeedback, reverseDelayMix,
+  reverseDelayCrossfade]) {
+  input.addEventListener("input", updateReverseDelay);
+  input.addEventListener("change", updateReverseDelay);
+}
+reverseDelayRun.addEventListener("change", updateReverseDelayRun);
+reverseDelayRestart.addEventListener("click", restartReverseDelay);
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1962,6 +2016,8 @@ updateRingModulator();
 updateRhythmicSlicer();
 updateStepFilter();
 updateNotchFilter();
+updateReverseDelay();
+updateReverseDelayRun();
 
 function updateDelayDual() {
   const values = [
@@ -2112,22 +2168,23 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 40 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 40 || effectRows.length !== 40 ||
+    const expectedEffectIds = Array.from({ length: 41 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 41 || effectRows.length !== 41 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
+        initialEffectState[38] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 40 ordered effects (IDs 0–39) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, and Notch Filter disabled by default.");
+      throw new Error("The effect picker must list 41 ordered effects (IDs 0–40) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, and Reverse Delay disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 40" ||
+        effectCount.value !== "8 of 41" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2135,8 +2192,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,39" ||
-        effectCount.value !== "7 of 40" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,40" ||
+        effectCount.value !== "7 of 41" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2145,15 +2202,23 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37" ||
-        effectCount.value !== "6 of 40" ||
+        effectCount.value !== "6 of 41" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include Step Filter and Notch Filter and preserve the current chain state.");
+    }
+    effectCategoryFilter.value = "delay";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const delayIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (delayIds.join(",") !== "21,38" || effectCount.value !== "2 of 41" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Delay category must include Digital Delay and Reverse Delay and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 40" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 41" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2163,12 +2228,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 40") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 41") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "40 of 40" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "41 of 41" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2248,6 +2313,8 @@ async function runBrowserSelfTest() {
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
+         reverseDelay: [350, 0.25, 0.35, 10],
+         reverseDelayRun: true,
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -2306,6 +2373,14 @@ async function runBrowserSelfTest() {
     notchFilterQ.value = String(notchFilterParameters[1]);
     notchFilterMix.value = String(notchFilterParameters[2] * 100);
     updateNotchFilter();
+    const reverseDelayParameters = testOptions.parameters.reverseDelay;
+    reverseDelayTime.value = String(reverseDelayParameters[0]);
+    reverseDelayFeedback.value = String(reverseDelayParameters[1] * 100);
+    reverseDelayMix.value = String(reverseDelayParameters[2] * 100);
+    reverseDelayCrossfade.value = String(reverseDelayParameters[3]);
+    reverseDelayRun.checked = testOptions.parameters.reverseDelayRun;
+    updateReverseDelay();
+    updateReverseDelayRun();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";
     volumeMaximum.value = "0";
@@ -2500,6 +2575,11 @@ async function runBrowserSelfTest() {
       )),
     ]);
     await waitForCapture(captureView, reference.samples.length);
+    reverseDelayRestart.click();
+    reverseDelayRun.checked = false;
+    reverseDelayRun.dispatchEvent(new Event("change", { bubbles: true }));
+    reverseDelayRun.checked = true;
+    reverseDelayRun.dispatchEvent(new Event("change", { bubbles: true }));
 
     const actual = new Float32Array(captureBuffer);
     if (actual.length !== reference.samples.length) throw new Error("Captured browser output has the wrong sample count.");

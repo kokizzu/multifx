@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -206,6 +206,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_phaser(this.chain, ...phaser);
       const notchFilter = parameters.notchFilter || [1000, 4, 1];
       module._tf_chain_set_notch_filter(this.chain, ...notchFilter);
+      const reverseDelay = parameters.reverseDelay || [350, 0.25, 0.35, 10];
+      module._tf_chain_set_reverse_delay(this.chain, ...reverseDelay);
+      module._tf_chain_set_reverse_delay_run(this.chain,
+        parameters.reverseDelayRun === false ? 0 : 1);
       const vibrato = parameters.vibrato || [5, 0.35, 1];
       module._tf_chain_set_vibrato(this.chain, ...vibrato);
       const limiter = parameters.limiter || [-1, 80];
@@ -295,6 +299,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.module._tf_chain_set_step_filter(this.chain, ...message.value);
     } else if (message.type === "notch-filter" && this.ready) {
       this.module._tf_chain_set_notch_filter(this.chain, ...message.value);
+    } else if (message.type === "reverse-delay" && this.ready) {
+      this.module._tf_chain_set_reverse_delay(this.chain, ...message.value);
+    } else if (message.type === "reverse-delay-run" && this.ready) {
+      this.module._tf_chain_set_reverse_delay_run(this.chain, message.value ? 1 : 0);
+    } else if (message.type === "reverse-delay-restart" && this.ready) {
+      this.module._tf_chain_restart_reverse_delay(this.chain);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

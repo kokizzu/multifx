@@ -12,7 +12,8 @@ PYTHON ?= python3
 	publish-ring-mod-plan publish-ring-mod \
 	publish-rhythmic-slicer-plan publish-rhythmic-slicer \
 	publish-step-filter-plan publish-step-filter \
-	publish-notch-filter-plan publish-notch-filter
+	publish-notch-filter-plan publish-notch-filter \
+	publish-reverse-delay-plan publish-reverse-delay
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -158,3 +159,9 @@ publish-notch-filter-plan:
 
 publish-notch-filter:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint notch-filter
+
+publish-reverse-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint reverse-delay
+
+publish-reverse-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint reverse-delay

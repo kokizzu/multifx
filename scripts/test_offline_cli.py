@@ -448,6 +448,40 @@ def check_notch_filter(executable: Path) -> None:
             raise AssertionError(f"Notch Filter response or dry mix is wrong: wet={wet_rms} dry={dry_rms}")
 
 
+def check_reverse_delay(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [((frame * 713) % 20000) - 10000 for frame in range(96)]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-reverse-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "sequence.wav"
+        wet_output = root / "reversed.wav"
+        muted_output = root / "muted.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        options = ["--reverse-delay", "--reverse-delay-time-ms", "1",
+                   "--reverse-delay-feedback", "0", "--reverse-delay-mix", "1",
+                   "--reverse-delay-crossfade-ms", "0"]
+        wet_result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output), *options],
+            capture_output=True, text=True, check=True,
+        )
+        muted_result = subprocess.run(
+            [str(executable), "render", str(source), str(muted_output), *options,
+             "--reverse-delay-run", "off"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in wet_result.stdout or "processors=1" not in muted_result.stdout:
+            raise AssertionError("Reverse Delay CLI controls did not enable one processor")
+        wet = struct.unpack("<" + "f" * len(source_samples), wet_output.read_bytes()[44:])
+        muted = struct.unpack("<" + "f" * len(source_samples), muted_output.read_bytes()[44:])
+        expected = [sample / 32768.0 for sample in reversed(source_samples[:48])]
+        if any(abs(value) > 1e-6 for value in wet[:48]):
+            raise AssertionError("Reverse Delay must wait for the first captured snippet")
+        if any(abs(actual - target) > 1 / 32768 for actual, target in zip(wet[48:96], expected)):
+            raise AssertionError("Reverse Delay did not play its captured segment backward")
+        if any(abs(value) > 1e-6 for value in muted):
+            raise AssertionError("Reverse Delay Run off must mute wet-only output")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1269,6 +1303,7 @@ def main() -> None:
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
     check_notch_filter(args.executable.resolve())
+    check_reverse_delay(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1293,7 +1328,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, reverse delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

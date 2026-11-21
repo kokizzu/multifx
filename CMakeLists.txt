@@ -40,6 +40,7 @@ add_library(tabletfx_core
     src/effects/rhythmic_slicer.cpp
     src/effects/step_filter.cpp
     src/effects/notch_filter.cpp
+    src/effects/reverse_delay.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -229,6 +230,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_notch_filter_tests tests/test_notch_filter.cpp)
     target_link_libraries(tabletfx_notch_filter_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_notch_filter_tests COMMAND tabletfx_notch_filter_tests)
+
+    add_executable(tabletfx_reverse_delay_tests tests/test_reverse_delay.cpp)
+    target_link_libraries(tabletfx_reverse_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_reverse_delay_tests COMMAND tabletfx_reverse_delay_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

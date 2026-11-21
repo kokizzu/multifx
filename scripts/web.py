@@ -146,7 +146,9 @@ def build_web() -> None:
         "_tf_chain_ramp_output_gain", "_tf_chain_process_output_gain",
         "_tf_chain_process_output_limiter", "_tf_chain_set_volume_pedal",
         "_tf_chain_set_noise_gate",
-        "_tf_chain_set_limiter", "_tf_chain_set_notch_filter", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
+        "_tf_chain_set_limiter", "_tf_chain_set_notch_filter",
+        "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
+        "_tf_chain_restart_reverse_delay", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
         "_tf_chain_set_chorus",
         "_tf_chain_set_flanger",
         "_tf_chain_set_phaser",
@@ -201,6 +203,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "rhythmic_slicer.cpp"),
         str(ROOT / "src" / "effects" / "step_filter.cpp"),
         str(ROOT / "src" / "effects" / "notch_filter.cpp"),
+        str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -619,6 +622,9 @@ def browser_test() -> None:
               "--step-filter-steps", "0,0.75,0.2,0.9,0.35,0.6,0.1,1,0.25,0.8,0.15,0.95,0.4,0.7,0.05,0.85",
               "--notch-filter", "--notch-filter-frequency-hz", "713",
               "--notch-filter-q", "6", "--notch-filter-mix", "0.72",
+              "--reverse-delay", "--reverse-delay-time-ms", "350",
+              "--reverse-delay-feedback", "0.25", "--reverse-delay-mix", "0.35",
+              "--reverse-delay-crossfade-ms", "10",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {
