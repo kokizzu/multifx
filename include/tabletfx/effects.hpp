@@ -259,4 +259,81 @@ private:
     std::size_t dual_routing_ramp_remaining_ = 0;
 };
 
+enum class RoomSize : std::uint8_t {
+    small,
+    large,
+};
+
+struct RoomReverbParameters {
+    RoomSize size = RoomSize::small;
+    float decay_seconds = 0.8F;
+    float pre_delay_ms = 10.0F;
+    float damping_hz = 6000.0F;
+    float mix = 0.2F;
+    float level_db = 0.0F;
+};
+
+// Project-authored Schroeder-style room reverb. The dry path has no added
+// latency; predelay applies only to the wet path. All storage is allocated at
+// construction and process() performs no allocation. Call reset() to clear
+// the complete reverb tail while retaining the selected parameters. Changing
+// room size while a tail is active changes the comb-delay geometry immediately;
+// that tail may briefly change texture.
+class RoomReverb final : public Effect {
+public:
+    RoomReverb(float sample_rate, std::uint16_t channels,
+               RoomReverbParameters parameters = {});
+    [[nodiscard]] std::string_view id() const noexcept override { return "room-reverb"; }
+    [[nodiscard]] std::size_t memory_bytes() const noexcept override;
+    [[nodiscard]] RoomReverbParameters parameters() const noexcept { return parameters_; }
+    void configure(RoomReverbParameters parameters) noexcept;
+    void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
+    void reset() noexcept override;
+
+private:
+    struct DelayLine {
+        std::size_t offset = 0;
+        std::size_t length = 1;
+        std::size_t index = 0;
+        float damping_state = 0.0F;
+        float feedback = 0.0F;
+        float feedback_target = 0.0F;
+        float feedback_step = 0.0F;
+    };
+
+    void configure_size(RoomSize size) noexcept;
+    void update_targets() noexcept;
+    void advance_parameters() noexcept;
+    [[nodiscard]] float read_predelay(std::uint16_t channel, float input) noexcept;
+    [[nodiscard]] float process_comb(DelayLine& line, float input, float damping_alpha) noexcept;
+    [[nodiscard]] float process_diffuser(DelayLine& line, float input) noexcept;
+
+    float sample_rate_;
+    std::uint16_t channels_;
+    RoomReverbParameters parameters_;
+    float decay_seconds_ = 0.8F;
+    float target_decay_seconds_ = 0.8F;
+    float damping_alpha_ = 0.0F;
+    float target_damping_alpha_ = 0.0F;
+    float pre_delay_samples_ = 0.0F;
+    float target_pre_delay_samples_ = 0.0F;
+    float wet_mix_ = 0.2F;
+    float target_wet_mix_ = 0.2F;
+    float wet_level_ = 1.0F;
+    float target_wet_level_ = 1.0F;
+    float decay_step_ = 0.0F;
+    float damping_step_ = 0.0F;
+    float predelay_step_ = 0.0F;
+    float mix_step_ = 0.0F;
+    float level_step_ = 0.0F;
+    std::size_t parameter_ramp_remaining_ = 0;
+    std::size_t parameter_ramp_total_ = 1;
+    std::vector<float> storage_;
+    std::array<std::size_t, 2> predelay_offset_{};
+    std::size_t predelay_capacity_ = 1;
+    std::array<std::size_t, 2> predelay_index_{};
+    std::array<DelayLine, 8> combs_{};
+    std::array<DelayLine, 4> diffusers_{};
+};
+
 } // namespace tabletfx

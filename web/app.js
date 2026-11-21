@@ -29,6 +29,7 @@ const EFFECT_NAMES = [
   "Guitar graphic EQ",
   "Bass graphic EQ",
   "Shelf / tilt EQ",
+  "Room reverb",
   "Output level",
   "Peak limiter",
 ];
@@ -56,6 +57,7 @@ const DEFAULT_PARAMETERS = {
   guitarGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
   bassGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
   shelfTiltEQ: [0, 1000, 0],
+  roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -334,6 +336,17 @@ const shelfTiltFrequency = document.querySelector("#shelf-tilt-frequency-hz");
 const shelfTiltFrequencyValue = document.querySelector("#shelf-tilt-frequency-value");
 const shelfTiltGain = document.querySelector("#shelf-tilt-gain-db");
 const shelfTiltGainValue = document.querySelector("#shelf-tilt-gain-value");
+const roomReverbSize = document.querySelector("#room-reverb-size");
+const roomReverbDecay = document.querySelector("#room-reverb-decay-seconds");
+const roomReverbDecayValue = document.querySelector("#room-reverb-decay-value");
+const roomReverbPreDelay = document.querySelector("#room-reverb-pre-delay-ms");
+const roomReverbPreDelayValue = document.querySelector("#room-reverb-pre-delay-value");
+const roomReverbDamping = document.querySelector("#room-reverb-damping-hz");
+const roomReverbDampingValue = document.querySelector("#room-reverb-damping-value");
+const roomReverbMix = document.querySelector("#room-reverb-mix");
+const roomReverbMixValue = document.querySelector("#room-reverb-mix-value");
+const roomReverbLevel = document.querySelector("#room-reverb-level-db");
+const roomReverbLevelValue = document.querySelector("#room-reverb-level-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1393,6 +1406,26 @@ function updateShelfTiltEQ() {
   if (workletNode) workletNode.port.postMessage({ type: "shelf-tilt-eq", value: values });
 }
 
+function updateRoomReverb() {
+  const values = [
+    Number(roomReverbSize.value),
+    Number(roomReverbDecay.value),
+    Number(roomReverbPreDelay.value),
+    Number(roomReverbDamping.value),
+    Number(roomReverbMix.value) / 100,
+    Number(roomReverbLevel.value),
+  ];
+  roomReverbDecayValue.value = `${values[1].toFixed(2)} s`;
+  roomReverbPreDelayValue.value = `${values[2].toFixed(1)} ms`;
+  roomReverbDampingValue.value = `${values[3].toFixed(0)} Hz`;
+  roomReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
+  roomReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.roomReverb = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "room-reverb", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1413,11 +1446,17 @@ for (const input of [shelfTiltMode, shelfTiltFrequency, shelfTiltGain]) {
   input.addEventListener("input", updateShelfTiltEQ);
   input.addEventListener("change", updateShelfTiltEQ);
 }
+for (const input of [roomReverbSize, roomReverbDecay, roomReverbPreDelay,
+  roomReverbDamping, roomReverbMix, roomReverbLevel]) {
+  input.addEventListener("input", updateRoomReverb);
+  input.addEventListener("change", updateRoomReverb);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
 updateBassGraphicEQ();
 updateShelfTiltEQ();
+updateRoomReverb();
 
 function updateDelayDual() {
   const values = [
@@ -1568,32 +1607,42 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    if (effectRows.length !== EFFECT_NAMES.length ||
-        effectIds.some((id, index) => id !== index) ||
+    const expectedEffectIds = Array.from({ length: 31 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 31 || effectRows.length !== 31 ||
+        effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The categorized effect browser is missing a category or changed signal-chain order.");
+      throw new Error("The effect picker must list 31 ordered effects (IDs 0–30) with Room Reverb disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 30" ||
+        effectCount.value !== "5 of 31" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
+    effectCategoryFilter.value = "reverb";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const reverbIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (reverbIds.join(",") !== "28" || effectCount.value !== "1 of 31" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Reverb filter must return only Room Reverb without changing enabled state.");
+    }
     effectCategoryFilter.value = "all";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     effectSearch.value = "guitar graphic";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 30") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 31") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "30 of 30" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "31 of 31" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1658,6 +1707,7 @@ async function runBrowserSelfTest() {
         guitarGraphicEQ: [1, 1.5, -1, 0, 1, 0.5, -0.5, 1],
         bassGraphicEQ: [1, -1, 0.5, 2, -2, 0.5, 1, -0.5],
         shelfTiltEQ: [2, 1200, 2],
+        roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -1763,6 +1813,10 @@ async function runBrowserSelfTest() {
     shelfTiltFrequency.value = String(testOptions.parameters.shelfTiltEQ[1]);
     shelfTiltGain.value = String(testOptions.parameters.shelfTiltEQ[2]);
     updateShelfTiltEQ();
+    [roomReverbSize.value, roomReverbDecay.value, roomReverbPreDelay.value,
+      roomReverbDamping.value, roomReverbMix.value, roomReverbLevel.value] =
+      ["0", "0.8", "10", "6000", "20", "0"];
+    updateRoomReverb();
     delayPreset.value = "slapback";
     applyDelayPreset();
     if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||

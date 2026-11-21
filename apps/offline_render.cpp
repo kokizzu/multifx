@@ -154,6 +154,8 @@ struct Options {
     tabletfx::ShelfTiltMode shelf_tilt_eq_mode = tabletfx::ShelfTiltMode::LowShelf;
     float shelf_tilt_eq_frequency_hz = 200.0F;
     float shelf_tilt_eq_gain_db = 0.0F;
+    bool room_reverb_enabled = false;
+    tabletfx::RoomReverbParameters room_reverb{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -268,6 +270,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.shelf_tilt_eq_enabled = true;
             continue;
         }
+        if (key == "--room-reverb") {
+            options.room_reverb_enabled = true;
+            continue;
+        }
         if (i + 1 >= argc) {
             throw std::invalid_argument("Missing value for " + std::string(key));
         }
@@ -315,6 +321,18 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Shelf/tilt EQ mode must be low-shelf, high-shelf, or tilt");
             }
             options.shelf_tilt_eq_enabled = true;
+            continue;
+        }
+        if (key == "--room-size") {
+            const std::string_view value(argv[++i]);
+            if (value == "small") {
+                options.room_reverb.size = tabletfx::RoomSize::small;
+            } else if (value == "large") {
+                options.room_reverb.size = tabletfx::RoomSize::large;
+            } else {
+                throw std::invalid_argument("Room size must be small or large");
+            }
+            options.room_reverb_enabled = true;
             continue;
         }
         if (key == "--delay-preset") {
@@ -917,6 +935,26 @@ Options parse_options(int argc, char** argv, int first) {
             options.shelf_tilt_eq_gain_db = value;
             options.shelf_tilt_eq_enabled = true;
         }
+        else if (key == "--room-decay-s") {
+            options.room_reverb.decay_seconds = value;
+            options.room_reverb_enabled = true;
+        }
+        else if (key == "--room-pre-delay-ms") {
+            options.room_reverb.pre_delay_ms = value;
+            options.room_reverb_enabled = true;
+        }
+        else if (key == "--room-damping-hz") {
+            options.room_reverb.damping_hz = value;
+            options.room_reverb_enabled = true;
+        }
+        else if (key == "--room-mix") {
+            options.room_reverb.mix = value;
+            options.room_reverb_enabled = true;
+        }
+        else if (key == "--room-level-db") {
+            options.room_reverb.level_db = value;
+            options.room_reverb_enabled = true;
+        }
         else if (set_graphic_eq_band_gain(key, "--guitar-eq-band",
                                           options.guitar_graphic_eq_gains,
                                           options.guitar_graphic_eq_enabled, value)) {}
@@ -1103,6 +1141,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::ShelfTiltEQ>(
             static_cast<float>(sample_rate), channels, options.shelf_tilt_eq_mode,
             options.shelf_tilt_eq_frequency_hz, options.shelf_tilt_eq_gain_db));
+    }
+    if (options.room_reverb_enabled) {
+        effects.push_back(std::make_unique<tabletfx::RoomReverb>(
+            static_cast<float>(sample_rate), channels, options.room_reverb));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -1541,6 +1583,14 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::ShelfTiltEQ>(
         static_cast<float>(sample_rate), channels, tabletfx::ShelfTiltMode::Tilt,
         1200.0F, 2.0F));
+    tabletfx::RoomReverbParameters room_reverb_parameters;
+    room_reverb_parameters.size = tabletfx::RoomSize::large;
+    room_reverb_parameters.decay_seconds = 1.2F;
+    room_reverb_parameters.pre_delay_ms = 18.0F;
+    room_reverb_parameters.damping_hz = 5000.0F;
+    room_reverb_parameters.mix = 0.3F;
+    effects.push_back(std::make_unique<tabletfx::RoomReverb>(
+        static_cast<float>(sample_rate), channels, room_reverb_parameters));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -1645,6 +1695,16 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("room-reverb", [=] {
+        tabletfx::RoomReverbParameters parameters;
+        parameters.size = tabletfx::RoomSize::large;
+        parameters.decay_seconds = 1.2F;
+        parameters.pre_delay_ms = 18.0F;
+        parameters.damping_hz = 5000.0F;
+        parameters.mix = 0.3F;
+        return std::make_unique<tabletfx::RoomReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
         delay->configure_bbd_style(true);
@@ -1922,6 +1982,9 @@ void print_usage() {
               << "                 [--bass-graphic-eq] [--bass-eq-layout 4|7] [--bass-eq-bandN-gain-db dB] (N=1..7)\n"
               << "                 [--shelf-tilt-eq] [--shelf-tilt-mode low-shelf|high-shelf|tilt]"
                  " [--shelf-tilt-frequency-hz Hz] [--shelf-tilt-gain-db dB]\n"
+              << "                 [--room-reverb] [--room-size small|large] [--room-decay-s 0.15..8]"
+                 " [--room-pre-delay-ms 0..80] [--room-damping-hz Hz] [--room-mix 0..1]"
+                 " [--room-level-db -24..12]\n"
               << "  tabletfx_offline --bench\n";
 }
 

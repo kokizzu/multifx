@@ -68,7 +68,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(28);
+        effects_.reserve(29);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -152,6 +152,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::ShelfTiltEQ>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::RoomReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -176,6 +179,9 @@ public:
         }
         if (index >= effects_.size()) {
             return false;
+        }
+        if (index == 28U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
         return true;
@@ -683,6 +689,21 @@ public:
         eq->configure(static_cast<tabletfx::ShelfTiltMode>(mode), frequency_hz, gain_db);
     }
 
+    void configure_room_reverb(std::uint32_t size, float decay_seconds,
+                               float pre_delay_ms, float damping_hz, float mix,
+                               float level_db) noexcept {
+        auto* reverb = static_cast<tabletfx::RoomReverb*>(effects_[28].effect.get());
+        tabletfx::RoomReverbParameters parameters;
+        parameters.size = size == 0U ? tabletfx::RoomSize::small
+                                     : tabletfx::RoomSize::large;
+        parameters.decay_seconds = decay_seconds;
+        parameters.pre_delay_ms = pre_delay_ms;
+        parameters.damping_hz = damping_hz;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        reverb->configure(parameters);
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1064,6 +1085,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shelf_tilt_eq(
     void* opaque, std::uint32_t mode, float frequency_hz, float gain_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_shelf_tilt_eq(mode, frequency_hz, gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_room_reverb(
+    void* opaque, std::uint32_t size, float decay_seconds, float pre_delay_ms,
+    float damping_hz, float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_room_reverb(
+            size, decay_seconds, pre_delay_ms, damping_hz, mix, level_db);
     }
 }
 

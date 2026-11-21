@@ -118,7 +118,8 @@ def build_web() -> None:
         "_tf_chain_reset", "_tf_chain_set_compressor",
         "_tf_chain_set_optical_compressor", "_tf_chain_set_fet_compressor",
         "_tf_chain_set_guitar_graphic_eq", "_tf_chain_set_bass_graphic_eq",
-        "_tf_chain_set_shelf_tilt_eq", "_tf_chain_set_drive",
+        "_tf_chain_set_shelf_tilt_eq", "_tf_chain_set_room_reverb",
+        "_tf_chain_set_drive",
         "_tf_chain_set_clean_boost",
         "_tf_chain_set_overdrive",
         "_tf_chain_set_mid_overdrive",
@@ -182,6 +183,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "guitar_graphic_eq.cpp"),
         str(ROOT / "src" / "effects" / "bass_graphic_eq.cpp"),
         str(ROOT / "src" / "effects" / "shelf_tilt_eq.cpp"),
+        str(ROOT / "src" / "effects" / "room_reverb.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -547,6 +549,9 @@ def browser_test() -> None:
             "--bass-eq-band7-gain-db", "-0.5",
             "--shelf-tilt-eq", "--shelf-tilt-mode", "tilt",
             "--shelf-tilt-frequency-hz", "1200", "--shelf-tilt-gain-db", "2",
+            "--room-reverb", "--room-size", "small", "--room-decay-s", "0.8",
+            "--room-pre-delay-ms", "10", "--room-damping-hz", "6000",
+            "--room-mix", "0.2", "--room-level-db", "0",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

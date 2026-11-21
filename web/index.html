@@ -72,12 +72,13 @@
             <option value="eq">Equalizer</option>
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
+            <option value="reverb">Reverb</option>
           </select>
         </label>
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">30 of 30</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">31 of 31</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -109,8 +110,9 @@
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="26"><span class="effect-number">27</span><span class="effect-name">Bass graphic EQ</span><span class="effect-default">4- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="27"><span class="effect-number">28</span><span class="effect-name">Shelf / tilt EQ</span><span class="effect-default">Low shelf · high shelf · complementary tilt</span><span class="effect-category-tag">Equalizer</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="28" checked><span class="effect-number">29</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="29" checked><span class="effect-number">30</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="28"><span class="effect-number">29</span><span class="effect-name">Room reverb</span><span class="effect-default">Small room · 0.8 s · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="29" checked><span class="effect-number">30</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="30" checked><span class="effect-number">31</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -178,6 +180,18 @@
           <label class="mix-control" for="shelf-tilt-frequency-hz"><span>Pivot frequency</span><output id="shelf-tilt-frequency-value" for="shelf-tilt-frequency-hz">1000 Hz</output><input id="shelf-tilt-frequency-hz" type="range" min="20" max="8000" step="10" value="1000"></label>
           <label class="mix-control" for="shelf-tilt-gain-db"><span>Gain</span><output id="shelf-tilt-gain-value" for="shelf-tilt-gain-db">0.0 dB</output><input id="shelf-tilt-gain-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Room reverb controls">
+        <h3>Room reverb · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="room-reverb-size"><span>Room size</span><select id="room-reverb-size"><option value="0" selected>Small</option><option value="1">Large</option></select></label>
+          <label class="mix-control" for="room-reverb-decay-seconds"><span>Decay</span><output id="room-reverb-decay-value" for="room-reverb-decay-seconds">0.80 s</output><input id="room-reverb-decay-seconds" type="range" min="0.15" max="8" step="0.05" value="0.8"></label>
+          <label class="mix-control" for="room-reverb-pre-delay-ms"><span>Wet pre-delay</span><output id="room-reverb-pre-delay-value" for="room-reverb-pre-delay-ms">10.0 ms</output><input id="room-reverb-pre-delay-ms" type="range" min="0" max="80" step="0.5" value="10"></label>
+          <label class="mix-control" for="room-reverb-damping-hz"><span>Damping</span><output id="room-reverb-damping-value" for="room-reverb-damping-hz">6000 Hz</output><input id="room-reverb-damping-hz" type="range" min="200" max="18000" step="100" value="6000"></label>
+          <label class="mix-control" for="room-reverb-mix"><span>Mix</span><output id="room-reverb-mix-value" for="room-reverb-mix">20%</output><input id="room-reverb-mix" type="range" min="0" max="100" step="1" value="20"></label>
+          <label class="mix-control" for="room-reverb-level-db"><span>Wet level</span><output id="room-reverb-level-value" for="room-reverb-level-db">0.0 dB</output><input id="room-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
+        <p class="hint">This is a project-authored Schroeder-style room effect, not a specific product emulation. Pre-delay affects only the wet path. Bypass clears the tail (no spillover); changing room size can alter an active tail’s texture.</p>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">

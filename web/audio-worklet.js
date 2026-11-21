@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-  "output-level", "peak-limiter",
+  "room-reverb", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -115,6 +115,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_bass_graphic_eq(this.chain, ...bassGraphicEQ);
       const shelfTiltEQ = parameters.shelfTiltEQ || [0, 1000, 0];
       module._tf_chain_set_shelf_tilt_eq(this.chain, ...shelfTiltEQ);
+       const roomReverb = parameters.roomReverb || [0, 0.8, 10, 6000, 0.2, 0];
+       module._tf_chain_set_room_reverb(this.chain, ...roomReverb);
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
@@ -247,6 +249,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_bass_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "shelf-tilt-eq" && this.ready) {
       this.module._tf_chain_set_shelf_tilt_eq(this.chain, ...message.value);
+    } else if (message.type === "room-reverb" && this.ready) {
+      this.module._tf_chain_set_room_reverb(this.chain, ...message.value);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

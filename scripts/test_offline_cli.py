@@ -66,6 +66,74 @@ def check_render(executable: Path) -> None:
                 raise AssertionError(f"Sample {index}: expected {expected}, got {actual}")
 
 
+def check_room_reverb(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    impulse = [26214] + [0] * (frame_count - 1)
+    guitar_like = [
+        round(11000 * math.exp(-frame / 1400.0) * (
+            math.sin(2.0 * math.pi * 110.0 * frame / sample_rate)
+            + 0.32 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate)
+            + 0.16 * math.sin(2.0 * math.pi * 330.0 * frame / sample_rate)
+        ))
+        for frame in range(frame_count)
+    ]
+    parameters = [
+        "--room-size", "large",
+        "--room-decay-s", "1.6",
+        "--room-pre-delay-ms", "3",
+        "--room-damping-hz", "1200",
+        "--room-mix", "1",
+        "--room-level-db", "-3",
+    ]
+
+    with tempfile.TemporaryDirectory(prefix="tabletfx-room-reverb-cli-test-") as directory:
+        root = Path(directory)
+        for label, source_samples in (("impulse", impulse), ("guitar", guitar_like)):
+            source = root / f"{label}.wav"
+            dry_output = root / f"{label}-dry.wav"
+            wet_output = root / f"{label}-room.wav"
+            write_pcm16(source, sample_rate, source_samples)
+
+            subprocess.run(
+                [str(executable), "render", str(source), str(dry_output)],
+                capture_output=True, text=True, check=True,
+            )
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(wet_output), *parameters],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"Room reverb parameters did not enable one processor: {result.stdout}")
+
+            dry_data = dry_output.read_bytes()
+            wet_data = wet_output.read_bytes()
+            dry = struct.unpack("<" + "f" * frame_count, dry_data[44:])
+            wet = struct.unpack("<" + "f" * frame_count, wet_data[44:])
+            if not all(math.isfinite(value) for value in wet):
+                raise AssertionError(f"Room reverb produced non-finite {label} audio")
+            difference = max(abs(a - b) for a, b in zip(dry, wet, strict=True))
+            if difference < 1.0e-3:
+                raise AssertionError(f"Room reverb did not change {label} audio")
+            if label == "impulse" and not any(abs(value) > 1.0e-5 for value in wet[100:]):
+                raise AssertionError("Room reverb impulse response did not produce an audible tail")
+
+        switch_output = root / "room-switch.wav"
+        switch_result = subprocess.run(
+            [str(executable), "render", str(root / "impulse.wav"), str(switch_output),
+             "--room-reverb"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in switch_result.stdout:
+            raise AssertionError(f"--room-reverb did not enable one processor: {switch_result.stdout}")
+        switch_values = struct.unpack("<" + "f" * frame_count, switch_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in switch_values):
+            raise AssertionError("Room reverb enable switch produced non-finite audio")
+        dry_values = struct.unpack("<" + "f" * frame_count, (root / "impulse-dry.wav").read_bytes()[44:])
+        if max(abs(a - b) for a, b in zip(dry_values, switch_values, strict=True)) < 1.0e-3:
+            raise AssertionError("--room-reverb did not change rendered impulse audio")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -877,6 +945,7 @@ def main() -> None:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     check_render(args.executable.resolve())
+    check_room_reverb(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -901,7 +970,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

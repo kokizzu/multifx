@@ -30,6 +30,7 @@ add_library(tabletfx_core
     src/effects/poly_pitch_shifter.cpp
     src/effects/tremolo.cpp
     src/effects/vibrato.cpp
+    src/effects/room_reverb.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -179,6 +180,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_delay_tests tests/test_delay.cpp)
     target_link_libraries(tabletfx_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_delay_tests COMMAND tabletfx_delay_tests)
+
+    add_executable(tabletfx_room_reverb_tests tests/test_room_reverb.cpp)
+    target_link_libraries(tabletfx_room_reverb_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_room_reverb_tests COMMAND tabletfx_room_reverb_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)
