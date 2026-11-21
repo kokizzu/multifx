@@ -44,6 +44,7 @@ const EFFECT_NAMES = [
   "Modulated Delay",
   "Filtered Delay",
   "Sweep Delay",
+  "Formant Filter",
   "Output level",
   "Peak limiter",
 ];
@@ -85,6 +86,7 @@ const DEFAULT_PARAMETERS = {
     0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   notchFilter: [1000, 4, 1],
+  formantFilter: [0, 4, 1, 0],
   reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
@@ -560,6 +562,14 @@ const notchFilterQ = document.querySelector("#notch-filter-q");
 const notchFilterQValue = document.querySelector("#notch-filter-q-value");
 const notchFilterMix = document.querySelector("#notch-filter-mix");
 const notchFilterMixValue = document.querySelector("#notch-filter-mix-value");
+const formantFilterVowel = document.querySelector("#formant-filter-vowel-position");
+const formantFilterVowelValue = document.querySelector("#formant-filter-vowel-position-value");
+const formantFilterQ = document.querySelector("#formant-filter-q");
+const formantFilterQValue = document.querySelector("#formant-filter-q-value");
+const formantFilterMix = document.querySelector("#formant-filter-mix");
+const formantFilterMixValue = document.querySelector("#formant-filter-mix-value");
+const formantFilterLevel = document.querySelector("#formant-filter-level-db");
+const formantFilterLevelValue = document.querySelector("#formant-filter-level-db-value");
 const reverseDelayTime = document.querySelector("#reverse-delay-time-ms");
 const reverseDelayTimeValue = document.querySelector("#reverse-delay-time-ms-value");
 const reverseDelayTimeMode = document.querySelector("#reverse-delay-time-mode");
@@ -1948,6 +1958,29 @@ function updateNotchFilter() {
   }
 }
 
+function updateFormantFilter() {
+  const values = [
+    Number(formantFilterVowel.value),
+    Number(formantFilterQ.value),
+    Number(formantFilterMix.value) / 100,
+    Number(formantFilterLevel.value),
+  ];
+  const vowels = ["A", "E", "I", "O", "U"];
+  const lower = Math.min(Math.floor(values[0]), vowels.length - 1);
+  const upper = Math.min(lower + 1, vowels.length - 1);
+  const fraction = values[0] - lower;
+  formantFilterVowelValue.value = lower === upper || fraction < 0.005
+    ? vowels[lower]
+    : `${vowels[lower]} → ${vowels[upper]} ${Math.round(fraction * 100)}%`;
+  formantFilterQValue.value = values[1].toFixed(2);
+  formantFilterMixValue.value = `${Math.round(values[2] * 100)}%`;
+  formantFilterLevelValue.value = `${values[3].toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.formantFilter = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "formant-filter", value: values });
+  }
+}
+
 function updateReverseDelay() {
   const timeMs = Number(reverseDelayTime.value);
   const timeMode = Number(reverseDelayTimeMode.value);
@@ -2167,6 +2200,11 @@ for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
   input.addEventListener("change", updateNotchFilter);
 }
+for (const input of [formantFilterVowel, formantFilterQ, formantFilterMix,
+  formantFilterLevel]) {
+  input.addEventListener("input", updateFormantFilter);
+  input.addEventListener("change", updateFormantFilter);
+}
 for (const input of [reverseDelayTime, reverseDelayTempo,
   reverseDelayFeedback, reverseDelayMix, reverseDelayCrossfade,
   reverseDelayLowCut, reverseDelayHighCut, reverseDelayForwardLevel]) {
@@ -2218,6 +2256,7 @@ updateRingModulator();
 updateRhythmicSlicer();
 updateStepFilter();
 updateNotchFilter();
+updateFormantFilter();
 updateReverseDelay();
 updateReverseDelayRun();
 updateDuckingDelay();
@@ -2374,17 +2413,17 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 45 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 45 || effectRows.length !== 45 ||
+    const expectedEffectIds = Array.from({ length: 46 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 46 || effectRows.length !== 46 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
-        initialEffectState[41] || initialEffectState[42] ||
+        initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 45 ordered, categorized effects (IDs 0–44) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
+      throw new Error("The effect picker must list 46 ordered, categorized effects (IDs 0–45) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
@@ -2427,7 +2466,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 45" ||
+        effectCount.value !== "8 of 46" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2435,8 +2474,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,44" ||
-        effectCount.value !== "7 of 45" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45" ||
+        effectCount.value !== "7 of 46" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2444,16 +2483,16 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (filterIds.join(",") !== "2,3,7,8,36,37" ||
-        effectCount.value !== "6 of 45" ||
+    if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
+        effectCount.value !== "7 of 46" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Filters category must include Step Filter and Notch Filter and preserve the current chain state.");
+      throw new Error("The Filters category must include Step Filter, Notch Filter, and Formant Filter and preserve the current chain state.");
     }
     effectCategoryFilter.value = "delay";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 45" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 46" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2461,7 +2500,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 45" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 46" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2471,12 +2510,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 45") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 46") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "45 of 45" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "46 of 46" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2556,6 +2595,7 @@ async function runBrowserSelfTest() {
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
+        formantFilter: [1.5, 6, 0.72, -2],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
@@ -2618,6 +2658,19 @@ async function runBrowserSelfTest() {
     notchFilterQ.value = String(notchFilterParameters[1]);
     notchFilterMix.value = String(notchFilterParameters[2] * 100);
     updateNotchFilter();
+    const formantFilterParameters = testOptions.parameters.formantFilter;
+    formantFilterVowel.value = String(formantFilterParameters[0]);
+    formantFilterQ.value = String(formantFilterParameters[1]);
+    formantFilterMix.value = String(formantFilterParameters[2] * 100);
+    formantFilterLevel.value = String(formantFilterParameters[3]);
+    updateFormantFilter();
+    if (DEFAULT_PARAMETERS.formantFilter[0] !== 1.5 ||
+        formantFilterVowelValue.value !== "E → I 50%" ||
+        DEFAULT_PARAMETERS.formantFilter[1] !== 6 ||
+        DEFAULT_PARAMETERS.formantFilter[2] !== 0.72 ||
+        DEFAULT_PARAMETERS.formantFilter[3] !== -2) {
+      throw new Error("Formant Filter controls must update vowel position, Q, mix, and output level.");
+    }
     const reverseDelayParameters = testOptions.parameters.reverseDelay;
     reverseDelayTime.value = String(reverseDelayParameters[0]);
     reverseDelayFeedback.value = String(reverseDelayParameters[1] * 100);

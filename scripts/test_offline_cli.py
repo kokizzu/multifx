@@ -1440,6 +1440,40 @@ def check_sweep_delay(executable: Path) -> None:
             raise AssertionError("zero-feedback Sweep Delay must not produce a second repeat")
 
 
+def check_formant_filter(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 4800
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 430.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-formant-filter-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        dry_output = root / "dry.wav"
+        wet_output = root / "formant.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        subprocess.run(
+            [str(executable), "render", str(source), str(dry_output)],
+            capture_output=True, text=True, check=True,
+        )
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output),
+             "--formant-filter", "--formant-filter-vowel-position", "2.5",
+             "--formant-filter-q", "6", "--formant-filter-mix", "0.72",
+             "--formant-filter-level-db", "-2"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Formant Filter options did not enable one processor")
+        dry = struct.unpack("<" + "f" * frame_count, dry_output.read_bytes()[44:])
+        wet = struct.unpack("<" + "f" * frame_count, wet_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in wet):
+            raise AssertionError("Formant Filter produced non-finite output")
+        if max(abs(a - b) for a, b in zip(dry, wet, strict=True)) < 1.0e-3:
+            raise AssertionError("Formant Filter controls did not change the rendered tone")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -1460,6 +1494,7 @@ def main() -> None:
     check_modulated_delay(args.executable.resolve())
     check_filtered_delay(args.executable.resolve())
     check_sweep_delay(args.executable.resolve())
+    check_formant_filter(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1484,7 +1519,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

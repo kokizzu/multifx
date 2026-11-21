@@ -16,6 +16,7 @@
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
+#include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -80,7 +81,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(43);
+          effects_.reserve(44);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -209,6 +210,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::SweepDelay>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::FormantFilter>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -929,6 +933,17 @@ public:
         notch_filter->set_parameters({frequency_hz, q, mix});
     }
 
+    void configure_formant_filter(float vowel_position, float resonance_q,
+                                  float mix, float level_db) noexcept {
+        tabletfx::FormantFilterParameters parameters;
+        parameters.vowel_position = vowel_position;
+        parameters.resonance_q = resonance_q;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        static_cast<tabletfx::FormantFilter*>(effects_[43].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_reverse_delay(float time_ms, float feedback, float mix,
                                  float crossfade_ms, std::uint32_t time_mode,
                                  std::uint32_t division, float tempo_bpm,
@@ -1529,6 +1544,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_notch_filter(
     void* opaque, float frequency_hz, float q, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_notch_filter(frequency_hz, q, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_formant_filter(
+    void* opaque, float vowel_position, float resonance_q, float mix,
+    float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_formant_filter(
+            vowel_position, resonance_q, mix, level_db);
     }
 }
 

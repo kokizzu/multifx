@@ -17,6 +17,7 @@
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
+#include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -186,6 +187,8 @@ struct Options {
     tabletfx::StepFilterParameters step_filter{};
     bool notch_filter_enabled = false;
     tabletfx::NotchFilterParameters notch_filter{};
+    bool formant_filter_enabled = false;
+    tabletfx::FormantFilterParameters formant_filter{};
     bool reverse_delay_enabled = false;
     tabletfx::ReverseDelayParameters reverse_delay{};
     bool reverse_delay_running = true;
@@ -402,6 +405,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--notch-filter") {
             options.notch_filter_enabled = true;
+            continue;
+        }
+        if (key == "--formant-filter") {
+            options.formant_filter_enabled = true;
             continue;
         }
         if (key == "--reverse-delay") {
@@ -1497,6 +1504,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.notch_filter.mix = value;
             options.notch_filter_enabled = true;
         }
+        else if (key == "--formant-filter-vowel-position") {
+            options.formant_filter.vowel_position = value;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-q") {
+            options.formant_filter.resonance_q = value;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-mix") {
+            options.formant_filter.mix = value;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-level-db") {
+            options.formant_filter.level_db = value;
+            options.formant_filter_enabled = true;
+        }
         else if (key == "--reverse-delay-time-ms") {
             options.reverse_delay.time_ms = value;
             options.reverse_delay_enabled = true;
@@ -1962,6 +1985,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::SweepDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F,
             options.sweep_delay));
+    }
+    if (options.formant_filter_enabled) {
+        effects.push_back(std::make_unique<tabletfx::FormantFilter>(
+            static_cast<float>(sample_rate), options.formant_filter));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2458,6 +2485,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels, 2000.0F));
     effects.push_back(std::make_unique<tabletfx::SweepDelay>(
         static_cast<float>(sample_rate), channels, 2000.0F));
+    effects.push_back(std::make_unique<tabletfx::FormantFilter>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2581,6 +2610,10 @@ void run_bench() {
     benchmark_one("sweep-delay", [=] {
         return std::make_unique<tabletfx::SweepDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("formant-filter", [=] {
+        return std::make_unique<tabletfx::FormantFilter>(
+            static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
         tabletfx::RoomReverbParameters parameters;
@@ -2978,6 +3011,9 @@ void print_usage() {
                    " [--step-filter-phase 0..1] [--step-filter-steps 16 values in 0..1]\n"
                 << "                 [--notch-filter] [--notch-filter-frequency-hz 20..18000]"
                    " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
+                  << "                 [--formant-filter] [--formant-filter-vowel-position 0..4]"
+                     " [--formant-filter-q 0.5..12] [--formant-filter-mix 0..1]"
+                     " [--formant-filter-level-db -24..12]\n"
                  << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
                     " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
                      " [--reverse-delay-time-mode milliseconds|tempo-sync]"

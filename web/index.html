@@ -63,7 +63,7 @@
       <div class="effect-browser-controls" aria-label="Browse processors">
         <label for="effect-category-filter">Category
           <select id="effect-category-filter" aria-controls="effects-list">
-            <option value="all">All categories</option>
+          <option value="all">All categories</option>
             <option value="utility">Utility</option>
             <option value="dynamics">Dynamics</option>
             <option value="filter">Filters &amp; wah</option>
@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-      <output id="effect-count" class="effect-count" aria-live="polite">45 of 45</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">46 of 46</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -125,8 +125,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="40"><span class="effect-number">41</span><span class="effect-name">Modulated Delay</span><span class="effect-default">0.8 Hz · 2 ms depth · sine</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="41"><span class="effect-number">42</span><span class="effect-name">Filtered Delay</span><span class="effect-default">120 Hz low cut · 6 kHz high cut on repeats</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="42"><span class="effect-number">43</span><span class="effect-name">Sweep Delay</span><span class="effect-default">LFO-swept band-pass · 250 Hz–6 kHz</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="43" checked><span class="effect-number">44</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="44" checked><span class="effect-number">45</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="43"><span class="effect-number">44</span><span class="effect-name">Formant Filter</span><span class="effect-default">A–E–I–O–U vowel profile · Q 4</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="44" checked><span class="effect-number">45</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="45" checked><span class="effect-number">46</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -255,6 +256,16 @@
           <label class="mix-control" for="notch-filter-mix"><span>Wet mix</span><output id="notch-filter-mix-value" for="notch-filter-mix">100%</output><input id="notch-filter-mix" type="range" min="0" max="100" step="1" value="100"></label>
         </div>
         <p class="hint">A stationary narrow cut, separate from Step Filter’s moving Notch response. Frequency, Q, mix, defaults, and smoothing are project-authored; they are not copied from Fender or Fractal controls.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Formant Filter controls">
+        <h3>Formant Filter · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="formant-filter-vowel-position"><span>Vowel position</span><output id="formant-filter-vowel-position-value" for="formant-filter-vowel-position">A</output><input id="formant-filter-vowel-position" type="range" min="0" max="4" step="0.01" value="0"></label>
+          <label class="mix-control" for="formant-filter-q"><span>Resonance Q</span><output id="formant-filter-q-value" for="formant-filter-q">4.00</output><input id="formant-filter-q" type="range" min="0.5" max="12" step="0.01" value="4"></label>
+          <label class="mix-control" for="formant-filter-mix"><span>Wet mix</span><output id="formant-filter-mix-value" for="formant-filter-mix">100%</output><input id="formant-filter-mix" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="formant-filter-level-db"><span>Output level</span><output id="formant-filter-level-db-value" for="formant-filter-level-db">0 dB</output><input id="formant-filter-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+        </div>
+        <p class="hint">Four project-authored peaking bands crossfade through generic A/E/I/O/U profiles. Vowel position, Q, mix, and output level ramp over 10 ms. This is a manual formant-style filter, not a speech synthesizer, pitch tracker, automatic humanizer, vendor algorithm, or copied model preset.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Reverse Delay controls">
         <h3>Reverse Delay · project-authored</h3>
