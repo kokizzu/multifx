@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Latest DLY-05 verification (2026-11-21)
+
+This post-multi-tap run supersedes the earlier pre-DLY-05 delay, full-chain, browser-parity, and memory values retained in the historical note below. The 2 s / 48 kHz instance owns 384,580 B in mono and 768,584 B in stereo; the mode reuses the existing delay ring and fixed-size tap state, adds no stage or process-time allocation, and the dry path has no fixed algorithmic delay. On a Ryzen 9 5950X / GCC 13.3.0 / Release / 48 kHz / 128-frame configuration, four-tap processing measured 0.1077% p50 / 0.1084% p95 mono and 0.1380% / 0.1451% stereo of the 2.667 ms callback deadline. The same run measured normal delay at 0.0589% / 0.0596%, ping-pong at 0.0897% / 0.1560%, dual mono at 0.0743% / 0.0750%, and dual stereo at 0.0896% / 0.0908%. Full 25-effect chain load was 13.2758% p50 / 16.8192% p95, 29.7128% maximum, and 1,283,872 B owned state.
+
+The current HeadlessChrome 151 mono Play/native comparison uses all four taps on a generated guitar-like local fixture. Maximum absolute error was 0.01019327, RMS error 0.00165978 (1.9760% of reference RMS), and chain-owned state was 1,228,628 B plus 10,364 B tuner state inside fixed 16 MiB WASM linear memory. This passed the existing 6% peak and 7.5% RMS bounds. Mono playback centers the echoes; core and offline stereo impulse tests verify per-tap equal-power pan. The browser's 1 ms timer fallback makes its live CPU percentage coarse. The older paragraph below records the earlier dual-delay browser run and previous benchmark baseline.
+
 Status: Linux desktop processor-call and owned-memory measurements are recorded below. A browser AudioWorklet also reports per-processor and whole-chain callback load, but HeadlessChrome 151 falls back to a 1 ms timer, so those live browser percentages are coarse. Native hardware round-trip, Windows/Android routes, and sustained live callback measurements remain unverified.
 
 The provisional targets are ≤15 ms electrical round trip for the dry/basic path and ≤20 ms for an advertised live-transpose configuration, with acceptable chord quality. Measure the actual physical loop through the exact host/interface. Record buffer estimate, algorithm-reported delay, adapter/scheduling delay, and physical round trip separately.
@@ -14,44 +20,46 @@ Latest measurement on 2026-11-21 with `make bench` on an AMD Ryzen 9 5950X 16-Co
 
 | Processor / chain | Median % | p95 % | p99 % | p99.9 % | Maximum % | Owned memory bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| Input gain | 0.0053 | 0.0068 | 0.0086 | 0.0158 | 0.3488 | 40 |
-| Output gain | 0.0049 | 0.0053 | 0.0053 | 0.0053 | 0.2352 | 40 |
-| Volume pedal | 0.0049 | 0.0053 | 0.0053 | 0.0053 | 0.0919 | 56 |
-| High-pass | 0.0379 | 0.0615 | 0.0683 | 0.4043 | 1.1667 | 64 |
-| Low-pass | 0.0296 | 0.0300 | 0.0353 | 0.0743 | 0.2681 | 64 |
-| Noise gate | 0.0184 | 0.0188 | 0.0188 | 0.0353 | 0.2205 | 64 |
-| Pedal compressor | 0.0956 | 0.0960 | 0.1365 | 0.3780 | 0.4515 | 72 |
-| Studio compressor | 0.0896 | 0.1114 | 0.1136 | 0.3728 | 0.5820 | 64 |
-| Wah | 0.0439 | 0.0443 | 0.0488 | 0.2254 | 0.2771 | 104 |
-| Envelope wah | 0.1058 | 0.1061 | 0.1223 | 0.3274 | 0.3645 | 616 |
-| Clean boost | 0.0049 | 0.0053 | 0.0090 | 0.0097 | 0.4144 | 48 |
-| Transparent overdrive | 0.0176 | 0.0176 | 0.0177 | 0.0379 | 0.2153 | 64 |
-| Mid-focused overdrive | 0.0300 | 0.0300 | 0.0300 | 0.0473 | 0.2970 | 104 |
-| High-gain distortion | 0.0315 | 0.0401 | 0.0405 | 0.2318 | 19.6955 | 136 |
-| Round fuzz | 0.0323 | 0.0356 | 0.0360 | 0.4729 | 1.9647 | 64 |
-| Soft drive | 0.1140 | 0.1148 | 0.1793 | 0.3409 | 0.3893 | 16 |
-| Tremolo | 0.0735 | 0.0739 | 0.0743 | 0.2682 | 0.2891 | 96 |
-| Chorus | 0.0551 | 0.0559 | 0.0859 | 0.2355 | 0.2880 | 12,448 |
-| Flanger | 0.0656 | 0.0664 | 0.1035 | 0.2456 | 0.3405 | 4,792 |
-| Phaser | 0.0833 | 0.0836 | 0.0840 | 0.2704 | 0.3349 | 280 |
-| Vibrato | 0.0525 | 0.0529 | 0.0533 | 0.2588 | 0.5513 | 1,696 |
-| Three-band parametric EQ | 0.0533 | 0.0540 | 0.0540 | 0.2483 | 0.2588 | 160 |
-| Delay, normal (2 s stereo allocation) | 0.0341 | 0.0345 | 0.0596 | 0.0713 | 0.4080 | 768,304 |
-| Delay, ping-pong (2 s stereo allocation) | 0.0533 | 0.0536 | 0.0544 | 0.2989 | 0.3780 | 768,304 |
-| Delay, independent dual mono (two 2 s lines) | 0.0420 | 0.0424 | 0.0731 | 0.2539 | 0.3896 | 768,304 |
-| Delay, independent dual stereo (two 2 s lines) | 0.0529 | 0.0533 | 0.0544 | 0.3401 | 0.3476 | 768,304 |
-| Poly pitch shifter, mono | 5.3222 | 6.8218 | 7.4091 | 9.5988 | 10.7339 | 311,056 |
-| Poly pitch shifter, stereo | 12.7721 | 14.3385 | 18.9448 | 20.5982 | 21.5245 | 494,016 |
-| Peak limiter | 0.0165 | 0.0165 | 0.0165 | 0.0169 | 0.2464 | 32 |
-| Signal controls (input + dry/wet) | 0.0015 | 0.0019 | 0.0019 | 0.0019 | 0.3026 | 80 |
-| Input + output meters | 0.0180 | 0.0180 | 0.0293 | 0.0394 | 0.2625 | 72 |
-| Stereo → mono (average) | 0.0015 | 0.0019 | 0.0019 | 0.0019 | 0.0023 | 0 |
-| Stereo → mono (equal-power) | 0.0019 | 0.0019 | 0.0019 | 0.0023 | 0.2546 | 0 |
-| Mono → stereo | 0.0038 | 0.0038 | 0.0038 | 0.0038 | 0.0053 | 0 |
-| Parallel split (copy to two branches) | 0.0030 | 0.0030 | 0.0030 | 0.0030 | 0.0038 | 0 |
-| Parallel mix (dry + two branches) | 0.0064 | 0.0068 | 0.0068 | 0.0068 | 0.1954 | 112 |
-| Chromatic tuner monitor | 0.0105 | 0.5059 | 0.5393 | 0.7399 | 0.9518 | 10,400 |
-| Full 25-effect chain + controls + meters | 13.1153 | 16.9568 | 19.0175 | 23.8660 | 45.5634 | 1,283,592 |
+| Input gain | 0.0056 | 0.0064 | 0.0079 | 0.0083 | 0.8059 | 40 |
+| Output gain | 0.0049 | 0.0053 | 0.0053 | 0.0116 | 0.2614 | 40 |
+| Volume pedal | 0.0049 | 0.0053 | 0.0053 | 0.0053 | 0.3927 | 56 |
+| High-pass | 0.0300 | 0.0304 | 0.0304 | 0.0360 | 0.2914 | 64 |
+| Low-pass | 0.0300 | 0.0330 | 0.0368 | 0.0518 | 0.2441 | 64 |
+| Noise gate | 0.0184 | 0.0188 | 0.0188 | 0.0356 | 0.2531 | 64 |
+| Pedal compressor | 0.0960 | 0.1313 | 0.1380 | 0.3267 | 0.5258 | 72 |
+| Studio compressor | 0.0881 | 0.0889 | 0.1129 | 0.2925 | 0.4118 | 64 |
+| Wah | 0.0469 | 0.0469 | 0.0473 | 0.2078 | 0.2250 | 104 |
+| Envelope wah | 0.1065 | 0.1324 | 0.1489 | 0.6176 | 1.3590 | 616 |
+| Clean boost | 0.0053 | 0.0064 | 0.0109 | 0.0120 | 0.1935 | 48 |
+| Transparent overdrive | 0.0176 | 0.0300 | 0.0311 | 0.0465 | 0.2468 | 64 |
+| Mid-focused overdrive | 0.0300 | 0.0458 | 0.0473 | 0.1976 | 0.2655 | 104 |
+| High-gain distortion | 0.0311 | 0.0315 | 0.0525 | 0.1988 | 0.3169 | 136 |
+| Round fuzz | 0.0259 | 0.0259 | 0.0454 | 0.0529 | 0.3064 | 64 |
+| Soft drive | 0.1429 | 0.1448 | 0.2348 | 0.5247 | 0.9259 | 16 |
+| Tremolo | 0.0581 | 0.0585 | 0.0604 | 0.2396 | 0.2659 | 96 |
+| Chorus | 0.0439 | 0.0713 | 0.0731 | 0.2677 | 0.3791 | 12,448 |
+| Flanger | 0.0518 | 0.0525 | 0.0529 | 0.4376 | 0.6255 | 4,792 |
+| Phaser | 0.1219 | 0.1223 | 0.1223 | 0.3199 | 0.4474 | 280 |
+| Vibrato | 0.0420 | 0.0439 | 0.0443 | 0.2175 | 0.9447 | 1,696 |
+| Three-band parametric EQ | 0.0540 | 0.0829 | 0.0889 | 0.2914 | 1.1325 | 160 |
+| Delay, normal (2 s stereo allocation) | 0.0589 | 0.0596 | 0.1170 | 0.2528 | 0.3698 | 768,584 |
+| Delay, ping-pong (2 s stereo allocation) | 0.0897 | 0.1560 | 0.1909 | 1.0583 | 1.5589 | 768,584 |
+| Delay, independent dual mono (two 2 s lines) | 0.0743 | 0.0750 | 0.0765 | 0.3188 | 1.5330 | 768,584 |
+| Delay, independent dual stereo (two 2 s lines) | 0.0896 | 0.0908 | 0.0930 | 0.3484 | 1.5484 | 768,584 |
+| Delay, four-tap mono (2 s ring) | 0.1077 | 0.1084 | 0.1091 | 0.5141 | 1.5514 | 384,580 |
+| Delay, four-tap stereo (2 s ring) | 0.1380 | 0.1451 | 0.2486 | 0.3548 | 0.4755 | 768,584 |
+| Poly pitch shifter, mono | 5.2254 | 6.5379 | 7.7608 | 9.8624 | 11.4611 | 311,056 |
+| Poly pitch shifter, stereo | 10.7193 | 13.7239 | 15.8258 | 20.1283 | 23.4123 | 494,016 |
+| Peak limiter | 0.0176 | 0.0180 | 0.0304 | 0.0345 | 0.2689 | 32 |
+| Signal controls (input + dry/wet) | 0.0015 | 0.0019 | 0.0023 | 0.0034 | 0.0041 | 80 |
+| Input + output meters | 0.0143 | 0.0146 | 0.0229 | 0.0270 | 0.2475 | 72 |
+| Stereo → mono (average) | 0.0011 | 0.0015 | 0.0015 | 0.0015 | 0.0015 | 0 |
+| Stereo → mono (equal-power) | 0.0011 | 0.0015 | 0.0015 | 0.0015 | 0.0023 | 0 |
+| Mono → stereo | 0.0019 | 0.0023 | 0.0023 | 0.0023 | 0.0023 | 0 |
+| Parallel split (copy to two branches) | 0.0023 | 0.0026 | 0.0026 | 0.0026 | 0.1781 | 0 |
+| Parallel mix (dry + two branches) | 0.0053 | 0.0071 | 0.0079 | 0.0139 | 0.2182 | 112 |
+| Chromatic tuner monitor | 0.0083 | 0.4290 | 0.6143 | 0.6941 | 0.8760 | 10,400 |
+| Full 25-effect chain + controls + meters | 13.2758 | 16.8192 | 18.8867 | 22.4478 | 29.7128 | 1,283,872 |
 
 The effect sequence is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Envelope Wah → Clean Boost → Transparent Overdrive → Mid-focused Overdrive → High-gain Distortion → Round Fuzz → Soft Drive → Tremolo → Chorus → Flanger → Phaser → Vibrato → Parametric EQ → Delay → Poly Pitch Shifter → Output Gain → Peak Limiter. Input mute and the input meter run before that sequence; the output meter and global dry/wet crossfade run after it. The tuner independently analyzes the original input and its optional mute stage runs after the output limiter; it is not included in the full-chain row. Effect timing includes processor calls, both meter passes and their status reads, and signal-control/copy work. Utility rows include their validation and sample work. The tuner monitor uses 10,400 B; its 1,024-sample window is 85.3 ms at 48 kHz, so its periodic analysis batches make tail percentiles higher than its median. This is pitch-display response, not signal-path latency. Memory estimates include processor objects and directly owned buffers, but exclude caller buffers, allocator metadata, input/output scratch buffers, UI, and backend/runtime overhead.
 

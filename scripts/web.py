@@ -124,6 +124,7 @@ def build_web() -> None:
         "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_delay_tempo",
         "_tf_chain_set_delay_ping_pong",
         "_tf_chain_set_delay_dual",
+        "_tf_chain_set_delay_multitap", "_tf_chain_set_delay_multitap_tap",
         "_tf_chain_set_pitch",
         "_tf_chain_set_filters",
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
@@ -495,11 +496,11 @@ def browser_test() -> None:
             "--eq-band2-q", "0.707",
             "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "1",
             "--eq-band3-q", "0.707",
-            "--delay-sync-bpm", "120", "--delay-division", "eighth",
             "--delay-feedback", "0.25", "--delay-mix", "0.2",
-            "--delay-dual-a-ms", "180", "--delay-dual-a-feedback", "0.25",
-            "--delay-dual-a-mix", "0.35", "--delay-dual-b-ms", "240",
-            "--delay-dual-b-feedback", "0.15", "--delay-dual-b-mix", "0.25",
+            "--delay-tap", "180", "0.65", "-1",
+            "--delay-tap", "240", "0.45", "1",
+            "--delay-tap", "360", "0.3", "-0.25",
+            "--delay-tap", "480", "0.2", "0.25",
             "--pitch-semitones", "5",
         ]
         run(renderer_command, cwd=ROOT)

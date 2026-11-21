@@ -423,6 +423,7 @@
             <option value="normal" selected>Normal</option>
             <option value="ping-pong">Ping-pong stereo</option>
             <option value="dual">Independent dual</option>
+            <option value="multi-tap">Multi-tap pattern</option>
           </select>
         </label>
         <label class="mix-control" for="delay-preset">
@@ -498,6 +499,25 @@
           <span>Delay B wet</span><output id="delay-dual-b-mix-value" for="delay-dual-b-mix">25%</output>
           <input id="delay-dual-b-mix" type="range" min="0" max="1" step="0.01" value="0.25">
         </label>
+      </div>
+      <div id="delay-multitap-controls" class="gain-controls delay-pattern-controls" hidden aria-label="Four-tap delay pattern controls">
+        <div class="delay-tap-heading">Tap 1</div>
+        <label class="mix-control" for="delay-tap-1-ms"><span>Time</span><output id="delay-tap-1-ms-value" for="delay-tap-1-ms">250 ms</output><input id="delay-tap-1-ms" type="range" min="1" max="2000" step="1" value="250"></label>
+        <label class="mix-control" for="delay-tap-1-level"><span>Level</span><output id="delay-tap-1-level-value" for="delay-tap-1-level">65%</output><input id="delay-tap-1-level" type="range" min="0" max="1" step="0.01" value="0.65"></label>
+        <label class="mix-control" for="delay-tap-1-pan"><span>Pan</span><output id="delay-tap-1-pan-value" for="delay-tap-1-pan">L 55%</output><input id="delay-tap-1-pan" type="range" min="-1" max="1" step="0.01" value="-0.55"></label>
+        <div class="delay-tap-heading">Tap 2</div>
+        <label class="mix-control" for="delay-tap-2-ms"><span>Time</span><output id="delay-tap-2-ms-value" for="delay-tap-2-ms">500 ms</output><input id="delay-tap-2-ms" type="range" min="1" max="2000" step="1" value="500"></label>
+        <label class="mix-control" for="delay-tap-2-level"><span>Level</span><output id="delay-tap-2-level-value" for="delay-tap-2-level">45%</output><input id="delay-tap-2-level" type="range" min="0" max="1" step="0.01" value="0.45"></label>
+        <label class="mix-control" for="delay-tap-2-pan"><span>Pan</span><output id="delay-tap-2-pan-value" for="delay-tap-2-pan">R 55%</output><input id="delay-tap-2-pan" type="range" min="-1" max="1" step="0.01" value="0.55"></label>
+        <div class="delay-tap-heading">Tap 3</div>
+        <label class="mix-control" for="delay-tap-3-ms"><span>Time</span><output id="delay-tap-3-ms-value" for="delay-tap-3-ms">750 ms</output><input id="delay-tap-3-ms" type="range" min="1" max="2000" step="1" value="750"></label>
+        <label class="mix-control" for="delay-tap-3-level"><span>Level</span><output id="delay-tap-3-level-value" for="delay-tap-3-level">30%</output><input id="delay-tap-3-level" type="range" min="0" max="1" step="0.01" value="0.3"></label>
+        <label class="mix-control" for="delay-tap-3-pan"><span>Pan</span><output id="delay-tap-3-pan-value" for="delay-tap-3-pan">L 25%</output><input id="delay-tap-3-pan" type="range" min="-1" max="1" step="0.01" value="-0.25"></label>
+        <div class="delay-tap-heading">Tap 4</div>
+        <label class="mix-control" for="delay-tap-4-ms"><span>Time</span><output id="delay-tap-4-ms-value" for="delay-tap-4-ms">1000 ms</output><input id="delay-tap-4-ms" type="range" min="1" max="2000" step="1" value="1000"></label>
+        <label class="mix-control" for="delay-tap-4-level"><span>Level</span><output id="delay-tap-4-level-value" for="delay-tap-4-level">20%</output><input id="delay-tap-4-level" type="range" min="0" max="1" step="0.01" value="0.2"></label>
+        <label class="mix-control" for="delay-tap-4-pan"><span>Pan</span><output id="delay-tap-4-pan-value" for="delay-tap-4-pan">R 25%</output><input id="delay-tap-4-pan" type="range" min="-1" max="1" step="0.01" value="0.25"></label>
+        <p class="hint delay-pan-note">Stereo input is summed for the echo taps, then each tap is placed with equal-power panning; dry stereo stays wide. Mono input stays centered.</p>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>
     </section>

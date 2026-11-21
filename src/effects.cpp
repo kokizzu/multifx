@@ -260,6 +260,16 @@ Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
     dual_feedback_ = {target_feedback_, target_feedback_};
     target_dual_mix_ = {target_mix_, target_mix_};
     dual_mix_ = {target_mix_, target_mix_};
+    constexpr std::array<float, maximum_delay_taps> default_times{250.0F, 500.0F,
+                                                                  750.0F, 1000.0F};
+    constexpr std::array<float, maximum_delay_taps> default_levels{0.65F, 0.45F,
+                                                                   0.30F, 0.20F};
+    constexpr std::array<float, maximum_delay_taps> default_pans{-0.55F, 0.55F,
+                                                                  -0.25F, 0.25F};
+    for (std::size_t tap = 0; tap < maximum_delay_taps; ++tap) {
+        configure_multitap_tap(tap, default_times[tap], default_levels[tap],
+                               default_pans[tap]);
+    }
     reset();
 }
 
@@ -272,9 +282,10 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
 }
 
 void Delay::configure_ping_pong(bool enabled) noexcept {
-    if (target_ping_pong_ == enabled && !target_dual_) return;
+    if (target_ping_pong_ == enabled && !target_dual_ && !target_multitap_) return;
     target_ping_pong_ = enabled;
     target_dual_ = false;
+    target_multitap_ = false;
     const float ping_target = enabled ? 1.0F : 0.0F;
     if (parameter_ramp_total_ <= 1) {
         ping_pong_mix_ = ping_target;
@@ -283,6 +294,9 @@ void Delay::configure_ping_pong(bool enabled) noexcept {
         dual_routing_mix_ = 0.0F;
         dual_routing_step_ = 0.0F;
         dual_routing_ramp_remaining_ = 0;
+        multitap_route_mix_ = 0.0F;
+        multitap_route_step_ = 0.0F;
+        multitap_route_ramp_remaining_ = 0;
         return;
     }
     ping_pong_step_ = (ping_target - ping_pong_mix_) /
@@ -291,6 +305,9 @@ void Delay::configure_ping_pong(bool enabled) noexcept {
     dual_routing_step_ = (0.0F - dual_routing_mix_) /
                          static_cast<float>(parameter_ramp_total_);
     dual_routing_ramp_remaining_ = parameter_ramp_total_;
+    multitap_route_step_ = (0.0F - multitap_route_mix_) /
+                           static_cast<float>(parameter_ramp_total_);
+    multitap_route_ramp_remaining_ = parameter_ramp_total_;
 }
 
 void Delay::configure_dual(float delay_a_ms, float feedback_a, float mix_a,
@@ -316,6 +333,7 @@ void Delay::configure_dual(float delay_a_ms, float feedback_a, float mix_a,
 
     target_ping_pong_ = false;
     target_dual_ = true;
+    target_multitap_ = false;
     if (parameter_ramp_total_ <= 1) {
         ping_pong_mix_ = 0.0F;
         ping_pong_step_ = 0.0F;
@@ -323,12 +341,84 @@ void Delay::configure_dual(float delay_a_ms, float feedback_a, float mix_a,
         dual_routing_mix_ = 1.0F;
         dual_routing_step_ = 0.0F;
         dual_routing_ramp_remaining_ = 0;
+        multitap_route_mix_ = 0.0F;
+        multitap_route_step_ = 0.0F;
+        multitap_route_ramp_remaining_ = 0;
         return;
     }
     ping_pong_step_ = (0.0F - ping_pong_mix_) / ramp;
     ping_pong_ramp_remaining_ = parameter_ramp_total_;
     dual_routing_step_ = (1.0F - dual_routing_mix_) / ramp;
     dual_routing_ramp_remaining_ = parameter_ramp_total_;
+    multitap_route_step_ = (0.0F - multitap_route_mix_) / ramp;
+    multitap_route_ramp_remaining_ = parameter_ramp_total_;
+}
+
+void Delay::configure_multitap(bool enabled, float feedback, float mix) noexcept {
+    if (std::isfinite(feedback)) target_feedback_ = std::clamp(feedback, 0.0F, 0.95F);
+    if (std::isfinite(mix)) target_mix_ = std::clamp(mix, 0.0F, 1.0F);
+    retarget_parameters();
+
+    target_multitap_ = enabled;
+    target_ping_pong_ = false;
+    target_dual_ = false;
+    const float ramp = static_cast<float>(std::max<std::size_t>(parameter_ramp_total_, 1));
+    if (parameter_ramp_total_ <= 1) {
+        ping_pong_mix_ = 0.0F;
+        ping_pong_step_ = 0.0F;
+        ping_pong_ramp_remaining_ = 0;
+        dual_routing_mix_ = 0.0F;
+        dual_routing_step_ = 0.0F;
+        dual_routing_ramp_remaining_ = 0;
+        multitap_route_mix_ = enabled ? 1.0F : 0.0F;
+        multitap_route_step_ = 0.0F;
+        multitap_route_ramp_remaining_ = 0;
+        return;
+    }
+    ping_pong_step_ = (0.0F - ping_pong_mix_) / ramp;
+    ping_pong_ramp_remaining_ = parameter_ramp_total_;
+    dual_routing_step_ = (0.0F - dual_routing_mix_) / ramp;
+    dual_routing_ramp_remaining_ = parameter_ramp_total_;
+    multitap_route_step_ = ((enabled ? 1.0F : 0.0F) - multitap_route_mix_) / ramp;
+    multitap_route_ramp_remaining_ = parameter_ramp_total_;
+}
+
+void Delay::configure_multitap_tap(std::size_t tap, float delay_ms,
+                                   float level, float pan) noexcept {
+    if (tap >= maximum_delay_taps) return;
+    if (std::isfinite(delay_ms)) {
+        const std::size_t samples = samples_for_ms(delay_ms);
+        if (samples != multitap_delay_samples_[tap]) {
+            multitap_transition_from_delay_samples_[tap] =
+                static_cast<float>(multitap_delay_samples_[tap]);
+            multitap_delay_samples_[tap] = samples;
+            multitap_delay_transition_remaining_[tap] = parameter_ramp_total_;
+        }
+    }
+    if (std::isfinite(level)) target_multitap_level_[tap] = std::clamp(level, 0.0F, 1.0F);
+    if (std::isfinite(pan)) {
+        const float clamped_pan = std::clamp(pan, -1.0F, 1.0F);
+        target_multitap_pan_left_[tap] = std::sqrt(0.5F * (1.0F - clamped_pan));
+        target_multitap_pan_right_[tap] = std::sqrt(0.5F * (1.0F + clamped_pan));
+    }
+    multitap_parameter_ramp_remaining_[tap] = parameter_ramp_total_;
+    const float ramp = static_cast<float>(std::max<std::size_t>(parameter_ramp_total_, 1));
+    multitap_level_step_[tap] =
+        (target_multitap_level_[tap] - multitap_level_[tap]) / ramp;
+    multitap_pan_left_step_[tap] =
+        (target_multitap_pan_left_[tap] - multitap_pan_left_[tap]) / ramp;
+    multitap_pan_right_step_[tap] =
+        (target_multitap_pan_right_[tap] - multitap_pan_right_[tap]) / ramp;
+    if (parameter_ramp_total_ <= 1) {
+        multitap_level_[tap] = target_multitap_level_[tap];
+        multitap_pan_left_[tap] = target_multitap_pan_left_[tap];
+        multitap_pan_right_[tap] = target_multitap_pan_right_[tap];
+        multitap_level_step_[tap] = 0.0F;
+        multitap_pan_left_step_[tap] = 0.0F;
+        multitap_pan_right_step_[tap] = 0.0F;
+        multitap_parameter_ramp_remaining_[tap] = 0;
+        multitap_delay_transition_remaining_[tap] = 0;
+    }
 }
 
 void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
@@ -490,7 +580,8 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
     const std::size_t frames = interleaved.size() / channels;
     const float maximum = std::numeric_limits<float>::max();
     const bool routed_path = ping_pong_mix_ != 0.0F || dual_routing_mix_ != 0.0F ||
-        ping_pong_ramp_remaining_ > 0 || dual_routing_ramp_remaining_ > 0;
+        multitap_route_mix_ != 0.0F || ping_pong_ramp_remaining_ > 0 ||
+        dual_routing_ramp_remaining_ > 0 || multitap_route_ramp_remaining_ > 0;
     const auto bound = [maximum](double value) noexcept {
         return static_cast<float>(std::clamp(
             value, -static_cast<double>(maximum), static_cast<double>(maximum)));
@@ -500,6 +591,42 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
             ? 1.0F
             : static_cast<float>(delay_transition_total_ - delay_transition_remaining_) /
                   static_cast<float>(delay_transition_total_);
+        std::array<float, 2> multitap_feedback_taps{};
+        std::array<float, 2> multitap_output{};
+        const float multitap_weight = std::clamp(multitap_route_mix_, 0.0F, 1.0F);
+        if (routed_path && (multitap_weight > 0.0F || multitap_route_ramp_remaining_ > 0)) {
+            float feedback_level_sum = 0.0F;
+            for (std::size_t tap = 0; tap < maximum_delay_taps; ++tap) {
+                const float level = multitap_level_[tap];
+                feedback_level_sum += level;
+                std::array<float, 2> delayed{};
+                for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+                    const float new_tap = read_delay(multitap_delay_samples_[tap], channel);
+                    delayed[channel] = new_tap;
+                    const std::size_t remaining = multitap_delay_transition_remaining_[tap];
+                    if (remaining > 0) {
+                        const float progress = static_cast<float>(delay_transition_total_ - remaining) /
+                                               static_cast<float>(delay_transition_total_);
+                        const float old_tap = read_fractional_delay(
+                            multitap_transition_from_delay_samples_[tap], channel);
+                        delayed[channel] = old_tap + (new_tap - old_tap) * progress;
+                    }
+                    multitap_feedback_taps[channel] += delayed[channel] * level;
+                }
+                if (channels_ == 2) {
+                    const float mono_tap = 0.5F * (delayed[0] + delayed[1]) * level;
+                    multitap_output[0] += mono_tap * multitap_pan_left_[tap];
+                    multitap_output[1] += mono_tap * multitap_pan_right_[tap];
+                } else {
+                    multitap_output[0] += delayed[0] * level;
+                }
+            }
+            if (feedback_level_sum > 1.0e-6F) {
+                for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+                    multitap_feedback_taps[channel] /= feedback_level_sum;
+                }
+            }
+        }
         if (!routed_path) {
             for (std::uint16_t channel = 0; channel < channels_; ++channel) {
                 const std::size_t input_index = frame * channels_ + channel;
@@ -532,7 +659,8 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
             std::array<float, 2> ping_pong_taps{};
             const float ping_weight = std::clamp(ping_pong_mix_, 0.0F, 1.0F);
             const float dual_weight = std::clamp(dual_routing_mix_, 0.0F, 1.0F);
-            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight,
+            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight -
+                                                   multitap_weight,
                                                    0.0F, 1.0F);
             for (std::uint16_t channel = 0; channel < 2; ++channel) {
                 const std::size_t input_index = frame * 2 + channel;
@@ -568,10 +696,13 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                                           ping_pong_taps[channel] * mix_;
                 const float dual_output = inputs[channel] * (1.0F - dual_mix_[channel]) +
                                           dual_taps[channel] * dual_mix_[channel];
+                const float multitap_output_channel =
+                    inputs[channel] * (1.0F - mix_) + multitap_output[channel] * mix_;
                 const double output_value =
                     static_cast<double>(normal_weight) * normal_output +
                     static_cast<double>(ping_weight) * ping_output +
-                    static_cast<double>(dual_weight) * dual_output;
+                    static_cast<double>(dual_weight) * dual_output +
+                    static_cast<double>(multitap_weight) * multitap_output_channel;
                 interleaved[frame * 2 + channel] = bound(output_value);
 
                 const float normal_feedback = inputs[channel] +
@@ -580,10 +711,13 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                                             ping_pong_taps[channel] * feedback_;
                 const float dual_feedback = inputs[channel] +
                                             dual_taps[channel] * dual_feedback_[channel];
+                const float multitap_feedback = inputs[channel] +
+                    multitap_feedback_taps[channel] * feedback_;
                 const double feedback_value =
                     static_cast<double>(normal_weight) * normal_feedback +
                     static_cast<double>(ping_weight) * ping_feedback +
-                    static_cast<double>(dual_weight) * dual_feedback;
+                    static_cast<double>(dual_weight) * dual_feedback +
+                    static_cast<double>(multitap_weight) * multitap_feedback;
                 storage_[write_frame_ * storage_channels_ + channel] = bound(feedback_value);
             }
         } else {
@@ -609,23 +743,29 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
             }
             const float ping_weight = std::clamp(ping_pong_mix_, 0.0F, 1.0F);
             const float dual_weight = std::clamp(dual_routing_mix_, 0.0F, 1.0F);
-            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight,
+            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight -
+                                                   multitap_weight,
                                                    0.0F, 1.0F);
             const float normal_output = input * (1.0F - mix_) + normal_delayed * mix_;
             const float average_dual_mix = 0.5F * (dual_mix_[0] + dual_mix_[1]);
             const float dual_wet = 0.5F *
                 (dual_taps[0] * dual_mix_[0] + dual_taps[1] * dual_mix_[1]);
             const float dual_output = input * (1.0F - average_dual_mix) + dual_wet;
+            const float multitap_output_mono = input * (1.0F - mix_) +
+                                                multitap_output[0] * mix_;
             interleaved[frame] = bound(
                 static_cast<double>(normal_weight + ping_weight) * normal_output +
-                static_cast<double>(dual_weight) * dual_output);
+                static_cast<double>(dual_weight) * dual_output +
+                static_cast<double>(multitap_weight) * multitap_output_mono);
 
             const float normal_feedback = input + normal_delayed * feedback_;
             for (std::uint16_t line = 0; line < storage_channels_; ++line) {
                 const float dual_feedback = input + dual_taps[line] * dual_feedback_[line];
+                const float multitap_feedback = input + multitap_feedback_taps[0] * feedback_;
                 const double feedback_value =
                     static_cast<double>(normal_weight + ping_weight) * normal_feedback +
-                    static_cast<double>(dual_weight) * dual_feedback;
+                    static_cast<double>(dual_weight) * dual_feedback +
+                    static_cast<double>(multitap_weight) * multitap_feedback;
                 storage_[write_frame_ * storage_channels_ + line] = bound(feedback_value);
             }
         }
@@ -643,6 +783,29 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                 if (dual_delay_transition_remaining_[line] == 0) {
                     dual_transition_from_delay_samples_[line] =
                         static_cast<float>(dual_delay_samples_[line]);
+                }
+            }
+        }
+        for (std::size_t tap = 0; tap < maximum_delay_taps; ++tap) {
+            if (multitap_delay_transition_remaining_[tap] > 0) {
+                --multitap_delay_transition_remaining_[tap];
+                if (multitap_delay_transition_remaining_[tap] == 0) {
+                    multitap_transition_from_delay_samples_[tap] =
+                        static_cast<float>(multitap_delay_samples_[tap]);
+                }
+            }
+            if (multitap_parameter_ramp_remaining_[tap] > 0) {
+                multitap_level_[tap] += multitap_level_step_[tap];
+                multitap_pan_left_[tap] += multitap_pan_left_step_[tap];
+                multitap_pan_right_[tap] += multitap_pan_right_step_[tap];
+                --multitap_parameter_ramp_remaining_[tap];
+                if (multitap_parameter_ramp_remaining_[tap] == 0) {
+                    multitap_level_[tap] = target_multitap_level_[tap];
+                    multitap_pan_left_[tap] = target_multitap_pan_left_[tap];
+                    multitap_pan_right_[tap] = target_multitap_pan_right_[tap];
+                    multitap_level_step_[tap] = 0.0F;
+                    multitap_pan_left_step_[tap] = 0.0F;
+                    multitap_pan_right_step_[tap] = 0.0F;
                 }
             }
         }
@@ -675,6 +838,14 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                 dual_routing_step_ = 0.0F;
             }
         }
+        if (multitap_route_ramp_remaining_ > 0) {
+            multitap_route_mix_ += multitap_route_step_;
+            --multitap_route_ramp_remaining_;
+            if (multitap_route_ramp_remaining_ == 0) {
+                multitap_route_mix_ = target_multitap_ ? 1.0F : 0.0F;
+                multitap_route_step_ = 0.0F;
+            }
+        }
     }
 }
 
@@ -700,6 +871,21 @@ void Delay::reset() noexcept {
     dual_mix_ = target_dual_mix_;
     dual_mix_step_ = {};
     dual_parameter_ramp_remaining_ = 0;
+    for (std::size_t tap = 0; tap < maximum_delay_taps; ++tap) {
+        multitap_transition_from_delay_samples_[tap] =
+            static_cast<float>(multitap_delay_samples_[tap]);
+        multitap_delay_transition_remaining_[tap] = 0;
+        multitap_level_[tap] = target_multitap_level_[tap];
+        multitap_level_step_[tap] = 0.0F;
+        multitap_pan_left_[tap] = target_multitap_pan_left_[tap];
+        multitap_pan_left_step_[tap] = 0.0F;
+        multitap_pan_right_[tap] = target_multitap_pan_right_[tap];
+        multitap_pan_right_step_[tap] = 0.0F;
+        multitap_parameter_ramp_remaining_[tap] = 0;
+    }
+    multitap_route_mix_ = target_multitap_ ? 1.0F : 0.0F;
+    multitap_route_step_ = 0.0F;
+    multitap_route_ramp_remaining_ = 0;
     dual_routing_mix_ = target_dual_ ? 1.0F : 0.0F;
     dual_routing_step_ = 0.0F;
     dual_routing_ramp_remaining_ = 0;

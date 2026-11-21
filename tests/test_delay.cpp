@@ -269,6 +269,116 @@ void test_dual_routing_crossfade_and_no_allocation() {
     require(after == before, "dual-delay processing allocated memory");
 }
 
+void test_multitap_levels_pan_feedback_and_no_allocation() {
+    tabletfx::Delay delay(8000.0F, 2, 100.0F, 4.0F, 0.0F, 1.0F);
+    delay.configure_multitap_tap(0, 4.0F, 1.0F, -1.0F);
+    delay.configure_multitap_tap(1, 6.0F, 0.5F, 1.0F);
+    delay.configure_multitap_tap(2, 8.0F, 0.0F, 0.0F);
+    delay.configure_multitap_tap(3, 10.0F, 0.0F, 0.0F);
+    delay.configure_multitap(true, 0.0F, 1.0F);
+    delay.reset();
+
+    std::array<float, 112> stereo_impulse{};
+    stereo_impulse[0] = 1.0F;
+    delay.process(stereo_impulse, 2);
+    require(near(stereo_impulse[32 * 2], 0.5F) &&
+                near(stereo_impulse[32 * 2 + 1], 0.0F),
+            "tap A must use its hard-left pan and full level on a left impulse");
+    require(near(stereo_impulse[48 * 2], 0.0F) &&
+                near(stereo_impulse[48 * 2 + 1], 0.25F),
+            "tap B must use its independent time, half level, and hard-right pan");
+
+    tabletfx::Delay feedback(8000.0F, 1, 100.0F, 4.0F, 0.0F, 1.0F);
+    feedback.configure_multitap_tap(0, 4.0F, 1.0F, -1.0F);
+    feedback.configure_multitap_tap(1, 8.0F, 0.0F, 0.0F);
+    feedback.configure_multitap_tap(2, 12.0F, 0.0F, 0.0F);
+    feedback.configure_multitap_tap(3, 16.0F, 0.0F, 0.0F);
+    feedback.configure_multitap(true, 0.5F, 1.0F);
+    feedback.reset();
+    std::array<float, 96> mono_impulse{};
+    mono_impulse[0] = 1.0F;
+    feedback.process(mono_impulse, 1);
+    require(near(mono_impulse[32], 1.0F) && near(mono_impulse[64], 0.5F),
+            "multi-tap feedback must repeat at the first tap's interval");
+
+    std::array<float, 256> block{};
+    block.fill(0.1F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        feedback.configure_multitap((iteration & 1) == 0, 0.5F, 0.5F);
+        feedback.configure_multitap_tap(static_cast<std::size_t>(iteration) %
+                                            tabletfx::maximum_delay_taps,
+                                        4.0F + static_cast<float>(iteration % 4),
+                                        0.5F, -0.5F + 0.01F * static_cast<float>(iteration % 100));
+        feedback.process(block, 1);
+    }
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "multi-tap processing allocated memory");
+}
+
+void test_multitap_route_and_tap_changes_are_smoothed() {
+    tabletfx::Delay delay(1000.0F, 2, 100.0F, 10.0F, 0.0F, 0.5F);
+    delay.configure_multitap_tap(0, 10.0F, 1.0F, 0.0F);
+    delay.configure_multitap_tap(1, 20.0F, 0.0F, 0.0F);
+    delay.configure_multitap_tap(2, 30.0F, 0.0F, 0.0F);
+    delay.configure_multitap_tap(3, 40.0F, 0.0F, 0.0F);
+    std::array<float, 80> steady{};
+    for (std::size_t frame = 0; frame < steady.size() / 2; ++frame) {
+        steady[frame * 2] = 0.25F;
+        steady[frame * 2 + 1] = 0.25F;
+    }
+    delay.process(steady, 2);
+
+    delay.configure_multitap(true, 0.2F, 0.5F);
+    std::array<float, 32> route_transition{};
+    for (std::size_t frame = 0; frame < route_transition.size() / 2; ++frame) {
+        route_transition[frame * 2] = 0.25F;
+        route_transition[frame * 2 + 1] = 0.25F;
+    }
+    delay.process(route_transition, 2);
+    for (std::size_t frame = 1; frame < route_transition.size() / 2; ++frame) {
+        require(std::abs(route_transition[frame * 2] - route_transition[(frame - 1) * 2]) < 0.04F &&
+                    std::abs(route_transition[frame * 2 + 1] -
+                             route_transition[(frame - 1) * 2 + 1]) < 0.04F,
+                "multi-tap mode entry must crossfade without an output jump");
+    }
+
+    delay.configure_multitap_tap(0, 20.0F, 0.4F, 1.0F);
+    std::array<float, 32> tap_transition{};
+    for (std::size_t frame = 0; frame < tap_transition.size() / 2; ++frame) {
+        tap_transition[frame * 2] = 0.25F;
+        tap_transition[frame * 2 + 1] = 0.25F;
+    }
+    delay.process(tap_transition, 2);
+    for (std::size_t frame = 1; frame < tap_transition.size() / 2; ++frame) {
+        require(std::abs(tap_transition[frame * 2] - tap_transition[(frame - 1) * 2]) < 0.04F &&
+                    std::abs(tap_transition[frame * 2 + 1] -
+                             tap_transition[(frame - 1) * 2 + 1]) < 0.04F,
+                "tap time, level, and pan changes must ramp without an output jump");
+    }
+}
+
+void test_multitap_controls_clamp_and_retarget_safely() {
+    tabletfx::Delay delay(1000.0F, 1, 20.0F, 4.0F, 0.0F, 0.0F);
+    delay.configure_multitap_tap(0, -1.0F, 2.0F, 2.0F);
+    delay.configure_multitap_tap(1, std::numeric_limits<float>::quiet_NaN(),
+                                 std::numeric_limits<float>::infinity(),
+                                 -std::numeric_limits<float>::infinity());
+    delay.configure_multitap_tap(tabletfx::maximum_delay_taps, 4.0F, 1.0F, 0.0F);
+    delay.configure_multitap(true, 2.0F, 2.0F);
+    require(near(delay.feedback(), 0.95F) && near(delay.mix(), 1.0F),
+            "multi-tap master feedback and mix must retain safe limits");
+    delay.reset();
+    std::array<float, 8> impulse{};
+    impulse[0] = 1.0F;
+    delay.process(impulse, 1);
+    require(near(impulse[1], 1.0F),
+            "out-of-range mono tap time/level controls should clamp to a one-sample full-level tap");
+    require(std::all_of(impulse.begin(), impulse.end(),
+                        [](float sample) { return std::isfinite(sample); }),
+            "invalid multi-tap controls must not poison the output");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -368,6 +478,9 @@ int main() {
         test_ping_pong_mode_crossfade_and_mono_fallback();
         test_independent_dual_times_and_feedback();
         test_dual_routing_crossfade_and_no_allocation();
+        test_multitap_levels_pan_feedback_and_no_allocation();
+        test_multitap_route_and_tap_changes_are_smoothed();
+        test_multitap_controls_clamp_and_retarget_safely();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

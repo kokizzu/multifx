@@ -102,6 +102,8 @@ enum class DelayDivision : std::uint8_t {
     sixteenth_triplet,
 };
 
+inline constexpr std::size_t maximum_delay_taps = 4;
+
 class Delay final : public Effect {
 public:
     Delay(float sample_rate, std::uint16_t channels, float max_delay_ms = 2000.0F,
@@ -131,6 +133,11 @@ public:
     // second line reserved at construction and mixes both wet taps to mono.
     void configure_dual(float delay_a_ms, float feedback_a, float mix_a,
                         float delay_b_ms, float feedback_b, float mix_b) noexcept;
+    // Four mono-derived taps with independent time, level and equal-power pan.
+    // Panning is audible in stereo; mono output sums the taps at center.
+    void configure_multitap(bool enabled, float feedback, float mix) noexcept;
+    void configure_multitap_tap(std::size_t tap, float delay_ms,
+                                float level, float pan) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
@@ -180,6 +187,23 @@ private:
     std::array<float, 2> target_dual_mix_{};
     std::array<float, 2> dual_mix_step_{};
     std::size_t dual_parameter_ramp_remaining_ = 0;
+    std::array<std::size_t, maximum_delay_taps> multitap_delay_samples_{};
+    std::array<float, maximum_delay_taps> multitap_transition_from_delay_samples_{};
+    std::array<std::size_t, maximum_delay_taps> multitap_delay_transition_remaining_{};
+    std::array<float, maximum_delay_taps> multitap_level_{};
+    std::array<float, maximum_delay_taps> target_multitap_level_{};
+    std::array<float, maximum_delay_taps> multitap_level_step_{};
+    std::array<float, maximum_delay_taps> multitap_pan_left_{};
+    std::array<float, maximum_delay_taps> target_multitap_pan_left_{};
+    std::array<float, maximum_delay_taps> multitap_pan_left_step_{};
+    std::array<float, maximum_delay_taps> multitap_pan_right_{};
+    std::array<float, maximum_delay_taps> target_multitap_pan_right_{};
+    std::array<float, maximum_delay_taps> multitap_pan_right_step_{};
+    std::array<std::size_t, maximum_delay_taps> multitap_parameter_ramp_remaining_{};
+    bool target_multitap_ = false;
+    float multitap_route_mix_ = 0.0F;
+    float multitap_route_step_ = 0.0F;
+    std::size_t multitap_route_ramp_remaining_ = 0;
     bool target_ping_pong_ = false;
     float ping_pong_mix_ = 0.0F;
     float ping_pong_step_ = 0.0F;

@@ -53,6 +53,9 @@ const DEFAULT_PARAMETERS = {
   delayPingPong: false,
   delayDualEnabled: false,
   delayDual: [350, 0.25, 0.25, 525, 0.25, 0.25],
+  delayMultiTapEnabled: false,
+  delayMultiTap: [250, 0.65, -0.55, 500, 0.45, 0.55,
+    750, 0.30, -0.25, 1000, 0.20, 0.25],
   pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -252,6 +255,18 @@ const delayDualBFeedback = document.querySelector("#delay-dual-b-feedback");
 const delayDualBFeedbackValue = document.querySelector("#delay-dual-b-feedback-value");
 const delayDualBMix = document.querySelector("#delay-dual-b-mix");
 const delayDualBMixValue = document.querySelector("#delay-dual-b-mix-value");
+const delayMultiTapControls = document.querySelector("#delay-multitap-controls");
+const delayMultiTapInputs = Array.from({ length: 4 }, (_, index) => {
+  const tap = index + 1;
+  return {
+    time: document.querySelector(`#delay-tap-${tap}-ms`),
+    timeValue: document.querySelector(`#delay-tap-${tap}-ms-value`),
+    level: document.querySelector(`#delay-tap-${tap}-level`),
+    levelValue: document.querySelector(`#delay-tap-${tap}-level-value`),
+    pan: document.querySelector(`#delay-tap-${tap}-pan`),
+    panValue: document.querySelector(`#delay-tap-${tap}-pan-value`),
+  };
+});
 const delayMode = document.querySelector("#delay-time-mode");
 const delayMs = document.querySelector("#delay-time-ms");
 const delayMsValue = document.querySelector("#delay-time-ms-value");
@@ -1127,14 +1142,21 @@ function updateDelayRouting() {
   const mode = delayRouting.value;
   const pingPong = mode === "ping-pong";
   const dual = mode === "dual";
+  const multiTap = mode === "multi-tap";
   DEFAULT_PARAMETERS.delayPingPong = pingPong;
   DEFAULT_PARAMETERS.delayDualEnabled = dual;
+  DEFAULT_PARAMETERS.delayMultiTapEnabled = multiTap;
   delayDualControls.hidden = !dual;
-  for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
-    control.disabled = dual;
+  delayMultiTapControls.hidden = !multiTap;
+  for (const control of [delayPreset, delayMode, delayMs, delayBpm, delayDivision]) {
+    control.disabled = dual || multiTap;
   }
+  delayFeedback.disabled = dual;
+  delayMix.disabled = dual;
   if (dual) {
     updateDelayDual();
+  } else if (multiTap) {
+    updateDelayMultiTap();
   } else if (workletNode) {
     workletNode.port.postMessage({ type: "delay-routing", value: pingPong });
   }
@@ -1162,6 +1184,33 @@ for (const control of [delayDualAms, delayDualAFeedback, delayDualAMix,
   delayDualBms, delayDualBFeedback, delayDualBMix]) {
   control.addEventListener("input", updateDelayDual);
   control.addEventListener("change", updateDelayDual);
+}
+function updateDelayMultiTap() {
+  const taps = delayMultiTapInputs.flatMap((controls) => [
+    Number(controls.time.value), Number(controls.level.value), Number(controls.pan.value),
+  ]);
+  DEFAULT_PARAMETERS.delayMultiTap = taps;
+  delayMultiTapInputs.forEach((controls, index) => {
+    const offset = index * 3;
+    const pan = taps[offset + 2];
+    controls.timeValue.value = `${taps[offset].toFixed(0)} ms`;
+    controls.levelValue.value = `${Math.round(taps[offset + 1] * 100)}%`;
+    controls.panValue.value = Math.abs(pan) < 0.005
+      ? "Center"
+      : `${pan < 0 ? "L" : "R"} ${Math.round(Math.abs(pan) * 100)}%`;
+  });
+  if (workletNode && DEFAULT_PARAMETERS.delayMultiTapEnabled) {
+    workletNode.port.postMessage({
+      type: "delay-multitap",
+      value: { taps, feedback: Number(delayFeedback.value), mix: Number(delayMix.value) },
+    });
+  }
+}
+for (const controls of delayMultiTapInputs) {
+  for (const control of [controls.time, controls.level, controls.pan]) {
+    control.addEventListener("input", updateDelayMultiTap);
+    control.addEventListener("change", updateDelayMultiTap);
+  }
 }
 for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
   control.addEventListener("input", () => updateDelay());
@@ -1319,10 +1368,13 @@ async function runBrowserSelfTest() {
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
-        delayTempo: [1, 120, 7],
+        delayTempo: [0, 120, 7],
         delayPingPong: false,
-        delayDualEnabled: true,
+        delayDualEnabled: false,
         delayDual: [180, 0.25, 0.35, 240, 0.15, 0.25],
+        delayMultiTapEnabled: true,
+        delayMultiTap: [180, 0.65, -1, 240, 0.45, 1,
+          360, 0.3, -0.25, 480, 0.2, 0.25],
         pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -1405,15 +1457,17 @@ async function runBrowserSelfTest() {
     }
     delayPreset.value = "custom";
     delayMode.value = "tempo";
-    delayRouting.value = "dual";
+    delayRouting.value = "multi-tap";
     updateDelayRouting();
-    delayDualAms.value = "180";
-    delayDualAFeedback.value = "0.25";
-    delayDualAMix.value = "0.35";
-    delayDualBms.value = "240";
-    delayDualBFeedback.value = "0.15";
-    delayDualBMix.value = "0.25";
-    updateDelayDual();
+    const testTaps = [180, 0.65, -1, 240, 0.45, 1,
+      360, 0.3, -0.25, 480, 0.2, 0.25];
+    delayMultiTapInputs.forEach((controls, index) => {
+      const offset = index * 3;
+      controls.time.value = String(testTaps[offset]);
+      controls.level.value = String(testTaps[offset + 1]);
+      controls.pan.value = String(testTaps[offset + 2]);
+    });
+    updateDelayMultiTap();
     delayMs.value = "180";
     delayBpm.value = "120";
     delayDivision.value = "7";

@@ -26,6 +26,7 @@
 #include "tabletfx/wav.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -98,6 +99,14 @@ struct Options {
     float delay_dual_b_ms = 525.0F;
     float delay_dual_b_feedback = 0.25F;
     float delay_dual_b_mix = 0.25F;
+    bool delay_multitap_enabled = false;
+    std::array<float, tabletfx::maximum_delay_taps> delay_multitap_ms{
+        250.0F, 500.0F, 750.0F, 1000.0F};
+    std::array<float, tabletfx::maximum_delay_taps> delay_multitap_level{
+        0.65F, 0.45F, 0.30F, 0.20F};
+    std::array<float, tabletfx::maximum_delay_taps> delay_multitap_pan{
+        -0.55F, 0.55F, -0.25F, 0.25F};
+    std::size_t delay_multitap_custom_count = 0;
     bool pitch_enabled = false;
     float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
@@ -146,6 +155,10 @@ Options parse_options(int argc, char** argv, int first) {
     Options options;
     for (int i = first; i < argc; ++i) {
         const std::string_view key(argv[i]);
+        if (key == "--delay-multitap") {
+            options.delay_multitap_enabled = true;
+            continue;
+        }
         if (i + 1 >= argc) {
             throw std::invalid_argument("Missing value for " + std::string(key));
         }
@@ -172,6 +185,21 @@ Options parse_options(int argc, char** argv, int first) {
             } else {
                 throw std::invalid_argument("Delay preset must be digital or slapback");
             }
+            continue;
+        }
+        if (key == "--delay-tap") {
+            if (i + 3 >= argc) {
+                throw std::invalid_argument("--delay-tap requires time-ms level pan");
+            }
+            if (options.delay_multitap_custom_count >= tabletfx::maximum_delay_taps) {
+                throw std::invalid_argument("At most four --delay-tap entries are supported");
+            }
+            const std::size_t tap = options.delay_multitap_custom_count++;
+            options.delay_multitap_ms[tap] = parse_float("--delay-tap time", argv[i + 1]);
+            options.delay_multitap_level[tap] = parse_float("--delay-tap level", argv[i + 2]);
+            options.delay_multitap_pan[tap] = parse_float("--delay-tap pan", argv[i + 3]);
+            options.delay_multitap_enabled = true;
+            i += 3;
             continue;
         }
         if (key == "--delay-ping-pong") {
@@ -726,7 +754,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                       options.eq_band3_frequency_hz, options.eq_band3_gain_db, options.eq_band3_q);
         effects.push_back(std::move(eq));
     }
-    if (options.delay_dual_enabled ||
+    if (options.delay_multitap_enabled || options.delay_dual_enabled ||
         ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F)) {
         auto delay = std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F,
@@ -736,7 +764,15 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
                                    options.delay_feedback, options.delay_mix);
         }
-        if (options.delay_dual_enabled) {
+        if (options.delay_multitap_enabled) {
+            for (std::size_t tap = 0; tap < tabletfx::maximum_delay_taps; ++tap) {
+                delay->configure_multitap_tap(tap, options.delay_multitap_ms[tap],
+                                              options.delay_multitap_level[tap],
+                                              options.delay_multitap_pan[tap]);
+            }
+            delay->configure_multitap(true, options.delay_feedback, options.delay_mix);
+            delay->reset();
+        } else if (options.delay_dual_enabled) {
             delay->configure_dual(options.delay_dual_a_ms, options.delay_dual_a_feedback,
                                   options.delay_dual_a_mix, options.delay_dual_b_ms,
                                   options.delay_dual_b_feedback, options.delay_dual_b_mix);
@@ -1280,6 +1316,28 @@ void run_bench() {
             sample_rate, 2, 2000.0F, 350.0F, 0.25F, 0.25F, true);
         delay->configure_dual(350.0F, 0.25F, 0.25F,
                               525.0F, 0.25F, 0.25F);
+        delay->reset();
+        return delay;
+    }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-multitap-mono", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(
+            sample_rate, 1, 2000.0F, 350.0F, 0.25F, 0.25F);
+        delay->configure_multitap_tap(0, 250.0F, 0.65F, -0.55F);
+        delay->configure_multitap_tap(1, 500.0F, 0.45F, 0.55F);
+        delay->configure_multitap_tap(2, 750.0F, 0.30F, -0.25F);
+        delay->configure_multitap_tap(3, 1000.0F, 0.20F, 0.25F);
+        delay->configure_multitap(true, 0.25F, 0.25F);
+        delay->reset();
+        return delay;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-multitap-stereo", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(
+            sample_rate, 2, 2000.0F, 350.0F, 0.25F, 0.25F);
+        delay->configure_multitap_tap(0, 250.0F, 0.65F, -0.55F);
+        delay->configure_multitap_tap(1, 500.0F, 0.45F, 0.55F);
+        delay->configure_multitap_tap(2, 750.0F, 0.30F, -0.25F);
+        delay->configure_multitap_tap(3, 1000.0F, 0.20F, 0.25F);
+        delay->configure_multitap(true, 0.25F, 0.25F);
         delay->reset();
         return delay;
     }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);

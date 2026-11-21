@@ -406,6 +406,17 @@ public:
                              delay_b_ms, feedback_b, mix_b);
     }
 
+    void configure_delay_multitap(bool enabled, float feedback, float mix) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_multitap(enabled, feedback, mix);
+    }
+
+    void configure_delay_multitap_tap(std::uint32_t tap, float delay_ms,
+                                      float level, float pan) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_multitap_tap(tap, delay_ms, level, pan);
+    }
+
     void configure_pitch(float semitones) noexcept {
         static_cast<tabletfx::PolyPitchShifter*>(effects_[22].effect.get())
             ->set_pitch_semitones(semitones);
@@ -1084,6 +1095,20 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_dual(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_dual(delay_a_ms, feedback_a, mix_a,
                                                 delay_b_ms, feedback_b, mix_b);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_multitap(
+    void* opaque, std::uint32_t enabled, float feedback, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_multitap(enabled != 0U, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_multitap_tap(
+    void* opaque, std::uint32_t tap, float delay_ms, float level, float pan) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_multitap_tap(tap, delay_ms, level, pan);
     }
 }
 

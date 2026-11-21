@@ -117,6 +117,15 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         const dual = parameters.delayDual || [350, 0.25, 0.25, 525, 0.25, 0.25];
         module._tf_chain_set_delay_dual(this.chain, ...dual);
       }
+      const multiTap = parameters.delayMultiTap || [250, 0.65, -0.55, 500, 0.45, 0.55,
+        750, 0.30, -0.25, 1000, 0.20, 0.25];
+      for (let tap = 0; tap < 4; tap += 1) {
+        const offset = tap * 3;
+        module._tf_chain_set_delay_multitap_tap(this.chain, tap, ...multiTap.slice(offset, offset + 3));
+      }
+      if (parameters.delayMultiTapEnabled) {
+        module._tf_chain_set_delay_multitap(this.chain, 1, delay[1], delay[2]);
+      }
       if (parameters.delayPingPong) {
         module._tf_chain_set_delay_ping_pong(this.chain, 1);
       }
@@ -246,6 +255,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_delay_ping_pong(this.chain, message.value ? 1 : 0);
     } else if (message.type === "delay-dual" && this.ready) {
       this.module._tf_chain_set_delay_dual(this.chain, ...message.value);
+    } else if (message.type === "delay-multitap" && this.ready) {
+      const { taps, feedback, mix } = message.value;
+      for (let tap = 0; tap < 4; tap += 1) {
+        const offset = tap * 3;
+        this.module._tf_chain_set_delay_multitap_tap(
+          this.chain, tap, taps[offset], taps[offset + 1], taps[offset + 2]);
+      }
+      this.module._tf_chain_set_delay_multitap(this.chain, 1, feedback, mix);
     } else if (message.type === "phaser" && this.ready) {
       this.module._tf_chain_set_phaser(this.chain, ...message.value);
     } else if (message.type === "vibrato" && this.ready) {
