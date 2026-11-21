@@ -272,6 +272,46 @@ def check_auto_swell(executable: Path) -> None:
             raise AssertionError(f"Auto Swell did not return to silence after release: {tail}")
 
 
+def check_rotary_speaker(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(2400)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-rotary-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "rotary.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--rotary-speaker", "--rotary-rate-hz", "2.5",
+             "--rotary-tempo-sync", "on", "--rotary-tempo-bpm", "90",
+             "--rotary-beats-per-rotation", "0.5", "--rotary-speed", "fast",
+             "--rotary-slow-speed-multiplier", "0.2", "--rotary-drive", "0.15",
+             "--rotary-hi-depth", "0.8", "--rotary-high-level", "0.9",
+             "--rotary-low-depth", "0.6", "--rotary-rotor-length", "0.6",
+             "--rotary-low-rate-multi", "0.7", "--rotary-low-time-constant-ms", "700",
+              "--rotary-hi-time-constant-ms", "400",
+              "--rotary-low-mic-spacing", "0.65",
+              "--rotary-high-mic-spacing", "0.8",
+             "--rotary-mic-distance", "0.3", "--rotary-stereo-spread", "1.2",
+             "--rotary-mix", "0.85", "--rotary-level", "0.95",
+             "--rotary-balance", "0.1", "--rotary-input-select", "stereo"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Rotary controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Rotary Speaker produced non-finite output")
+        source_float = [value / 32768.0 for value in source_samples]
+        if max(abs(value) for value in values) < 0.05:
+            raise AssertionError("Rotary Speaker unexpectedly silenced the test tone")
+        if max(abs(actual - expected) for actual, expected in zip(values, source_float, strict=True)) < 0.02:
+            raise AssertionError("Rotary controls did not change the test tone")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1088,6 +1128,7 @@ def main() -> None:
     check_plate_reverb(args.executable.resolve())
     check_spring_reverb(args.executable.resolve())
     check_auto_swell(args.executable.resolve())
+    check_rotary_speaker(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1112,7 +1153,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, Rotary Speaker, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

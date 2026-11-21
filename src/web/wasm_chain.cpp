@@ -11,6 +11,7 @@
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
+#include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -170,6 +171,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::AutoSwell>(
                                 static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::RotarySpeaker>(
+                                static_cast<float>(sample_rate), channels),
                             false});
     }
 
@@ -780,6 +784,43 @@ public:
         swell->configure(static_cast<float>(sample_rate_), parameters);
     }
 
+    void configure_rotary_speaker(
+        float rate_hz, std::uint32_t tempo_sync, float tempo_bpm,
+        float beats_per_rotation, std::uint32_t speed,
+        float slow_speed_multiplier, float drive, float hi_depth,
+        float high_level, float low_depth, float rotor_length,
+        float low_rate_multi, float low_time_constant_ms,
+        float hi_time_constant_ms, float low_mic_spacing,
+        float high_mic_spacing, float mic_distance,
+        float stereo_spread, float mix, float level, float balance,
+        std::uint32_t input_select) noexcept {
+        auto* rotary = static_cast<tabletfx::RotarySpeaker*>(effects_[33].effect.get());
+        tabletfx::RotarySpeakerParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.tempo_sync = tempo_sync != 0;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.beats_per_rotation = beats_per_rotation;
+        parameters.speed = static_cast<tabletfx::RotarySpeed>(speed);
+        parameters.slow_speed_multiplier = slow_speed_multiplier;
+        parameters.drive = drive;
+        parameters.hi_depth = hi_depth;
+        parameters.high_level = high_level;
+        parameters.low_depth = low_depth;
+        parameters.rotor_length = rotor_length;
+        parameters.low_rate_multi = low_rate_multi;
+        parameters.low_time_constant_ms = low_time_constant_ms;
+        parameters.hi_time_constant_ms = hi_time_constant_ms;
+        parameters.low_mic_spacing = low_mic_spacing;
+        parameters.high_mic_spacing = high_mic_spacing;
+        parameters.mic_distance = mic_distance;
+        parameters.stereo_spread = stereo_spread;
+        parameters.mix = mix;
+        parameters.level = level;
+        parameters.balance = balance;
+        parameters.input_select = static_cast<tabletfx::RotaryInputSelect>(input_select);
+        rotary->set_parameters(parameters);
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1206,6 +1247,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_auto_swell(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_auto_swell(
             threshold_db, attack_ms, release_ms, hysteresis_db, taper, volume);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_rotary_speaker(
+    void* opaque, float rate_hz, std::uint32_t tempo_sync, float tempo_bpm,
+    float beats_per_rotation, std::uint32_t speed, float slow_speed_multiplier,
+    float drive, float hi_depth, float high_level, float low_depth,
+    float rotor_length, float low_rate_multi, float low_time_constant_ms,
+    float hi_time_constant_ms, float low_mic_spacing,
+    float high_mic_spacing, float mic_distance,
+    float stereo_spread, float mix, float level, float balance,
+    std::uint32_t input_select) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_rotary_speaker(
+            rate_hz, tempo_sync, tempo_bpm, beats_per_rotation, speed,
+            slow_speed_multiplier, drive, hi_depth, high_level, low_depth,
+            rotor_length, low_rate_multi, low_time_constant_ms,
+            hi_time_constant_ms, low_mic_spacing, high_mic_spacing,
+            mic_distance, stereo_spread,
+            mix, level, balance, input_select);
     }
 }
 

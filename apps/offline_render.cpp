@@ -12,6 +12,7 @@
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
+#include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -168,6 +169,8 @@ struct Options {
     tabletfx::SpringReverbParameters spring_reverb{};
     bool auto_swell_enabled = false;
     tabletfx::AutoSwellParameters auto_swell{};
+    bool rotary_speaker_enabled = false;
+    tabletfx::RotarySpeakerParameters rotary_speaker{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -300,6 +303,45 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--auto-swell") {
             options.auto_swell_enabled = true;
+            continue;
+        }
+        if (key == "--rotary-speaker") {
+            options.rotary_speaker_enabled = true;
+            continue;
+        }
+        if (key == "--rotary-tempo-sync") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --rotary-tempo-sync");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.rotary_speaker.tempo_sync = true;
+            else if (value == "off") options.rotary_speaker.tempo_sync = false;
+            else throw std::invalid_argument("Rotary tempo sync must be on or off");
+            options.rotary_speaker_enabled = true;
+            continue;
+        }
+        if (key == "--rotary-speed") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --rotary-speed");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "slow") options.rotary_speaker.speed = tabletfx::RotarySpeed::slow;
+            else if (value == "fast") options.rotary_speaker.speed = tabletfx::RotarySpeed::fast;
+            else throw std::invalid_argument("Rotary speed must be slow or fast");
+            options.rotary_speaker_enabled = true;
+            continue;
+        }
+        if (key == "--rotary-input-select") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --rotary-input-select");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "stereo") options.rotary_speaker.input_select = tabletfx::RotaryInputSelect::stereo;
+            else if (value == "left") options.rotary_speaker.input_select = tabletfx::RotaryInputSelect::left;
+            else if (value == "right") options.rotary_speaker.input_select = tabletfx::RotaryInputSelect::right;
+            else if (value == "sum") options.rotary_speaker.input_select = tabletfx::RotaryInputSelect::sum;
+            else throw std::invalid_argument("Rotary input select must be stereo, left, right, or sum");
+            options.rotary_speaker_enabled = true;
             continue;
         }
         if (key == "--auto-swell-taper") {
@@ -1095,6 +1137,82 @@ Options parse_options(int argc, char** argv, int first) {
             options.auto_swell.volume = value;
             options.auto_swell_enabled = true;
         }
+        else if (key == "--rotary-rate-hz") {
+            options.rotary_speaker.rate_hz = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-tempo-bpm") {
+            options.rotary_speaker.tempo_bpm = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-beats-per-rotation") {
+            options.rotary_speaker.beats_per_rotation = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-slow-speed-multiplier") {
+            options.rotary_speaker.slow_speed_multiplier = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-drive") {
+            options.rotary_speaker.drive = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-hi-depth") {
+            options.rotary_speaker.hi_depth = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-high-level") {
+            options.rotary_speaker.high_level = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-low-depth") {
+            options.rotary_speaker.low_depth = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-rotor-length") {
+            options.rotary_speaker.rotor_length = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-low-rate-multi") {
+            options.rotary_speaker.low_rate_multi = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-low-time-constant-ms") {
+            options.rotary_speaker.low_time_constant_ms = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-hi-time-constant-ms") {
+            options.rotary_speaker.hi_time_constant_ms = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-low-mic-spacing") {
+            options.rotary_speaker.low_mic_spacing = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-high-mic-spacing") {
+            options.rotary_speaker.high_mic_spacing = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-mic-distance") {
+            options.rotary_speaker.mic_distance = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-stereo-spread") {
+            options.rotary_speaker.stereo_spread = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-mix") {
+            options.rotary_speaker.mix = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-level") {
+            options.rotary_speaker.level = value;
+            options.rotary_speaker_enabled = true;
+        }
+        else if (key == "--rotary-balance") {
+            options.rotary_speaker.balance = value;
+            options.rotary_speaker_enabled = true;
+        }
         else if (set_graphic_eq_band_gain(key, "--guitar-eq-band",
                                           options.guitar_graphic_eq_gains,
                                           options.guitar_graphic_eq_enabled, value)) {}
@@ -1301,6 +1419,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.auto_swell_enabled) {
         effects.push_back(std::make_unique<tabletfx::AutoSwell>(
             static_cast<float>(sample_rate), options.auto_swell));
+    }
+    if (options.rotary_speaker_enabled) {
+        effects.push_back(std::make_unique<tabletfx::RotarySpeaker>(
+            static_cast<float>(sample_rate), channels, options.rotary_speaker));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -1762,6 +1884,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels));
     effects.push_back(std::make_unique<tabletfx::AutoSwell>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::RotarySpeaker>(
+        static_cast<float>(sample_rate), channels));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -1898,6 +2022,12 @@ void run_bench() {
     benchmark_one("auto-swell", [=] {
         return std::make_unique<tabletfx::AutoSwell>(
             static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("rotary-speaker", [=] {
+        tabletfx::RotarySpeakerParameters parameters;
+        parameters.drive = 0.15F;
+        return std::make_unique<tabletfx::RotarySpeaker>(
+            static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
@@ -2196,6 +2326,18 @@ void print_usage() {
                   " [--auto-swell-hysteresis-db 0..36]"
                   " [--auto-swell-taper linear|log30a|log20a|log15a|log10a|log5a|s-taper]"
                   " [--auto-swell-volume 0..2]\n"
+                << "                 [--rotary-speaker] [--rotary-rate-hz 0.1..10]"
+                   " [--rotary-tempo-sync on|off] [--rotary-tempo-bpm 20..300]"
+                   " [--rotary-beats-per-rotation 0.125..8] [--rotary-speed slow|fast]"
+                   " [--rotary-slow-speed-multiplier 0..1] [--rotary-drive 0..1]"
+                   " [--rotary-hi-depth 0..1] [--rotary-high-level 0..2]"
+                   " [--rotary-low-depth 0..1] [--rotary-rotor-length 0..1]"
+                   " [--rotary-low-rate-multi 0..1] [--rotary-low-time-constant-ms ms]"
+                    " [--rotary-hi-time-constant-ms ms]"
+                    " [--rotary-low-mic-spacing 0..1] [--rotary-high-mic-spacing 0..1]"
+                   " [--rotary-mic-distance 0..1] [--rotary-stereo-spread -2..2]"
+                   " [--rotary-mix 0..1] [--rotary-level 0..2] [--rotary-balance -1..1]"
+                   " [--rotary-input-select stereo|left|right|sum]\n"
                << "  tabletfx_offline --bench\n";
 }
 

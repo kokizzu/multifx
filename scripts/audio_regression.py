@@ -155,6 +155,18 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--auto-swell-attack-ms", "250", "--auto-swell-release-ms", "250",
         "--auto-swell-hysteresis-db", "6", "--auto-swell-taper", "s-taper",
         "--auto-swell-volume", "1",
+        "--rotary-speaker", "--rotary-rate-hz", "6",
+        "--rotary-tempo-sync", "off", "--rotary-tempo-bpm", "120",
+        "--rotary-beats-per-rotation", "1", "--rotary-speed", "slow",
+        "--rotary-slow-speed-multiplier", "0.12", "--rotary-drive", "0.15",
+        "--rotary-hi-depth", "0.75", "--rotary-high-level", "1",
+        "--rotary-low-depth", "0.55", "--rotary-rotor-length", "0.5",
+        "--rotary-low-rate-multi", "0.72", "--rotary-low-time-constant-ms", "800",
+        "--rotary-hi-time-constant-ms", "450",
+        "--rotary-low-mic-spacing", "0.4", "--rotary-high-mic-spacing", "0.75",
+        "--rotary-mic-distance", "0.25", "--rotary-stereo-spread", "1",
+        "--rotary-mix", "1", "--rotary-level", "1", "--rotary-balance", "0",
+        "--rotary-input-select", "stereo",
     ]
     if delay_character == "tape":
         command.extend([
@@ -177,7 +189,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 35:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 36:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -244,7 +256,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 35-effect chain, including Room, Hall, Plate, Spring Reverb, and Auto Swell, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 36-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, and Rotary Speaker, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

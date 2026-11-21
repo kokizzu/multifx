@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">35 of 35</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">36 of 36</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -115,8 +115,9 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="30"><span class="effect-number">31</span><span class="effect-name">Plate reverb</span><span class="effect-default">1.8 s · 82% diffusion · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="31"><span class="effect-number">32</span><span class="effect-name">Spring reverb</span><span class="effect-default">2.4 s · 35% dwell · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="32"><span class="effect-number">33</span><span class="effect-name">Auto Swell</span><span class="effect-default">250 ms attack · S-taper</span><span class="effect-category-tag">Dynamics</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="33" checked><span class="effect-number">34</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="34" checked><span class="effect-number">35</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="33"><span class="effect-number">34</span><span class="effect-name">Rotary Speaker</span><span class="effect-default">6 Hz · slow · 100% mix</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="34" checked><span class="effect-number">35</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="35" checked><span class="effect-number">36</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -162,6 +163,34 @@
           <label class="mix-control" for="auto-swell-volume"><span>Volume</span><output id="auto-swell-volume-value" for="auto-swell-volume">100%</output><input id="auto-swell-volume" type="range" min="0" max="200" step="1" value="100"></label>
         </div>
         <p class="hint">Control names follow Fractal's documented Auto Swell controls. This project's detector, taper curves, numeric ranges, and DSP are project-authored; the guide does not publish exact taper curves or numeric control limits.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Rotary speaker controls">
+        <h3>Rotary speaker · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="rotary-rate-hz"><span>Free rate</span><output id="rotary-rate-hz-value" for="rotary-rate-hz">6.00 Hz</output><input id="rotary-rate-hz" type="range" min="0.1" max="10" step="0.01" value="6"></label>
+          <label class="mix-control" for="rotary-tempo-sync"><span>Tempo mode</span><select id="rotary-tempo-sync"><option value="off" selected>Free rate</option><option value="on">Tempo sync</option></select></label>
+          <label class="mix-control" for="rotary-tempo-bpm"><span>Tempo</span><output id="rotary-tempo-bpm-value" for="rotary-tempo-bpm">120 BPM</output><input id="rotary-tempo-bpm" type="range" min="20" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="rotary-beats-per-rotation"><span>Beats per rotation</span><output id="rotary-beats-per-rotation-value" for="rotary-beats-per-rotation">1.000 beats</output><input id="rotary-beats-per-rotation" type="range" min="0.125" max="8" step="0.125" value="1"></label>
+          <label class="mix-control" for="rotary-speed"><span>Rotor speed</span><select id="rotary-speed"><option value="slow" selected>Slow</option><option value="fast">Fast</option></select></label>
+          <label class="mix-control" for="rotary-slow-speed-multiplier"><span>Slow speed multiplier</span><output id="rotary-slow-speed-multiplier-value" for="rotary-slow-speed-multiplier">0.120×</output><input id="rotary-slow-speed-multiplier" type="range" min="0.02" max="0.5" step="0.005" value="0.12"></label>
+          <label class="mix-control" for="rotary-drive"><span>Drive</span><output id="rotary-drive-value" for="rotary-drive">0%</output><input id="rotary-drive" type="range" min="0" max="1" step="0.01" value="0"></label>
+          <label class="mix-control" for="rotary-high-depth"><span>High rotor depth</span><output id="rotary-high-depth-value" for="rotary-high-depth">75%</output><input id="rotary-high-depth" type="range" min="0" max="1" step="0.01" value="0.75"></label>
+          <label class="mix-control" for="rotary-high-level"><span>High rotor level</span><output id="rotary-high-level-value" for="rotary-high-level">100%</output><input id="rotary-high-level" type="range" min="0" max="2" step="0.01" value="1"></label>
+          <label class="mix-control" for="rotary-low-depth"><span>Low rotor depth</span><output id="rotary-low-depth-value" for="rotary-low-depth">55%</output><input id="rotary-low-depth" type="range" min="0" max="1" step="0.01" value="0.55"></label>
+          <label class="mix-control" for="rotary-rotor-length"><span>Rotor length</span><output id="rotary-rotor-length-value" for="rotary-rotor-length">50%</output><input id="rotary-rotor-length" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+          <label class="mix-control" for="rotary-low-rate-multiplier"><span>Low rotor rate multiplier</span><output id="rotary-low-rate-multiplier-value" for="rotary-low-rate-multiplier">0.72×</output><input id="rotary-low-rate-multiplier" type="range" min="0" max="1" step="0.01" value="0.72"></label>
+          <label class="mix-control" for="rotary-low-time-constant-ms"><span>Low rotor time constant</span><output id="rotary-low-time-constant-ms-value" for="rotary-low-time-constant-ms">800 ms</output><input id="rotary-low-time-constant-ms" type="range" min="10" max="5000" step="10" value="800"></label>
+          <label class="mix-control" for="rotary-high-time-constant-ms"><span>High rotor time constant</span><output id="rotary-high-time-constant-ms-value" for="rotary-high-time-constant-ms">450 ms</output><input id="rotary-high-time-constant-ms" type="range" min="10" max="5000" step="10" value="450"></label>
+          <label class="mix-control" for="rotary-low-mic-spacing"><span>LF mic spacing</span><output id="rotary-low-mic-spacing-value" for="rotary-low-mic-spacing">0%</output><input id="rotary-low-mic-spacing" type="range" min="0" max="1" step="0.01" value="0"></label>
+          <label class="mix-control" for="rotary-high-mic-spacing"><span>HF mic spacing</span><output id="rotary-high-mic-spacing-value" for="rotary-high-mic-spacing">0%</output><input id="rotary-high-mic-spacing" type="range" min="0" max="1" step="0.01" value="0"></label>
+          <label class="mix-control" for="rotary-mic-distance"><span>Mic distance</span><output id="rotary-mic-distance-value" for="rotary-mic-distance">25%</output><input id="rotary-mic-distance" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="rotary-stereo-spread"><span>Stereo spread</span><output id="rotary-stereo-spread-value" for="rotary-stereo-spread">1.00×</output><input id="rotary-stereo-spread" type="range" min="-200" max="200" step="1" value="100"></label>
+          <label class="mix-control" for="rotary-mix"><span>Mix</span><output id="rotary-mix-value" for="rotary-mix">100%</output><input id="rotary-mix" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="rotary-level"><span>Level</span><output id="rotary-level-value" for="rotary-level">100%</output><input id="rotary-level" type="range" min="0" max="200" step="1" value="100"></label>
+          <label class="mix-control" for="rotary-balance"><span>Balance</span><output id="rotary-balance-value" for="rotary-balance">0%</output><input id="rotary-balance" type="range" min="-100" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="rotary-input-select"><span>Input select</span><select id="rotary-input-select"><option value="0" selected>Stereo</option><option value="1">Left</option><option value="2">Right</option><option value="3">Sum</option></select></label>
+        </div>
+        <p class="hint">Controls expose this project's rotary-speaker model. Tempo mode selects the BPM/beat rate or free-rate control. Stereo spread is a signed scale; bypass uses the effect row checkbox.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

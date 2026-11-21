@@ -7,7 +7,8 @@ PYTHON ?= python3
 	publish-picker-plan publish-picker publish-room-reverb-plan publish-room-reverb \
 	publish-hall-reverb-plan publish-hall-reverb publish-plate-reverb-plan publish-plate-reverb \
 	publish-spring-reverb-plan publish-spring-reverb \
-	publish-auto-swell-plan publish-auto-swell
+	publish-auto-swell-plan publish-auto-swell \
+	publish-rotary-speaker-plan publish-rotary-speaker
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -123,3 +124,9 @@ publish-auto-swell-plan:
 
 publish-auto-swell:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint auto-swell
+
+publish-rotary-speaker-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint rotary-speaker
+
+publish-rotary-speaker:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint rotary-speaker

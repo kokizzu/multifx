@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-  "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "output-level", "peak-limiter",
+  "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -125,6 +125,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
        module._tf_chain_set_spring_reverb(this.chain, ...springReverb);
        const autoSwell = parameters.autoSwell || [-36, 250, 250, 6, 6, 1];
        module._tf_chain_set_auto_swell(this.chain, ...autoSwell);
+        const rotarySpeaker = parameters.rotarySpeaker || [6, 0, 120, 1, 0, 0.12, 0,
+          0.75, 1, 0.55, 0.5, 0.72, 800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0];
+        module._tf_chain_set_rotary_speaker(this.chain, ...rotarySpeaker);
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
@@ -267,6 +270,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_spring_reverb(this.chain, ...message.value);
     } else if (message.type === "auto-swell" && this.ready) {
       this.module._tf_chain_set_auto_swell(this.chain, ...message.value);
+    } else if (message.type === "rotary-speaker" && this.ready) {
+      this.module._tf_chain_set_rotary_speaker(this.chain, ...message.value);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

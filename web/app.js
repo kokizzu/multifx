@@ -34,6 +34,7 @@ const EFFECT_NAMES = [
   "Plate reverb",
   "Spring reverb",
   "Auto Swell",
+  "Rotary Speaker",
   "Output level",
   "Peak limiter",
 ];
@@ -66,6 +67,8 @@ const DEFAULT_PARAMETERS = {
   plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
   springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
   autoSwell: [-36, 250, 250, 6, 6, 1],
+  rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
+    800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -404,6 +407,47 @@ const autoSwellHysteresisValue = document.querySelector("#auto-swell-hysteresis-
 const autoSwellTaper = document.querySelector("#auto-swell-taper");
 const autoSwellVolume = document.querySelector("#auto-swell-volume");
 const autoSwellVolumeValue = document.querySelector("#auto-swell-volume-value");
+const rotaryRate = document.querySelector("#rotary-rate-hz");
+const rotaryRateValue = document.querySelector("#rotary-rate-hz-value");
+const rotaryTempoSync = document.querySelector("#rotary-tempo-sync");
+const rotaryTempoBpm = document.querySelector("#rotary-tempo-bpm");
+const rotaryTempoBpmValue = document.querySelector("#rotary-tempo-bpm-value");
+const rotaryBeatsPerRotation = document.querySelector("#rotary-beats-per-rotation");
+const rotaryBeatsPerRotationValue = document.querySelector("#rotary-beats-per-rotation-value");
+const rotarySpeed = document.querySelector("#rotary-speed");
+const rotarySlowSpeedMultiplier = document.querySelector("#rotary-slow-speed-multiplier");
+const rotarySlowSpeedMultiplierValue = document.querySelector("#rotary-slow-speed-multiplier-value");
+const rotaryDrive = document.querySelector("#rotary-drive");
+const rotaryDriveValue = document.querySelector("#rotary-drive-value");
+const rotaryHighDepth = document.querySelector("#rotary-high-depth");
+const rotaryHighDepthValue = document.querySelector("#rotary-high-depth-value");
+const rotaryHighLevel = document.querySelector("#rotary-high-level");
+const rotaryHighLevelValue = document.querySelector("#rotary-high-level-value");
+const rotaryLowDepth = document.querySelector("#rotary-low-depth");
+const rotaryLowDepthValue = document.querySelector("#rotary-low-depth-value");
+const rotaryRotorLength = document.querySelector("#rotary-rotor-length");
+const rotaryRotorLengthValue = document.querySelector("#rotary-rotor-length-value");
+const rotaryLowRateMultiplier = document.querySelector("#rotary-low-rate-multiplier");
+const rotaryLowRateMultiplierValue = document.querySelector("#rotary-low-rate-multiplier-value");
+const rotaryLowTimeConstant = document.querySelector("#rotary-low-time-constant-ms");
+const rotaryLowTimeConstantValue = document.querySelector("#rotary-low-time-constant-ms-value");
+const rotaryHighTimeConstant = document.querySelector("#rotary-high-time-constant-ms");
+const rotaryHighTimeConstantValue = document.querySelector("#rotary-high-time-constant-ms-value");
+const rotaryLowMicSpacing = document.querySelector("#rotary-low-mic-spacing");
+const rotaryLowMicSpacingValue = document.querySelector("#rotary-low-mic-spacing-value");
+const rotaryHighMicSpacing = document.querySelector("#rotary-high-mic-spacing");
+const rotaryHighMicSpacingValue = document.querySelector("#rotary-high-mic-spacing-value");
+const rotaryMicDistance = document.querySelector("#rotary-mic-distance");
+const rotaryMicDistanceValue = document.querySelector("#rotary-mic-distance-value");
+const rotaryStereoSpread = document.querySelector("#rotary-stereo-spread");
+const rotaryStereoSpreadValue = document.querySelector("#rotary-stereo-spread-value");
+const rotaryMix = document.querySelector("#rotary-mix");
+const rotaryMixValue = document.querySelector("#rotary-mix-value");
+const rotaryLevel = document.querySelector("#rotary-level");
+const rotaryLevelValue = document.querySelector("#rotary-level-value");
+const rotaryBalance = document.querySelector("#rotary-balance");
+const rotaryBalanceValue = document.querySelector("#rotary-balance-value");
+const rotaryInputSelect = document.querySelector("#rotary-input-select");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1568,6 +1612,56 @@ function updateAutoSwell() {
   }
 }
 
+function updateRotarySpeaker() {
+  const values = [
+    Number(rotaryRate.value),
+    rotaryTempoSync.value === "on" ? 1 : 0,
+    Number(rotaryTempoBpm.value),
+    Number(rotaryBeatsPerRotation.value),
+    rotarySpeed.value === "fast" ? 1 : 0,
+    Number(rotarySlowSpeedMultiplier.value),
+    Number(rotaryDrive.value),
+    Number(rotaryHighDepth.value),
+    Number(rotaryHighLevel.value),
+    Number(rotaryLowDepth.value),
+    Number(rotaryRotorLength.value),
+    Number(rotaryLowRateMultiplier.value),
+    Number(rotaryLowTimeConstant.value),
+    Number(rotaryHighTimeConstant.value),
+    Number(rotaryLowMicSpacing.value),
+    Number(rotaryHighMicSpacing.value),
+    Number(rotaryMicDistance.value),
+    Number(rotaryStereoSpread.value) / 100,
+    Number(rotaryMix.value) / 100,
+    Number(rotaryLevel.value) / 100,
+    Number(rotaryBalance.value) / 100,
+    Number(rotaryInputSelect.value),
+  ];
+  rotaryRateValue.value = `${values[0].toFixed(2)} Hz`;
+  rotaryTempoBpmValue.value = `${values[2].toFixed(0)} BPM`;
+  rotaryBeatsPerRotationValue.value = `${values[3].toFixed(3)} beats`;
+  rotarySlowSpeedMultiplierValue.value = `${values[5].toFixed(3)}×`;
+  rotaryDriveValue.value = `${Math.round(values[6] * 100)}%`;
+  rotaryHighDepthValue.value = `${Math.round(values[7] * 100)}%`;
+  rotaryHighLevelValue.value = `${Math.round(values[8] * 100)}%`;
+  rotaryLowDepthValue.value = `${Math.round(values[9] * 100)}%`;
+  rotaryRotorLengthValue.value = `${Math.round(values[10] * 100)}%`;
+  rotaryLowRateMultiplierValue.value = `${values[11].toFixed(2)}×`;
+  rotaryLowTimeConstantValue.value = `${values[12].toFixed(0)} ms`;
+  rotaryHighTimeConstantValue.value = `${values[13].toFixed(0)} ms`;
+  rotaryLowMicSpacingValue.value = `${Math.round(values[14] * 100)}%`;
+  rotaryHighMicSpacingValue.value = `${Math.round(values[15] * 100)}%`;
+  rotaryMicDistanceValue.value = `${Math.round(values[16] * 100)}%`;
+  rotaryStereoSpreadValue.value = `${values[17].toFixed(2)}×`;
+  rotaryMixValue.value = `${Math.round(values[18] * 100)}%`;
+  rotaryLevelValue.value = `${Math.round(values[19] * 100)}%`;
+  rotaryBalanceValue.value = `${Math.round(values[20] * 100)}%`;
+  DEFAULT_PARAMETERS.rotarySpeaker = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "rotary-speaker", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1613,6 +1707,18 @@ for (const input of [autoSwellThreshold, autoSwellAttack, autoSwellRelease,
   input.addEventListener("input", updateAutoSwell);
   input.addEventListener("change", updateAutoSwell);
 }
+for (const input of [rotaryRate, rotaryTempoBpm, rotaryBeatsPerRotation,
+  rotarySlowSpeedMultiplier, rotaryDrive, rotaryHighDepth, rotaryHighLevel,
+  rotaryLowDepth, rotaryRotorLength, rotaryLowRateMultiplier,
+  rotaryLowTimeConstant, rotaryHighTimeConstant, rotaryLowMicSpacing,
+  rotaryHighMicSpacing, rotaryMicDistance,
+  rotaryStereoSpread, rotaryMix, rotaryLevel, rotaryBalance]) {
+  input.addEventListener("input", updateRotarySpeaker);
+  input.addEventListener("change", updateRotarySpeaker);
+}
+for (const input of [rotaryTempoSync, rotarySpeed, rotaryInputSelect]) {
+  input.addEventListener("change", updateRotarySpeaker);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1623,6 +1729,7 @@ updateHallReverb();
 updatePlateReverb();
 updateSpringReverb();
 updateAutoSwell();
+updateRotarySpeaker();
 
 function updateDelayDual() {
   const values = [
@@ -1773,21 +1880,21 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 35 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 35 || effectRows.length !== 35 ||
+    const expectedEffectIds = Array.from({ length: 36 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 36 || effectRows.length !== 36 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
-        initialEffectState[32] ||
+        initialEffectState[32] || initialEffectState[33] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 35 ordered effects (IDs 0–34) with the reverbs and Auto Swell disabled by default.");
+      throw new Error("The effect picker must list 36 ordered effects (IDs 0–35) with the reverbs, Auto Swell, and Rotary Speaker disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 35" ||
+    if (modulationIds.join(",") !== "15,16,17,18,19,33" ||
+        effectCount.value !== "6 of 36" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1795,8 +1902,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,34" ||
-        effectCount.value !== "7 of 35" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,35" ||
+        effectCount.value !== "7 of 36" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -1804,7 +1911,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 35" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 36" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -1814,12 +1921,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 35") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 36") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "35 of 35" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "36 of 36" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1889,6 +1996,8 @@ async function runBrowserSelfTest() {
         plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
         springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
         autoSwell: [-90, 100, 150, 6, 0, 0.9],
+         rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0.15, 0.75, 1, 0.55, 0.5,
+           0.72, 800, 450, 0.4, 0.75, 0.25, 1, 1, 1, 0, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
