@@ -117,6 +117,31 @@ def check_pitch_shifter(executable: Path) -> None:
             )
 
 
+def check_chorus(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [32767] + [0] * 79
+    with tempfile.TemporaryDirectory(prefix="tabletfx-chorus-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "chorus.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--chorus-rate-hz", "0.8", "--chorus-delay-ms", "8",
+             "--chorus-depth-ms", "0", "--chorus-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Chorus options did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<80f", data[44:44 + 80 * 4])
+        expected = 32767 / 32768.0
+        if abs(samples[0]) > 1.0e-7 or abs(samples[64] - expected) > 1.0e-6:
+            raise AssertionError(
+                f"Chorus impulse should be delayed 64 frames at 8 kHz; got frame 0={samples[0]}, frame 64={samples[64]}"
+            )
+
+
 def check_compressor(executable: Path) -> None:
     sample_rate = 48000
     input_samples = [16384] * sample_rate
@@ -360,6 +385,7 @@ def main() -> None:
     args = parser.parse_args()
     check_render(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
+    check_chorus(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
@@ -367,7 +393,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ const EFFECT_NAMES = [
   "Clean boost",
   "Soft drive",
   "Tremolo",
+  "Chorus",
   "Three-band parametric EQ",
   "Stereo delay",
   "Polyphonic pitch shifter",
@@ -29,6 +30,7 @@ const DEFAULT_PARAMETERS = {
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1],
+  chorus: [0.8, 15, 7, 0.3],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -149,6 +151,14 @@ const tremoloSync = document.querySelector("#tremolo-sync");
 const tremoloBpm = document.querySelector("#tremolo-tempo-bpm");
 const tremoloBpmValue = document.querySelector("#tremolo-tempo-value");
 const tremoloDivision = document.querySelector("#tremolo-beats-per-cycle");
+const chorusRate = document.querySelector("#chorus-rate-hz");
+const chorusRateValue = document.querySelector("#chorus-rate-value");
+const chorusDelay = document.querySelector("#chorus-delay-ms");
+const chorusDelayValue = document.querySelector("#chorus-delay-value");
+const chorusDepth = document.querySelector("#chorus-depth-ms");
+const chorusDepthValue = document.querySelector("#chorus-depth-value");
+const chorusMix = document.querySelector("#chorus-mix");
+const chorusMixValue = document.querySelector("#chorus-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -816,6 +826,30 @@ for (const control of [tremoloRate, tremoloDepth, tremoloWaveform,
   control.addEventListener("change", updateTremolo);
 }
 
+function updateChorus() {
+  const delayMs = Number(chorusDelay.value);
+  const maximumDepthMs = Math.max(0, Math.min(14, delayMs - 1, 30 - delayMs));
+  chorusDepth.max = String(maximumDepthMs);
+  chorusDepth.value = String(Math.min(Number(chorusDepth.value), maximumDepthMs));
+  const values = [
+    Number(chorusRate.value),
+    delayMs,
+    Number(chorusDepth.value),
+    Number(chorusMix.value),
+  ];
+  DEFAULT_PARAMETERS.chorus = values;
+  chorusRateValue.value = `${Number(chorusRate.value).toFixed(2)} Hz`;
+  chorusDelayValue.value = `${Number(chorusDelay.value).toFixed(1)} ms`;
+  chorusDepthValue.value = `${Number(chorusDepth.value).toFixed(1)} ms`;
+  chorusMixValue.value = `${Math.round(Number(chorusMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "chorus", value: values });
+}
+
+for (const control of [chorusRate, chorusDelay, chorusDepth, chorusMix]) {
+  control.addEventListener("input", updateChorus);
+  control.addEventListener("change", updateChorus);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -941,7 +975,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: Array.from({ length: 17 }, () => true),
+      enabled: Array.from({ length: 18 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -955,6 +989,7 @@ async function runBrowserSelfTest() {
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1],
+        chorus: [0.8, 15, 7, 0.2],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -1002,12 +1037,17 @@ async function runBrowserSelfTest() {
     pitchSemitonesValue.value = "+5.0 semitones";
     tremoloBpm.value = "120";
     tremoloDivision.value = "1";
+    chorusRate.value = "0.8";
+    chorusDelay.value = "15";
+    chorusDepth.value = "7";
+    chorusMix.value = "0.2";
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();
     updateWah();
     updateEnvelopeWah();
     updateTremolo();
+    updateChorus();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

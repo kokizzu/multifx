@@ -2,6 +2,7 @@
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
+#include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/filters.hpp"
@@ -55,7 +56,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(15);
+        effects_.reserve(16);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -89,6 +90,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::SoftDrive>(3.0F), false});
         effects_.push_back({std::make_unique<tabletfx::Tremolo>(
                                 static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::Chorus>(
+                                static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ThreeBandParametricEQ>(
                                 static_cast<float>(sample_rate), channels),
@@ -300,17 +304,17 @@ public:
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[12].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[13].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[13].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[14].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
     void configure_pitch(float semitones) noexcept {
-        static_cast<tabletfx::PolyPitchShifter*>(effects_[14].effect.get())
+            static_cast<tabletfx::PolyPitchShifter*>(effects_[15].effect.get())
             ->set_pitch_semitones(semitones);
     }
 
@@ -415,6 +419,17 @@ public:
         }
         tremolo->set_tempo_sync(tempo_sync != 0, tempo_bpm, beats_per_cycle);
         tremolo->set_depth(depth);
+    }
+
+    void configure_chorus(float rate_hz, float base_delay_ms, float depth_ms,
+                          float mix) noexcept {
+        tabletfx::ChorusParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.base_delay_ms = base_delay_ms;
+        parameters.depth_ms = depth_ms;
+        parameters.mix = mix;
+        static_cast<tabletfx::Chorus*>(effects_[12].effect.get())
+            ->set_parameters(parameters);
     }
 
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
@@ -822,6 +837,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tremolo(
         as_chain(opaque)->configure_tremolo(rate_hz, depth, waveform,
                                             tempo_sync, tempo_bpm,
                                             beats_per_cycle);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_chorus(
+    void* opaque, float rate_hz, float base_delay_ms,
+    float depth_ms, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_chorus(rate_hz, base_delay_ms, depth_ms, mix);
     }
 }
 

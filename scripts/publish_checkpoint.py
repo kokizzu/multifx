@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency polyphonic pitch shifter"
+COMMIT_MESSAGE = "feat: add low-latency mono/stereo chorus"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -44,9 +44,11 @@ CHECKPOINT_PATHS = (
     "tests/test_wah.cpp",
     "tests/test_noise_gate.cpp",
     "tests/test_clean_boost.cpp",
+    "tests/test_chorus.cpp",
     "tests/test_envelope_wah.cpp",
     "include/tabletfx/effects/filters.hpp",
     "include/tabletfx/effects/clean_boost.hpp",
+    "include/tabletfx/effects/chorus.hpp",
     "include/tabletfx/effects/envelope_wah.hpp",
     "include/tabletfx/effects/pedal_compressor.hpp",
     "include/tabletfx/audio/wasapi_backend.hpp",
@@ -76,6 +78,7 @@ CHECKPOINT_PATHS = (
     "src/parallel_mixer.cpp",
     "src/effects/filters.cpp",
     "src/effects/clean_boost.cpp",
+    "src/effects/chorus.cpp",
     "src/effects/envelope_wah.cpp",
     "src/effects/pedal_compressor.cpp",
     "src/effects/peak_limiter.cpp",

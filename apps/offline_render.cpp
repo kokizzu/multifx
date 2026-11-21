@@ -3,6 +3,7 @@
 #include "tabletfx/parallel_mixer.hpp"
 #include "tabletfx/tuner.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
+#include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/filters.hpp"
@@ -55,6 +56,8 @@ struct Options {
     float clean_boost_db = 0.0F;
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
+    bool chorus_enabled = false;
+    tabletfx::ChorusParameters chorus{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     bool noise_gate_enabled = false;
@@ -254,6 +257,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.tremolo.beats_per_cycle = value;
             options.tremolo_enabled = true;
         }
+        else if (key == "--chorus-rate-hz") {
+            options.chorus.rate_hz = value;
+            options.chorus_enabled = true;
+        }
+        else if (key == "--chorus-delay-ms") {
+            options.chorus.base_delay_ms = value;
+            options.chorus_enabled = true;
+        }
+        else if (key == "--chorus-depth-ms") {
+            options.chorus.depth_ms = value;
+            options.chorus_enabled = true;
+        }
+        else if (key == "--chorus-mix") {
+            options.chorus.mix = value;
+            options.chorus_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -423,6 +442,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.tremolo_enabled) {
         effects.push_back(std::make_unique<tabletfx::Tremolo>(
             static_cast<float>(sample_rate), options.tremolo));
+    }
+    if (options.chorus_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Chorus>(
+            static_cast<float>(sample_rate), channels, options.chorus));
     }
     if (options.eq_enabled) {
         auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -808,6 +831,13 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     tremolo_parameters.rate_hz = 4.0F;
     tremolo_parameters.depth = 0.2F;
     effects.push_back(std::make_unique<tabletfx::Tremolo>(sample_rate, tremolo_parameters));
+    tabletfx::ChorusParameters chorus_parameters;
+    chorus_parameters.rate_hz = 0.8F;
+    chorus_parameters.base_delay_ms = 15.0F;
+    chorus_parameters.depth_ms = 7.0F;
+    chorus_parameters.mix = 0.2F;
+    effects.push_back(std::make_unique<tabletfx::Chorus>(
+        static_cast<float>(sample_rate), channels, chorus_parameters));
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
@@ -979,6 +1009,15 @@ void run_bench() {
         parameters.depth = 0.5F;
         return std::make_unique<tabletfx::Tremolo>(static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("chorus", [=] {
+        tabletfx::ChorusParameters parameters;
+        parameters.rate_hz = 0.8F;
+        parameters.base_delay_ms = 15.0F;
+        parameters.depth_ms = 7.0F;
+        parameters.mix = 0.3F;
+        return std::make_unique<tabletfx::Chorus>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
@@ -996,6 +1035,8 @@ void print_usage() {
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
+                  " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
+                  " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

@@ -11,6 +11,7 @@ add_library(tabletfx_core
     src/parallel_mixer.cpp
     src/tuner.cpp
     src/effects/clean_boost.cpp
+    src/effects/chorus.cpp
     src/effects/envelope_wah.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
@@ -66,6 +67,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_clean_boost_tests tests/test_clean_boost.cpp)
     target_link_libraries(tabletfx_clean_boost_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_clean_boost_tests COMMAND tabletfx_clean_boost_tests)
+
+    add_executable(tabletfx_chorus_tests tests/test_chorus.cpp)
+    target_link_libraries(tabletfx_chorus_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_chorus_tests COMMAND tabletfx_chorus_tests)
 
     add_executable(tabletfx_envelope_wah_tests tests/test_envelope_wah.cpp)
     target_link_libraries(tabletfx_envelope_wah_tests PRIVATE tabletfx_core)
