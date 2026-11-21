@@ -90,6 +90,7 @@ struct Options {
     bool delay_tempo_enabled = false;
     float delay_tempo_bpm = 120.0F;
     tabletfx::DelayDivision delay_division = tabletfx::DelayDivision::quarter;
+    bool delay_ping_pong = false;
     bool pitch_enabled = false;
     float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
@@ -164,6 +165,10 @@ Options parse_options(int argc, char** argv, int first) {
             } else {
                 throw std::invalid_argument("Delay preset must be digital or slapback");
             }
+            continue;
+        }
+        if (key == "--delay-ping-pong") {
+            options.delay_ping_pong = true;
             continue;
         }
         if (key == "--delay-division") {
@@ -695,6 +700,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
                                    options.delay_feedback, options.delay_mix);
         }
+        if (options.delay_ping_pong) {
+            delay->configure_ping_pong(true);
+            delay->reset();
+        }
         effects.push_back(std::move(delay));
     }
     if (options.pitch_enabled) {
@@ -1211,6 +1220,12 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-ping-pong", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
+        delay->configure_ping_pong(true);
+        delay->reset();
+        return delay;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("poly-pitch-shifter", [=] {
         auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
             static_cast<float>(sample_rate), channels);
@@ -1355,7 +1370,8 @@ void print_usage() {
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
                    " [--drive 1..20] [--delay-preset digital|slapback] [--delay-ms ms] [--delay-sync-bpm 20..300]"
-                  " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
+                   " [--delay-ping-pong]"
+                   " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
                   " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
                  " [--pitch-semitones -12..12]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"

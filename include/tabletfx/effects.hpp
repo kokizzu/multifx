@@ -116,10 +116,14 @@ public:
     }
     [[nodiscard]] float feedback() const noexcept { return target_feedback_; }
     [[nodiscard]] float mix() const noexcept { return target_mix_; }
+    [[nodiscard]] bool ping_pong_enabled() const noexcept { return target_ping_pong_; }
     [[nodiscard]] float tempo_bpm() const noexcept { return tempo_bpm_; }
     [[nodiscard]] DelayDivision division() const noexcept { return division_; }
     [[nodiscard]] DelayTimeMode time_mode() const noexcept { return time_mode_; }
     void configure(float delay_ms, float feedback, float mix) noexcept;
+    // Stereo wet routing crossfades over 10 ms. A mono instance keeps normal
+    // same-channel delay behavior regardless of this setting.
+    void configure_ping_pong(bool enabled) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
@@ -156,6 +160,10 @@ private:
     std::size_t write_frame_ = 0;
     std::size_t capacity_frames_;
     std::vector<float> storage_;
+    bool target_ping_pong_ = false;
+    float ping_pong_mix_ = 0.0F;
+    float ping_pong_step_ = 0.0F;
+    std::size_t ping_pong_ramp_remaining_ = 0;
 };
 
 } // namespace tabletfx

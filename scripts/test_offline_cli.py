@@ -216,6 +216,36 @@ def check_delay_time_modes(executable: Path) -> None:
             )
 
 
+def check_ping_pong_delay(executable: Path) -> None:
+    sample_rate = 8000
+    frames = 80
+    source_samples = [32767, 0] + [0] * (frames * 2 - 2)
+    with tempfile.TemporaryDirectory(prefix="tabletfx-ping-pong-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "stereo-impulse.wav"
+        output = root / "stereo-ping-pong.wav"
+        write_pcm16_channels(source, sample_rate, 2, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--delay-ms", "4",
+             "--delay-ping-pong", "--delay-feedback", "0.5", "--delay-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"ping-pong CLI did not instantiate one delay: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<" + "f" * (frames * 2), data[44:44 + frames * 8])
+        peak = 32767 / 32768.0
+        expected = ((0, 0.0), (32 * 2 + 1, peak), (64 * 2, peak * 0.5))
+        for index, value in expected:
+            if abs(samples[index] - value) > 1.0e-6:
+                raise AssertionError(
+                    f"ping-pong echo mismatch at interleaved sample {index}: "
+                    f"got {samples[index]}, expected {value}"
+                )
+        if abs(samples[32 * 2]) > 1.0e-7 or abs(samples[64 * 2 + 1]) > 1.0e-7:
+            raise AssertionError("ping-pong echoes did not alternate between stereo channels")
+
+
 def check_phaser(executable: Path) -> None:
     sample_rate = 48000
     source_samples = [32767] + [0] * 1023
@@ -624,6 +654,7 @@ def main() -> None:
     check_render(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
+    check_ping_pong_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())

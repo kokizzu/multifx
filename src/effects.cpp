@@ -1,6 +1,7 @@
 #include "tabletfx/effects.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -261,6 +262,21 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
     retarget_parameters();
 }
 
+void Delay::configure_ping_pong(bool enabled) noexcept {
+    if (target_ping_pong_ == enabled) return;
+    target_ping_pong_ = enabled;
+    const float target = enabled ? 1.0F : 0.0F;
+    if (parameter_ramp_total_ <= 1) {
+        ping_pong_mix_ = target;
+        ping_pong_step_ = 0.0F;
+        ping_pong_ramp_remaining_ = 0;
+        return;
+    }
+    ping_pong_step_ = (target - ping_pong_mix_) /
+                      static_cast<float>(parameter_ramp_total_);
+    ping_pong_ramp_remaining_ = parameter_ramp_total_;
+}
+
 void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
                             float mix) noexcept {
     tempo_bpm_ = std::isfinite(bpm) ? std::clamp(bpm, 20.0F, 300.0F) : 120.0F;
@@ -399,34 +415,74 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
     }
     const std::size_t frames = interleaved.size() / channels;
     const float maximum = std::numeric_limits<float>::max();
+    const bool use_ping_pong_path = channels_ == 2 &&
+        (ping_pong_mix_ != 0.0F || ping_pong_ramp_remaining_ > 0);
     for (std::size_t frame = 0; frame < frames; ++frame) {
         const float transition_progress = delay_transition_remaining_ == 0
             ? 1.0F
             : static_cast<float>(delay_transition_total_ - delay_transition_remaining_) /
                   static_cast<float>(delay_transition_total_);
-        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
-            const std::size_t input_index = frame * channels_ + channel;
-            const std::size_t write_index = write_frame_ * channels_ + channel;
-            const float input = std::isfinite(interleaved[input_index]) ? interleaved[input_index] : 0.0F;
-            const float new_delay = read_delay(delay_samples_, channel);
-            float delayed = new_delay;
-            if (delay_transition_remaining_ > 0) {
-                const float old_delay = read_fractional_delay(transition_from_delay_samples_, channel);
-                delayed = old_delay + (new_delay - old_delay) * transition_progress;
+        if (!use_ping_pong_path) {
+            for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+                const std::size_t input_index = frame * channels_ + channel;
+                const std::size_t write_index = write_frame_ * channels_ + channel;
+                const float input = std::isfinite(interleaved[input_index])
+                                        ? interleaved[input_index]
+                                        : 0.0F;
+                const float new_delay = read_delay(delay_samples_, channel);
+                float delayed = new_delay;
+                if (delay_transition_remaining_ > 0) {
+                    const float old_delay = read_fractional_delay(
+                        transition_from_delay_samples_, channel);
+                    delayed = old_delay + (new_delay - old_delay) * transition_progress;
+                }
+
+                const double output_value = static_cast<double>(input) *
+                                                (1.0 - static_cast<double>(mix_)) +
+                                            static_cast<double>(delayed) * mix_;
+                interleaved[input_index] = static_cast<float>(std::clamp(
+                    output_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+                const double feedback_value = static_cast<double>(input) +
+                                              static_cast<double>(delayed) * feedback_;
+                storage_[write_index] = static_cast<float>(std::clamp(
+                    feedback_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+            }
+        } else {
+            std::array<float, 2> input_samples{};
+            std::array<float, 2> delayed_samples{};
+            for (std::uint16_t channel = 0; channel < 2; ++channel) {
+                const std::size_t input_index = frame * channels_ + channel;
+                input_samples[channel] = std::isfinite(interleaved[input_index])
+                                             ? interleaved[input_index]
+                                             : 0.0F;
+                const float new_delay = read_delay(delay_samples_, channel);
+                delayed_samples[channel] = new_delay;
+                if (delay_transition_remaining_ > 0) {
+                    const float old_delay = read_fractional_delay(
+                        transition_from_delay_samples_, channel);
+                    delayed_samples[channel] = old_delay +
+                        (new_delay - old_delay) * transition_progress;
+                }
             }
 
-            const double output_value = static_cast<double>(input) * (1.0 - static_cast<double>(mix_)) +
-                                        static_cast<double>(delayed) * static_cast<double>(mix_);
-            const double bounded_output = std::clamp(output_value,
-                                                      -static_cast<double>(maximum),
-                                                      static_cast<double>(maximum));
-            interleaved[input_index] = static_cast<float>(bounded_output);
-            const double feedback_value = static_cast<double>(input) +
-                                          static_cast<double>(delayed) * feedback_;
-            const double bounded_feedback = std::clamp(feedback_value,
-                                                       -static_cast<double>(maximum),
-                                                       static_cast<double>(maximum));
-            storage_[write_index] = static_cast<float>(bounded_feedback);
+            const float ping_pong_mix = ping_pong_mix_;
+            for (std::uint16_t channel = 0; channel < 2; ++channel) {
+                const std::uint16_t opposite_channel = static_cast<std::uint16_t>(1 - channel);
+                const float delayed = delayed_samples[channel] +
+                    (delayed_samples[opposite_channel] - delayed_samples[channel]) * ping_pong_mix;
+                const std::size_t input_index = frame * channels_ + channel;
+                const std::size_t write_index = write_frame_ * channels_ + channel;
+                const float input = input_samples[channel];
+                const double output_value = static_cast<double>(input) *
+                                                (1.0 - static_cast<double>(mix_)) +
+                                            static_cast<double>(delayed) * mix_;
+                interleaved[input_index] = static_cast<float>(std::clamp(
+                    output_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+                const double feedback_value = static_cast<double>(input) +
+                                              static_cast<double>(delayed) * feedback_;
+                storage_[write_index] = static_cast<float>(std::clamp(
+                    feedback_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+            }
         }
         write_frame_ = write_frame_ + 1 == capacity_frames_ ? 0 : write_frame_ + 1;
         advance_ramps();
@@ -434,6 +490,14 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
             --delay_transition_remaining_;
             if (delay_transition_remaining_ == 0) {
                 transition_from_delay_samples_ = static_cast<float>(delay_samples_);
+            }
+        }
+        if (ping_pong_ramp_remaining_ > 0) {
+            ping_pong_mix_ += ping_pong_step_;
+            --ping_pong_ramp_remaining_;
+            if (ping_pong_ramp_remaining_ == 0) {
+                ping_pong_mix_ = target_ping_pong_ ? 1.0F : 0.0F;
+                ping_pong_step_ = 0.0F;
             }
         }
     }
@@ -449,6 +513,9 @@ void Delay::reset() noexcept {
     parameter_ramp_remaining_ = 0;
     transition_from_delay_samples_ = static_cast<float>(delay_samples_);
     delay_transition_remaining_ = 0;
+    ping_pong_mix_ = target_ping_pong_ ? 1.0F : 0.0F;
+    ping_pong_step_ = 0.0F;
+    ping_pong_ramp_remaining_ = 0;
 }
 
 } // namespace tabletfx

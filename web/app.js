@@ -50,6 +50,7 @@ const DEFAULT_PARAMETERS = {
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
   delayTempo: [0, 120, 4],
+  delayPingPong: false,
   pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -235,6 +236,7 @@ const vibratoDepthValue = document.querySelector("#vibrato-depth-value");
 const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
 const delayPreset = document.querySelector("#delay-preset");
+const delayRouting = document.querySelector("#delay-routing");
 const delayMode = document.querySelector("#delay-time-mode");
 const delayMs = document.querySelector("#delay-time-ms");
 const delayMsValue = document.querySelector("#delay-time-ms-value");
@@ -1106,6 +1108,13 @@ function applyDelayPreset() {
 }
 
 delayPreset.addEventListener("change", applyDelayPreset);
+function updateDelayRouting() {
+  const enabled = delayRouting.value === "ping-pong";
+  DEFAULT_PARAMETERS.delayPingPong = enabled;
+  if (workletNode) workletNode.port.postMessage({ type: "delay-routing", value: enabled });
+}
+
+delayRouting.addEventListener("change", updateDelayRouting);
 for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
   control.addEventListener("input", () => updateDelay());
   control.addEventListener("change", () => updateDelay());
@@ -1263,6 +1272,7 @@ async function runBrowserSelfTest() {
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
         delayTempo: [1, 120, 7],
+        delayPingPong: true,
         pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -1345,6 +1355,8 @@ async function runBrowserSelfTest() {
     }
     delayPreset.value = "custom";
     delayMode.value = "tempo";
+    delayRouting.value = "ping-pong";
+    updateDelayRouting();
     delayMs.value = "180";
     delayBpm.value = "120";
     delayDivision.value = "7";

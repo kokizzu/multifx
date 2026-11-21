@@ -152,6 +152,65 @@ void test_stereo_impulses_feedback_and_no_extra_dry_latency() {
             "stereo feedback repeats have the wrong sign or level");
 }
 
+void test_ping_pong_echoes_alternate_channels() {
+    tabletfx::Delay delay(1000.0F, 2, 100.0F, 4.0F, 0.5F, 1.0F);
+    delay.configure_ping_pong(true);
+    require(delay.ping_pong_enabled(), "ping-pong mode did not retain its requested state");
+
+    std::array<float, 20> settle{};
+    delay.process(settle, 2);
+    std::array<float, 28> impulse{};
+    impulse[0] = 1.0F;
+    delay.process(impulse, 2);
+    require(near(impulse[9], 1.0F),
+            "a left impulse's first ping-pong echo must appear on the right");
+    require(near(impulse[16], 0.5F),
+            "the second ping-pong echo must return to the left at the feedback level");
+    require(near(impulse[25], 0.25F),
+            "the third ping-pong echo must alternate back to the right");
+
+    delay.reset();
+    std::array<float, 12> after_reset{};
+    after_reset[1] = 1.0F;
+    delay.process(after_reset, 2);
+    require(near(after_reset[8], 1.0F),
+            "reset must clear old echoes while preserving the selected routing mode");
+}
+
+void test_ping_pong_mode_crossfade_and_mono_fallback() {
+    tabletfx::Delay stereo(1000.0F, 2, 100.0F, 4.0F, 0.0F, 1.0F);
+    std::array<float, 40> steady{};
+    for (std::size_t frame = 0; frame < steady.size() / 2; ++frame) {
+        steady[frame * 2] = 0.25F;
+        steady[frame * 2 + 1] = -0.25F;
+    }
+    stereo.process(steady, 2);
+    stereo.configure_ping_pong(true);
+    std::array<float, 22> transition{};
+    for (std::size_t frame = 0; frame < transition.size() / 2; ++frame) {
+        transition[frame * 2] = 0.25F;
+        transition[frame * 2 + 1] = -0.25F;
+    }
+    stereo.process(transition, 2);
+    for (std::size_t frame = 1; frame < transition.size() / 2; ++frame) {
+        require(std::abs(transition[frame * 2] - transition[(frame - 1) * 2]) < 0.06F &&
+                    std::abs(transition[frame * 2 + 1] - transition[(frame - 1) * 2 + 1]) < 0.06F,
+                "stereo routing change was not crossfaded smoothly over 10 ms");
+    }
+    require(transition[20] < -0.2F && transition[21] > 0.2F,
+            "ping-pong routing crossfade did not reach the opposite-channel taps");
+
+    tabletfx::Delay mono(1000.0F, 1, 100.0F, 2.0F, 0.5F, 1.0F);
+    mono.configure_ping_pong(true);
+    std::array<float, 10> mono_settle{};
+    mono.process(mono_settle, 1);
+    std::array<float, 8> mono_impulse{};
+    mono_impulse[0] = 1.0F;
+    mono.process(mono_impulse, 1);
+    require(near(mono_impulse[2], 1.0F) && near(mono_impulse[4], 0.5F),
+            "mono ping-pong configuration must safely retain same-channel echoes");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -228,10 +287,15 @@ void test_layout_invalid_audio_and_process_allocation() {
 
     std::array<float, 512> audio{};
     audio.fill(0.1F);
+    tabletfx::Delay stereo(48000.0F, 2, 100.0F, 20.0F, 0.5F, 0.5F);
+    stereo.configure_ping_pong(true);
+    std::array<float, 512> stereo_audio{};
+    stereo_audio.fill(0.1F);
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) delay.process(audio, 1);
+    for (int iteration = 0; iteration < 100; ++iteration) stereo.process(stereo_audio, 2);
     const std::size_t after = allocation_count.load(std::memory_order_relaxed);
-    require(after == before, "delay processing allocated memory");
+    require(after == before, "delay processing or ping-pong routing allocated memory");
 }
 
 } // namespace
@@ -242,6 +306,8 @@ int main() {
         test_tempo_bounds_division_fallback_and_delay_cap();
         test_delay_bounds_and_non_finite_controls_are_safe();
         test_stereo_impulses_feedback_and_no_extra_dry_latency();
+        test_ping_pong_echoes_alternate_channels();
+        test_ping_pong_mode_crossfade_and_mono_fallback();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

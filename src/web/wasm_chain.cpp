@@ -394,6 +394,11 @@ public:
             ->configure_tempo(bpm, safe_division, feedback, mix);
     }
 
+    void configure_delay_ping_pong(bool enabled) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_ping_pong(enabled);
+    }
+
     void configure_pitch(float semitones) noexcept {
         static_cast<tabletfx::PolyPitchShifter*>(effects_[22].effect.get())
             ->set_pitch_semitones(semitones);
@@ -1056,6 +1061,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_tempo(void* opaque, float bpm,
                                                    float feedback, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_tempo(bpm, division, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_ping_pong(void* opaque,
+                                                        std::uint32_t enabled) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_ping_pong(enabled != 0U);
     }
 }
 
