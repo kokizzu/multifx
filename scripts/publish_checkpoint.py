@@ -52,6 +52,9 @@ CHECKPOINT_PATHS = (
     "tests/test_chorus.cpp",
     "tests/test_envelope_wah.cpp",
     "include/tabletfx/effects/filters.hpp",
+    "include/tabletfx/effects/hall_reverb.hpp",
+    "include/tabletfx/effects/plate_reverb.hpp",
+    "include/tabletfx/effects/spring_reverb.hpp",
     "include/tabletfx/effects/mid_overdrive.hpp",
     "include/tabletfx/effects/high_gain_distortion.hpp",
     "include/tabletfx/effects/round_fuzz.hpp",
@@ -152,9 +155,15 @@ CHECKPOINT_PATHS = (
     "tests/test_vibrato.cpp",
     "tests/test_overdrive.cpp",
     "src/effects/flanger.cpp",
+    "src/effects/hall_reverb.cpp",
     "src/effects/room_reverb.cpp",
+    "src/effects/plate_reverb.cpp",
+    "src/effects/spring_reverb.cpp",
     "tests/test_flanger.cpp",
+    "tests/test_hall_reverb.cpp",
     "tests/test_room_reverb.cpp",
+    "tests/test_plate_reverb.cpp",
+    "tests/test_spring_reverb.cpp",
 )
 
 FEATURE_MODULE_PATHS = (
@@ -230,6 +239,28 @@ ROOM_REVERB_CHECKPOINT_PATHS = (
     "web/index.html",
     "web/style.css",
 )
+HALL_REVERB_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/hall_reverb.hpp",
+    "src/effects/hall_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_hall_reverb.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -254,6 +285,8 @@ CHECKPOINTS = {
                "feat: add flagship comparison and categorized picker"),
     "room-reverb": (ROOM_REVERB_CHECKPOINT_PATHS,
                     "feat: add project-authored room reverb"),
+    "hall-reverb": (HALL_REVERB_CHECKPOINT_PATHS,
+                    "feat: add project-authored hall reverb"),
 }
 
 

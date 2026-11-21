@@ -134,6 +134,39 @@ def check_room_reverb(executable: Path) -> None:
             raise AssertionError("--room-reverb did not change rendered impulse audio")
 
 
+def check_hall_reverb(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    impulse = [26214] + [0] * (frame_count - 1)
+    with tempfile.TemporaryDirectory(prefix="tabletfx-hall-reverb-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        dry_output = root / "impulse-dry.wav"
+        wet_output = root / "impulse-hall.wav"
+        write_pcm16(source, sample_rate, impulse)
+        subprocess.run(
+            [str(executable), "render", str(source), str(dry_output)],
+            capture_output=True, text=True, check=True,
+        )
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output), "--hall-reverb",
+             "--hall-decay-s", "4", "--hall-pre-delay-ms", "2",
+             "--hall-damping-hz", "2200", "--hall-low-cut-hz", "80",
+             "--hall-mix", "1", "--hall-level-db", "-3"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Hall reverb controls did not enable one processor: {result.stdout}")
+        dry = struct.unpack("<" + "f" * frame_count, dry_output.read_bytes()[44:])
+        wet = struct.unpack("<" + "f" * frame_count, wet_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in wet):
+            raise AssertionError("Hall reverb produced non-finite output")
+        if max(abs(a - b) for a, b in zip(dry, wet, strict=True)) < 1.0e-3:
+            raise AssertionError("Hall reverb parameters did not change the rendered impulse")
+        if not any(abs(value) > 1.0e-5 for value in wet[100:]):
+            raise AssertionError("Hall reverb impulse response did not produce an audible tail")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -946,6 +979,7 @@ def main() -> None:
     args = parser.parse_args()
     check_render(args.executable.resolve())
     check_room_reverb(args.executable.resolve())
+    check_hall_reverb(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -970,7 +1004,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

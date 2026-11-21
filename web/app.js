@@ -30,6 +30,7 @@ const EFFECT_NAMES = [
   "Bass graphic EQ",
   "Shelf / tilt EQ",
   "Room reverb",
+  "Hall reverb",
   "Output level",
   "Peak limiter",
 ];
@@ -58,6 +59,7 @@ const DEFAULT_PARAMETERS = {
   bassGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
   shelfTiltEQ: [0, 1000, 0],
   roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
+  hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -347,6 +349,18 @@ const roomReverbMix = document.querySelector("#room-reverb-mix");
 const roomReverbMixValue = document.querySelector("#room-reverb-mix-value");
 const roomReverbLevel = document.querySelector("#room-reverb-level-db");
 const roomReverbLevelValue = document.querySelector("#room-reverb-level-value");
+const hallReverbDecay = document.querySelector("#hall-reverb-decay-seconds");
+const hallReverbDecayValue = document.querySelector("#hall-reverb-decay-value");
+const hallReverbPreDelay = document.querySelector("#hall-reverb-pre-delay-ms");
+const hallReverbPreDelayValue = document.querySelector("#hall-reverb-pre-delay-value");
+const hallReverbDamping = document.querySelector("#hall-reverb-damping-hz");
+const hallReverbDampingValue = document.querySelector("#hall-reverb-damping-value");
+const hallReverbLowCut = document.querySelector("#hall-reverb-low-cut-hz");
+const hallReverbLowCutValue = document.querySelector("#hall-reverb-low-cut-value");
+const hallReverbMix = document.querySelector("#hall-reverb-mix");
+const hallReverbMixValue = document.querySelector("#hall-reverb-mix-value");
+const hallReverbLevel = document.querySelector("#hall-reverb-level-db");
+const hallReverbLevelValue = document.querySelector("#hall-reverb-level-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1426,6 +1440,27 @@ function updateRoomReverb() {
   }
 }
 
+function updateHallReverb() {
+  const values = [
+    Number(hallReverbDecay.value),
+    Number(hallReverbPreDelay.value),
+    Number(hallReverbDamping.value),
+    Number(hallReverbLowCut.value),
+    Number(hallReverbMix.value) / 100,
+    Number(hallReverbLevel.value),
+  ];
+  hallReverbDecayValue.value = `${values[0].toFixed(2)} s`;
+  hallReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
+  hallReverbDampingValue.value = `${values[2].toFixed(0)} Hz`;
+  hallReverbLowCutValue.value = `${values[3].toFixed(0)} Hz`;
+  hallReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
+  hallReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.hallReverb = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "hall-reverb", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1451,12 +1486,18 @@ for (const input of [roomReverbSize, roomReverbDecay, roomReverbPreDelay,
   input.addEventListener("input", updateRoomReverb);
   input.addEventListener("change", updateRoomReverb);
 }
+for (const input of [hallReverbDecay, hallReverbPreDelay, hallReverbDamping,
+  hallReverbLowCut, hallReverbMix, hallReverbLevel]) {
+  input.addEventListener("input", updateHallReverb);
+  input.addEventListener("change", updateHallReverb);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
 updateBassGraphicEQ();
 updateShelfTiltEQ();
 updateRoomReverb();
+updateHallReverb();
 
 function updateDelayDual() {
   const values = [
@@ -1607,19 +1648,20 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 31 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 31 || effectRows.length !== 31 ||
+    const expectedEffectIds = Array.from({ length: 32 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 32 || effectRows.length !== 32 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
+        initialEffectState[29] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 31 ordered effects (IDs 0–30) with Room Reverb disabled by default.");
+      throw new Error("The effect picker must list 32 ordered effects (IDs 0–31) with Room and Hall Reverb disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 31" ||
+        effectCount.value !== "5 of 32" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1627,9 +1669,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28" || effectCount.value !== "1 of 31" ||
+    if (reverbIds.join(",") !== "28,29" || effectCount.value !== "2 of 32" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Reverb filter must return only Room Reverb without changing enabled state.");
+      throw new Error("The Reverb filter must return Room and Hall Reverb without changing enabled state.");
     }
     effectCategoryFilter.value = "all";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1637,12 +1679,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 31") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 32") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "31 of 31" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "32 of 32" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1708,6 +1750,7 @@ async function runBrowserSelfTest() {
         bassGraphicEQ: [1, -1, 0.5, 2, -2, 0.5, 1, -0.5],
         shelfTiltEQ: [2, 1200, 2],
         roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
+        hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],

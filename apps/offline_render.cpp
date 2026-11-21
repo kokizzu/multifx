@@ -8,6 +8,7 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -156,6 +157,8 @@ struct Options {
     float shelf_tilt_eq_gain_db = 0.0F;
     bool room_reverb_enabled = false;
     tabletfx::RoomReverbParameters room_reverb{};
+    bool hall_reverb_enabled = false;
+    tabletfx::HallReverbParameters hall_reverb{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -272,6 +275,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--room-reverb") {
             options.room_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--hall-reverb") {
+            options.hall_reverb_enabled = true;
             continue;
         }
         if (i + 1 >= argc) {
@@ -955,6 +962,30 @@ Options parse_options(int argc, char** argv, int first) {
             options.room_reverb.level_db = value;
             options.room_reverb_enabled = true;
         }
+        else if (key == "--hall-decay-s") {
+            options.hall_reverb.decay_seconds = value;
+            options.hall_reverb_enabled = true;
+        }
+        else if (key == "--hall-pre-delay-ms") {
+            options.hall_reverb.pre_delay_ms = value;
+            options.hall_reverb_enabled = true;
+        }
+        else if (key == "--hall-damping-hz") {
+            options.hall_reverb.damping_hz = value;
+            options.hall_reverb_enabled = true;
+        }
+        else if (key == "--hall-low-cut-hz") {
+            options.hall_reverb.low_cut_hz = value;
+            options.hall_reverb_enabled = true;
+        }
+        else if (key == "--hall-mix") {
+            options.hall_reverb.mix = value;
+            options.hall_reverb_enabled = true;
+        }
+        else if (key == "--hall-level-db") {
+            options.hall_reverb.level_db = value;
+            options.hall_reverb_enabled = true;
+        }
         else if (set_graphic_eq_band_gain(key, "--guitar-eq-band",
                                           options.guitar_graphic_eq_gains,
                                           options.guitar_graphic_eq_enabled, value)) {}
@@ -1145,6 +1176,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.room_reverb_enabled) {
         effects.push_back(std::make_unique<tabletfx::RoomReverb>(
             static_cast<float>(sample_rate), channels, options.room_reverb));
+    }
+    if (options.hall_reverb_enabled) {
+        effects.push_back(std::make_unique<tabletfx::HallReverb>(
+            static_cast<float>(sample_rate), channels, options.hall_reverb));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -1591,6 +1626,14 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     room_reverb_parameters.mix = 0.3F;
     effects.push_back(std::make_unique<tabletfx::RoomReverb>(
         static_cast<float>(sample_rate), channels, room_reverb_parameters));
+    tabletfx::HallReverbParameters hall_reverb_parameters;
+    hall_reverb_parameters.decay_seconds = 3.2F;
+    hall_reverb_parameters.pre_delay_ms = 32.0F;
+    hall_reverb_parameters.damping_hz = 9000.0F;
+    hall_reverb_parameters.low_cut_hz = 100.0F;
+    hall_reverb_parameters.mix = 0.25F;
+    effects.push_back(std::make_unique<tabletfx::HallReverb>(
+        static_cast<float>(sample_rate), channels, hall_reverb_parameters));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -1703,6 +1746,16 @@ void run_bench() {
         parameters.damping_hz = 5000.0F;
         parameters.mix = 0.3F;
         return std::make_unique<tabletfx::RoomReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("hall-reverb", [=] {
+        tabletfx::HallReverbParameters parameters;
+        parameters.decay_seconds = 3.2F;
+        parameters.pre_delay_ms = 32.0F;
+        parameters.damping_hz = 9000.0F;
+        parameters.low_cut_hz = 100.0F;
+        parameters.mix = 0.25F;
+        return std::make_unique<tabletfx::HallReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
@@ -1985,6 +2038,10 @@ void print_usage() {
               << "                 [--room-reverb] [--room-size small|large] [--room-decay-s 0.15..8]"
                  " [--room-pre-delay-ms 0..80] [--room-damping-hz Hz] [--room-mix 0..1]"
                  " [--room-level-db -24..12]\n"
+              << "                 [--hall-reverb] [--hall-decay-s 0.5..12]"
+                 " [--hall-pre-delay-ms 0..120] [--hall-damping-hz Hz]"
+                 " [--hall-low-cut-hz 20..1500] [--hall-mix 0..1]"
+                 " [--hall-level-db -24..12]\n"
               << "  tabletfx_offline --bench\n";
 }
 
