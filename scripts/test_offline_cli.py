@@ -1317,6 +1317,35 @@ def check_channel_conversion(executable: Path) -> None:
             raise AssertionError(f"Mono upmix expected {expected_upmixed}, got {upmixed}")
 
 
+def check_modulated_delay(executable: Path) -> None:
+    sample_rate = 48000
+    delay_frames = 96
+    source_samples = [0] * 384
+    source_samples[0] = 26214
+    with tempfile.TemporaryDirectory(prefix="tabletfx-modulated-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "delayed.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--modulated-delay", "--modulated-delay-time-ms", "2",
+             "--modulated-delay-feedback", "0", "--modulated-delay-mix", "1",
+             "--modulated-delay-rate-hz", "0.8", "--modulated-delay-depth-ms", "0",
+             "--modulated-delay-waveform", "sine",
+             "--modulated-delay-spread-degrees", "0",
+             "--modulated-delay-trigger-threshold-db", "-24"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Modulated Delay CLI controls did not enable one processor")
+        rendered = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if abs(rendered[delay_frames] - (26214 / 32768)) > 0.002:
+            raise AssertionError("zero-depth Modulated Delay must produce the 2 ms wet repeat")
+        if any(abs(rendered[index]) > 0.002 for index in range(delay_frames + 1, len(rendered))):
+            raise AssertionError("zero-feedback Modulated Delay must not produce later repeats")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -1334,6 +1363,7 @@ def main() -> None:
     check_notch_filter(args.executable.resolve())
     check_reverse_delay(args.executable.resolve())
     check_ducking_delay(args.executable.resolve())
+    check_modulated_delay(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1358,7 +1388,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, reverse and ducking delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

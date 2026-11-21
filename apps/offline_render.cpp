@@ -19,6 +19,7 @@
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
+#include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -190,6 +191,8 @@ struct Options {
     bool reverse_delay_running = true;
     bool ducking_delay_enabled = false;
     tabletfx::DuckingDelayParameters ducking_delay{};
+    bool modulated_delay_enabled = false;
+    tabletfx::ModulatedDelayParameters modulated_delay{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -403,6 +406,31 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--ducking-delay") {
             options.ducking_delay_enabled = true;
+            continue;
+        }
+        if (key == "--modulated-delay") {
+            options.modulated_delay_enabled = true;
+            continue;
+        }
+        if (key == "--modulated-delay-waveform") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --modulated-delay-waveform");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "sine") {
+                options.modulated_delay.waveform = tabletfx::ModulatedDelayWaveform::sine;
+            } else if (value == "triangle") {
+                options.modulated_delay.waveform = tabletfx::ModulatedDelayWaveform::triangle;
+            } else if (value == "random") {
+                options.modulated_delay.waveform = tabletfx::ModulatedDelayWaveform::random;
+            } else if (value == "triggered-ramp") {
+                options.modulated_delay.waveform =
+                    tabletfx::ModulatedDelayWaveform::triggered_ramp;
+            } else {
+                throw std::invalid_argument(
+                    "Modulated-delay waveform must be sine, triangle, random, or triggered-ramp");
+            }
+            options.modulated_delay_enabled = true;
             continue;
         }
         if (key == "--reverse-delay-run") {
@@ -1444,6 +1472,34 @@ Options parse_options(int argc, char** argv, int first) {
             options.ducking_delay.release_ms = value;
             options.ducking_delay_enabled = true;
         }
+        else if (key == "--modulated-delay-time-ms") {
+            options.modulated_delay.time_ms = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-feedback") {
+            options.modulated_delay.feedback = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-mix") {
+            options.modulated_delay.mix = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-rate-hz") {
+            options.modulated_delay.rate_hz = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-depth-ms") {
+            options.modulated_delay.depth_ms = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-spread-degrees") {
+            options.modulated_delay.stereo_spread_degrees = value;
+            options.modulated_delay_enabled = true;
+        }
+        else if (key == "--modulated-delay-trigger-threshold-db") {
+            options.modulated_delay.trigger_threshold_db = value;
+            options.modulated_delay_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1758,6 +1814,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::DuckingDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F,
             options.ducking_delay));
+    }
+    if (options.modulated_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::ModulatedDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.modulated_delay));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2248,6 +2309,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::DuckingDelay>(
         static_cast<float>(sample_rate), channels, 2000.0F,
         ducking_delay_parameters));
+    effects.push_back(std::make_unique<tabletfx::ModulatedDelay>(
+        static_cast<float>(sample_rate), channels, 2000.0F));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2359,6 +2422,10 @@ void run_bench() {
         parameters.release_ms = 250.0F;
         return std::make_unique<tabletfx::DuckingDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("modulated-delay", [=] {
+        return std::make_unique<tabletfx::ModulatedDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
         tabletfx::RoomReverbParameters parameters;
@@ -2764,6 +2831,12 @@ void print_usage() {
                     " [--ducking-delay-threshold-db -72..0]"
                     " [--ducking-delay-attenuation-db 0..60]"
                     " [--ducking-delay-release-ms 1..2000]\n"
+                  << "                 [--modulated-delay] [--modulated-delay-time-ms 1..2000]"
+                     " [--modulated-delay-feedback 0..0.95] [--modulated-delay-mix 0..1]"
+                     " [--modulated-delay-rate-hz 0.05..10] [--modulated-delay-depth-ms 0..50]"
+                     " [--modulated-delay-waveform sine|triangle|random|triggered-ramp]"
+                     " [--modulated-delay-spread-degrees 0..180]"
+                     " [--modulated-delay-trigger-threshold-db -72..0]\n"
                << "  tabletfx_offline --bench\n";
 }
 

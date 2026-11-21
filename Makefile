@@ -172,3 +172,9 @@ publish-ducking-delay-plan:
 
 publish-ducking-delay:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint ducking-delay
+
+publish-modulated-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint modulated-delay
+
+publish-modulated-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint modulated-delay

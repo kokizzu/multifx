@@ -41,6 +41,7 @@ const EFFECT_NAMES = [
   "Notch Filter",
   "Reverse Delay",
   "Ducking Delay",
+  "Modulated Delay",
   "Output level",
   "Peak limiter",
 ];
@@ -84,6 +85,7 @@ const DEFAULT_PARAMETERS = {
   notchFilter: [1000, 4, 1],
   reverseDelay: [350, 0.25, 0.35, 10],
   reverseDelayRun: true,
+  modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -576,6 +578,21 @@ const duckingDelayAttenuation = document.querySelector("#ducking-delay-attenuati
 const duckingDelayAttenuationValue = document.querySelector("#ducking-delay-attenuation-db-value");
 const duckingDelayRelease = document.querySelector("#ducking-delay-release-ms");
 const duckingDelayReleaseValue = document.querySelector("#ducking-delay-release-ms-value");
+const modulatedDelayTime = document.querySelector("#modulated-delay-time-ms");
+const modulatedDelayTimeValue = document.querySelector("#modulated-delay-time-ms-value");
+const modulatedDelayFeedback = document.querySelector("#modulated-delay-feedback");
+const modulatedDelayFeedbackValue = document.querySelector("#modulated-delay-feedback-value");
+const modulatedDelayMix = document.querySelector("#modulated-delay-mix");
+const modulatedDelayMixValue = document.querySelector("#modulated-delay-mix-value");
+const modulatedDelayRate = document.querySelector("#modulated-delay-rate-hz");
+const modulatedDelayRateValue = document.querySelector("#modulated-delay-rate-hz-value");
+const modulatedDelayDepth = document.querySelector("#modulated-delay-depth-ms");
+const modulatedDelayDepthValue = document.querySelector("#modulated-delay-depth-ms-value");
+const modulatedDelayWaveform = document.querySelector("#modulated-delay-waveform");
+const modulatedDelaySpread = document.querySelector("#modulated-delay-spread-degrees");
+const modulatedDelaySpreadValue = document.querySelector("#modulated-delay-spread-degrees-value");
+const modulatedDelayTriggerThreshold = document.querySelector("#modulated-delay-trigger-threshold-db");
+const modulatedDelayTriggerThresholdValue = document.querySelector("#modulated-delay-trigger-threshold-db-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1942,6 +1959,28 @@ function updateDuckingDelay() {
   if (workletNode) workletNode.port.postMessage({ type: "ducking-delay", value: values });
 }
 
+function updateModulatedDelay() {
+  const values = [
+    Number(modulatedDelayTime.value),
+    Number(modulatedDelayFeedback.value) / 100,
+    Number(modulatedDelayMix.value) / 100,
+    Number(modulatedDelayRate.value),
+    Number(modulatedDelayDepth.value),
+    Number(modulatedDelayWaveform.value),
+    Number(modulatedDelaySpread.value),
+    Number(modulatedDelayTriggerThreshold.value),
+  ];
+  modulatedDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  modulatedDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
+  modulatedDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
+  modulatedDelayRateValue.value = `${values[3].toFixed(2)} Hz`;
+  modulatedDelayDepthValue.value = `${values[4].toFixed(1)} ms`;
+  modulatedDelaySpreadValue.value = `${values[6].toFixed(0)}°`;
+  modulatedDelayTriggerThresholdValue.value = `${values[7].toFixed(0)} dB`;
+  DEFAULT_PARAMETERS.modulatedDelay = values;
+  if (workletNode) workletNode.port.postMessage({ type: "modulated-delay", value: values });
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -2036,6 +2075,13 @@ for (const input of [duckingDelayTime, duckingDelayFeedback, duckingDelayMix,
   input.addEventListener("input", updateDuckingDelay);
   input.addEventListener("change", updateDuckingDelay);
 }
+for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayMix,
+  modulatedDelayRate, modulatedDelayDepth, modulatedDelaySpread,
+  modulatedDelayTriggerThreshold]) {
+  input.addEventListener("input", updateModulatedDelay);
+  input.addEventListener("change", updateModulatedDelay);
+}
+modulatedDelayWaveform.addEventListener("change", updateModulatedDelay);
 reverseDelayRun.addEventListener("change", updateReverseDelayRun);
 reverseDelayRestart.addEventListener("click", restartReverseDelay);
 updateOpticalCompressor();
@@ -2056,6 +2102,7 @@ updateNotchFilter();
 updateReverseDelay();
 updateReverseDelayRun();
 updateDuckingDelay();
+updateModulatedDelay();
 
 function updateDelayDual() {
   const values = [
@@ -2206,16 +2253,16 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 42 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 42 || effectRows.length !== 42 ||
+    const expectedEffectIds = Array.from({ length: 43 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 43 || effectRows.length !== 43 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
-        initialEffectState[38] || initialEffectState[39] ||
+        initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 42 ordered effects (IDs 0–41) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, and Ducking Delay disabled by default.");
+      throw new Error("The effect picker must list 43 ordered, categorized effects (IDs 0–42) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, Ducking Delay, and Modulated Delay disabled by default.");
     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
@@ -2226,12 +2273,21 @@ async function runBrowserSelfTest() {
     }
     duckingDelayThreshold.value = defaultDuckThreshold;
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultModulatedRate = modulatedDelayRate.value;
+    modulatedDelayRate.value = "1.25";
+    modulatedDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.modulatedDelay[3] !== 1.25 ||
+        modulatedDelayRateValue.value !== "1.25 Hz") {
+      throw new Error("Modulated Delay controls must update processor parameters and display values.");
+    }
+    modulatedDelayRate.value = defaultModulatedRate;
+    modulatedDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 42" ||
+        effectCount.value !== "8 of 43" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2239,8 +2295,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,41" ||
-        effectCount.value !== "7 of 42" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,42" ||
+        effectCount.value !== "7 of 43" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2249,7 +2305,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37" ||
-        effectCount.value !== "6 of 42" ||
+        effectCount.value !== "6 of 43" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include Step Filter and Notch Filter and preserve the current chain state.");
     }
@@ -2257,15 +2313,15 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39" || effectCount.value !== "3 of 42" ||
+    if (delayIds.join(",") !== "21,38,39,40" || effectCount.value !== "4 of 43" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Delay category must include Digital Delay, Reverse Delay, and Ducking Delay and preserve the current chain state.");
+      throw new Error("The Delay category must include Digital, Reverse, Ducking, and Modulated Delay and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 42" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 43" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2275,12 +2331,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 42") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 43") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "42 of 42" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "43 of 43" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();

@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">42 of 42</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">43 of 43</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -122,8 +122,9 @@
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="37"><span class="effect-number">38</span><span class="effect-name">Notch Filter</span><span class="effect-default">1 kHz · Q 4 · 100% wet</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="38"><span class="effect-number">39</span><span class="effect-name">Reverse Delay</span><span class="effect-default">350 ms · 25% feedback · 35% wet</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="39"><span class="effect-number">40</span><span class="effect-name">Ducking Delay</span><span class="effect-default">−30 dB threshold · 12 dB duck · 250 ms release</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="40" checked><span class="effect-number">41</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="41" checked><span class="effect-number">42</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="40"><span class="effect-number">41</span><span class="effect-name">Modulated Delay</span><span class="effect-default">0.8 Hz · 2 ms depth · sine</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="41" checked><span class="effect-number">42</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="42" checked><span class="effect-number">43</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -278,6 +279,20 @@
           <label class="mix-control" for="ducking-delay-release-ms"><span>Ducker release</span><output id="ducking-delay-release-ms-value" for="ducking-delay-release-ms">250 ms</output><input id="ducking-delay-release-ms" type="range" min="1" max="2000" step="1" value="250"></label>
         </div>
         <p class="hint">Stereo-linked input peak detection lowers the delayed signal above Threshold. Release controls how quickly repeats return. These ranges/defaults are project-authored; no vendor ranges are claimed. The general effect checkbox bypasses this chain stage.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Modulated Delay controls">
+        <h3>Modulated Delay · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="modulated-delay-time-ms"><span>Time</span><output id="modulated-delay-time-ms-value" for="modulated-delay-time-ms">350 ms</output><input id="modulated-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="modulated-delay-feedback"><span>Feedback</span><output id="modulated-delay-feedback-value" for="modulated-delay-feedback">25%</output><input id="modulated-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
+          <label class="mix-control" for="modulated-delay-mix"><span>Mix</span><output id="modulated-delay-mix-value" for="modulated-delay-mix">25%</output><input id="modulated-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="modulated-delay-rate-hz"><span>Modulation rate</span><output id="modulated-delay-rate-hz-value" for="modulated-delay-rate-hz">0.80 Hz</output><input id="modulated-delay-rate-hz" type="range" min="0.05" max="10" step="0.05" value="0.8"></label>
+          <label class="mix-control" for="modulated-delay-depth-ms"><span>Modulation depth</span><output id="modulated-delay-depth-ms-value" for="modulated-delay-depth-ms">2.0 ms</output><input id="modulated-delay-depth-ms" type="range" min="0" max="50" step="0.1" value="2"></label>
+          <label class="mix-control" for="modulated-delay-waveform"><span>Modulation mode</span><select id="modulated-delay-waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Random</option><option value="3">Triggered ramp</option></select></label>
+          <label class="mix-control" for="modulated-delay-spread-degrees"><span>Stereo spread</span><output id="modulated-delay-spread-degrees-value" for="modulated-delay-spread-degrees">180°</output><input id="modulated-delay-spread-degrees" type="range" min="0" max="180" step="1" value="180"></label>
+          <label class="mix-control" for="modulated-delay-trigger-threshold-db"><span>Trigger threshold</span><output id="modulated-delay-trigger-threshold-db-value" for="modulated-delay-trigger-threshold-db">−24 dB</output><input id="modulated-delay-trigger-threshold-db" type="range" min="-72" max="0" step="1" value="-24"></label>
+        </div>
+        <p class="hint">A project-authored feedback delay modulates its read time. Trigger threshold applies only to Triggered ramp. Bounds/defaults are project choices; vendor-specific rate/depth ranges, sync divisions, repeat EQ, and spillover are not inferred. The general effect checkbox bypasses this chain stage.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

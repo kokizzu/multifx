@@ -18,6 +18,7 @@
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
+#include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -79,7 +80,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(40);
+          effects_.reserve(41);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -197,6 +198,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::DuckingDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::ModulatedDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -940,6 +944,16 @@ public:
             {time_ms, feedback, mix, threshold_db, attenuation_db, release_ms});
     }
 
+    void configure_modulated_delay(float time_ms, float feedback, float mix,
+                                   float rate_hz, float depth_ms,
+                                   std::uint32_t waveform, float spread_degrees,
+                                   float trigger_threshold_db) noexcept {
+        static_cast<tabletfx::ModulatedDelay*>(effects_[40].effect.get())->configure(
+            {time_ms, feedback, mix, rate_hz, depth_ms,
+             static_cast<tabletfx::ModulatedDelayWaveform>(waveform),
+             spread_degrees, trigger_threshold_db});
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1514,6 +1528,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_ducking_delay(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ducking_delay(
             time_ms, feedback, mix, threshold_db, attenuation_db, release_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_modulated_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float rate_hz, float depth_ms, std::uint32_t waveform,
+    float spread_degrees, float trigger_threshold_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_modulated_delay(
+            time_ms, feedback, mix, rate_hz, depth_ms, waveform,
+            spread_degrees, trigger_threshold_db);
     }
 }
 

@@ -199,6 +199,12 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--ducking-delay-threshold-db", "-30",
         "--ducking-delay-attenuation-db", "12",
         "--ducking-delay-release-ms", "250",
+        "--modulated-delay", "--modulated-delay-time-ms", "350",
+        "--modulated-delay-feedback", "0.25", "--modulated-delay-mix", "0.25",
+        "--modulated-delay-rate-hz", "0.8", "--modulated-delay-depth-ms", "2",
+        "--modulated-delay-waveform", "sine",
+        "--modulated-delay-spread-degrees", "180",
+        "--modulated-delay-trigger-threshold-db", "-24",
     ]
     if delay_character == "tape":
         command.extend([
@@ -221,7 +227,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 42:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 43:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -288,7 +294,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 42-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, and Ducking Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 43-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, Ducking Delay, and Modulated Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

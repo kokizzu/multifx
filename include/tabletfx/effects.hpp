@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tabletfx/effect.hpp"
+#include "tabletfx/effects/modulated_delay.hpp"
 
 #include <array>
 #include <cstddef>
