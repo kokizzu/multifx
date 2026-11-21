@@ -142,6 +142,32 @@ def check_chorus(executable: Path) -> None:
             )
 
 
+def check_flanger(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [32767] + [0] * 159
+    with tempfile.TemporaryDirectory(prefix="tabletfx-flanger-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "flanger.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "8",
+             "--flanger-depth-ms", "0", "--flanger-feedback", "0.5",
+             "--flanger-feedback-polarity", "negative", "--flanger-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Flanger options did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<160f", data[44:44 + 160 * 4])
+        expected = 32767 / 32768.0
+        if abs(samples[64] - expected) > 1.0e-6 or abs(samples[128] + expected * 0.5) > 1.0e-6:
+            raise AssertionError(
+                f"Flanger CLI should render negative feedback at frames 64/128; got {samples[64]}/{samples[128]}"
+            )
+
+
 def check_compressor(executable: Path) -> None:
     sample_rate = 48000
     input_samples = [16384] * sample_rate
@@ -386,6 +412,7 @@ def main() -> None:
     check_render(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_chorus(args.executable.resolve())
+    check_flanger(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
@@ -393,7 +420,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

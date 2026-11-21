@@ -6,6 +6,8 @@
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
+#include "tabletfx/effects/flanger.hpp"
+#include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
@@ -58,6 +60,8 @@ struct Options {
     tabletfx::TremoloParameters tremolo{};
     bool chorus_enabled = false;
     tabletfx::ChorusParameters chorus{};
+    bool flanger_enabled = false;
+    tabletfx::FlangerParameters flanger{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     bool noise_gate_enabled = false;
@@ -114,6 +118,18 @@ Options parse_options(int argc, char** argv, int first) {
             if (value == "average") options.mono_sum_policy = tabletfx::MonoSumPolicy::Average;
             else if (value == "equal-power") options.mono_sum_policy = tabletfx::MonoSumPolicy::EqualPower;
             else throw std::invalid_argument("Mono sum policy must be average or equal-power");
+            continue;
+        }
+        if (key == "--flanger-feedback-polarity") {
+            const std::string_view value(argv[++i]);
+            if (value == "positive") {
+                options.flanger.feedback_polarity = tabletfx::FlangerFeedbackPolarity::Positive;
+            } else if (value == "negative") {
+                options.flanger.feedback_polarity = tabletfx::FlangerFeedbackPolarity::Negative;
+            } else {
+                throw std::invalid_argument("Flanger feedback polarity must be positive or negative");
+            }
+            options.flanger_enabled = true;
             continue;
         }
         if (key == "--volume-curve") {
@@ -272,6 +288,26 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--chorus-mix") {
             options.chorus.mix = value;
             options.chorus_enabled = true;
+        }
+        else if (key == "--flanger-rate-hz") {
+            options.flanger.rate_hz = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-delay-ms") {
+            options.flanger.base_delay_ms = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-depth-ms") {
+            options.flanger.depth_ms = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-feedback") {
+            options.flanger.feedback = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-mix") {
+            options.flanger.mix = value;
+            options.flanger_enabled = true;
         }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
@@ -446,6 +482,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.chorus_enabled) {
         effects.push_back(std::make_unique<tabletfx::Chorus>(
             static_cast<float>(sample_rate), channels, options.chorus));
+    }
+    if (options.flanger_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Flanger>(
+            static_cast<float>(sample_rate), channels, options.flanger));
     }
     if (options.eq_enabled) {
         auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -838,6 +878,14 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     chorus_parameters.mix = 0.2F;
     effects.push_back(std::make_unique<tabletfx::Chorus>(
         static_cast<float>(sample_rate), channels, chorus_parameters));
+    tabletfx::FlangerParameters flanger_parameters;
+    flanger_parameters.rate_hz = 0.25F;
+    flanger_parameters.base_delay_ms = 2.0F;
+    flanger_parameters.depth_ms = 1.0F;
+    flanger_parameters.feedback = 0.35F;
+    flanger_parameters.mix = 0.25F;
+    effects.push_back(std::make_unique<tabletfx::Flanger>(
+        static_cast<float>(sample_rate), channels, flanger_parameters));
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
@@ -1018,6 +1066,16 @@ void run_bench() {
         return std::make_unique<tabletfx::Chorus>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("flanger", [=] {
+        tabletfx::FlangerParameters parameters;
+        parameters.rate_hz = 0.25F;
+        parameters.base_delay_ms = 2.0F;
+        parameters.depth_ms = 1.0F;
+        parameters.feedback = 0.35F;
+        parameters.mix = 0.35F;
+        return std::make_unique<tabletfx::Flanger>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
@@ -1037,6 +1095,9 @@ void print_usage() {
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
                   " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
                   " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
+                  " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
+                  " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
+                  " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

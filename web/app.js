@@ -14,6 +14,7 @@ const EFFECT_NAMES = [
   "Soft drive",
   "Tremolo",
   "Chorus",
+  "Flanger",
   "Three-band parametric EQ",
   "Stereo delay",
   "Polyphonic pitch shifter",
@@ -31,6 +32,7 @@ const DEFAULT_PARAMETERS = {
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1],
   chorus: [0.8, 15, 7, 0.3],
+  flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -159,6 +161,17 @@ const chorusDepth = document.querySelector("#chorus-depth-ms");
 const chorusDepthValue = document.querySelector("#chorus-depth-value");
 const chorusMix = document.querySelector("#chorus-mix");
 const chorusMixValue = document.querySelector("#chorus-mix-value");
+const flangerRate = document.querySelector("#flanger-rate-hz");
+const flangerRateValue = document.querySelector("#flanger-rate-value");
+const flangerDelay = document.querySelector("#flanger-delay-ms");
+const flangerDelayValue = document.querySelector("#flanger-delay-value");
+const flangerDepth = document.querySelector("#flanger-depth-ms");
+const flangerDepthValue = document.querySelector("#flanger-depth-value");
+const flangerFeedback = document.querySelector("#flanger-feedback");
+const flangerFeedbackValue = document.querySelector("#flanger-feedback-value");
+const flangerPolarity = document.querySelector("#flanger-feedback-polarity");
+const flangerMix = document.querySelector("#flanger-mix");
+const flangerMixValue = document.querySelector("#flanger-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -850,6 +863,31 @@ for (const control of [chorusRate, chorusDelay, chorusDepth, chorusMix]) {
   control.addEventListener("change", updateChorus);
 }
 
+function updateFlanger() {
+  const delayMs = Number(flangerDelay.value);
+  const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
+  flangerDepth.max = String(maximumDepthMs);
+  flangerDepth.value = String(Math.min(Number(flangerDepth.value), maximumDepthMs));
+  const polarity = flangerPolarity.value === "negative" ? 1 : 0;
+  const values = [
+    Number(flangerRate.value), delayMs, Number(flangerDepth.value),
+    Number(flangerFeedback.value), polarity, Number(flangerMix.value),
+  ];
+  DEFAULT_PARAMETERS.flanger = values;
+  flangerRateValue.value = `${Number(flangerRate.value).toFixed(2)} Hz`;
+  flangerDelayValue.value = `${delayMs.toFixed(2)} ms`;
+  flangerDepthValue.value = `${Number(flangerDepth.value).toFixed(2)} ms`;
+  flangerFeedbackValue.value = `${Math.round(Number(flangerFeedback.value) * 100)}%`;
+  flangerMixValue.value = `${Math.round(Number(flangerMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "flanger", value: values });
+}
+
+for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
+  flangerPolarity, flangerMix]) {
+  control.addEventListener("input", updateFlanger);
+  control.addEventListener("change", updateFlanger);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -975,7 +1013,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: Array.from({ length: 18 }, () => true),
+      enabled: Array.from({ length: 19 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -990,6 +1028,7 @@ async function runBrowserSelfTest() {
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1],
         chorus: [0.8, 15, 7, 0.2],
+        flanger: [0.25, 2, 1, 0.35, 1, 0.2],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -1041,6 +1080,12 @@ async function runBrowserSelfTest() {
     chorusDelay.value = "15";
     chorusDepth.value = "7";
     chorusMix.value = "0.2";
+    flangerRate.value = "0.25";
+    flangerDelay.value = "2";
+    flangerDepth.value = "1";
+    flangerFeedback.value = "0.35";
+    flangerPolarity.value = "negative";
+    flangerMix.value = "0.2";
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();
@@ -1048,6 +1093,7 @@ async function runBrowserSelfTest() {
     updateEnvelopeWah();
     updateTremolo();
     updateChorus();
+    updateFlanger();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

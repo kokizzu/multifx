@@ -3,7 +3,7 @@ import createWasmModule from "../build/web/tabletfx_wasm.js";
 const EFFECTS = [
   "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
   "pedal-compressor", "compressor", "wah", "envelope-wah", "clean-boost",
-  "soft-drive", "tremolo", "chorus", "three-band-eq", "delay", "poly-pitch-shifter",
+  "soft-drive", "tremolo", "chorus", "flanger", "three-band-eq", "delay", "poly-pitch-shifter",
   "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
@@ -58,7 +58,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.tunerGeneration = 0;
     this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     this.enabled = config.enabled || [true, true, false, false, false, false,
-      true, false, false, false, false, false, false, false, false, false, true, true];
+      true, false, false, false, false, false, false, false, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -124,6 +124,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
+      const flanger = parameters.flanger || [0.25, 2, 1, 0.35, 0, 0.35];
+      module._tf_chain_set_flanger(this.chain, ...flanger);
       const limiter = parameters.limiter || [-1, 80];
       module._tf_chain_set_limiter(this.chain, ...limiter);
       const effectMemoryBytes = [];
@@ -195,6 +197,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_tremolo(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {
       this.module._tf_chain_set_chorus(this.chain, ...message.value);
+    } else if (message.type === "flanger" && this.ready) {
+      this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "limiter" && this.ready) {
       this.module._tf_chain_set_limiter(this.chain, ...message.value);
     } else if (message.type === "reset" && this.ready) {

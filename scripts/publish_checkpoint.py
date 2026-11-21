@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency mono/stereo chorus"
+COMMIT_MESSAGE = "feat: add low-latency flanger with feedback polarity"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -130,6 +130,9 @@ CHECKPOINT_PATHS = (
     "third_party/stft-pitch-shift/StftPitchShift/StftPitchShiftCore.h",
     "third_party/stft-pitch-shift/StftPitchShift/Timer.h",
     "third_party/stft-pitch-shift/StftPitchShift/Vocoder.h",
+    "include/tabletfx/effects/flanger.hpp",
+    "src/effects/flanger.cpp",
+    "tests/test_flanger.cpp",
 )
 
 
