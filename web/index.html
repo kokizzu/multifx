@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">44 of 44</output>
+      <output id="effect-count" class="effect-count" aria-live="polite">45 of 45</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -124,8 +124,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="39"><span class="effect-number">40</span><span class="effect-name">Ducking Delay</span><span class="effect-default">−30 dB threshold · 12 dB duck · 250 ms release</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="40"><span class="effect-number">41</span><span class="effect-name">Modulated Delay</span><span class="effect-default">0.8 Hz · 2 ms depth · sine</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="41"><span class="effect-number">42</span><span class="effect-name">Filtered Delay</span><span class="effect-default">120 Hz low cut · 6 kHz high cut on repeats</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="42" checked><span class="effect-number">43</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="43" checked><span class="effect-number">44</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="42"><span class="effect-number">43</span><span class="effect-name">Sweep Delay</span><span class="effect-default">LFO-swept band-pass · 250 Hz–6 kHz</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="43" checked><span class="effect-number">44</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="44" checked><span class="effect-number">45</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -305,6 +306,21 @@
           <label class="mix-control" for="filtered-delay-high-cut-hz"><span>Repeat high cut</span><output id="filtered-delay-high-cut-hz-value" for="filtered-delay-high-cut-hz">6000 Hz</output><input id="filtered-delay-high-cut-hz" type="range" min="2000" max="20000" step="10" value="6000"></label>
         </div>
         <p class="hint">Low and high cuts shape the feedback repeats; the direct signal is unchanged. This static repeat filter is project-authored and does not emulate a swept or resonant delay. Bounds/defaults are project-authored; the general effect checkbox bypasses this chain stage.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Sweep Delay controls">
+        <h3>Sweep Delay · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="sweep-delay-time-ms"><span>Time</span><output id="sweep-delay-time-ms-value" for="sweep-delay-time-ms">350 ms</output><input id="sweep-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="sweep-delay-feedback"><span>Feedback</span><output id="sweep-delay-feedback-value" for="sweep-delay-feedback">25%</output><input id="sweep-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
+          <label class="mix-control" for="sweep-delay-mix"><span>Mix</span><output id="sweep-delay-mix-value" for="sweep-delay-mix">25%</output><input id="sweep-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="sweep-delay-start-hz"><span>Start frequency</span><output id="sweep-delay-start-hz-value" for="sweep-delay-start-hz">250 Hz</output><input id="sweep-delay-start-hz" type="range" min="20" max="18000" step="10" value="250"></label>
+          <label class="mix-control" for="sweep-delay-stop-hz"><span>Stop frequency</span><output id="sweep-delay-stop-hz-value" for="sweep-delay-stop-hz">6000 Hz</output><input id="sweep-delay-stop-hz" type="range" min="20" max="18000" step="10" value="6000"></label>
+          <label class="mix-control" for="sweep-delay-resonance-q"><span>Resonance Q</span><output id="sweep-delay-resonance-q-value" for="sweep-delay-resonance-q">1.2</output><input id="sweep-delay-resonance-q" type="range" min="0.5" max="12" step="0.1" value="1.2"></label>
+          <label class="mix-control" for="sweep-delay-rate-hz"><span>Sweep rate</span><output id="sweep-delay-rate-hz-value" for="sweep-delay-rate-hz">0.50 Hz</output><input id="sweep-delay-rate-hz" type="range" min="0.05" max="10" step="0.01" value="0.5"></label>
+          <label class="mix-control" for="sweep-delay-waveform"><span>Sweep type</span><select id="sweep-delay-waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Square</option></select></label>
+          <label class="mix-control" for="sweep-delay-phase-degrees"><span>Stereo phase</span><output id="sweep-delay-phase-degrees-value" for="sweep-delay-phase-degrees">90°</output><input id="sweep-delay-phase-degrees" type="range" min="0" max="360" step="1" value="90"></label>
+        </div>
+        <p class="hint">An LFO moves a band-pass filter over the delayed signal after it leaves the delay. This project-authored effect is not a vendor emulation; tempo lock and selectable filter types are not included. Bounds/defaults are project choices. The general effect checkbox bypasses this chain stage.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

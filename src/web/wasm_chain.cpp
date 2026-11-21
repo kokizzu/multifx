@@ -80,7 +80,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(42);
+          effects_.reserve(43);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -204,6 +204,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::FilteredDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::SweepDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -963,6 +966,16 @@ public:
             {time_ms, feedback, mix, low_cut_hz, high_cut_hz});
     }
 
+    void configure_sweep_delay(float time_ms, float feedback, float mix,
+                               float start_hz, float stop_hz,
+                               float resonance_q, float rate_hz,
+                               std::uint32_t waveform,
+                               float phase_degrees) noexcept {
+        static_cast<tabletfx::SweepDelay*>(effects_[42].effect.get())->configure(
+            {time_ms, feedback, mix, start_hz, stop_hz, resonance_q, rate_hz,
+             static_cast<tabletfx::SweepDelayWaveform>(waveform), phase_degrees});
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1557,6 +1570,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_filtered_delay(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_filtered_delay(
             time_ms, feedback, mix, low_cut_hz, high_cut_hz);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_sweep_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float start_hz, float stop_hz, float resonance_q, float rate_hz,
+    std::uint32_t waveform, float phase_degrees) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_sweep_delay(
+            time_ms, feedback, mix, start_hz, stop_hz, resonance_q,
+            rate_hz, waveform, phase_degrees);
     }
 }
 

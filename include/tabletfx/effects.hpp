@@ -313,6 +313,83 @@ private:
     FilteredDelayParameters parameters_{};
 };
 
+enum class SweepDelayWaveform : std::uint8_t {
+    sine,
+    triangle,
+    square,
+};
+
+struct SweepDelayParameters {
+    float time_ms = 350.0F;
+    float feedback = 0.25F;
+    float mix = 0.25F;
+    float start_hz = 250.0F;
+    float stop_hz = 6000.0F;
+    float resonance_q = 1.2F;
+    float rate_hz = 0.5F;
+    SweepDelayWaveform waveform = SweepDelayWaveform::sine;
+    float phase_degrees = 90.0F;
+};
+
+// Project-authored delay with an LFO-swept band-pass on the wet output only.
+// It does not claim to reproduce a commercial Sweep Delay algorithm.
+class SweepDelay final : public Effect {
+public:
+    explicit SweepDelay(float sample_rate = 48000.0F,
+                        std::uint16_t channels = 1,
+                        float max_delay_ms = 2000.0F,
+                        SweepDelayParameters parameters = {});
+
+    [[nodiscard]] std::string_view id() const noexcept override {
+        return "sweep-delay";
+    }
+    [[nodiscard]] std::size_t memory_bytes() const noexcept override;
+    [[nodiscard]] SweepDelayParameters parameters() const noexcept {
+        return parameters_;
+    }
+    void configure(SweepDelayParameters parameters) noexcept;
+    void process(std::span<float> interleaved,
+                 std::uint16_t channels) noexcept override;
+    void reset() noexcept override;
+
+private:
+    struct BiquadState {
+        float input_1 = 0.0F;
+        float input_2 = 0.0F;
+        float output_1 = 0.0F;
+        float output_2 = 0.0F;
+    };
+
+    void retarget_ramps() noexcept;
+    void advance_ramps() noexcept;
+    [[nodiscard]] float lfo_value(float phase) const noexcept;
+    [[nodiscard]] float filter_wet_sample(float input, std::uint16_t channel,
+                                          float cutoff_hz,
+                                          float resonance_q) noexcept;
+
+    float sample_rate_;
+    std::uint16_t channels_;
+    float max_delay_ms_;
+    Delay delay_;
+    SweepDelayParameters parameters_{};
+    std::array<BiquadState, 2> filter_state_{};
+    float phase_ = 0.0F;
+    float current_mix_ = 0.25F;
+    float mix_step_ = 0.0F;
+    float current_start_hz_ = 250.0F;
+    float start_step_ = 0.0F;
+    float current_stop_hz_ = 6000.0F;
+    float stop_step_ = 0.0F;
+    float current_resonance_q_ = 1.2F;
+    float resonance_step_ = 0.0F;
+    float current_rate_hz_ = 0.5F;
+    float rate_step_ = 0.0F;
+    float current_phase_degrees_ = 90.0F;
+    float phase_step_ = 0.0F;
+    std::size_t ramp_total_ = 0;
+    std::size_t ramp_remaining_ = 0;
+};
+
 enum class RoomSize : std::uint8_t {
     small,
     large,

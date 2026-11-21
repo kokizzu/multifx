@@ -195,6 +195,8 @@ struct Options {
     tabletfx::ModulatedDelayParameters modulated_delay{};
     bool filtered_delay_enabled = false;
     tabletfx::FilteredDelayParameters filtered_delay{};
+    bool sweep_delay_enabled = false;
+    tabletfx::SweepDelayParameters sweep_delay{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -418,6 +420,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.filtered_delay_enabled = true;
             continue;
         }
+        if (key == "--sweep-delay") {
+            options.sweep_delay_enabled = true;
+            continue;
+        }
         if (key == "--modulated-delay-waveform") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --modulated-delay-waveform");
@@ -437,6 +443,24 @@ Options parse_options(int argc, char** argv, int first) {
                     "Modulated-delay waveform must be sine, triangle, random, or triggered-ramp");
             }
             options.modulated_delay_enabled = true;
+            continue;
+        }
+        if (key == "--sweep-delay-waveform") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --sweep-delay-waveform");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "sine") {
+                options.sweep_delay.waveform = tabletfx::SweepDelayWaveform::sine;
+            } else if (value == "triangle") {
+                options.sweep_delay.waveform = tabletfx::SweepDelayWaveform::triangle;
+            } else if (value == "square") {
+                options.sweep_delay.waveform = tabletfx::SweepDelayWaveform::square;
+            } else {
+                throw std::invalid_argument(
+                    "Sweep-delay waveform must be sine, triangle, or square");
+            }
+            options.sweep_delay_enabled = true;
             continue;
         }
         if (key == "--reverse-delay-run") {
@@ -1526,6 +1550,38 @@ Options parse_options(int argc, char** argv, int first) {
             options.filtered_delay.high_cut_hz = value;
             options.filtered_delay_enabled = true;
         }
+        else if (key == "--sweep-delay-time-ms") {
+            options.sweep_delay.time_ms = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-feedback") {
+            options.sweep_delay.feedback = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-mix") {
+            options.sweep_delay.mix = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-start-hz") {
+            options.sweep_delay.start_hz = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-stop-hz") {
+            options.sweep_delay.stop_hz = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-resonance-q") {
+            options.sweep_delay.resonance_q = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-rate-hz") {
+            options.sweep_delay.rate_hz = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-phase-degrees") {
+            options.sweep_delay.phase_degrees = value;
+            options.sweep_delay_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1850,6 +1906,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::FilteredDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F,
             options.filtered_delay));
+    }
+    if (options.sweep_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::SweepDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.sweep_delay));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2344,6 +2405,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels, 2000.0F));
     effects.push_back(std::make_unique<tabletfx::FilteredDelay>(
         static_cast<float>(sample_rate), channels, 2000.0F));
+    effects.push_back(std::make_unique<tabletfx::SweepDelay>(
+        static_cast<float>(sample_rate), channels, 2000.0F));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2462,6 +2525,10 @@ void run_bench() {
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("filtered-delay", [=] {
         return std::make_unique<tabletfx::FilteredDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("sweep-delay", [=] {
+        return std::make_unique<tabletfx::SweepDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
@@ -2878,6 +2945,12 @@ void print_usage() {
                      " [--filtered-delay-feedback 0..0.95] [--filtered-delay-mix 0..1]"
                      " [--filtered-delay-low-cut-hz 20..1000]"
                      " [--filtered-delay-high-cut-hz 2000..20000]\n"
+                  << "                 [--sweep-delay] [--sweep-delay-time-ms 1..2000]"
+                     " [--sweep-delay-feedback 0..0.95] [--sweep-delay-mix 0..1]"
+                     " [--sweep-delay-start-hz 20..18000] [--sweep-delay-stop-hz 20..18000]"
+                     " [--sweep-delay-resonance-q 0.5..12] [--sweep-delay-rate-hz 0.05..10]"
+                     " [--sweep-delay-waveform sine|triangle|square]"
+                     " [--sweep-delay-phase-degrees 0..360]\n"
                << "  tabletfx_offline --bench\n";
 }
 

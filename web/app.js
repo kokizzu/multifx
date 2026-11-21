@@ -43,6 +43,7 @@ const EFFECT_NAMES = [
   "Ducking Delay",
   "Modulated Delay",
   "Filtered Delay",
+  "Sweep Delay",
   "Output level",
   "Peak limiter",
 ];
@@ -88,6 +89,7 @@ const DEFAULT_PARAMETERS = {
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   filteredDelay: [350, 0.25, 0.25, 120, 6000],
+  sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -605,6 +607,23 @@ const filteredDelayLowCut = document.querySelector("#filtered-delay-low-cut-hz")
 const filteredDelayLowCutValue = document.querySelector("#filtered-delay-low-cut-hz-value");
 const filteredDelayHighCut = document.querySelector("#filtered-delay-high-cut-hz");
 const filteredDelayHighCutValue = document.querySelector("#filtered-delay-high-cut-hz-value");
+const sweepDelayTime = document.querySelector("#sweep-delay-time-ms");
+const sweepDelayTimeValue = document.querySelector("#sweep-delay-time-ms-value");
+const sweepDelayFeedback = document.querySelector("#sweep-delay-feedback");
+const sweepDelayFeedbackValue = document.querySelector("#sweep-delay-feedback-value");
+const sweepDelayMix = document.querySelector("#sweep-delay-mix");
+const sweepDelayMixValue = document.querySelector("#sweep-delay-mix-value");
+const sweepDelayStart = document.querySelector("#sweep-delay-start-hz");
+const sweepDelayStartValue = document.querySelector("#sweep-delay-start-hz-value");
+const sweepDelayStop = document.querySelector("#sweep-delay-stop-hz");
+const sweepDelayStopValue = document.querySelector("#sweep-delay-stop-hz-value");
+const sweepDelayResonance = document.querySelector("#sweep-delay-resonance-q");
+const sweepDelayResonanceValue = document.querySelector("#sweep-delay-resonance-q-value");
+const sweepDelayRate = document.querySelector("#sweep-delay-rate-hz");
+const sweepDelayRateValue = document.querySelector("#sweep-delay-rate-hz-value");
+const sweepDelayWaveform = document.querySelector("#sweep-delay-waveform");
+const sweepDelayPhase = document.querySelector("#sweep-delay-phase-degrees");
+const sweepDelayPhaseValue = document.querySelector("#sweep-delay-phase-degrees-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -2010,6 +2029,30 @@ function updateFilteredDelay() {
   if (workletNode) workletNode.port.postMessage({ type: "filtered-delay", value: values });
 }
 
+function updateSweepDelay() {
+  const values = [
+    Number(sweepDelayTime.value),
+    Number(sweepDelayFeedback.value) / 100,
+    Number(sweepDelayMix.value) / 100,
+    Number(sweepDelayStart.value),
+    Number(sweepDelayStop.value),
+    Number(sweepDelayResonance.value),
+    Number(sweepDelayRate.value),
+    Number(sweepDelayWaveform.value),
+    Number(sweepDelayPhase.value),
+  ];
+  sweepDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  sweepDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
+  sweepDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
+  sweepDelayStartValue.value = `${values[3].toFixed(0)} Hz`;
+  sweepDelayStopValue.value = `${values[4].toFixed(0)} Hz`;
+  sweepDelayResonanceValue.value = values[5].toFixed(1);
+  sweepDelayRateValue.value = `${values[6].toFixed(2)} Hz`;
+  sweepDelayPhaseValue.value = `${values[8].toFixed(0)}°`;
+  DEFAULT_PARAMETERS.sweepDelay = values;
+  if (workletNode) workletNode.port.postMessage({ type: "sweep-delay", value: values });
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -2116,6 +2159,13 @@ for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   input.addEventListener("input", updateFilteredDelay);
   input.addEventListener("change", updateFilteredDelay);
 }
+sweepDelayWaveform.addEventListener("change", updateSweepDelay);
+for (const input of [sweepDelayTime, sweepDelayFeedback, sweepDelayMix,
+  sweepDelayStart, sweepDelayStop, sweepDelayResonance, sweepDelayRate,
+  sweepDelayPhase]) {
+  input.addEventListener("input", updateSweepDelay);
+  input.addEventListener("change", updateSweepDelay);
+}
 reverseDelayRun.addEventListener("change", updateReverseDelayRun);
 reverseDelayRestart.addEventListener("click", restartReverseDelay);
 updateOpticalCompressor();
@@ -2138,6 +2188,7 @@ updateReverseDelayRun();
 updateDuckingDelay();
 updateModulatedDelay();
 updateFilteredDelay();
+updateSweepDelay();
 
 function updateDelayDual() {
   const values = [
@@ -2288,17 +2339,17 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 44 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 44 || effectRows.length !== 44 ||
+    const expectedEffectIds = Array.from({ length: 45 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 45 || effectRows.length !== 45 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
-        initialEffectState[41] ||
+        initialEffectState[41] || initialEffectState[42] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 44 ordered, categorized effects (IDs 0–43) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, Ducking Delay, Modulated Delay, and Filtered Delay disabled by default.");
+      throw new Error("The effect picker must list 45 ordered, categorized effects (IDs 0–44) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
@@ -2327,12 +2378,21 @@ async function runBrowserSelfTest() {
     }
     filteredDelayHighCut.value = defaultFilteredHighCut;
     filteredDelayHighCut.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultSweepRate = sweepDelayRate.value;
+    sweepDelayRate.value = "1.25";
+    sweepDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.sweepDelay[6] !== 1.25 ||
+        sweepDelayRateValue.value !== "1.25 Hz") {
+      throw new Error("Sweep Delay controls must update processor parameters and display values.");
+    }
+    sweepDelayRate.value = defaultSweepRate;
+    sweepDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 44" ||
+        effectCount.value !== "8 of 45" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2340,8 +2400,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,43" ||
-        effectCount.value !== "7 of 44" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,44" ||
+        effectCount.value !== "7 of 45" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2350,7 +2410,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37" ||
-        effectCount.value !== "6 of 44" ||
+        effectCount.value !== "6 of 45" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include Step Filter and Notch Filter and preserve the current chain state.");
     }
@@ -2358,15 +2418,15 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41" || effectCount.value !== "5 of 44" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 45" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, and Filtered Delay and preserve the current chain state.");
+      throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 44" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 45" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2376,12 +2436,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 44") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 45") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "44 of 44" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "45 of 45" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2464,6 +2524,7 @@ async function runBrowserSelfTest() {
          reverseDelay: [350, 0.25, 0.35, 10],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
+        sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],

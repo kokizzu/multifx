@@ -16,7 +16,8 @@ PYTHON ?= python3
 	publish-reverse-delay-plan publish-reverse-delay \
 	publish-ducking-delay-plan publish-ducking-delay \
 	publish-modulated-delay-plan publish-modulated-delay \
-	publish-filtered-delay-plan publish-filtered-delay
+	publish-filtered-delay-plan publish-filtered-delay \
+	publish-sweep-delay-plan publish-sweep-delay
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -186,3 +187,9 @@ publish-filtered-delay-plan:
 
 publish-filtered-delay:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint filtered-delay
+
+publish-sweep-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint sweep-delay
+
+publish-sweep-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint sweep-delay

@@ -44,6 +44,7 @@ add_library(tabletfx_core
     src/effects/ducking_delay.cpp
     src/effects/modulated_delay.cpp
     src/effects/filtered_delay.cpp
+    src/effects/sweep_delay.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -249,6 +250,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_filtered_delay_tests tests/test_filtered_delay.cpp)
     target_link_libraries(tabletfx_filtered_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_filtered_delay_tests COMMAND tabletfx_filtered_delay_tests)
+
+    add_executable(tabletfx_sweep_delay_tests tests/test_sweep_delay.cpp)
+    target_link_libraries(tabletfx_sweep_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_sweep_delay_tests COMMAND tabletfx_sweep_delay_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

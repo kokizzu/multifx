@@ -555,6 +555,29 @@ FILTERED_DELAY_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+SWEEP_DELAY_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "src/effects/sweep_delay.cpp",
+    "tests/test_sweep_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -606,6 +629,8 @@ CHECKPOINTS = {
                         "feat: add project-authored modulated delay"),
     "filtered-delay": (FILTERED_DELAY_CHECKPOINT_PATHS,
                        "feat: add project-authored filtered delay"),
+    "sweep-delay": (SWEEP_DELAY_CHECKPOINT_PATHS,
+                    "feat: add project-authored swept delay"),
 }
 
 
