@@ -187,6 +187,7 @@ void DiatonicHarmonizer::reset() noexcept {
     target_ratio_ = 1.0F;
     smoothed_ratio_ = 1.0F;
     confidence_ = 0.0F;
+    detected_input_frequency_hz_ = 0.0F;
     filter_state_[0] = 0.0F;
     filter_state_[1] = 0.0F;
     had_valid_pitch_ = false;
@@ -343,6 +344,15 @@ float DiatonicHarmonizer::latency_ms() const noexcept {
     return pitch_shifter_.algorithmic_latency_ms();
 }
 
+float DiatonicHarmonizer::detected_input_frequency_hz() const noexcept {
+    if (!had_valid_pitch_ || confidence_ < kMinPitchConfidence ||
+        !(detected_input_frequency_hz_ > 0.0F) ||
+        !std::isfinite(detected_input_frequency_hz_)) {
+        return 0.0F;
+    }
+    return detected_input_frequency_hz_;
+}
+
 int DiatonicHarmonizer::harmony_midi_note(int midi_note,
                                          int key,
                                          DiatonicScale scale,
@@ -420,6 +430,7 @@ void DiatonicHarmonizer::detect_pitch() noexcept {
         kDetectorFrame - 32,
         static_cast<std::size_t>(detector_rate_ / kMinTrackedHz));
     if (max_lag <= min_lag + 2) {
+        confidence_ = 0.0F;
         return;
     }
 
@@ -482,15 +493,18 @@ void DiatonicHarmonizer::detect_pitch() noexcept {
         }
     }
     if (!(refined_lag > 0.0F) || !std::isfinite(refined_lag)) {
+        confidence_ = 0.0F;
         return;
     }
     const float frequency = detector_rate_ / refined_lag;
     if (!(frequency >= kMinTrackedHz && frequency <= kMaxTrackedHz)) {
+        confidence_ = 0.0F;
         return;
     }
 
     const float midi = 69.0F + 12.0F * std::log2(frequency / 440.0F);
     if (!std::isfinite(midi)) {
+        confidence_ = 0.0F;
         return;
     }
     const int nearest_midi = static_cast<int>(std::floor(midi + 0.5F));
@@ -507,6 +521,7 @@ void DiatonicHarmonizer::detect_pitch() noexcept {
         target_ratio_ = 1.0F;
     }
     confidence_ = 1.0F - best_cmnd;
+    detected_input_frequency_hz_ = frequency;
     lost_pitch_samples_ = 0;
     had_valid_pitch_ = true;
 }

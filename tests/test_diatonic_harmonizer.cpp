@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
@@ -229,6 +230,63 @@ void test_stereo_link_and_reset() {
     assert(reset_check.enabled());
 }
 
+void test_detected_input_frequency_api() {
+    constexpr std::size_t kFrames = 4096;
+    constexpr float kSampleRate = 48000.0F;
+    constexpr float kInputHz = 220.0F;
+    std::array<float, kFrames> input{};
+    std::array<float, kFrames> output{};
+    std::array<float, kFrames> low_confidence_noise{};
+    std::array<float, kFrames> silence{};
+
+    DiatonicHarmonizerConfig config;
+    config.mix = 1.0F;
+    config.pitch_interval = 2;
+    config.key = 0;
+    config.scale = DiatonicScale::Major;
+    pitch_check.configure(config);
+    pitch_check.reset();
+    assert(pitch_check.detected_input_frequency_hz() == 0.0F);
+
+    for (std::size_t i = 0; i < kFrames; ++i) {
+        input[i] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * kInputHz *
+            static_cast<float>(i) / kSampleRate);
+    }
+    pitch_check.process(input.data(), nullptr, output.data(), nullptr, kFrames);
+    const float detected_hz = pitch_check.detected_input_frequency_hz();
+    assert(detected_hz > 0.0F);
+    assert(std::abs(detected_hz - kInputHz) < 2.0F);
+    // The API reports the raw input fundamental, not the C-major harmony voice.
+    assert(std::abs(detected_hz - 261.6256F) > 20.0F);
+    assert(pitch_check.latency_samples() == 256U);
+    assert(pitch_check.pitch_control_latency_samples() == 1280U);
+
+    // A deterministic, aperiodic signal has ample level but should fail the
+    // tracker confidence threshold and immediately hide the previous note.
+    std::uint32_t state = 0x12345678U;
+    for (float& sample : low_confidence_noise) {
+        state = state * 1664525U + 1013904223U;
+        const float unit = static_cast<float>((state >> 8U) & 0x00ffffffU) /
+                           16777215.0F;
+        sample = (2.0F * unit - 1.0F) * 0.05F;
+    }
+    pitch_check.process(low_confidence_noise.data(), nullptr, output.data(),
+                        nullptr, kFrames);
+    assert(pitch_check.detected_input_frequency_hz() == 0.0F);
+
+    pitch_check.reset();
+    assert(pitch_check.detected_input_frequency_hz() == 0.0F);
+    pitch_check.process(silence.data(), nullptr, output.data(), nullptr,
+                        kFrames);
+    assert(pitch_check.detected_input_frequency_hz() == 0.0F);
+
+    pitch_check.process(input.data(), nullptr, output.data(), nullptr, kFrames);
+    assert(pitch_check.detected_input_frequency_hz() > 0.0F);
+    pitch_check.reset();
+    assert(pitch_check.detected_input_frequency_hz() == 0.0F);
+}
+
 void test_generated_pitch_and_out_of_scale_correction() {
     constexpr std::size_t kFrames = 12000;
     constexpr std::size_t kMeasureStart = 2500;
@@ -321,6 +379,7 @@ int main() {
     test_config_bounds_and_latency();
     test_block_partition_and_finite_recovery();
     test_stereo_link_and_reset();
+    test_detected_input_frequency_api();
     test_generated_pitch_and_out_of_scale_correction();
     test_in_place_effect_api();
     return 0;

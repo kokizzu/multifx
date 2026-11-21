@@ -10,6 +10,14 @@ Research baseline: `GOAL.md` was supplied with a source bibliography dated 20 No
 - The Amp Rack audit in `GOAL.md` identifies a pinned source snapshot and warns that bundled binary libraries, commented-out source modules, and individual effect licenses must be considered separately.
 - Pitch candidates in `GOAL.md` are not yet integrated, built, or measured in this project. Do not treat library buffer/window values as end-to-end latency.
 
+## Flagship pitch arpeggiator comparison
+
+The November 2026 Fractal Audio Blocks Guide documents its FM9 Pitch-block Arpeggiator as one voice with 16 scale-aware steps, shifts up to ±24 scale degrees, and no voice delay. Named controls are Key, Scale, Run, Trigger Thresh, Steps, Repeats, Tempo, amplitude/pan Shape and Alpha, and per-step Shift. The guide does not give numeric limits for most controls. Fractal's FM9 downloads page lists v12.0 for “FM9 Original and FM9 Turbo”; that phrasing does not separately establish FM9 Mark II Turbo compatibility or a unit's installed firmware.
+
+TabletFX now has a project-authored 16-step Pitch Arpeggiator in the Pitch category. Its project controls include ±7 scale degrees, 1–16 steps, repeats, manual/threshold triggering, free/tempo divisions, amplitude/pan shape and alpha, Mix, and Level. Threshold bounds (−90…0 dBFS), 5 ms detector attack, 80 ms release, and other bounds are project choices, not Fractal values. The implementation shares the monophonic Diatonic Harmonizer path and therefore has about 26.7 ms estimated first-note response at 48 kHz and 1,024,888 B measured stereo state. The 48 kHz stereo/128-frame Linux benchmark recorded 15.4107% p50 and 17.4398% p95 of a 2.667 ms deadline, with a 52.1921% maximum. Treat that cost as a live-path optimization issue. `make test`, `make web-test`, `make audio-regression`, and `make bench` pass; the 55-stage browser test confirms Play/native numerical parity, not sound quality. No Fractal DSP, note-tracking, threshold-range, or performance parity is claimed.
+
+Primary sources: [Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) and [FM9 downloads/firmware](https://www.fractalaudio.com/fm9-downloads/), checked 2026-11-22.
+
 ## Evidence ledger
 
 | Component or claim | Revision/version | Primary source | Finding | Status |

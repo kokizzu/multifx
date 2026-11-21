@@ -105,6 +105,9 @@ struct Options {
     tabletfx::FourBandResonatorParameters four_band_resonator{};
     bool diatonic_harmonizer_enabled = false;
     tabletfx::effects::DiatonicHarmonizerConfig diatonic_harmonizer{};
+    bool pitch_arpeggiator_enabled = false;
+    bool pitch_arpeggiator_run_explicit = false;
+    tabletfx::effects::PitchArpeggiatorParameters pitch_arpeggiator{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
@@ -533,6 +536,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.diatonic_harmonizer_enabled = true;
             continue;
         }
+        if (key == "--pitch-arpeggiator") {
+            options.pitch_arpeggiator_enabled = true;
+            continue;
+        }
         if (key == "--grain-delay") {
             options.grain_delay_enabled = true;
             continue;
@@ -591,6 +598,111 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.diatonic_harmonizer_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--pitch-arpeggiator-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.pitch_arpeggiator;
+            const std::string_view setting = key.substr(
+                std::string_view("--pitch-arpeggiator-").size());
+            if (setting == "mix") {
+                parameters.mix = parse_float(key, argv[i]);
+            } else if (setting == "output-level") {
+                parameters.output_level = parse_float(key, argv[i]);
+            } else if (setting == "key") {
+                parameters.key = static_cast<int>(std::lround(std::clamp(
+                    parse_float(key, argv[i]), 0.0F, 11.0F)));
+            } else if (setting == "scale") {
+                if (value == "major") parameters.scale = tabletfx::effects::DiatonicScale::Major;
+                else if (value == "natural-minor") parameters.scale = tabletfx::effects::DiatonicScale::NaturalMinor;
+                else if (value == "dorian") parameters.scale = tabletfx::effects::DiatonicScale::Dorian;
+                else if (value == "phrygian") parameters.scale = tabletfx::effects::DiatonicScale::Phrygian;
+                else if (value == "lydian") parameters.scale = tabletfx::effects::DiatonicScale::Lydian;
+                else if (value == "mixolydian") parameters.scale = tabletfx::effects::DiatonicScale::Mixolydian;
+                else if (value == "locrian") parameters.scale = tabletfx::effects::DiatonicScale::Locrian;
+                else if (value == "harmonic-minor") parameters.scale = tabletfx::effects::DiatonicScale::HarmonicMinor;
+                else if (value == "melodic-minor") parameters.scale = tabletfx::effects::DiatonicScale::MelodicMinor;
+                else if (value == "major-pentatonic") parameters.scale = tabletfx::effects::DiatonicScale::MajorPentatonic;
+                else if (value == "minor-pentatonic") parameters.scale = tabletfx::effects::DiatonicScale::MinorPentatonic;
+                else if (value == "blues") parameters.scale = tabletfx::effects::DiatonicScale::Blues;
+                else if (value == "chromatic") parameters.scale = tabletfx::effects::DiatonicScale::Chromatic;
+                else throw std::invalid_argument("Unknown pitch arpeggiator scale");
+            } else if (setting == "steps") {
+                parameters.steps = static_cast<std::uint8_t>(std::lround(
+                    std::clamp(parse_float(key, argv[i]), 1.0F, 16.0F)));
+            } else if (setting == "repeats") {
+                parameters.repeats = static_cast<std::uint8_t>(std::lround(
+                    std::clamp(parse_float(key, argv[i]), 0.0F, 64.0F)));
+            } else if (setting == "run") {
+                if (value == "on") parameters.run = true;
+                else if (value == "off") parameters.run = false;
+                else throw std::invalid_argument("Pitch arpeggiator run must be on or off");
+                options.pitch_arpeggiator_run_explicit = true;
+            } else if (setting == "trigger-threshold-dbfs") {
+                parameters.trigger_threshold_dbfs = parse_float(key, argv[i]);
+            } else if (setting == "division") {
+                using Division = tabletfx::effects::PitchArpeggiatorDivision;
+                if (value == "free") parameters.step_division = Division::Free;
+                else if (value == "whole") parameters.step_division = Division::Whole;
+                else if (value == "half") parameters.step_division = Division::Half;
+                else if (value == "dotted-half") parameters.step_division = Division::DottedHalf;
+                else if (value == "quarter") parameters.step_division = Division::Quarter;
+                else if (value == "dotted-quarter") parameters.step_division = Division::DottedQuarter;
+                else if (value == "quarter-triplet") parameters.step_division = Division::QuarterTriplet;
+                else if (value == "eighth") parameters.step_division = Division::Eighth;
+                else if (value == "dotted-eighth") parameters.step_division = Division::DottedEighth;
+                else if (value == "eighth-triplet") parameters.step_division = Division::EighthTriplet;
+                else if (value == "sixteenth") parameters.step_division = Division::Sixteenth;
+                else if (value == "dotted-sixteenth") parameters.step_division = Division::DottedSixteenth;
+                else if (value == "sixteenth-triplet") parameters.step_division = Division::SixteenthTriplet;
+                else if (value == "thirty-second") parameters.step_division = Division::ThirtySecond;
+                else throw std::invalid_argument("Unknown pitch arpeggiator division");
+            } else if (setting == "tempo-bpm") {
+                parameters.tempo_bpm = parse_float(key, argv[i]);
+            } else if (setting == "step-ms") {
+                parameters.free_step_ms = parse_float(key, argv[i]);
+            } else if (setting == "amplitude-shape") {
+                using Shape = tabletfx::effects::PitchArpeggiatorAmplitudeShape;
+                if (value == "constant") parameters.amplitude_shape = Shape::Constant;
+                else if (value == "ramp-up") parameters.amplitude_shape = Shape::RampUp;
+                else if (value == "ramp-down") parameters.amplitude_shape = Shape::RampDown;
+                else if (value == "triangle") parameters.amplitude_shape = Shape::Triangle;
+                else throw std::invalid_argument("Unknown pitch arpeggiator amplitude shape");
+            } else if (setting == "amplitude-alpha") {
+                parameters.amplitude_alpha = parse_float(key, argv[i]);
+            } else if (setting == "pan-shape") {
+                using Shape = tabletfx::effects::PitchArpeggiatorPanShape;
+                if (value == "center") parameters.pan_shape = Shape::Center;
+                else if (value == "left-to-right") parameters.pan_shape = Shape::LeftToRight;
+                else if (value == "right-to-left") parameters.pan_shape = Shape::RightToLeft;
+                else if (value == "ping-pong") parameters.pan_shape = Shape::PingPong;
+                else throw std::invalid_argument("Unknown pitch arpeggiator pan shape");
+            } else if (setting == "pan-alpha") {
+                parameters.pan_alpha = parse_float(key, argv[i]);
+            } else if (setting == "shifts") {
+                const auto shifts = parse_step_pattern(value);
+                for (std::size_t step = 0; step < shifts.size(); ++step) {
+                    parameters.stage_shift_scale_degrees[step] = static_cast<int>(
+                        std::lround(std::clamp(shifts[step], -24.0F, 24.0F)));
+                }
+            } else if (setting.starts_with("step-")) {
+                unsigned step = 0;
+                const char* first = setting.data() + 5;
+                const char* last = setting.data() + setting.size();
+                const auto parsed = std::from_chars(first, last, step);
+                if (parsed.ec != std::errc{} || parsed.ptr != last ||
+                    step == 0U || step > parameters.stage_shift_scale_degrees.size()) {
+                    throw std::invalid_argument("Pitch arpeggiator step must be 1 through 16");
+                }
+                parameters.stage_shift_scale_degrees[step - 1U] = static_cast<int>(
+                    std::lround(std::clamp(parse_float(key, argv[i]), -24.0F, 24.0F)));
+            } else {
+                throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.pitch_arpeggiator_enabled = true;
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -2281,6 +2393,10 @@ Options parse_options(int argc, char** argv, int first) {
                                           options.bass_graphic_eq_enabled, value)) {}
         else throw std::invalid_argument("Unknown option: " + std::string(key));
     }
+    if (options.pitch_arpeggiator_enabled &&
+        !options.pitch_arpeggiator_run_explicit) {
+        options.pitch_arpeggiator.run = true;
+    }
     return options;
 }
 
@@ -2562,6 +2678,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate));
         harmonizer->configure(options.diatonic_harmonizer);
         effects.push_back(std::move(harmonizer));
+    }
+    if (options.pitch_arpeggiator_enabled) {
+        auto arpeggiator = std::make_unique<tabletfx::effects::PitchArpeggiator>(
+            static_cast<float>(sample_rate), options.pitch_arpeggiator);
+        effects.push_back(std::move(arpeggiator));
     }
     if (options.grain_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(
@@ -2978,6 +3099,12 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels);
     pitch->set_pitch_semitones(5.0F);
     effects.push_back(std::move(pitch));
+    tabletfx::effects::PitchArpeggiatorParameters arpeggiator_parameters;
+    arpeggiator_parameters.run = true;
+    arpeggiator_parameters.steps = 8;
+    arpeggiator_parameters.mix = 0.5F;
+    effects.push_back(std::make_unique<tabletfx::effects::PitchArpeggiator>(
+        static_cast<float>(sample_rate), arpeggiator_parameters));
     tabletfx::OpticalCompressorParameters optical_parameters;
     optical_parameters.threshold_db = -24.0F;
     optical_parameters.ratio = 3.0F;
@@ -3292,6 +3419,14 @@ void run_bench() {
         effect->configure(parameters);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("pitch-arpeggiator", [=] {
+        tabletfx::effects::PitchArpeggiatorParameters parameters;
+        parameters.run = true;
+        parameters.steps = 8;
+        parameters.mix = 0.5F;
+        return std::make_unique<tabletfx::effects::PitchArpeggiator>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("grain-delay-worst-case", [=] {
         tabletfx::GrainDelayParameters parameters;
         parameters.time_ms = 2000.0F;
@@ -3584,6 +3719,18 @@ void print_usage() {
                     " [--diatonic-harmonizer-feedback 0..0.85]"
                     " [--diatonic-harmonizer-tap-division free|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth]"
                     " [--diatonic-harmonizer-tempo-bpm BPM]"
+                  " [--pitch-arpeggiator] [--pitch-arpeggiator-run on|off]"
+                  " [--pitch-arpeggiator-mix 0..1] [--pitch-arpeggiator-output-level 0..2]"
+                  " [--pitch-arpeggiator-trigger-threshold-dbfs -90..0]"
+                  " [--pitch-arpeggiator-key 0..11] [--pitch-arpeggiator-scale major|natural-minor|dorian|phrygian|lydian|mixolydian|locrian|harmonic-minor|melodic-minor|major-pentatonic|minor-pentatonic|blues|chromatic]"
+                  " [--pitch-arpeggiator-steps 1..16] [--pitch-arpeggiator-repeats 0..64]"
+                  " [--pitch-arpeggiator-division free|whole|half|dotted-half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth|dotted-sixteenth|sixteenth-triplet|thirty-second]"
+                  " [--pitch-arpeggiator-tempo-bpm BPM] [--pitch-arpeggiator-step-ms 10..2000]"
+                  " [--pitch-arpeggiator-shifts 16 comma-separated shifts (-24..24 degrees)]"
+                  " [--pitch-arpeggiator-amplitude-shape constant|ramp-up|ramp-down|triangle]"
+                  " [--pitch-arpeggiator-amplitude-alpha 0..1]"
+                  " [--pitch-arpeggiator-pan-shape center|left-to-right|right-to-left|ping-pong]"
+                  " [--pitch-arpeggiator-pan-alpha 0..1]"
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"

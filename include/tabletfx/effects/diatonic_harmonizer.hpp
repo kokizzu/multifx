@@ -124,6 +124,10 @@ public:
     [[nodiscard]] std::size_t pitch_control_latency_samples() const noexcept {
         return analysis_latency_samples_ + latency_samples();
     }
+    // Raw fundamental estimate from the latest confident monophonic input
+    // measurement, in Hz. Returns 0 when pitch validity/confidence is lost.
+    // This does not apply key/scale snapping or the configured harmony interval.
+    [[nodiscard]] float detected_input_frequency_hz() const noexcept;
     [[nodiscard]] std::size_t effective_delay_samples() const noexcept {
         return delay_samples_;
     }
@@ -171,6 +175,7 @@ private:
     float mix_wet_gain_ = 0.0F;
     float feedback_ = 0.0F;
     float confidence_ = 0.0F;
+    float detected_input_frequency_hz_ = 0.0F;
     float filter_state_[2] = {0.0F, 0.0F};
     bool enabled_ = true;
     bool had_valid_pitch_ = false;

@@ -28,6 +28,7 @@ PYTHON ?= python3
 	publish-diatonic-harmonizer-plan publish-diatonic-harmonizer \
 	publish-grain-delay-plan publish-grain-delay \
 	publish-pitch-arpeggiator-plan publish-pitch-arpeggiator \
+	publish-pitch-feedback-delay-plan publish-pitch-feedback-delay \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -264,6 +265,18 @@ publish-pitch-arpeggiator-plan:
 
 publish-pitch-arpeggiator:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint pitch-arpeggiator
+
+publish-pitch-feedback-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint pitch-feedback-delay
+
+publish-pitch-feedback-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint pitch-feedback-delay
+
+publish-mono-guitar-synth-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint mono-guitar-synth
+
+publish-mono-guitar-synth:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint mono-guitar-synth
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog

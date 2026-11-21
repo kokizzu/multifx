@@ -85,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(52);
+          effects_.reserve(53);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -239,6 +239,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::PitchArpeggiator>(
+                                static_cast<float>(sample_rate)),
+                            false});
         effects_.push_back({std::make_unique<tabletfx::GrainDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
@@ -283,6 +286,9 @@ public:
         if (index == 50U) {
             static_cast<tabletfx::effects::DiatonicHarmonizer*>(
                 effects_[index].effect.get())->set_enabled(enabled);
+        }
+        if (index == 51U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
         return true;
@@ -778,6 +784,56 @@ public:
             ->configure(config);
     }
 
+    void configure_pitch_arpeggiator(const float* values,
+                                      std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 31U;
+        if (values == nullptr || value_count != kParameterCount) {
+            return;
+        }
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) {
+                return 0U;
+            }
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        tabletfx::effects::PitchArpeggiatorParameters parameters;
+        parameters.run = std::isfinite(values[0]) && values[0] >= 0.5F;
+        parameters.mix = values[1];
+        parameters.output_level = values[2];
+        parameters.key = static_cast<int>(selector(values[3], 11U));
+        parameters.scale = static_cast<tabletfx::effects::DiatonicScale>(
+            selector(values[4], static_cast<std::uint32_t>(
+                                    tabletfx::effects::DiatonicScale::Chromatic)));
+        parameters.steps = static_cast<std::uint8_t>(selector(values[5], 16U));
+        parameters.repeats = static_cast<std::uint8_t>(selector(values[6], 64U));
+        parameters.step_division =
+            static_cast<tabletfx::effects::PitchArpeggiatorDivision>(
+                selector(values[7], static_cast<std::uint32_t>(
+                                        tabletfx::effects::PitchArpeggiatorDivision::ThirtySecond)));
+        parameters.tempo_bpm = values[8];
+        parameters.free_step_ms = values[9];
+        parameters.amplitude_shape =
+            static_cast<tabletfx::effects::PitchArpeggiatorAmplitudeShape>(
+                selector(values[10], static_cast<std::uint32_t>(
+                                         tabletfx::effects::PitchArpeggiatorAmplitudeShape::Triangle)));
+        parameters.amplitude_alpha = values[11];
+        parameters.pan_shape =
+            static_cast<tabletfx::effects::PitchArpeggiatorPanShape>(
+                selector(values[12], static_cast<std::uint32_t>(
+                                         tabletfx::effects::PitchArpeggiatorPanShape::PingPong)));
+        parameters.pan_alpha = values[13];
+        parameters.trigger_threshold_dbfs = values[30];
+        for (std::size_t step = 0; step < parameters.stage_shift_scale_degrees.size(); ++step) {
+            const float requested = values[14U + step];
+            parameters.stage_shift_scale_degrees[step] = std::isfinite(requested)
+                ? static_cast<int>(std::lround(std::clamp(requested, -7.0F, 7.0F)))
+                : 0;
+        }
+        static_cast<tabletfx::effects::PitchArpeggiator*>(effects_[51].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_grain_delay(float time_ms, float feedback, float mix,
                                float grain_size_ms, std::uint32_t overlap,
                                float pitch_semitones, float spray_ms) noexcept {
@@ -790,7 +846,7 @@ public:
             std::clamp(overlap, 0U, 255U));
         parameters.pitch_semitones = pitch_semitones;
         parameters.spray_ms = spray_ms;
-        static_cast<tabletfx::GrainDelay*>(effects_[51].effect.get())
+        static_cast<tabletfx::GrainDelay*>(effects_[52].effect.get())
             ->configure(parameters);
     }
 
@@ -1939,6 +1995,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_diatonic_harmonizer(
         as_chain(opaque)->configure_diatonic_harmonizer(
             mix, pitch_interval, key, scale, tone_hz, delay_ms, feedback,
             tap_division, tempo_bpm);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch_arpeggiator(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch_arpeggiator(values, value_count);
     }
 }
 

@@ -772,6 +772,51 @@ def check_diatonic_harmonizer(executable: Path) -> None:
             raise AssertionError("Diatonic Harmonizer accepted an unknown scale")
 
 
+def check_pitch_arpeggiator(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 32768
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    shifts = "0,7," + ",".join(["0"] * 14)
+    with tempfile.TemporaryDirectory(prefix="tabletfx-pitch-arpeggiator-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "single-note.wav"
+        output = root / "arpeggiated.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--pitch-arpeggiator", "--pitch-arpeggiator-mix", "1",
+             "--pitch-arpeggiator-run", "off",
+             "--pitch-arpeggiator-trigger-threshold-dbfs", "-20",
+             "--pitch-arpeggiator-steps", "2", "--pitch-arpeggiator-repeats", "0",
+             "--pitch-arpeggiator-division", "free", "--pitch-arpeggiator-step-ms", "100",
+             "--pitch-arpeggiator-key", "0", "--pitch-arpeggiator-scale", "major",
+             "--pitch-arpeggiator-shifts", shifts,
+             "--pitch-arpeggiator-amplitude-shape", "ramp-up",
+             "--pitch-arpeggiator-amplitude-alpha", "0.25",
+             "--pitch-arpeggiator-pan-shape", "ping-pong",
+             "--pitch-arpeggiator-pan-alpha", "0.5"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Pitch Arpeggiator options did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        dry = [sample / 32768.0 for sample in source_samples]
+        if not all(math.isfinite(sample) for sample in rendered) or \
+                max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.05:
+            raise AssertionError("Pitch Arpeggiator did not render a finite pitch/level pattern")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--pitch-arpeggiator-division", "not-a-division"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Pitch Arpeggiator accepted an unknown step division")
+
+
 def check_grain_delay(executable: Path) -> None:
     sample_rate = 8000
     frame_count = 4096
@@ -1797,6 +1842,7 @@ def main() -> None:
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())
     check_diatonic_harmonizer(args.executable.resolve())
+    check_pitch_arpeggiator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -1813,7 +1859,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting and Diatonic Harmonizer, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, and Pitch Arpeggiator, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
