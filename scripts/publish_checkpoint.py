@@ -594,6 +594,14 @@ EFFECT_MODULE_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
 ) + FEATURE_MODULE_PATHS
+FLAGSHIP_CATALOG_CHECKPOINT_PATHS = (
+    "Makefile",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "RESEARCH.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "README.md",
+    "scripts/publish_checkpoint.py",
+)
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -631,6 +639,8 @@ CHECKPOINTS = {
                        "feat: add project-authored filtered delay"),
     "sweep-delay": (SWEEP_DELAY_CHECKPOINT_PATHS,
                     "feat: add project-authored swept delay"),
+    "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,
+                         "docs: expand flagship effects catalog"),
 }
 
 

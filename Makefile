@@ -17,7 +17,8 @@ PYTHON ?= python3
 	publish-ducking-delay-plan publish-ducking-delay \
 	publish-modulated-delay-plan publish-modulated-delay \
 	publish-filtered-delay-plan publish-filtered-delay \
-	publish-sweep-delay-plan publish-sweep-delay
+	publish-sweep-delay-plan publish-sweep-delay \
+	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -193,3 +194,9 @@ publish-sweep-delay-plan:
 
 publish-sweep-delay:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint sweep-delay
+
+publish-flagship-catalog-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog
+
+publish-flagship-catalog:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint flagship-catalog
