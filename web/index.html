@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">40 of 40</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">42 of 42</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -121,8 +121,9 @@
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="36"><span class="effect-number">37</span><span class="effect-name">Step Filter</span><span class="effect-default">16 steps · resonant low-pass</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="37"><span class="effect-number">38</span><span class="effect-name">Notch Filter</span><span class="effect-default">1 kHz · Q 4 · 100% wet</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="38"><span class="effect-number">39</span><span class="effect-name">Reverse Delay</span><span class="effect-default">350 ms · 25% feedback · 35% wet</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="39" checked><span class="effect-number">40</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="40" checked><span class="effect-number">41</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="39"><span class="effect-number">40</span><span class="effect-name">Ducking Delay</span><span class="effect-default">−30 dB threshold · 12 dB duck · 250 ms release</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="40" checked><span class="effect-number">41</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="41" checked><span class="effect-number">42</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -265,6 +266,18 @@
           <button id="reverse-delay-restart" class="button" type="button">Trigger restart</button>
         </div>
         <p class="hint">Project-authored rolling reversed snippets. Time, feedback, mix, crossfade and defaults are project-specific; crossfade is additionally capped below half of Time. The general effect checkbox bypasses this chain stage.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Ducking Delay controls">
+        <h3>Ducking Delay · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="ducking-delay-time-ms"><span>Time</span><output id="ducking-delay-time-ms-value" for="ducking-delay-time-ms">350 ms</output><input id="ducking-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="ducking-delay-feedback"><span>Feedback</span><output id="ducking-delay-feedback-value" for="ducking-delay-feedback">25%</output><input id="ducking-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
+          <label class="mix-control" for="ducking-delay-mix"><span>Mix</span><output id="ducking-delay-mix-value" for="ducking-delay-mix">25%</output><input id="ducking-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="ducking-delay-threshold-db"><span>Ducker threshold</span><output id="ducking-delay-threshold-db-value" for="ducking-delay-threshold-db">−30 dB</output><input id="ducking-delay-threshold-db" type="range" min="-72" max="0" step="1" value="-30"></label>
+          <label class="mix-control" for="ducking-delay-attenuation-db"><span>Ducker attenuation</span><output id="ducking-delay-attenuation-db-value" for="ducking-delay-attenuation-db">12 dB</output><input id="ducking-delay-attenuation-db" type="range" min="0" max="60" step="1" value="12"></label>
+          <label class="mix-control" for="ducking-delay-release-ms"><span>Ducker release</span><output id="ducking-delay-release-ms-value" for="ducking-delay-release-ms">250 ms</output><input id="ducking-delay-release-ms" type="range" min="1" max="2000" step="1" value="250"></label>
+        </div>
+        <p class="hint">Stereo-linked input peak detection lowers the delayed signal above Threshold. Release controls how quickly repeats return. These ranges/defaults are project-authored; no vendor ranges are claimed. The general effect checkbox bypasses this chain stage.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

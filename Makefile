@@ -13,7 +13,8 @@ PYTHON ?= python3
 	publish-rhythmic-slicer-plan publish-rhythmic-slicer \
 	publish-step-filter-plan publish-step-filter \
 	publish-notch-filter-plan publish-notch-filter \
-	publish-reverse-delay-plan publish-reverse-delay
+	publish-reverse-delay-plan publish-reverse-delay \
+	publish-ducking-delay-plan publish-ducking-delay
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -165,3 +166,9 @@ publish-reverse-delay-plan:
 
 publish-reverse-delay:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint reverse-delay
+
+publish-ducking-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint ducking-delay
+
+publish-ducking-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint ducking-delay

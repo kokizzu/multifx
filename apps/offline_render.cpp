@@ -18,6 +18,7 @@
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
+#include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -187,6 +188,8 @@ struct Options {
     bool reverse_delay_enabled = false;
     tabletfx::ReverseDelayParameters reverse_delay{};
     bool reverse_delay_running = true;
+    bool ducking_delay_enabled = false;
+    tabletfx::DuckingDelayParameters ducking_delay{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -396,6 +399,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--reverse-delay") {
             options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--ducking-delay") {
+            options.ducking_delay_enabled = true;
             continue;
         }
         if (key == "--reverse-delay-run") {
@@ -1413,6 +1420,30 @@ Options parse_options(int argc, char** argv, int first) {
             options.reverse_delay.crossfade_ms = value;
             options.reverse_delay_enabled = true;
         }
+        else if (key == "--ducking-delay-time-ms") {
+            options.ducking_delay.time_ms = value;
+            options.ducking_delay_enabled = true;
+        }
+        else if (key == "--ducking-delay-feedback") {
+            options.ducking_delay.feedback = value;
+            options.ducking_delay_enabled = true;
+        }
+        else if (key == "--ducking-delay-mix") {
+            options.ducking_delay.mix = value;
+            options.ducking_delay_enabled = true;
+        }
+        else if (key == "--ducking-delay-threshold-db") {
+            options.ducking_delay.threshold_db = value;
+            options.ducking_delay_enabled = true;
+        }
+        else if (key == "--ducking-delay-attenuation-db") {
+            options.ducking_delay.attenuation_db = value;
+            options.ducking_delay_enabled = true;
+        }
+        else if (key == "--ducking-delay-release-ms") {
+            options.ducking_delay.release_ms = value;
+            options.ducking_delay_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1722,6 +1753,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             options.reverse_delay);
         reverse_delay->set_running(options.reverse_delay_running);
         effects.push_back(std::move(reverse_delay));
+    }
+    if (options.ducking_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::DuckingDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.ducking_delay));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2205,6 +2241,13 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::ReverseDelay>(
         static_cast<float>(sample_rate), channels));
+    tabletfx::DuckingDelayParameters ducking_delay_parameters;
+    ducking_delay_parameters.threshold_db = -30.0F;
+    ducking_delay_parameters.attenuation_db = 12.0F;
+    ducking_delay_parameters.release_ms = 250.0F;
+    effects.push_back(std::make_unique<tabletfx::DuckingDelay>(
+        static_cast<float>(sample_rate), channels, 2000.0F,
+        ducking_delay_parameters));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2309,6 +2352,14 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("ducking-delay", [=] {
+        tabletfx::DuckingDelayParameters parameters;
+        parameters.threshold_db = -30.0F;
+        parameters.attenuation_db = 18.0F;
+        parameters.release_ms = 250.0F;
+        return std::make_unique<tabletfx::DuckingDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
         tabletfx::RoomReverbParameters parameters;
         parameters.size = tabletfx::RoomSize::large;
@@ -2708,6 +2759,11 @@ void print_usage() {
                  << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
                     " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
                     " [--reverse-delay-crossfade-ms 0..50] [--reverse-delay-run on|off]\n"
+                 << "                 [--ducking-delay] [--ducking-delay-time-ms 1..2000]"
+                    " [--ducking-delay-feedback 0..0.95] [--ducking-delay-mix 0..1]"
+                    " [--ducking-delay-threshold-db -72..0]"
+                    " [--ducking-delay-attenuation-db 0..60]"
+                    " [--ducking-delay-release-ms 1..2000]\n"
                << "  tabletfx_offline --bench\n";
 }
 

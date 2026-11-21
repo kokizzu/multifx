@@ -17,6 +17,7 @@
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
+#include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -78,7 +79,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(39);
+          effects_.reserve(40);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -193,6 +194,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ReverseDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::DuckingDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -929,6 +933,13 @@ public:
             ->trigger_restart();
     }
 
+    void configure_ducking_delay(float time_ms, float feedback, float mix,
+                                 float threshold_db, float attenuation_db,
+                                 float release_ms) noexcept {
+        static_cast<tabletfx::DuckingDelay*>(effects_[39].effect.get())->configure(
+            {time_ms, feedback, mix, threshold_db, attenuation_db, release_ms});
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1494,6 +1505,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_reverse_delay_run(
 TABLETFX_WASM_EXPORT void tf_chain_restart_reverse_delay(void* opaque) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->trigger_reverse_delay_restart();
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_ducking_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float threshold_db, float attenuation_db, float release_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_ducking_delay(
+            time_ms, feedback, mix, threshold_db, attenuation_db, release_ms);
     }
 }
 

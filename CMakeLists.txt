@@ -41,6 +41,7 @@ add_library(tabletfx_core
     src/effects/step_filter.cpp
     src/effects/notch_filter.cpp
     src/effects/reverse_delay.cpp
+    src/effects/ducking_delay.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -234,6 +235,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_reverse_delay_tests tests/test_reverse_delay.cpp)
     target_link_libraries(tabletfx_reverse_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_reverse_delay_tests COMMAND tabletfx_reverse_delay_tests)
+
+    add_executable(tabletfx_ducking_delay_tests tests/test_ducking_delay.cpp)
+    target_link_libraries(tabletfx_ducking_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_ducking_delay_tests COMMAND tabletfx_ducking_delay_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

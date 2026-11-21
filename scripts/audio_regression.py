@@ -194,6 +194,11 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--reverse-delay", "--reverse-delay-time-ms", "350",
         "--reverse-delay-feedback", "0.25", "--reverse-delay-mix", "0.35",
         "--reverse-delay-crossfade-ms", "10",
+        "--ducking-delay", "--ducking-delay-time-ms", "350",
+        "--ducking-delay-feedback", "0.25", "--ducking-delay-mix", "0.25",
+        "--ducking-delay-threshold-db", "-30",
+        "--ducking-delay-attenuation-db", "12",
+        "--ducking-delay-release-ms", "250",
     ]
     if delay_character == "tape":
         command.extend([
@@ -216,7 +221,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 41:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 42:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -283,7 +288,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 41-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, and Reverse Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 42-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Reverse Delay, and Ducking Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

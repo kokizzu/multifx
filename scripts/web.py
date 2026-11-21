@@ -148,7 +148,8 @@ def build_web() -> None:
         "_tf_chain_set_noise_gate",
         "_tf_chain_set_limiter", "_tf_chain_set_notch_filter",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
-        "_tf_chain_restart_reverse_delay", "_tf_chain_set_wah", "_tf_chain_set_tremolo",
+        "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
+        "_tf_chain_set_wah", "_tf_chain_set_tremolo",
         "_tf_chain_set_chorus",
         "_tf_chain_set_flanger",
         "_tf_chain_set_phaser",
@@ -204,6 +205,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "step_filter.cpp"),
         str(ROOT / "src" / "effects" / "notch_filter.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
+        str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -625,6 +627,11 @@ def browser_test() -> None:
               "--reverse-delay", "--reverse-delay-time-ms", "350",
               "--reverse-delay-feedback", "0.25", "--reverse-delay-mix", "0.35",
               "--reverse-delay-crossfade-ms", "10",
+               "--ducking-delay", "--ducking-delay-time-ms", "350",
+               "--ducking-delay-feedback", "0.25", "--ducking-delay-mix", "0.25",
+               "--ducking-delay-threshold-db", "-30",
+               "--ducking-delay-attenuation-db", "12",
+               "--ducking-delay-release-ms", "250",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

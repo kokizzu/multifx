@@ -484,6 +484,29 @@ REVERSE_DELAY_CHECKPOINT_PATHS = (
     "web/index.html",
     "web/style.css",
 )
+DUCKING_DELAY_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/ducking_delay.hpp",
+    "src/effects/ducking_delay.cpp",
+    "tests/test_ducking_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -529,6 +552,8 @@ CHECKPOINTS = {
                      "feat: add project-authored notch filter"),
     "reverse-delay": (REVERSE_DELAY_CHECKPOINT_PATHS,
                       "feat: add project-authored reverse delay"),
+    "ducking-delay": (DUCKING_DELAY_CHECKPOINT_PATHS,
+                      "feat: add project-authored ducking delay"),
 }
 
 
