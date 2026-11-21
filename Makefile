@@ -19,6 +19,7 @@ PYTHON ?= python3
 	publish-filtered-delay-plan publish-filtered-delay \
 	publish-sweep-delay-plan publish-sweep-delay \
 	publish-formant-filter-plan publish-formant-filter \
+	publish-harmonic-resonator-plan publish-harmonic-resonator \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -201,6 +202,12 @@ publish-formant-filter-plan:
 
 publish-formant-filter:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint formant-filter
+
+publish-harmonic-resonator-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint harmonic-resonator
+
+publish-harmonic-resonator:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint harmonic-resonator
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog

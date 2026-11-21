@@ -45,6 +45,7 @@ const EFFECT_NAMES = [
   "Filtered Delay",
   "Sweep Delay",
   "Formant Filter",
+  "Harmonic Resonator",
   "Output level",
   "Peak limiter",
 ];
@@ -87,6 +88,7 @@ const DEFAULT_PARAMETERS = {
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   notchFilter: [1000, 4, 1],
   formantFilter: [0, 4, 1, 0],
+  harmonicResonator: [110, 1.2, 0.55, 0.5],
   reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
@@ -570,6 +572,14 @@ const formantFilterMix = document.querySelector("#formant-filter-mix");
 const formantFilterMixValue = document.querySelector("#formant-filter-mix-value");
 const formantFilterLevel = document.querySelector("#formant-filter-level-db");
 const formantFilterLevelValue = document.querySelector("#formant-filter-level-db-value");
+const harmonicResonatorRoot = document.querySelector("#harmonic-resonator-root-frequency-hz");
+const harmonicResonatorRootValue = document.querySelector("#harmonic-resonator-root-frequency-hz-value");
+const harmonicResonatorDecay = document.querySelector("#harmonic-resonator-decay-seconds");
+const harmonicResonatorDecayValue = document.querySelector("#harmonic-resonator-decay-seconds-value");
+const harmonicResonatorBrightness = document.querySelector("#harmonic-resonator-brightness");
+const harmonicResonatorBrightnessValue = document.querySelector("#harmonic-resonator-brightness-value");
+const harmonicResonatorMix = document.querySelector("#harmonic-resonator-mix");
+const harmonicResonatorMixValue = document.querySelector("#harmonic-resonator-mix-value");
 const reverseDelayTime = document.querySelector("#reverse-delay-time-ms");
 const reverseDelayTimeValue = document.querySelector("#reverse-delay-time-ms-value");
 const reverseDelayTimeMode = document.querySelector("#reverse-delay-time-mode");
@@ -1981,6 +1991,23 @@ function updateFormantFilter() {
   }
 }
 
+function updateHarmonicResonator() {
+  const values = [
+    Number(harmonicResonatorRoot.value),
+    Number(harmonicResonatorDecay.value),
+    Number(harmonicResonatorBrightness.value) / 100,
+    Number(harmonicResonatorMix.value) / 100,
+  ];
+  harmonicResonatorRootValue.value = `${Math.round(values[0])} Hz`;
+  harmonicResonatorDecayValue.value = `${values[1].toFixed(2)} s`;
+  harmonicResonatorBrightnessValue.value = `${Math.round(values[2] * 100)}%`;
+  harmonicResonatorMixValue.value = `${Math.round(values[3] * 100)}%`;
+  DEFAULT_PARAMETERS.harmonicResonator = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "harmonic-resonator", value: values });
+  }
+}
+
 function updateReverseDelay() {
   const timeMs = Number(reverseDelayTime.value);
   const timeMode = Number(reverseDelayTimeMode.value);
@@ -2205,6 +2232,11 @@ for (const input of [formantFilterVowel, formantFilterQ, formantFilterMix,
   input.addEventListener("input", updateFormantFilter);
   input.addEventListener("change", updateFormantFilter);
 }
+for (const input of [harmonicResonatorRoot, harmonicResonatorDecay,
+  harmonicResonatorBrightness, harmonicResonatorMix]) {
+  input.addEventListener("input", updateHarmonicResonator);
+  input.addEventListener("change", updateHarmonicResonator);
+}
 for (const input of [reverseDelayTime, reverseDelayTempo,
   reverseDelayFeedback, reverseDelayMix, reverseDelayCrossfade,
   reverseDelayLowCut, reverseDelayHighCut, reverseDelayForwardLevel]) {
@@ -2257,6 +2289,7 @@ updateRhythmicSlicer();
 updateStepFilter();
 updateNotchFilter();
 updateFormantFilter();
+updateHarmonicResonator();
 updateReverseDelay();
 updateReverseDelayRun();
 updateDuckingDelay();
@@ -2413,17 +2446,18 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 46 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 46 || effectRows.length !== 46 ||
+    const expectedEffectIds = Array.from({ length: 47 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 47 || effectRows.length !== 47 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
+        initialEffectState[44] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 46 ordered, categorized effects (IDs 0–45) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
+      throw new Error("The effect picker must list 47 ordered, categorized effects (IDs 0–46) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
@@ -2466,7 +2500,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 46" ||
+        effectCount.value !== "8 of 47" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2474,8 +2508,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45" ||
-        effectCount.value !== "7 of 46" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,46" ||
+        effectCount.value !== "7 of 47" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2483,16 +2517,16 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 46" ||
+    if (filterIds.join(",") !== "2,3,7,8,36,37,43,44" ||
+        effectCount.value !== "8 of 47" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Filters category must include Step Filter, Notch Filter, and Formant Filter and preserve the current chain state.");
+      throw new Error("The Filters category must include Step Filter, Notch Filter, Formant Filter, and Harmonic Resonator and preserve the current chain state.");
     }
     effectCategoryFilter.value = "delay";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 46" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 47" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2500,7 +2534,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 46" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 47" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2510,12 +2544,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 46") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 47") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "46 of 46" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "47 of 47" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2596,6 +2630,7 @@ async function runBrowserSelfTest() {
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
         formantFilter: [1.5, 6, 0.72, -2],
+        harmonicResonator: [220, 0.8, 0.7, 0.65],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
@@ -2670,6 +2705,18 @@ async function runBrowserSelfTest() {
         DEFAULT_PARAMETERS.formantFilter[2] !== 0.72 ||
         DEFAULT_PARAMETERS.formantFilter[3] !== -2) {
       throw new Error("Formant Filter controls must update vowel position, Q, mix, and output level.");
+    }
+    const harmonicParameters = testOptions.parameters.harmonicResonator;
+    harmonicResonatorRoot.value = String(harmonicParameters[0]);
+    harmonicResonatorDecay.value = String(harmonicParameters[1]);
+    harmonicResonatorBrightness.value = String(harmonicParameters[2] * 100);
+    harmonicResonatorMix.value = String(harmonicParameters[3] * 100);
+    updateHarmonicResonator();
+    if (DEFAULT_PARAMETERS.harmonicResonator[0] !== 220 ||
+        DEFAULT_PARAMETERS.harmonicResonator[1] !== 0.8 ||
+        DEFAULT_PARAMETERS.harmonicResonator[2] !== 0.7 ||
+        DEFAULT_PARAMETERS.harmonicResonator[3] !== 0.65) {
+      throw new Error("Harmonic Resonator controls must update root, decay, brightness, and mix.");
     }
     const reverseDelayParameters = testOptions.parameters.reverseDelay;
     reverseDelayTime.value = String(reverseDelayParameters[0]);

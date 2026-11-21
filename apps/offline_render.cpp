@@ -18,6 +18,7 @@
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
+#include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -189,6 +190,8 @@ struct Options {
     tabletfx::NotchFilterParameters notch_filter{};
     bool formant_filter_enabled = false;
     tabletfx::FormantFilterParameters formant_filter{};
+    bool harmonic_resonator_enabled = false;
+    tabletfx::HarmonicResonatorParameters harmonic_resonator{};
     bool reverse_delay_enabled = false;
     tabletfx::ReverseDelayParameters reverse_delay{};
     bool reverse_delay_running = true;
@@ -409,6 +412,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--formant-filter") {
             options.formant_filter_enabled = true;
+            continue;
+        }
+        if (key == "--harmonic-resonator") {
+            options.harmonic_resonator_enabled = true;
             continue;
         }
         if (key == "--reverse-delay") {
@@ -1520,6 +1527,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.formant_filter.level_db = value;
             options.formant_filter_enabled = true;
         }
+        else if (key == "--harmonic-resonator-root-frequency-hz") {
+            options.harmonic_resonator.root_frequency_hz = value;
+            options.harmonic_resonator_enabled = true;
+        }
+        else if (key == "--harmonic-resonator-decay-seconds") {
+            options.harmonic_resonator.decay_seconds = value;
+            options.harmonic_resonator_enabled = true;
+        }
+        else if (key == "--harmonic-resonator-brightness") {
+            options.harmonic_resonator.brightness = value;
+            options.harmonic_resonator_enabled = true;
+        }
+        else if (key == "--harmonic-resonator-mix") {
+            options.harmonic_resonator.mix = value;
+            options.harmonic_resonator_enabled = true;
+        }
         else if (key == "--reverse-delay-time-ms") {
             options.reverse_delay.time_ms = value;
             options.reverse_delay_enabled = true;
@@ -1989,6 +2012,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.formant_filter_enabled) {
         effects.push_back(std::make_unique<tabletfx::FormantFilter>(
             static_cast<float>(sample_rate), options.formant_filter));
+    }
+    if (options.harmonic_resonator_enabled) {
+        effects.push_back(std::make_unique<tabletfx::HarmonicResonator>(
+            static_cast<float>(sample_rate), options.harmonic_resonator));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2487,6 +2514,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels, 2000.0F));
     effects.push_back(std::make_unique<tabletfx::FormantFilter>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::HarmonicResonator>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2613,6 +2642,10 @@ void run_bench() {
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("formant-filter", [=] {
         return std::make_unique<tabletfx::FormantFilter>(
+            static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("harmonic-resonator", [=] {
+        return std::make_unique<tabletfx::HarmonicResonator>(
             static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
@@ -3014,6 +3047,11 @@ void print_usage() {
                   << "                 [--formant-filter] [--formant-filter-vowel-position 0..4]"
                      " [--formant-filter-q 0.5..12] [--formant-filter-mix 0..1]"
                      " [--formant-filter-level-db -24..12]\n"
+                   << "                 [--harmonic-resonator]"
+                      " [--harmonic-resonator-root-frequency-hz 20..1000]"
+                      " [--harmonic-resonator-decay-seconds 0.05..8]"
+                      " [--harmonic-resonator-brightness 0..1]"
+                      " [--harmonic-resonator-mix 0..1]\n"
                  << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
                     " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
                      " [--reverse-delay-time-mode milliseconds|tempo-sync]"

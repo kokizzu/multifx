@@ -1474,6 +1474,37 @@ def check_formant_filter(executable: Path) -> None:
             raise AssertionError("Formant Filter controls did not change the rendered tone")
 
 
+def check_harmonic_resonator(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 9600
+    source_samples = [
+        round(10000 * (math.sin(2.0 * math.pi * 110.0 * frame / sample_rate) +
+                       0.35 * math.sin(2.0 * math.pi * 173.0 * frame / sample_rate)))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-harmonic-resonator-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "resonated.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--harmonic-resonator", "--harmonic-resonator-root-frequency-hz", "110",
+             "--harmonic-resonator-decay-seconds", "0.8",
+             "--harmonic-resonator-brightness", "0.7",
+             "--harmonic-resonator-mix", "0.65"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Harmonic Resonator options did not enable one processor")
+        rendered = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in rendered):
+            raise AssertionError("Harmonic Resonator produced non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 1.0e-3:
+            raise AssertionError("Harmonic Resonator did not change the rendered signal")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -1495,6 +1526,7 @@ def main() -> None:
     check_filtered_delay(args.executable.resolve())
     check_sweep_delay(args.executable.resolve())
     check_formant_filter(args.executable.resolve())
+    check_harmonic_resonator(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())

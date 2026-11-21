@@ -17,6 +17,7 @@
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
+#include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -212,6 +213,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::FormantFilter>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::HarmonicResonator>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -944,6 +948,18 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_harmonic_resonator(float root_frequency_hz,
+                                      float decay_seconds, float brightness,
+                                      float mix) noexcept {
+        tabletfx::HarmonicResonatorParameters parameters;
+        parameters.root_frequency_hz = root_frequency_hz;
+        parameters.decay_seconds = decay_seconds;
+        parameters.brightness = brightness;
+        parameters.mix = mix;
+        static_cast<tabletfx::HarmonicResonator*>(effects_[44].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_reverse_delay(float time_ms, float feedback, float mix,
                                  float crossfade_ms, std::uint32_t time_mode,
                                  std::uint32_t division, float tempo_bpm,
@@ -1553,6 +1569,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_formant_filter(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_formant_filter(
             vowel_position, resonance_q, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_harmonic_resonator(
+    void* opaque, float root_frequency_hz, float decay_seconds,
+    float brightness, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_harmonic_resonator(
+            root_frequency_hz, decay_seconds, brightness, mix);
     }
 }
 

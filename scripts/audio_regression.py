@@ -217,6 +217,10 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--formant-filter", "--formant-filter-vowel-position", "1.5",
         "--formant-filter-q", "6", "--formant-filter-mix", "0.72",
         "--formant-filter-level-db", "-2",
+        "--harmonic-resonator", "--harmonic-resonator-root-frequency-hz", "110",
+        "--harmonic-resonator-decay-seconds", "1.2",
+        "--harmonic-resonator-brightness", "0.55",
+        "--harmonic-resonator-mix", "0.5",
     ]
     if delay_character == "tape":
         command.extend([
@@ -239,7 +243,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 46:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 47:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -306,7 +310,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 46-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 47-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

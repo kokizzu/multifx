@@ -148,6 +148,7 @@ def build_web() -> None:
         "_tf_chain_set_noise_gate",
         "_tf_chain_set_limiter", "_tf_chain_set_notch_filter",
         "_tf_chain_set_formant_filter",
+        "_tf_chain_set_harmonic_resonator",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -208,6 +209,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "step_filter.cpp"),
         str(ROOT / "src" / "effects" / "notch_filter.cpp"),
         str(ROOT / "src" / "effects" / "formant_filter.cpp"),
+        str(ROOT / "src" / "effects" / "harmonic_resonator.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -664,6 +666,10 @@ def browser_test() -> None:
                 "--formant-filter", "--formant-filter-vowel-position", "1.5",
                 "--formant-filter-q", "6", "--formant-filter-mix", "0.72",
                 "--formant-filter-level-db", "-2",
+                "--harmonic-resonator", "--harmonic-resonator-root-frequency-hz", "220",
+                "--harmonic-resonator-decay-seconds", "0.8",
+                "--harmonic-resonator-brightness", "0.7",
+                "--harmonic-resonator-mix", "0.65",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {
