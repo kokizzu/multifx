@@ -388,6 +388,41 @@ void Delay::configure_tape_echo(bool enabled, float saturation, float wow_depth_
     }
 }
 
+void Delay::configure_repeat_filters(bool enabled, float low_cut_hz,
+                                     float high_cut_hz) noexcept {
+    const float low_max = std::max(20.0F, std::min(1000.0F, sample_rate_ * 0.15F));
+    const float high_max = std::max(20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
+    const float high_min = std::min(2000.0F, high_max);
+    const float safe_low = std::isfinite(low_cut_hz)
+        ? std::clamp(low_cut_hz, 20.0F, low_max)
+        : 120.0F;
+    const float safe_high = std::isfinite(high_cut_hz)
+        ? std::clamp(high_cut_hz, high_min, high_max)
+        : std::clamp(6000.0F, high_min, high_max);
+    constexpr float two_pi = 6.2831853071795864769F;
+    target_repeat_highpass_alpha_ = std::exp(-two_pi * safe_low / sample_rate_);
+    target_repeat_lowpass_alpha_ = 1.0F -
+        std::exp(-two_pi * safe_high / sample_rate_);
+    target_repeat_filter_mix_ = enabled ? 1.0F : 0.0F;
+    if (parameter_ramp_total_ <= 1) {
+        repeat_filter_mix_ = target_repeat_filter_mix_;
+        repeat_highpass_alpha_ = target_repeat_highpass_alpha_;
+        repeat_lowpass_alpha_ = target_repeat_lowpass_alpha_;
+        repeat_filter_mix_step_ = 0.0F;
+        repeat_highpass_alpha_step_ = 0.0F;
+        repeat_lowpass_alpha_step_ = 0.0F;
+        repeat_filter_ramp_remaining_ = 0;
+        return;
+    }
+    const float count = static_cast<float>(parameter_ramp_total_);
+    repeat_filter_mix_step_ = (target_repeat_filter_mix_ - repeat_filter_mix_) / count;
+    repeat_highpass_alpha_step_ =
+        (target_repeat_highpass_alpha_ - repeat_highpass_alpha_) / count;
+    repeat_lowpass_alpha_step_ =
+        (target_repeat_lowpass_alpha_ - repeat_lowpass_alpha_) / count;
+    repeat_filter_ramp_remaining_ = parameter_ramp_total_;
+}
+
 void Delay::configure_ping_pong(bool enabled) noexcept {
     if (target_ping_pong_ == enabled && !target_dual_ && !target_multitap_) return;
     target_ping_pong_ = enabled;
@@ -725,6 +760,23 @@ float Delay::shape_delay_feedback(float value, std::uint16_t channel) noexcept {
         shaped += (saturated - shaped) *
                   static_cast<double>(std::clamp(tape_mix_, 0.0F, 1.0F));
     }
+    if (repeat_filter_mix_ > 0.0F || repeat_filter_ramp_remaining_ > 0) {
+        const double high_passed = static_cast<double>(repeat_highpass_alpha_) *
+            (static_cast<double>(repeat_highpass_previous_output_[channel]) + shaped -
+             static_cast<double>(repeat_highpass_previous_input_[channel]));
+        const double maximum = static_cast<double>(std::numeric_limits<float>::max());
+        const float high_pass = static_cast<float>(std::clamp(high_passed, -maximum, maximum));
+        repeat_highpass_previous_input_[channel] = static_cast<float>(
+            std::clamp(shaped, -maximum, maximum));
+        repeat_highpass_previous_output_[channel] = high_pass;
+        const double low_passed = static_cast<double>(repeat_lowpass_state_[channel]) +
+            static_cast<double>(repeat_lowpass_alpha_) *
+                (static_cast<double>(high_pass) - repeat_lowpass_state_[channel]);
+        const float low_pass = static_cast<float>(std::clamp(low_passed, -maximum, maximum));
+        repeat_lowpass_state_[channel] = low_pass;
+        const double blend = static_cast<double>(std::clamp(repeat_filter_mix_, 0.0F, 1.0F));
+        shaped += (static_cast<double>(low_pass) - shaped) * blend;
+    }
     return static_cast<float>(shaped);
 }
 
@@ -789,6 +841,20 @@ void Delay::advance_ramps() noexcept {
             tape_flutter_depth_step_ = 0.0F;
             tape_wow_phase_step_ = 0.0F;
             tape_flutter_phase_step_ = 0.0F;
+        }
+    }
+    if (repeat_filter_ramp_remaining_ > 0) {
+        repeat_filter_mix_ += repeat_filter_mix_step_;
+        repeat_highpass_alpha_ += repeat_highpass_alpha_step_;
+        repeat_lowpass_alpha_ += repeat_lowpass_alpha_step_;
+        --repeat_filter_ramp_remaining_;
+        if (repeat_filter_ramp_remaining_ == 0) {
+            repeat_filter_mix_ = target_repeat_filter_mix_;
+            repeat_highpass_alpha_ = target_repeat_highpass_alpha_;
+            repeat_lowpass_alpha_ = target_repeat_lowpass_alpha_;
+            repeat_filter_mix_step_ = 0.0F;
+            repeat_highpass_alpha_step_ = 0.0F;
+            repeat_lowpass_alpha_step_ = 0.0F;
         }
     }
 }
@@ -1147,6 +1213,16 @@ void Delay::reset() noexcept {
     tape_flutter_phase_ = 0.0F;
     tape_modulation_samples_ = 0.0F;
     tape_parameter_ramp_remaining_ = 0;
+    repeat_filter_mix_ = target_repeat_filter_mix_;
+    repeat_filter_mix_step_ = 0.0F;
+    repeat_filter_ramp_remaining_ = 0;
+    repeat_highpass_alpha_ = target_repeat_highpass_alpha_;
+    repeat_highpass_alpha_step_ = 0.0F;
+    repeat_lowpass_alpha_ = target_repeat_lowpass_alpha_;
+    repeat_lowpass_alpha_step_ = 0.0F;
+    repeat_highpass_previous_input_ = {};
+    repeat_highpass_previous_output_ = {};
+    repeat_lowpass_state_ = {};
 }
 
 } // namespace tabletfx

@@ -149,7 +149,7 @@ def build_web() -> None:
         "_tf_chain_set_limiter", "_tf_chain_set_notch_filter",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
-        "_tf_chain_set_modulated_delay",
+        "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
         "_tf_chain_set_wah", "_tf_chain_set_tremolo",
         "_tf_chain_set_chorus",
         "_tf_chain_set_flanger",
@@ -208,6 +208,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
+        str(ROOT / "src" / "effects" / "filtered_delay.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -640,6 +641,10 @@ def browser_test() -> None:
                "--modulated-delay-waveform", "sine",
                "--modulated-delay-spread-degrees", "180",
                "--modulated-delay-trigger-threshold-db", "-24",
+               "--filtered-delay", "--filtered-delay-time-ms", "350",
+               "--filtered-delay-feedback", "0.25", "--filtered-delay-mix", "0.25",
+               "--filtered-delay-low-cut-hz", "120",
+               "--filtered-delay-high-cut-hz", "6000",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

@@ -80,7 +80,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(41);
+          effects_.reserve(42);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -201,6 +201,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ModulatedDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::FilteredDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -954,6 +957,12 @@ public:
              spread_degrees, trigger_threshold_db});
     }
 
+    void configure_filtered_delay(float time_ms, float feedback, float mix,
+                                  float low_cut_hz, float high_cut_hz) noexcept {
+        static_cast<tabletfx::FilteredDelay*>(effects_[41].effect.get())->configure(
+            {time_ms, feedback, mix, low_cut_hz, high_cut_hz});
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1539,6 +1548,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_modulated_delay(
         as_chain(opaque)->configure_modulated_delay(
             time_ms, feedback, mix, rate_hz, depth_ms, waveform,
             spread_degrees, trigger_threshold_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_filtered_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float low_cut_hz, float high_cut_hz) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_filtered_delay(
+            time_ms, feedback, mix, low_cut_hz, high_cut_hz);
     }
 }
 

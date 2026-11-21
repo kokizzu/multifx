@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -215,6 +215,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         350, 0.25, 0.25, ...duckingDelay);
       const modulatedDelay = parameters.modulatedDelay || [350, 0.25, 0.25, 0.8, 2, 0, 180, -24];
       module._tf_chain_set_modulated_delay(this.chain, ...modulatedDelay);
+      const filteredDelay = parameters.filteredDelay || [350, 0.25, 0.25, 120, 6000];
+      module._tf_chain_set_filtered_delay(this.chain, ...filteredDelay);
       const vibrato = parameters.vibrato || [5, 0.35, 1];
       module._tf_chain_set_vibrato(this.chain, ...vibrato);
       const limiter = parameters.limiter || [-1, 80];
@@ -314,6 +316,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_ducking_delay(this.chain, ...message.value);
     } else if (message.type === "modulated-delay" && this.ready) {
       this.module._tf_chain_set_modulated_delay(this.chain, ...message.value);
+    } else if (message.type === "filtered-delay" && this.ready) {
+      this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

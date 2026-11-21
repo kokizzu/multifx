@@ -1346,6 +1346,35 @@ def check_modulated_delay(executable: Path) -> None:
             raise AssertionError("zero-feedback Modulated Delay must not produce later repeats")
 
 
+def check_filtered_delay(executable: Path) -> None:
+    sample_rate = 48000
+    delay_frames = 96
+    source_samples = [0] * 384
+    source_samples[0] = 26214
+    with tempfile.TemporaryDirectory(prefix="tabletfx-filtered-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "filtered.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--filtered-delay", "--filtered-delay-time-ms", "2",
+             "--filtered-delay-feedback", "0", "--filtered-delay-mix", "1",
+             "--filtered-delay-low-cut-hz", "120",
+             "--filtered-delay-high-cut-hz", "6000"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Filtered Delay CLI controls did not enable one processor")
+        rendered = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if any(abs(rendered[index]) > 0.002 for index in range(delay_frames)):
+            raise AssertionError("fully-wet Filtered Delay must not leak dry input")
+        if not any(abs(rendered[index]) > 0.01 for index in range(delay_frames, delay_frames + 24)):
+            raise AssertionError("Filtered Delay must produce its first filtered repeat")
+        if any(abs(rendered[index]) > 0.002 for index in range(delay_frames + 128, len(rendered))):
+            raise AssertionError("zero-feedback Filtered Delay must not produce later repeats")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -1364,6 +1393,7 @@ def main() -> None:
     check_reverse_delay(args.executable.resolve())
     check_ducking_delay(args.executable.resolve())
     check_modulated_delay(args.executable.resolve())
+    check_filtered_delay(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())

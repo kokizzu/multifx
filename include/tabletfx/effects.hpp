@@ -153,6 +153,10 @@ public:
     // routing only; tape coloration remains independently controlled above.
     void configure_tape_heads(bool enabled, float head_spacing_ms = 110.0F,
                               std::uint8_t selected_heads = 0x0FU) noexcept;
+    // Project-authored repeat-path high-pass and low-pass coloration. This
+    // affects the signal written back into the delay ring, not the dry path.
+    void configure_repeat_filters(bool enabled, float low_cut_hz,
+                                  float high_cut_hz) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
@@ -246,6 +250,19 @@ private:
     float tape_flutter_phase_ = 0.0F;
     float tape_modulation_samples_ = 0.0F;
     std::size_t tape_parameter_ramp_remaining_ = 0;
+    float repeat_filter_mix_ = 0.0F;
+    float target_repeat_filter_mix_ = 0.0F;
+    float repeat_filter_mix_step_ = 0.0F;
+    std::size_t repeat_filter_ramp_remaining_ = 0;
+    float repeat_highpass_alpha_ = 0.0F;
+    float target_repeat_highpass_alpha_ = 0.0F;
+    float repeat_highpass_alpha_step_ = 0.0F;
+    float repeat_lowpass_alpha_ = 1.0F;
+    float target_repeat_lowpass_alpha_ = 1.0F;
+    float repeat_lowpass_alpha_step_ = 0.0F;
+    std::array<float, 2> repeat_highpass_previous_input_{};
+    std::array<float, 2> repeat_highpass_previous_output_{};
+    std::array<float, 2> repeat_lowpass_state_{};
     bool target_multitap_ = false;
     float multitap_route_mix_ = 0.0F;
     float multitap_route_step_ = 0.0F;
@@ -258,6 +275,42 @@ private:
     float dual_routing_mix_ = 0.0F;
     float dual_routing_step_ = 0.0F;
     std::size_t dual_routing_ramp_remaining_ = 0;
+};
+
+struct FilteredDelayParameters {
+    float time_ms = 350.0F;
+    float feedback = 0.25F;
+    float mix = 0.25F;
+    float low_cut_hz = 120.0F;
+    float high_cut_hz = 6000.0F;
+};
+
+// Project-authored static filtered-repeat delay. It reuses Delay's preallocated
+// ring and filters only the signal re-entering that ring; dry audio is immediate.
+class FilteredDelay final : public Effect {
+public:
+    explicit FilteredDelay(float sample_rate = 48000.0F,
+                           std::uint16_t channels = 1,
+                           float max_delay_ms = 2000.0F,
+                           FilteredDelayParameters parameters = {});
+
+    [[nodiscard]] std::string_view id() const noexcept override {
+        return "filtered-delay";
+    }
+    [[nodiscard]] std::size_t memory_bytes() const noexcept override;
+    [[nodiscard]] FilteredDelayParameters parameters() const noexcept {
+        return parameters_;
+    }
+    void configure(FilteredDelayParameters parameters) noexcept;
+    void process(std::span<float> interleaved,
+                 std::uint16_t channels) noexcept override;
+    void reset() noexcept override;
+
+private:
+    float sample_rate_;
+    float max_delay_ms_;
+    Delay delay_;
+    FilteredDelayParameters parameters_{};
 };
 
 enum class RoomSize : std::uint8_t {
