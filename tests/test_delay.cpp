@@ -427,6 +427,84 @@ void test_bbd_style_colors_echoes_without_allocating() {
             "stereo BBD-style delay must remain finite through feedback repeats");
 }
 
+void test_tape_echo_modulation_saturation_and_no_allocation() {
+    constexpr std::size_t frames = 2048;
+    tabletfx::Delay digital(48000.0F, 2, 100.0F, 10.0F, 0.0F, 1.0F);
+    tabletfx::Delay tape(48000.0F, 2, 100.0F, 10.0F, 0.0F, 1.0F);
+    tape.configure_tape_echo(true, 0.0F, 0.8F, 0.35F, 0.12F, 7.0F);
+    tape.reset();
+    std::array<float, frames * 2> digital_audio{};
+    std::array<float, frames * 2> tape_audio{};
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float sample = 0.4F * std::sin(
+            6.2831853071795864769F * 220.0F * static_cast<float>(frame) / 48000.0F);
+        digital_audio[frame * 2] = sample;
+        digital_audio[frame * 2 + 1] = sample;
+        tape_audio[frame * 2] = sample;
+        tape_audio[frame * 2 + 1] = sample;
+    }
+    digital.process(digital_audio, 2);
+    const std::size_t allocations_before = allocation_count.load(std::memory_order_relaxed);
+    tape.process(tape_audio, 2);
+    const std::size_t allocations_after = allocation_count.load(std::memory_order_relaxed);
+    require(allocations_after == allocations_before,
+            "tape echo modulation and saturation must not allocate");
+    double difference_energy = 0.0;
+    double reference_energy = 0.0;
+    for (std::size_t frame = 480; frame < frames; ++frame) {
+        const float processed = tape_audio[frame * 2];
+        const float difference = processed - digital_audio[frame * 2];
+        difference_energy += static_cast<double>(difference) * difference;
+        reference_energy += static_cast<double>(digital_audio[frame * 2]) *
+                            digital_audio[frame * 2];
+        require(std::isfinite(processed), "tape echo must keep finite stereo output");
+        require(near(tape_audio[frame * 2], tape_audio[frame * 2 + 1], 1.0e-6F),
+                "tape wow/flutter modulation must remain linked across stereo channels");
+    }
+    const double relative_difference = std::sqrt(difference_energy / reference_energy);
+    require(relative_difference > 0.02,
+            "tape wow/flutter must audibly modulate a sustained sinusoid");
+
+    tabletfx::Delay saturation(48000.0F, 1, 5.0F, 2.0F, 0.0F, 1.0F);
+    saturation.configure_tape_echo(true, 0.45F, 0.0F, 0.35F, 0.0F, 7.0F);
+    saturation.reset();
+    std::array<float, 256> impulse{};
+    impulse[0] = 1.0F;
+    saturation.process(impulse, 1);
+    const float first_echo = impulse[96];
+    require(first_echo > 0.76F && first_echo < 0.79F,
+            "tape saturation control must shape the first echo predictably");
+}
+
+void test_tape_echo_character_changes_are_smoothed() {
+    tabletfx::Delay delay(48000.0F, 1, 50.0F, 8.0F, 0.0F, 1.0F);
+    std::array<float, 512> steady{};
+    steady.fill(0.2F);
+    delay.process(steady, 1);
+
+    delay.configure_tape_echo(true, 0.8F, 0.0F, 0.35F, 0.0F, 6.0F);
+    std::array<float, 1024> entering{};
+    entering.fill(0.2F);
+    delay.process(entering, 1);
+    for (std::size_t frame = 1; frame < entering.size(); ++frame) {
+        require(std::abs(entering[frame] - entering[frame - 1]) < 0.005F,
+                "tape saturation entry must not make a sample discontinuity");
+    }
+    require(entering.back() < 0.195F,
+            "tape saturation entry did not reach its requested feedback coloration");
+
+    delay.configure_tape_echo(false, 0.8F, 0.0F, 0.35F, 0.0F, 6.0F);
+    std::array<float, 1024> exiting{};
+    exiting.fill(0.2F);
+    delay.process(exiting, 1);
+    for (std::size_t frame = 1; frame < exiting.size(); ++frame) {
+        require(std::abs(exiting[frame] - exiting[frame - 1]) < 0.005F,
+                "tape saturation exit must not make a sample discontinuity");
+    }
+    require(near(exiting.back(), 0.2F, 0.001F),
+            "tape saturation exit did not return to the clean digital echo");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -530,6 +608,8 @@ int main() {
         test_multitap_route_and_tap_changes_are_smoothed();
         test_multitap_controls_clamp_and_retarget_safely();
         test_bbd_style_colors_echoes_without_allocating();
+        test_tape_echo_modulation_saturation_and_no_allocation();
+        test_tape_echo_character_changes_are_smoothed();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

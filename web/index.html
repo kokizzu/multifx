@@ -431,6 +431,7 @@
           <select id="delay-preset">
             <option value="custom" selected>Custom</option>
             <option value="slapback">Slapback · 110 ms</option>
+            <option value="tape">Tape echo · 300 ms</option>
           </select>
         </label>
         <label class="mix-control" for="delay-character">
@@ -438,6 +439,7 @@
           <select id="delay-character">
             <option value="digital" selected>Digital · clear repeats</option>
             <option value="bbd">BBD style · warm repeats</option>
+            <option value="tape">Tape echo · saturation + wow/flutter</option>
           </select>
         </label>
         <label class="mix-control" for="delay-time-mode">
@@ -481,7 +483,14 @@
           <input id="delay-mix" type="range" min="0" max="1" step="0.01" value="0.25">
         </label>
       </div>
-      <p class="hint">BBD style adds project-authored bandwidth loss and gentle saturation to the repeats; it is an approximation, not a circuit-level model. Dry tone and the existing delay buffer are preserved.</p>
+      <p class="hint">BBD and tape characters are project-authored approximations, not circuit or tape-machine models. Both preserve the dry path and reuse the existing delay buffer.</p>
+      <div id="delay-tape-controls" class="gain-controls" hidden aria-label="Tape echo saturation and speed controls">
+        <label class="mix-control" for="delay-tape-saturation"><span>Tape saturation</span><output id="delay-tape-saturation-value" for="delay-tape-saturation">45%</output><input id="delay-tape-saturation" type="range" min="0" max="1" step="0.01" value="0.45"></label>
+        <label class="mix-control" for="delay-tape-wow-depth"><span>Wow depth</span><output id="delay-tape-wow-depth-value" for="delay-tape-wow-depth">0.35 ms</output><input id="delay-tape-wow-depth" type="range" min="0" max="5" step="0.01" value="0.35"></label>
+        <label class="mix-control" for="delay-tape-wow-rate"><span>Wow rate</span><output id="delay-tape-wow-rate-value" for="delay-tape-wow-rate">0.30 Hz</output><input id="delay-tape-wow-rate" type="range" min="0.05" max="2" step="0.01" value="0.30"></label>
+        <label class="mix-control" for="delay-tape-flutter-depth"><span>Flutter depth</span><output id="delay-tape-flutter-depth-value" for="delay-tape-flutter-depth">0.08 ms</output><input id="delay-tape-flutter-depth" type="range" min="0" max="1" step="0.01" value="0.08"></label>
+        <label class="mix-control" for="delay-tape-flutter-rate"><span>Flutter rate</span><output id="delay-tape-flutter-rate-value" for="delay-tape-flutter-rate">6.00 Hz</output><input id="delay-tape-flutter-rate" type="range" min="1" max="20" step="0.1" value="6"></label>
+      </div>
       <div id="delay-dual-controls" class="gain-controls" hidden aria-label="Independent dual delay controls">
         <label class="mix-control" for="delay-dual-a-ms">
           <span>Delay A time</span><output id="delay-dual-a-ms-value" for="delay-dual-a-ms">350 ms</output>

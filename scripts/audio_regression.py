@@ -71,7 +71,8 @@ def is_direct_input(path: Path, root: Path) -> bool:
 
 
 def run_input(renderer: Path, source: Path, output: Path,
-              output_channels: str | None = None) -> str:
+              output_channels: str | None = None,
+              delay_character: str = "digital") -> str:
     command = [
         str(renderer), "render", str(source), str(output),
         "--gain-db", "2", "--output-gain-db", "-1",
@@ -124,6 +125,14 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--eq-band2-frequency-hz", "900", "--eq-band2-gain-db", "-1", "--eq-band2-q", "1",
         "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "0.5", "--eq-band3-q", "0.7",
     ]
+    if delay_character == "tape":
+        command.extend([
+            "--delay-tape", "--delay-tape-saturation", "0.45",
+            "--delay-tape-wow-depth-ms", "0.35", "--delay-tape-wow-rate-hz", "0.3",
+            "--delay-tape-flutter-depth-ms", "0.08", "--delay-tape-flutter-rate-hz", "6",
+        ])
+    elif delay_character != "digital":
+        raise ValueError(f"Unsupported delay regression character: {delay_character}")
     if output_channels is not None:
         command.extend(["--output-channels", output_channels])
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -173,12 +182,22 @@ def main() -> None:
             source = pickups[label]
             report = run_input(renderer, source, output_root / f"{label.replace('-', '_')}.wav")
             print(f"OK EGFxSet note {note}, {label}: {source.relative_to(clean_root)}; {report}")
+            tape_report = run_input(
+                renderer, source, output_root / f"{label.replace('-', '_')}-tape.wav",
+                delay_character="tape",
+            )
+            print(f"OK EGFxSet Tape Echo note {note}, {label}: {tape_report}")
         source = music_files[0]
         report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
+        tape_report = run_input(
+            renderer, source, output_root / "guitar-techs-music-tape.wav",
+            delay_character="tape",
+        )
+        print(f"OK Guitar-TECHS DI Tape Echo performance: {tape_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 25-effect offline chain.")
+    print("All prerecorded clean guitar inputs rendered through the 25-effect chain, including Tape Echo pickup and music passes.")
 
 
 if __name__ == "__main__":

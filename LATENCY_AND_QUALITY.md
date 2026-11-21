@@ -1,10 +1,10 @@
 # Latency, quality, and DSP-load protocol
 
-## Latest DLY-06 verification (2026-11-21)
+## Latest DLY-07 verification (2026-11-21)
 
-This run supersedes the earlier delay, full-chain, browser-parity, and memory values retained in the historical note below. The BBD-style mode reuses the existing delay ring, adds 32 B of fixed processor state, no stage or process-time allocation, and no dry-path delay. On an AMD Ryzen 9 5950X / GCC 13.3.0 / Release / 48 kHz / 128-frame configuration, BBD processing measured 0.0776% p50 / 0.0818% p95 mono and 0.1211% / 0.1230% stereo of the 2.667 ms callback deadline. The full 25-effect chain measured 12.8647% p50 / 13.1767% p95, 15.9462% maximum, and 1,283,904 B owned state.
+This run supersedes the earlier delay, full-chain, browser-parity, and memory values retained in the historical note below. Tape Echo reuses the existing delay ring, adds no processor stage or process-time allocation, and leaves the dry path immediate. The native `Delay` object is 104 B larger than the DLY-06 build to hold the fixed saturation/LFO/ramp state, independent of whether Tape is selected. On an AMD Ryzen 9 5950X / GCC 13.3.0 / Release / 48 kHz / 128-frame configuration, Tape processing measured 0.1658% p50 / 0.1699% p95 mono and 0.2614% / 0.2771% stereo of the 2.667 ms callback deadline. The full 25-effect chain measured 12.9033% p50 / 14.7897% p95, 24.4694% maximum, and 1,284,008 B owned state.
 
-The current HeadlessChrome 151 mono Play/native comparison enables BBD-style coloration on the four-tap Delay and uses a generated guitar-like local fixture. Maximum absolute error was 0.00693906, RMS error 0.00020373 (0.2572% of reference RMS), and chain-owned state was 1,228,656 B plus 10,364 B tuner state inside fixed 16 MiB WASM linear memory. This passed the existing 6% peak and 7.5% RMS bounds. Mono playback centers the echoes; core and offline stereo impulse tests verify per-tap equal-power pan and BBD stereo isolation. The browser's 1 ms timer fallback makes its live CPU percentage coarse. The older paragraph below records earlier browser runs and benchmark baselines.
+The current HeadlessChrome 151 mono Play/native comparison enables Tape Echo on the four-tap Delay and uses a generated guitar-like local fixture. Maximum absolute error was 0.00693906, RMS error 0.00020131 (0.2600% of reference RMS), and chain-owned state was 1,228,748 B plus 10,364 B tuner state inside fixed 16 MiB WASM linear memory. This passed the existing 6% peak and 7.5% RMS bounds. The fixture also checks the Tape quick preset and wow control updates. Mono playback centers the echoes; native and offline tests verify linked Tape modulation and stereo isolation. The browser's 1 ms timer fallback makes its live CPU percentage coarse. The older paragraph below records earlier browser runs and benchmark baselines.
 
 Status: Linux desktop processor-call and owned-memory measurements are recorded below. A browser AudioWorklet also reports per-processor and whole-chain callback load, but HeadlessChrome 151 falls back to a 1 ms timer, so those live browser percentages are coarse. Native hardware round-trip, Windows/Android routes, and sustained live callback measurements remain unverified.
 
@@ -42,14 +42,16 @@ Latest measurement on 2026-11-21 with `make bench` on an AMD Ryzen 9 5950X 16-Co
 | Phaser | 0.0821 | 0.0825 | 0.1230 | 0.2816 | 0.3431 | 280 |
 | Vibrato | 0.0525 | 0.0529 | 0.0724 | 0.2415 | 0.2704 | 1,696 |
 | Three-band parametric EQ | 0.0656 | 0.0926 | 0.1046 | 0.2974 | 0.4084 | 160 |
-| Delay, normal (2 s stereo allocation) | 0.0938 | 0.0949 | 0.1980 | 0.4031 | 0.6623 | 768,616 |
-| Delay, BBD-style mono | 0.0776 | 0.0818 | 0.1391 | 0.2393 | 0.3019 | 384,612 |
-| Delay, BBD-style stereo | 0.1211 | 0.1230 | 0.2153 | 0.3574 | 0.7328 | 768,616 |
-| Delay, ping-pong (2 s stereo allocation) | 0.1208 | 0.1219 | 0.2359 | 0.3424 | 0.6825 | 768,616 |
-| Delay, independent dual mono (two 2 s lines) | 0.0979 | 0.0986 | 0.1845 | 0.3405 | 0.4170 | 768,616 |
-| Delay, independent dual stereo (two 2 s lines) | 0.1211 | 0.1226 | 0.1965 | 0.3735 | 0.4886 | 768,616 |
-| Delay, four-tap mono (2 s ring) | 0.1208 | 0.1219 | 0.2427 | 0.3754 | 1.1445 | 384,612 |
-| Delay, four-tap stereo (2 s ring) | 0.1853 | 0.1931 | 0.3484 | 0.4557 | 0.7069 | 768,616 |
+| Delay, normal (2 s stereo allocation) | 0.1103 | 0.1155 | 0.2153 | 0.3465 | 0.7313 | 768,720 |
+| Delay, BBD-style mono | 0.0919 | 0.0938 | 0.0941 | 0.3019 | 0.3124 | 384,716 |
+| Delay, BBD-style stereo | 0.1418 | 0.1493 | 0.1500 | 0.3536 | 0.3683 | 768,720 |
+| Delay, Tape mono | 0.1658 | 0.1699 | 0.1714 | 0.3806 | 0.5442 | 384,716 |
+| Delay, Tape stereo | 0.2614 | 0.2771 | 0.2794 | 0.5194 | 0.6420 | 768,720 |
+| Delay, ping-pong (2 s stereo allocation) | 0.1399 | 0.2599 | 0.3105 | 0.6236 | 1.1629 | 768,720 |
+| Delay, independent dual mono (two 2 s lines) | 0.1185 | 0.1196 | 0.1958 | 0.4324 | 0.8040 | 768,720 |
+| Delay, independent dual stereo (two 2 s lines) | 0.1395 | 0.1470 | 0.1496 | 0.4032 | 0.4916 | 768,720 |
+| Delay, four-tap mono (2 s ring) | 0.1493 | 0.1515 | 0.1519 | 0.3705 | 0.7676 | 384,716 |
+| Delay, four-tap stereo (2 s ring) | 0.2134 | 0.2171 | 0.2231 | 0.4834 | 0.5292 | 768,720 |
 | Poly pitch shifter, mono | 5.6619 | 6.8222 | 7.5197 | 9.6858 | 13.4340 | 311,056 |
 | Poly pitch shifter, stereo | 13.1989 | 13.6684 | 16.0325 | 19.8782 | 22.8201 | 494,016 |
 | Peak limiter | 0.0206 | 0.0338 | 0.0375 | 0.0450 | 0.3334 | 32 |
@@ -61,7 +63,7 @@ Latest measurement on 2026-11-21 with `make bench` on an AMD Ryzen 9 5950X 16-Co
 | Parallel split (copy to two branches) | 0.0030 | 0.0030 | 0.0060 | 0.0064 | 0.0176 | 0 |
 | Parallel mix (dry + two branches) | 0.0064 | 0.0064 | 0.0064 | 0.0064 | 0.2216 | 112 |
 | Chromatic tuner monitor | 0.0101 | 0.5014 | 0.6893 | 0.7812 | 0.8629 | 10,400 |
-| Full 25-effect chain + controls + meters | 12.8647 | 13.1767 | 13.6849 | 13.9815 | 15.9462 | 1,283,904 |
+| Full 25-effect chain + controls + meters | 12.9033 | 14.7897 | 17.0060 | 22.1271 | 24.4694 | 1,284,008 |
 
 The effect sequence is Input Gain → Volume Pedal → High-pass → Low-pass → Noise Gate → Pedal Compressor → Studio Compressor → Wah → Envelope Wah → Clean Boost → Transparent Overdrive → Mid-focused Overdrive → High-gain Distortion → Round Fuzz → Soft Drive → Tremolo → Chorus → Flanger → Phaser → Vibrato → Parametric EQ → Delay → Poly Pitch Shifter → Output Gain → Peak Limiter. Input mute and the input meter run before that sequence; the output meter and global dry/wet crossfade run after it. The tuner independently analyzes the original input and its optional mute stage runs after the output limiter; it is not included in the full-chain row. Effect timing includes processor calls, both meter passes and their status reads, and signal-control/copy work. Utility rows include their validation and sample work. The tuner monitor uses 10,400 B; its 1,024-sample window is 85.3 ms at 48 kHz, so its periodic analysis batches make tail percentiles higher than its median. This is pitch-display response, not signal-path latency. Memory estimates include processor objects and directly owned buffers, but exclude caller buffers, allocator metadata, input/output scratch buffers, UI, and backend/runtime overhead.
 

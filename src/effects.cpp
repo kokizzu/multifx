@@ -255,6 +255,16 @@ Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
     const float bbd_cutoff_hz = std::min(4500.0F, sample_rate_ * 0.45F);
     bbd_filter_alpha_ = 1.0F - std::exp(
         -6.2831853071795864769F * bbd_cutoff_hz / sample_rate_);
+    target_tape_wow_depth_samples_ = 0.35F * sample_rate_ / 1000.0F;
+    tape_wow_depth_samples_ = target_tape_wow_depth_samples_;
+    target_tape_flutter_depth_samples_ = 0.08F * sample_rate_ / 1000.0F;
+    tape_flutter_depth_samples_ = target_tape_flutter_depth_samples_;
+    target_tape_wow_phase_increment_ =
+        6.2831853071795864769F * 0.3F / sample_rate_;
+    tape_wow_phase_increment_ = target_tape_wow_phase_increment_;
+    target_tape_flutter_phase_increment_ =
+        6.2831853071795864769F * 6.0F / sample_rate_;
+    tape_flutter_phase_increment_ = target_tape_flutter_phase_increment_;
     configure(delay_ms, feedback, mix);
     dual_delay_samples_ = {delay_samples_, delay_samples_};
     dual_transition_from_delay_samples_ = {
@@ -285,6 +295,12 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
 }
 
 void Delay::configure_bbd_style(bool enabled) noexcept {
+    if (enabled) {
+        target_tape_mix_ = 0.0F;
+        tape_mix_step_ = (target_tape_mix_ - tape_mix_) /
+                         static_cast<float>(std::max<std::size_t>(parameter_ramp_total_, 1));
+        tape_ramp_remaining_ = parameter_ramp_total_;
+    }
     target_bbd_mix_ = enabled ? 1.0F : 0.0F;
     if (parameter_ramp_total_ <= 1) {
         bbd_mix_ = target_bbd_mix_;
@@ -295,6 +311,81 @@ void Delay::configure_bbd_style(bool enabled) noexcept {
     bbd_mix_step_ = (target_bbd_mix_ - bbd_mix_) /
                     static_cast<float>(parameter_ramp_total_);
     bbd_ramp_remaining_ = parameter_ramp_total_;
+}
+
+void Delay::configure_tape_echo(bool enabled, float saturation, float wow_depth_ms,
+                                float wow_rate_hz, float flutter_depth_ms,
+                                float flutter_rate_hz) noexcept {
+    if (enabled) configure_bbd_style(false);
+    if (std::isfinite(saturation)) {
+        target_tape_saturation_ = std::clamp(saturation, 0.0F, 1.0F);
+    }
+    if (std::isfinite(wow_depth_ms)) {
+        target_tape_wow_depth_samples_ = std::clamp(wow_depth_ms, 0.0F, 5.0F) *
+                                         sample_rate_ / 1000.0F;
+    }
+    if (std::isfinite(flutter_depth_ms)) {
+        target_tape_flutter_depth_samples_ = std::clamp(flutter_depth_ms, 0.0F, 1.0F) *
+                                              sample_rate_ / 1000.0F;
+    }
+    if (std::isfinite(wow_rate_hz)) {
+        const float rate = std::clamp(wow_rate_hz, 0.05F, 2.0F);
+        target_tape_wow_phase_increment_ = 6.2831853071795864769F *
+            std::min(rate, sample_rate_ * 0.45F) / sample_rate_;
+    }
+    if (std::isfinite(flutter_rate_hz)) {
+        const float rate = std::clamp(flutter_rate_hz, 1.0F, 20.0F);
+        target_tape_flutter_phase_increment_ = 6.2831853071795864769F *
+            std::min(rate, sample_rate_ * 0.45F) / sample_rate_;
+    }
+    target_tape_mix_ = enabled ? 1.0F : 0.0F;
+    if (!enabled && tape_mix_ <= 0.0F) {
+        tape_mix_ = 0.0F;
+        tape_mix_step_ = 0.0F;
+        tape_ramp_remaining_ = 0;
+        tape_saturation_ = target_tape_saturation_;
+        tape_wow_depth_samples_ = target_tape_wow_depth_samples_;
+        tape_flutter_depth_samples_ = target_tape_flutter_depth_samples_;
+        tape_wow_phase_increment_ = target_tape_wow_phase_increment_;
+        tape_flutter_phase_increment_ = target_tape_flutter_phase_increment_;
+        tape_parameter_ramp_remaining_ = 0;
+        tape_saturation_step_ = 0.0F;
+        tape_wow_depth_step_ = 0.0F;
+        tape_flutter_depth_step_ = 0.0F;
+        tape_wow_phase_step_ = 0.0F;
+        tape_flutter_phase_step_ = 0.0F;
+        return;
+    }
+
+    const float ramp = static_cast<float>(std::max<std::size_t>(parameter_ramp_total_, 1));
+    tape_mix_step_ = (target_tape_mix_ - tape_mix_) / ramp;
+    tape_ramp_remaining_ = parameter_ramp_total_;
+    tape_saturation_step_ = (target_tape_saturation_ - tape_saturation_) / ramp;
+    tape_wow_depth_step_ =
+        (target_tape_wow_depth_samples_ - tape_wow_depth_samples_) / ramp;
+    tape_flutter_depth_step_ =
+        (target_tape_flutter_depth_samples_ - tape_flutter_depth_samples_) / ramp;
+    tape_wow_phase_step_ =
+        (target_tape_wow_phase_increment_ - tape_wow_phase_increment_) / ramp;
+    tape_flutter_phase_step_ =
+        (target_tape_flutter_phase_increment_ - tape_flutter_phase_increment_) / ramp;
+    tape_parameter_ramp_remaining_ = parameter_ramp_total_;
+    if (parameter_ramp_total_ <= 1) {
+        tape_mix_ = target_tape_mix_;
+        tape_mix_step_ = 0.0F;
+        tape_ramp_remaining_ = 0;
+        tape_saturation_ = target_tape_saturation_;
+        tape_wow_depth_samples_ = target_tape_wow_depth_samples_;
+        tape_flutter_depth_samples_ = target_tape_flutter_depth_samples_;
+        tape_wow_phase_increment_ = target_tape_wow_phase_increment_;
+        tape_flutter_phase_increment_ = target_tape_flutter_phase_increment_;
+        tape_saturation_step_ = 0.0F;
+        tape_wow_depth_step_ = 0.0F;
+        tape_flutter_depth_step_ = 0.0F;
+        tape_wow_phase_step_ = 0.0F;
+        tape_flutter_phase_step_ = 0.0F;
+        tape_parameter_ramp_remaining_ = 0;
+    }
 }
 
 void Delay::configure_ping_pong(bool enabled) noexcept {
@@ -541,6 +632,9 @@ void Delay::set_dual_delay_samples(std::uint16_t line, std::size_t samples) noex
 }
 
 float Delay::read_delay(std::size_t delay_samples, std::uint16_t channel) const noexcept {
+    if (tape_modulation_samples_ != 0.0F) {
+        return read_fractional_delay(static_cast<float>(delay_samples), channel);
+    }
     const std::size_t read_frame = write_frame_ >= delay_samples
                                        ? write_frame_ - delay_samples
                                        : write_frame_ + capacity_frames_ - delay_samples;
@@ -548,8 +642,12 @@ float Delay::read_delay(std::size_t delay_samples, std::uint16_t channel) const 
 }
 
 float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) const noexcept {
+    const double maximum_delay = static_cast<double>(capacity_frames_ - 1);
+    const double effective_delay = std::clamp(
+        static_cast<double>(delay_samples) + static_cast<double>(tape_modulation_samples_),
+        1.0, maximum_delay);
     double read_position = static_cast<double>(write_frame_) -
-                           static_cast<double>(delay_samples);
+                           effective_delay;
     if (read_position < 0.0) read_position += static_cast<double>(capacity_frames_);
     const std::size_t first_frame = static_cast<std::size_t>(read_position);
     const std::size_t second_frame = first_frame + 1 == capacity_frames_ ? 0 : first_frame + 1;
@@ -561,29 +659,36 @@ float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) c
     return static_cast<float>(first + (second - first) * fraction);
 }
 
-float Delay::shape_bbd_feedback(float value, std::uint16_t channel) noexcept {
+float Delay::shape_delay_feedback(float value, std::uint16_t channel) noexcept {
     if (channel >= bbd_filter_state_.size() || !std::isfinite(value)) {
         return std::isfinite(value) ? value : 0.0F;
     }
-    if (bbd_mix_ <= 0.0F && bbd_ramp_remaining_ == 0) {
-        bbd_filter_state_[channel] = value;
-        return value;
-    }
-
-    const double prior = static_cast<double>(bbd_filter_state_[channel]);
     const double input = static_cast<double>(value);
-    const double filtered_value = prior + static_cast<double>(bbd_filter_alpha_) *
-                                             (input - prior);
-    const double bounded_filter = std::clamp(
-        filtered_value,
-        -static_cast<double>(std::numeric_limits<float>::max()),
-        static_cast<double>(std::numeric_limits<float>::max()));
-    const float filtered = static_cast<float>(bounded_filter);
-    bbd_filter_state_[channel] = filtered;
-    const double saturated = static_cast<double>(filtered) /
-        (1.0 + 0.08 * std::abs(static_cast<double>(filtered)));
-    const double blend = static_cast<double>(std::clamp(bbd_mix_, 0.0F, 1.0F));
-    return static_cast<float>(input + (saturated - input) * blend);
+    double shaped = input;
+    if (bbd_mix_ > 0.0F || bbd_ramp_remaining_ > 0) {
+        const double prior = static_cast<double>(bbd_filter_state_[channel]);
+        const double filtered_value = prior + static_cast<double>(bbd_filter_alpha_) *
+                                                     (input - prior);
+        const double bounded_filter = std::clamp(
+            filtered_value,
+            -static_cast<double>(std::numeric_limits<float>::max()),
+            static_cast<double>(std::numeric_limits<float>::max()));
+        const float filtered = static_cast<float>(bounded_filter);
+        bbd_filter_state_[channel] = filtered;
+        const double saturated = static_cast<double>(filtered) /
+            (1.0 + 0.08 * std::abs(static_cast<double>(filtered)));
+        const double blend = static_cast<double>(std::clamp(bbd_mix_, 0.0F, 1.0F));
+        shaped = input + (saturated - input) * blend;
+    } else {
+        bbd_filter_state_[channel] = value;
+    }
+    if (tape_mix_ > 0.0F || tape_ramp_remaining_ > 0) {
+        const double saturated = shaped /
+            (1.0 + 0.65 * static_cast<double>(tape_saturation_) * std::abs(shaped));
+        shaped += (saturated - shaped) *
+                  static_cast<double>(std::clamp(tape_mix_, 0.0F, 1.0F));
+    }
+    return static_cast<float>(shaped);
 }
 
 void Delay::retarget_parameters() noexcept {
@@ -621,6 +726,34 @@ void Delay::advance_ramps() noexcept {
             bbd_mix_step_ = 0.0F;
         }
     }
+    if (tape_ramp_remaining_ > 0) {
+        tape_mix_ += tape_mix_step_;
+        --tape_ramp_remaining_;
+        if (tape_ramp_remaining_ == 0) {
+            tape_mix_ = target_tape_mix_;
+            tape_mix_step_ = 0.0F;
+        }
+    }
+    if (tape_parameter_ramp_remaining_ > 0) {
+        tape_saturation_ += tape_saturation_step_;
+        tape_wow_depth_samples_ += tape_wow_depth_step_;
+        tape_flutter_depth_samples_ += tape_flutter_depth_step_;
+        tape_wow_phase_increment_ += tape_wow_phase_step_;
+        tape_flutter_phase_increment_ += tape_flutter_phase_step_;
+        --tape_parameter_ramp_remaining_;
+        if (tape_parameter_ramp_remaining_ == 0) {
+            tape_saturation_ = target_tape_saturation_;
+            tape_wow_depth_samples_ = target_tape_wow_depth_samples_;
+            tape_flutter_depth_samples_ = target_tape_flutter_depth_samples_;
+            tape_wow_phase_increment_ = target_tape_wow_phase_increment_;
+            tape_flutter_phase_increment_ = target_tape_flutter_phase_increment_;
+            tape_saturation_step_ = 0.0F;
+            tape_wow_depth_step_ = 0.0F;
+            tape_flutter_depth_step_ = 0.0F;
+            tape_wow_phase_step_ = 0.0F;
+            tape_flutter_phase_step_ = 0.0F;
+        }
+    }
 }
 
 void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexcept {
@@ -637,6 +770,19 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
             value, -static_cast<double>(maximum), static_cast<double>(maximum)));
     };
     for (std::size_t frame = 0; frame < frames; ++frame) {
+        tape_modulation_samples_ = 0.0F;
+        if (tape_mix_ > 0.0F || tape_ramp_remaining_ > 0) {
+            constexpr float two_pi = 6.2831853071795864769F;
+            const float wow = tape_wow_depth_samples_ * std::sin(tape_wow_phase_);
+            const float flutter = tape_flutter_depth_samples_ *
+                                  std::sin(tape_flutter_phase_);
+            tape_modulation_samples_ =
+                (wow + flutter) * std::clamp(tape_mix_, 0.0F, 1.0F);
+            tape_wow_phase_ += tape_wow_phase_increment_;
+            tape_flutter_phase_ += tape_flutter_phase_increment_;
+            if (tape_wow_phase_ >= two_pi) tape_wow_phase_ -= two_pi;
+            if (tape_flutter_phase_ >= two_pi) tape_flutter_phase_ -= two_pi;
+        }
         const float transition_progress = delay_transition_remaining_ == 0
             ? 1.0F
             : static_cast<float>(delay_transition_total_ - delay_transition_remaining_) /
@@ -697,7 +843,7 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                 interleaved[input_index] = bound(output_value);
                 const double feedback_value = static_cast<double>(input) +
                                               static_cast<double>(delayed) * feedback_;
-                const float shaped_feedback = shape_bbd_feedback(
+                const float shaped_feedback = shape_delay_feedback(
                     bound(feedback_value), channel);
                 storage_[write_index] = shaped_feedback;
                 if (channels_ == 1 && dual_capable_) {
@@ -771,7 +917,7 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                     static_cast<double>(dual_weight) * dual_feedback +
                     static_cast<double>(multitap_weight) * multitap_feedback;
                 storage_[write_frame_ * storage_channels_ + channel] =
-                    shape_bbd_feedback(bound(feedback_value), channel);
+                    shape_delay_feedback(bound(feedback_value), channel);
             }
         } else {
             const float input = std::isfinite(interleaved[frame]) ? interleaved[frame] : 0.0F;
@@ -820,7 +966,7 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                     static_cast<double>(dual_weight) * dual_feedback +
                     static_cast<double>(multitap_weight) * multitap_feedback;
                 storage_[write_frame_ * storage_channels_ + line] =
-                    shape_bbd_feedback(bound(feedback_value), line);
+                    shape_delay_feedback(bound(feedback_value), line);
             }
         }
         write_frame_ = write_frame_ + 1 == capacity_frames_ ? 0 : write_frame_ + 1;
@@ -947,6 +1093,23 @@ void Delay::reset() noexcept {
     bbd_mix_step_ = 0.0F;
     bbd_ramp_remaining_ = 0;
     bbd_filter_state_ = {};
+    tape_mix_ = target_tape_mix_;
+    tape_mix_step_ = 0.0F;
+    tape_ramp_remaining_ = 0;
+    tape_saturation_ = target_tape_saturation_;
+    tape_saturation_step_ = 0.0F;
+    tape_wow_depth_samples_ = target_tape_wow_depth_samples_;
+    tape_wow_depth_step_ = 0.0F;
+    tape_flutter_depth_samples_ = target_tape_flutter_depth_samples_;
+    tape_flutter_depth_step_ = 0.0F;
+    tape_wow_phase_increment_ = target_tape_wow_phase_increment_;
+    tape_wow_phase_step_ = 0.0F;
+    tape_flutter_phase_increment_ = target_tape_flutter_phase_increment_;
+    tape_flutter_phase_step_ = 0.0F;
+    tape_wow_phase_ = 0.0F;
+    tape_flutter_phase_ = 0.0F;
+    tape_modulation_samples_ = 0.0F;
+    tape_parameter_ramp_remaining_ = 0;
 }
 
 } // namespace tabletfx

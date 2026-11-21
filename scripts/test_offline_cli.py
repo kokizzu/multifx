@@ -247,6 +247,35 @@ def check_bbd_style_delay(executable: Path) -> None:
             raise AssertionError("BBD-style delay produced a non-finite sample")
 
 
+def check_tape_echo_delay(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [0] * 700
+    source_samples[480] = 32767
+    with tempfile.TemporaryDirectory(prefix="tabletfx-tape-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "warmed-impulse.wav"
+        output = root / "tape-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--delay-preset", "tape", "--delay-ms", "1",
+             "--delay-feedback", "0", "--delay-mix", "1", "--delay-tape",
+             "--delay-tape-saturation", "0.45", "--delay-tape-wow-depth-ms", "0",
+             "--delay-tape-flutter-depth-ms", "0"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Tape delay did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<700f", data[44:44 + 700 * 4])
+        if abs(samples[527]) > 1.0e-7:
+            raise AssertionError("Tape delay moved its first echo before the selected delay time")
+        if not 0.76 < samples[528] < 0.79:
+            raise AssertionError(f"Tape saturation control produced an unexpected echo: {samples[528]}")
+        if not all(math.isfinite(sample) for sample in samples):
+            raise AssertionError("Tape delay produced a non-finite sample")
+
+
 def check_ping_pong_delay(executable: Path) -> None:
     sample_rate = 8000
     frames = 80
@@ -755,6 +784,7 @@ def main() -> None:
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
+    check_tape_echo_delay(args.executable.resolve())
     check_ping_pong_delay(args.executable.resolve())
     check_independent_dual_delay(args.executable.resolve())
     check_multitap_delay(args.executable.resolve())

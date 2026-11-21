@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add BBD-style delay"
+COMMIT_MESSAGE = "feat: add tape echo delay"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",

@@ -129,6 +129,10 @@ public:
     // Project-authored BBD-style coloration: bandwidth-limited, mildly saturated
     // repeats. This reuses the existing delay ring and adds no processor stage.
     void configure_bbd_style(bool enabled) noexcept;
+    // Project-authored tape-style echo with bounded saturation and speed modulation.
+    void configure_tape_echo(bool enabled, float saturation, float wow_depth_ms,
+                             float wow_rate_hz, float flutter_depth_ms,
+                             float flutter_rate_hz) noexcept;
     // Stereo wet routing crossfades over 10 ms. A mono instance keeps normal
     // same-channel delay behavior regardless of this setting.
     void configure_ping_pong(bool enabled) noexcept;
@@ -153,8 +157,8 @@ private:
                                    std::uint16_t channel) const noexcept;
     [[nodiscard]] float read_fractional_delay(float delay_samples,
                                               std::uint16_t channel) const noexcept;
-    [[nodiscard]] float shape_bbd_feedback(float value,
-                                           std::uint16_t channel) noexcept;
+    [[nodiscard]] float shape_delay_feedback(float value,
+                                             std::uint16_t channel) noexcept;
     void set_delay_samples(std::size_t samples) noexcept;
     void set_dual_delay_samples(std::uint16_t line, std::size_t samples) noexcept;
     void retarget_parameters() noexcept;
@@ -211,6 +215,29 @@ private:
     std::size_t bbd_ramp_remaining_ = 0;
     float bbd_filter_alpha_ = 0.5F;
     std::array<float, 2> bbd_filter_state_{};
+    float tape_mix_ = 0.0F;
+    float target_tape_mix_ = 0.0F;
+    float tape_mix_step_ = 0.0F;
+    std::size_t tape_ramp_remaining_ = 0;
+    float tape_saturation_ = 0.45F;
+    float target_tape_saturation_ = 0.45F;
+    float tape_saturation_step_ = 0.0F;
+    float tape_wow_depth_samples_ = 0.0F;
+    float target_tape_wow_depth_samples_ = 0.0F;
+    float tape_wow_depth_step_ = 0.0F;
+    float tape_flutter_depth_samples_ = 0.0F;
+    float target_tape_flutter_depth_samples_ = 0.0F;
+    float tape_flutter_depth_step_ = 0.0F;
+    float tape_wow_phase_increment_ = 0.0F;
+    float target_tape_wow_phase_increment_ = 0.0F;
+    float tape_wow_phase_step_ = 0.0F;
+    float tape_flutter_phase_increment_ = 0.0F;
+    float target_tape_flutter_phase_increment_ = 0.0F;
+    float tape_flutter_phase_step_ = 0.0F;
+    float tape_wow_phase_ = 0.0F;
+    float tape_flutter_phase_ = 0.0F;
+    float tape_modulation_samples_ = 0.0F;
+    std::size_t tape_parameter_ramp_remaining_ = 0;
     bool target_multitap_ = false;
     float multitap_route_mix_ = 0.0F;
     float multitap_route_step_ = 0.0F;

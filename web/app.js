@@ -50,6 +50,7 @@ const DEFAULT_PARAMETERS = {
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
   delayBbd: false,
+  delayTape: [0, 0.45, 0.35, 0.3, 0.08, 6],
   delayTempo: [0, 120, 4],
   delayPingPong: false,
   delayDualEnabled: false,
@@ -243,6 +244,14 @@ const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
 const delayPreset = document.querySelector("#delay-preset");
 const delayCharacter = document.querySelector("#delay-character");
+const delayTapeControls = document.querySelector("#delay-tape-controls");
+const delayTapeInputs = [
+  { input: document.querySelector("#delay-tape-saturation"), output: document.querySelector("#delay-tape-saturation-value") },
+  { input: document.querySelector("#delay-tape-wow-depth"), output: document.querySelector("#delay-tape-wow-depth-value") },
+  { input: document.querySelector("#delay-tape-wow-rate"), output: document.querySelector("#delay-tape-wow-rate-value") },
+  { input: document.querySelector("#delay-tape-flutter-depth"), output: document.querySelector("#delay-tape-flutter-depth-value") },
+  { input: document.querySelector("#delay-tape-flutter-rate"), output: document.querySelector("#delay-tape-flutter-rate-value") },
+];
 const delayRouting = document.querySelector("#delay-routing");
 const delayDualControls = document.querySelector("#delay-dual-controls");
 const delayDualAms = document.querySelector("#delay-dual-a-ms");
@@ -1135,17 +1144,48 @@ function applyDelayPreset() {
     delayDivision.value = "4";
     delayFeedback.value = "0.12";
     delayMix.value = "0.25";
+  } else if (delayPreset.value === "tape") {
+    delayMode.value = "free";
+    delayMs.value = "300";
+    delayBpm.value = "120";
+    delayDivision.value = "4";
+    delayFeedback.value = "0.35";
+    delayMix.value = "0.25";
+    delayCharacter.value = "tape";
   }
+  updateDelayCharacter();
   updateDelay(true);
 }
 
 delayPreset.addEventListener("change", applyDelayPreset);
 function updateDelayCharacter() {
-  const enabled = delayCharacter.value === "bbd";
-  DEFAULT_PARAMETERS.delayBbd = enabled;
-  if (workletNode) workletNode.port.postMessage({ type: "delay-bbd", value: enabled });
+  const bbd = delayCharacter.value === "bbd";
+  const tapeEnabled = delayCharacter.value === "tape";
+  const tape = [
+    tapeEnabled ? 1 : 0,
+    ...delayTapeInputs.map(({ input }) => Number(input.value)),
+  ];
+  DEFAULT_PARAMETERS.delayBbd = bbd;
+  DEFAULT_PARAMETERS.delayTape = tape;
+  delayTapeControls.hidden = !tapeEnabled;
+  const [enabled, saturation, wowDepth, wowRate, flutterDepth, flutterRate] = tape;
+  delayTapeInputs[0].output.value = `${Math.round(saturation * 100)}%`;
+  delayTapeInputs[1].output.value = `${wowDepth.toFixed(2)} ms`;
+  delayTapeInputs[2].output.value = `${wowRate.toFixed(2)} Hz`;
+  delayTapeInputs[3].output.value = `${flutterDepth.toFixed(2)} ms`;
+  delayTapeInputs[4].output.value = `${flutterRate.toFixed(1)} Hz`;
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "delay-character",
+      value: { bbd, tape: [enabled, saturation, wowDepth, wowRate, flutterDepth, flutterRate] },
+    });
+  }
 }
 delayCharacter.addEventListener("change", updateDelayCharacter);
+for (const { input } of delayTapeInputs) {
+  input.addEventListener("input", updateDelayCharacter);
+  input.addEventListener("change", updateDelayCharacter);
+}
 function updateDelayRouting() {
   const mode = delayRouting.value;
   const pingPong = mode === "ping-pong";
@@ -1376,7 +1416,8 @@ async function runBrowserSelfTest() {
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
-        delayBbd: true,
+        delayBbd: false,
+        delayTape: [1, 0.45, 0.35, 0.3, 0.08, 6],
         delayTempo: [0, 120, 7],
         delayPingPong: false,
         delayDualEnabled: false,
@@ -1459,13 +1500,29 @@ async function runBrowserSelfTest() {
         DEFAULT_PARAMETERS.delay[2] !== 0.25 || delayMode.value !== "free") {
       throw new Error("The slapback preset did not set its advertised delay controls.");
     }
+    delayPreset.value = "tape";
+    applyDelayPreset();
+    if (DEFAULT_PARAMETERS.delay[0] !== 300 || DEFAULT_PARAMETERS.delay[1] !== 0.35 ||
+        delayCharacter.value !== "tape" || DEFAULT_PARAMETERS.delayTape[0] !== 1 ||
+        delayTapeControls.hidden) {
+      throw new Error("The tape preset did not enable its controls and advertised delay settings.");
+    }
+    delayTapeInputs[1].input.value = "0.4";
+    delayTapeInputs[1].input.dispatchEvent(new Event("input", { bubbles: true }));
+    if (Math.abs(DEFAULT_PARAMETERS.delayTape[2] - 0.4) > 1e-6) {
+      throw new Error("Changing the tape wow control did not update Worklet state.");
+    }
     delayCharacter.value = "bbd";
     updateDelayCharacter();
-    if (!DEFAULT_PARAMETERS.delayBbd) {
+    if (!DEFAULT_PARAMETERS.delayBbd || DEFAULT_PARAMETERS.delayTape[0] !== 0 ||
+        !delayTapeControls.hidden) {
       throw new Error("The BBD-style delay character did not update Worklet state.");
     }
     delayCharacter.value = "digital";
     updateDelayCharacter();
+    if (DEFAULT_PARAMETERS.delayBbd || DEFAULT_PARAMETERS.delayTape[0] !== 0) {
+      throw new Error("Digital delay did not disable BBD and tape coloration.");
+    }
     delayMs.value = "120";
     delayMs.dispatchEvent(new Event("input", { bubbles: true }));
     if (delayPreset.value !== "custom" || DEFAULT_PARAMETERS.delay[0] !== 120) {

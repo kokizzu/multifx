@@ -62,6 +62,12 @@ BOSS's official DM-2W product page identifies its analog delay line as BBD-based
 
 - **DLY-06 product-character reference:** [BOSS DM-2W product page](https://www.boss.info/global/products/dm-2w/).
 
+## Tape Echo research (DLY-07, 2026-11-21)
+
+The official BOSS RE-202 page exposes Saturation and Wow & Flutter as separate controls and describes their roles as magnetic-tape/preamp compression-colour and tape modulation. The official Strymon El Capistan manual also describes Wow & Flutter as speed fluctuation, while Tape Age changes bandwidth and Tape Crinkle models irregularities. These references support keeping saturation and time modulation as independently adjustable controls; they do not specify a generic tape emulation algorithm or authorize a claim of machine accuracy. TabletFX adds a project-authored approximation to its existing Delay ring: a rational saturation curve on the ring-write/feedback signal plus two linked sine LFOs that modulate fractional delay reads with linear interpolation. Defaults are 45% saturation, 0.35 ms wow at 0.30 Hz, and 0.08 ms flutter at 6 Hz; style/control changes ramp over 10 ms. No tape hiss, head geometry, bias, speed-dependent frequency response, wow/flutter spectra, or multi-head behavior is modeled. Automated impulse, modulation, stereo-link, transition-smoothing, finite-output and allocation tests pass; browser/native parity, five prerecorded clean pickup-position renders, stereo DI music rendering, Linux CPU/memory benchmarks, and Windows cross-build pass. Human tape/guitar listening remains open.
+
+- **DLY-07 references:** [BOSS RE-202](https://www.boss.info/global/products/re-202/), [Strymon El Capistan user manual](https://www.strymon.net/manuals/ElCapistan_v2_UserManual_RevB.pdf), and [El Capistan product page](https://www.strymon.net/product/elcapistan/).
+
 The in-house compressor and EQ add no third-party source or asset dependency. Their exact control ranges, default values, channels, latency limitations, owned memory, and automated evidence are recorded in `EFFECTS_MATRIX.md`.
 
 ## Browser/WASM prototype verification (2026-11-21)

@@ -390,6 +390,15 @@ public:
             ->configure_bbd_style(enabled);
     }
 
+    void configure_delay_tape_echo(bool enabled, float saturation,
+                                   float wow_depth_ms, float wow_rate_hz,
+                                   float flutter_depth_ms,
+                                   float flutter_rate_hz) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_tape_echo(enabled, saturation, wow_depth_ms, wow_rate_hz,
+                                  flutter_depth_ms, flutter_rate_hz);
+    }
+
     void configure_delay_tempo(float bpm, std::uint32_t division,
                                float feedback, float mix) noexcept {
         const auto safe_division = division <= 11U
@@ -1083,6 +1092,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_bbd_style(
     void* opaque, std::uint32_t enabled) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_bbd_style(enabled != 0U);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_tape_echo(
+    void* opaque, std::uint32_t enabled, float saturation, float wow_depth_ms,
+    float wow_rate_hz, float flutter_depth_ms, float flutter_rate_hz) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_tape_echo(
+            enabled != 0U, saturation, wow_depth_ms, wow_rate_hz,
+            flutter_depth_ms, flutter_rate_hz);
     }
 }
 

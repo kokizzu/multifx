@@ -94,6 +94,12 @@ struct Options {
     bool delay_ping_pong = false;
     bool delay_dual_enabled = false;
     bool delay_bbd_style = false;
+    bool delay_tape_enabled = false;
+    float delay_tape_saturation = 0.45F;
+    float delay_tape_wow_depth_ms = 0.35F;
+    float delay_tape_wow_rate_hz = 0.3F;
+    float delay_tape_flutter_depth_ms = 0.08F;
+    float delay_tape_flutter_rate_hz = 6.0F;
     float delay_dual_a_ms = 350.0F;
     float delay_dual_a_feedback = 0.25F;
     float delay_dual_a_mix = 0.25F;
@@ -162,6 +168,12 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--delay-bbd") {
             options.delay_bbd_style = true;
+            options.delay_tape_enabled = false;
+            continue;
+        }
+        if (key == "--delay-tape") {
+            options.delay_tape_enabled = true;
+            options.delay_bbd_style = false;
             continue;
         }
         if (i + 1 >= argc) {
@@ -183,20 +195,30 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_mix = 0.25F;
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = false;
+                options.delay_tape_enabled = false;
             } else if (value == "slapback") {
                 options.delay_ms = 110.0F;
                 options.delay_feedback = 0.12F;
                 options.delay_mix = 0.25F;
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = false;
+                options.delay_tape_enabled = false;
             } else if (value == "bbd") {
                 options.delay_ms = 280.0F;
                 options.delay_feedback = 0.28F;
                 options.delay_mix = 0.25F;
                 options.delay_tempo_enabled = false;
                 options.delay_bbd_style = true;
+                options.delay_tape_enabled = false;
+            } else if (value == "tape") {
+                options.delay_ms = 300.0F;
+                options.delay_feedback = 0.35F;
+                options.delay_mix = 0.25F;
+                options.delay_tempo_enabled = false;
+                options.delay_bbd_style = false;
+                options.delay_tape_enabled = true;
             } else {
-                throw std::invalid_argument("Delay preset must be digital, slapback, or bbd");
+                throw std::invalid_argument("Delay preset must be digital, slapback, bbd, or tape");
             }
             continue;
         }
@@ -561,6 +583,11 @@ Options parse_options(int argc, char** argv, int first) {
             options.clean_boost_enabled = true;
         }
         else if (key == "--delay-ms") options.delay_ms = value;
+        else if (key == "--delay-tape-saturation") options.delay_tape_saturation = value;
+        else if (key == "--delay-tape-wow-depth-ms") options.delay_tape_wow_depth_ms = value;
+        else if (key == "--delay-tape-wow-rate-hz") options.delay_tape_wow_rate_hz = value;
+        else if (key == "--delay-tape-flutter-depth-ms") options.delay_tape_flutter_depth_ms = value;
+        else if (key == "--delay-tape-flutter-rate-hz") options.delay_tape_flutter_rate_hz = value;
         else if (key == "--delay-sync-bpm") {
             options.delay_tempo_bpm = value;
             options.delay_tempo_enabled = true;
@@ -768,7 +795,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::move(eq));
     }
     if (options.delay_multitap_enabled || options.delay_dual_enabled ||
-        options.delay_bbd_style ||
+        options.delay_bbd_style || options.delay_tape_enabled ||
         ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F)) {
         auto delay = std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F,
@@ -779,6 +806,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                                    options.delay_feedback, options.delay_mix);
         }
         delay->configure_bbd_style(options.delay_bbd_style);
+        delay->configure_tape_echo(options.delay_tape_enabled,
+                                   options.delay_tape_saturation,
+                                   options.delay_tape_wow_depth_ms,
+                                   options.delay_tape_wow_rate_hz,
+                                   options.delay_tape_flutter_depth_ms,
+                                   options.delay_tape_flutter_rate_hz);
         if (options.delay_multitap_enabled) {
             for (std::size_t tap = 0; tap < tabletfx::maximum_delay_taps; ++tap) {
                 delay->configure_multitap_tap(tap, options.delay_multitap_ms[tap],
@@ -1322,6 +1355,16 @@ void run_bench() {
         delay->configure_bbd_style(true);
         return delay;
     }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-tape-mono", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
+        delay->configure_tape_echo(true, 0.45F, 0.35F, 0.3F, 0.08F, 6.0F);
+        return delay;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-tape-stereo", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 2, 2000.0F);
+        delay->configure_tape_echo(true, 0.45F, 0.35F, 0.3F, 0.08F, 6.0F);
+        return delay;
+    }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-ping-pong", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
         delay->configure_ping_pong(true);
@@ -1509,7 +1552,7 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                   " [--drive 1..20] [--delay-preset digital|slapback|bbd] [--delay-bbd] [--delay-ms ms] [--delay-sync-bpm 20..300]"
+                   " [--drive 1..20] [--delay-preset digital|slapback|bbd|tape] [--delay-bbd|--delay-tape] [--delay-ms ms] [--delay-tape-saturation 0..1] [--delay-tape-wow-depth-ms 0..5] [--delay-tape-wow-rate-hz 0.05..2] [--delay-tape-flutter-depth-ms 0..1] [--delay-tape-flutter-rate-hz 1..20] [--delay-sync-bpm 20..300]"
                    " [--delay-ping-pong]"
                     " [--delay-dual] [--delay-dual-a-ms ms] [--delay-dual-a-feedback 0..0.95]"
                     " [--delay-dual-a-mix 0..1] [--delay-dual-b-ms ms]"
