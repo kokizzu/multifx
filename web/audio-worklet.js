@@ -113,6 +113,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         module._tf_chain_set_delay_tempo(this.chain, delayTempo[1], delayTempo[2],
           delay[1], delay[2]);
       }
+      if (parameters.delayDualEnabled) {
+        const dual = parameters.delayDual || [350, 0.25, 0.25, 525, 0.25, 0.25];
+        module._tf_chain_set_delay_dual(this.chain, ...dual);
+      }
       if (parameters.delayPingPong) {
         module._tf_chain_set_delay_ping_pong(this.chain, 1);
       }
@@ -240,6 +244,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       }
     } else if (message.type === "delay-routing" && this.ready) {
       this.module._tf_chain_set_delay_ping_pong(this.chain, message.value ? 1 : 0);
+    } else if (message.type === "delay-dual" && this.ready) {
+      this.module._tf_chain_set_delay_dual(this.chain, ...message.value);
     } else if (message.type === "phaser" && this.ready) {
       this.module._tf_chain_set_phaser(this.chain, ...message.value);
     } else if (message.type === "vibrato" && this.ready) {

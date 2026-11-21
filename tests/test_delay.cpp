@@ -211,6 +211,64 @@ void test_ping_pong_mode_crossfade_and_mono_fallback() {
             "mono ping-pong configuration must safely retain same-channel echoes");
 }
 
+void test_independent_dual_times_and_feedback() {
+    tabletfx::Delay stereo(8000.0F, 2, 100.0F, 4.0F, 0.0F, 0.0F, true);
+    stereo.configure_dual(4.0F, 0.5F, 1.0F, 6.0F, 0.25F, 1.0F);
+    require(stereo.dual_enabled(), "dual delay mode did not retain its requested state");
+    stereo.reset();
+
+    std::array<float, 210> impulses{};
+    impulses[0] = 1.0F;
+    impulses[3] = 0.5F;
+    stereo.process(impulses, 2);
+    require(near(impulses[64], 1.0F) && near(impulses[65], 0.0F),
+            "Delay A must use its 4 ms time on the left without channel leakage");
+    require(near(impulses[99], 0.5F) && near(impulses[98], 0.0F),
+            "Delay B must use its independent 6 ms time on the right");
+    require(near(impulses[128], 0.5F) && near(impulses[195], 0.125F),
+            "the two independent feedback levels must produce separate repeats");
+
+    tabletfx::Delay mono(8000.0F, 1, 100.0F, 4.0F, 0.0F, 0.0F, true);
+    mono.configure_dual(4.0F, 0.0F, 1.0F, 6.0F, 0.0F, 1.0F);
+    mono.reset();
+    std::array<float, 56> mono_impulse{};
+    mono_impulse[0] = 1.0F;
+    mono.process(mono_impulse, 1);
+    require(near(mono_impulse[32], 0.5F) && near(mono_impulse[48], 0.5F),
+            "mono dual mode must mix both independently timed taps at half level");
+}
+
+void test_dual_routing_crossfade_and_no_allocation() {
+    tabletfx::Delay delay(1000.0F, 2, 100.0F, 4.0F, 0.0F, 0.0F, true);
+    std::array<float, 40> steady{};
+    for (std::size_t frame = 0; frame < steady.size() / 2; ++frame) {
+        steady[frame * 2] = 0.25F;
+        steady[frame * 2 + 1] = -0.25F;
+    }
+    delay.process(steady, 2);
+    delay.configure_dual(4.0F, 0.2F, 0.5F, 6.0F, 0.4F, 0.5F);
+    std::array<float, 24> transition{};
+    for (std::size_t frame = 0; frame < transition.size() / 2; ++frame) {
+        transition[frame * 2] = 0.25F;
+        transition[frame * 2 + 1] = -0.25F;
+    }
+    delay.process(transition, 2);
+    for (std::size_t frame = 1; frame < transition.size() / 2; ++frame) {
+        require(std::abs(transition[frame * 2] - transition[(frame - 1) * 2]) < 0.06F &&
+                    std::abs(transition[frame * 2 + 1] - transition[(frame - 1) * 2 + 1]) < 0.06F,
+                "switching to independent dual delay should crossfade without a jump");
+    }
+
+    tabletfx::Delay mono(48000.0F, 1, 100.0F, 20.0F, 0.5F, 0.5F, true);
+    mono.configure_dual(120.0F, 0.25F, 0.25F, 240.0F, 0.4F, 0.3F);
+    std::array<float, 512> mono_audio{};
+    mono_audio.fill(0.1F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) mono.process(mono_audio, 1);
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "dual-delay processing allocated memory");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -308,6 +366,8 @@ int main() {
         test_stereo_impulses_feedback_and_no_extra_dry_latency();
         test_ping_pong_echoes_alternate_channels();
         test_ping_pong_mode_crossfade_and_mono_fallback();
+        test_independent_dual_times_and_feedback();
+        test_dual_routing_crossfade_and_no_allocation();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

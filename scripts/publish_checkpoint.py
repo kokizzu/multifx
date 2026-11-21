@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add stereo ping-pong delay"
+COMMIT_MESSAGE = "feat: add independent dual delay"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",

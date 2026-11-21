@@ -91,6 +91,13 @@ struct Options {
     float delay_tempo_bpm = 120.0F;
     tabletfx::DelayDivision delay_division = tabletfx::DelayDivision::quarter;
     bool delay_ping_pong = false;
+    bool delay_dual_enabled = false;
+    float delay_dual_a_ms = 350.0F;
+    float delay_dual_a_feedback = 0.25F;
+    float delay_dual_a_mix = 0.25F;
+    float delay_dual_b_ms = 525.0F;
+    float delay_dual_b_feedback = 0.25F;
+    float delay_dual_b_mix = 0.25F;
     bool pitch_enabled = false;
     float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
@@ -169,6 +176,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--delay-ping-pong") {
             options.delay_ping_pong = true;
+            continue;
+        }
+        if (key == "--delay-dual") {
+            options.delay_dual_enabled = true;
             continue;
         }
         if (key == "--delay-division") {
@@ -515,6 +526,30 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--delay-feedback") options.delay_feedback = value;
         else if (key == "--delay-mix") options.delay_mix = value;
+        else if (key == "--delay-dual-a-ms") {
+            options.delay_dual_a_ms = value;
+            options.delay_dual_enabled = true;
+        }
+        else if (key == "--delay-dual-a-feedback") {
+            options.delay_dual_a_feedback = value;
+            options.delay_dual_enabled = true;
+        }
+        else if (key == "--delay-dual-a-mix") {
+            options.delay_dual_a_mix = value;
+            options.delay_dual_enabled = true;
+        }
+        else if (key == "--delay-dual-b-ms") {
+            options.delay_dual_b_ms = value;
+            options.delay_dual_enabled = true;
+        }
+        else if (key == "--delay-dual-b-feedback") {
+            options.delay_dual_b_feedback = value;
+            options.delay_dual_enabled = true;
+        }
+        else if (key == "--delay-dual-b-mix") {
+            options.delay_dual_b_mix = value;
+            options.delay_dual_enabled = true;
+        }
         else if (key == "--pitch-semitones") {
             options.pitch_semitones = value;
             options.pitch_enabled = true;
@@ -691,16 +726,22 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                       options.eq_band3_frequency_hz, options.eq_band3_gain_db, options.eq_band3_q);
         effects.push_back(std::move(eq));
     }
-    if ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F) {
+    if (options.delay_dual_enabled ||
+        ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F)) {
         auto delay = std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F,
             options.delay_ms > 0.0F ? options.delay_ms : 350.0F,
-            options.delay_feedback, options.delay_mix);
+            options.delay_feedback, options.delay_mix, options.delay_dual_enabled);
         if (options.delay_tempo_enabled) {
             delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
                                    options.delay_feedback, options.delay_mix);
         }
-        if (options.delay_ping_pong) {
+        if (options.delay_dual_enabled) {
+            delay->configure_dual(options.delay_dual_a_ms, options.delay_dual_a_feedback,
+                                  options.delay_dual_a_mix, options.delay_dual_b_ms,
+                                  options.delay_dual_b_feedback, options.delay_dual_b_mix);
+            delay->reset();
+        } else if (options.delay_ping_pong) {
             delay->configure_ping_pong(true);
             delay->reset();
         }
@@ -1226,6 +1267,22 @@ void run_bench() {
         delay->reset();
         return delay;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-dual-mono", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(
+            sample_rate, 1, 2000.0F, 350.0F, 0.25F, 0.25F, true);
+        delay->configure_dual(350.0F, 0.25F, 0.25F,
+                              525.0F, 0.25F, 0.25F);
+        delay->reset();
+        return delay;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-dual-stereo", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(
+            sample_rate, 2, 2000.0F, 350.0F, 0.25F, 0.25F, true);
+        delay->configure_dual(350.0F, 0.25F, 0.25F,
+                              525.0F, 0.25F, 0.25F);
+        delay->reset();
+        return delay;
+    }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("poly-pitch-shifter", [=] {
         auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
             static_cast<float>(sample_rate), channels);
@@ -1371,6 +1428,9 @@ void print_usage() {
                  " [--gate-release-ms ms]"
                    " [--drive 1..20] [--delay-preset digital|slapback] [--delay-ms ms] [--delay-sync-bpm 20..300]"
                    " [--delay-ping-pong]"
+                    " [--delay-dual] [--delay-dual-a-ms ms] [--delay-dual-a-feedback 0..0.95]"
+                    " [--delay-dual-a-mix 0..1] [--delay-dual-b-ms ms]"
+                    " [--delay-dual-b-feedback 0..0.95] [--delay-dual-b-mix 0..1]"
                    " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
                   " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
                  " [--pitch-semitones -12..12]\n"

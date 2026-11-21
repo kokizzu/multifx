@@ -51,6 +51,8 @@ const DEFAULT_PARAMETERS = {
   delay: [350, 0.25, 0.25],
   delayTempo: [0, 120, 4],
   delayPingPong: false,
+  delayDualEnabled: false,
+  delayDual: [350, 0.25, 0.25, 525, 0.25, 0.25],
   pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -237,6 +239,19 @@ const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
 const delayPreset = document.querySelector("#delay-preset");
 const delayRouting = document.querySelector("#delay-routing");
+const delayDualControls = document.querySelector("#delay-dual-controls");
+const delayDualAms = document.querySelector("#delay-dual-a-ms");
+const delayDualAmsValue = document.querySelector("#delay-dual-a-ms-value");
+const delayDualAFeedback = document.querySelector("#delay-dual-a-feedback");
+const delayDualAFeedbackValue = document.querySelector("#delay-dual-a-feedback-value");
+const delayDualAMix = document.querySelector("#delay-dual-a-mix");
+const delayDualAMixValue = document.querySelector("#delay-dual-a-mix-value");
+const delayDualBms = document.querySelector("#delay-dual-b-ms");
+const delayDualBmsValue = document.querySelector("#delay-dual-b-ms-value");
+const delayDualBFeedback = document.querySelector("#delay-dual-b-feedback");
+const delayDualBFeedbackValue = document.querySelector("#delay-dual-b-feedback-value");
+const delayDualBMix = document.querySelector("#delay-dual-b-mix");
+const delayDualBMixValue = document.querySelector("#delay-dual-b-mix-value");
 const delayMode = document.querySelector("#delay-time-mode");
 const delayMs = document.querySelector("#delay-time-ms");
 const delayMsValue = document.querySelector("#delay-time-ms-value");
@@ -1109,12 +1124,45 @@ function applyDelayPreset() {
 
 delayPreset.addEventListener("change", applyDelayPreset);
 function updateDelayRouting() {
-  const enabled = delayRouting.value === "ping-pong";
-  DEFAULT_PARAMETERS.delayPingPong = enabled;
-  if (workletNode) workletNode.port.postMessage({ type: "delay-routing", value: enabled });
+  const mode = delayRouting.value;
+  const pingPong = mode === "ping-pong";
+  const dual = mode === "dual";
+  DEFAULT_PARAMETERS.delayPingPong = pingPong;
+  DEFAULT_PARAMETERS.delayDualEnabled = dual;
+  delayDualControls.hidden = !dual;
+  for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
+    control.disabled = dual;
+  }
+  if (dual) {
+    updateDelayDual();
+  } else if (workletNode) {
+    workletNode.port.postMessage({ type: "delay-routing", value: pingPong });
+  }
 }
 
 delayRouting.addEventListener("change", updateDelayRouting);
+function updateDelayDual() {
+  const values = [
+    Number(delayDualAms.value), Number(delayDualAFeedback.value), Number(delayDualAMix.value),
+    Number(delayDualBms.value), Number(delayDualBFeedback.value), Number(delayDualBMix.value),
+  ];
+  DEFAULT_PARAMETERS.delayDual = values;
+  delayDualAmsValue.value = `${values[0].toFixed(0)} ms`;
+  delayDualAFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
+  delayDualAMixValue.value = `${Math.round(values[2] * 100)}%`;
+  delayDualBmsValue.value = `${values[3].toFixed(0)} ms`;
+  delayDualBFeedbackValue.value = `${Math.round(values[4] * 100)}%`;
+  delayDualBMixValue.value = `${Math.round(values[5] * 100)}%`;
+  if (workletNode && DEFAULT_PARAMETERS.delayDualEnabled) {
+    workletNode.port.postMessage({ type: "delay-dual", value: values });
+  }
+}
+
+for (const control of [delayDualAms, delayDualAFeedback, delayDualAMix,
+  delayDualBms, delayDualBFeedback, delayDualBMix]) {
+  control.addEventListener("input", updateDelayDual);
+  control.addEventListener("change", updateDelayDual);
+}
 for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
   control.addEventListener("input", () => updateDelay());
   control.addEventListener("change", () => updateDelay());
@@ -1272,7 +1320,9 @@ async function runBrowserSelfTest() {
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
         delayTempo: [1, 120, 7],
-        delayPingPong: true,
+        delayPingPong: false,
+        delayDualEnabled: true,
+        delayDual: [180, 0.25, 0.35, 240, 0.15, 0.25],
         pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -1355,8 +1405,15 @@ async function runBrowserSelfTest() {
     }
     delayPreset.value = "custom";
     delayMode.value = "tempo";
-    delayRouting.value = "ping-pong";
+    delayRouting.value = "dual";
     updateDelayRouting();
+    delayDualAms.value = "180";
+    delayDualAFeedback.value = "0.25";
+    delayDualAMix.value = "0.35";
+    delayDualBms.value = "240";
+    delayDualBFeedback.value = "0.15";
+    delayDualBMix.value = "0.25";
+    updateDelayDual();
     delayMs.value = "180";
     delayBpm.value = "120";
     delayDivision.value = "7";

@@ -127,7 +127,7 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::Delay>(
                                 static_cast<float>(sample_rate), channels, 2000.0F,
-                                350.0F, 0.25F, 0.25F),
+                                350.0F, 0.25F, 0.25F, true),
                             false});
         effects_.push_back({std::make_unique<tabletfx::PolyPitchShifter>(
                                 static_cast<float>(sample_rate), channels),
@@ -397,6 +397,13 @@ public:
     void configure_delay_ping_pong(bool enabled) noexcept {
         static_cast<tabletfx::Delay*>(effects_[21].effect.get())
             ->configure_ping_pong(enabled);
+    }
+
+    void configure_delay_dual(float delay_a_ms, float feedback_a, float mix_a,
+                               float delay_b_ms, float feedback_b, float mix_b) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_dual(delay_a_ms, feedback_a, mix_a,
+                             delay_b_ms, feedback_b, mix_b);
     }
 
     void configure_pitch(float semitones) noexcept {
@@ -1068,6 +1075,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_ping_pong(void* opaque,
                                                         std::uint32_t enabled) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_ping_pong(enabled != 0U);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_dual(
+    void* opaque, float delay_a_ms, float feedback_a, float mix_a,
+    float delay_b_ms, float feedback_b, float mix_b) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_dual(delay_a_ms, feedback_a, mix_a,
+                                                delay_b_ms, feedback_b, mix_b);
     }
 }
 

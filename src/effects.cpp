@@ -222,8 +222,10 @@ void SoftDrive::process(std::span<float> interleaved, std::uint16_t channels) no
 }
 
 Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
-             float delay_ms, float feedback, float mix)
-    : sample_rate_(sample_rate), channels_(channels), delay_samples_(1), feedback_(0.0F),
+             float delay_ms, float feedback, float mix, bool reserve_dual_line)
+    : sample_rate_(sample_rate), channels_(channels),
+      storage_channels_(channels == 1 && reserve_dual_line ? 2 : channels),
+      dual_capable_(reserve_dual_line), delay_samples_(1), feedback_(0.0F),
       target_feedback_(0.0F), mix_(0.0F), target_mix_(0.0F), write_frame_(0),
       capacity_frames_(0) {
     if (!std::isfinite(sample_rate_) || sample_rate_ <= 0.0F ||
@@ -240,10 +242,10 @@ Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
     }
     const std::size_t maximum_frames = static_cast<std::size_t>(requested_frames);
     capacity_frames_ = maximum_frames + 1;
-    if (capacity_frames_ > storage_.max_size() / static_cast<std::size_t>(channels_)) {
+    if (capacity_frames_ > storage_.max_size() / storage_channels_) {
         throw std::length_error("Delay buffer size is too large");
     }
-    storage_.assign(capacity_frames_ * channels_, 0.0F);
+    storage_.assign(capacity_frames_ * storage_channels_, 0.0F);
     const double ramp_frames = std::ceil(static_cast<double>(sample_rate_) * 0.010);
     const std::size_t ramp_samples = ramp_frames >= 1.0
                                          ? static_cast<std::size_t>(ramp_frames)
@@ -251,6 +253,13 @@ Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
     parameter_ramp_total_ = std::max<std::size_t>(ramp_samples, 1);
     delay_transition_total_ = parameter_ramp_total_;
     configure(delay_ms, feedback, mix);
+    dual_delay_samples_ = {delay_samples_, delay_samples_};
+    dual_transition_from_delay_samples_ = {
+        static_cast<float>(delay_samples_), static_cast<float>(delay_samples_)};
+    target_dual_feedback_ = {target_feedback_, target_feedback_};
+    dual_feedback_ = {target_feedback_, target_feedback_};
+    target_dual_mix_ = {target_mix_, target_mix_};
+    dual_mix_ = {target_mix_, target_mix_};
     reset();
 }
 
@@ -263,18 +272,63 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
 }
 
 void Delay::configure_ping_pong(bool enabled) noexcept {
-    if (target_ping_pong_ == enabled) return;
+    if (target_ping_pong_ == enabled && !target_dual_) return;
     target_ping_pong_ = enabled;
-    const float target = enabled ? 1.0F : 0.0F;
+    target_dual_ = false;
+    const float ping_target = enabled ? 1.0F : 0.0F;
     if (parameter_ramp_total_ <= 1) {
-        ping_pong_mix_ = target;
+        ping_pong_mix_ = ping_target;
         ping_pong_step_ = 0.0F;
         ping_pong_ramp_remaining_ = 0;
+        dual_routing_mix_ = 0.0F;
+        dual_routing_step_ = 0.0F;
+        dual_routing_ramp_remaining_ = 0;
         return;
     }
-    ping_pong_step_ = (target - ping_pong_mix_) /
+    ping_pong_step_ = (ping_target - ping_pong_mix_) /
                       static_cast<float>(parameter_ramp_total_);
     ping_pong_ramp_remaining_ = parameter_ramp_total_;
+    dual_routing_step_ = (0.0F - dual_routing_mix_) /
+                         static_cast<float>(parameter_ramp_total_);
+    dual_routing_ramp_remaining_ = parameter_ramp_total_;
+}
+
+void Delay::configure_dual(float delay_a_ms, float feedback_a, float mix_a,
+                           float delay_b_ms, float feedback_b, float mix_b) noexcept {
+    if (!dual_capable_) return;
+    if (std::isfinite(delay_a_ms)) {
+        set_dual_delay_samples(0, samples_for_ms(delay_a_ms));
+    }
+    if (std::isfinite(delay_b_ms)) {
+        set_dual_delay_samples(1, samples_for_ms(delay_b_ms));
+    }
+    if (std::isfinite(feedback_a)) target_dual_feedback_[0] = std::clamp(feedback_a, 0.0F, 0.95F);
+    if (std::isfinite(feedback_b)) target_dual_feedback_[1] = std::clamp(feedback_b, 0.0F, 0.95F);
+    if (std::isfinite(mix_a)) target_dual_mix_[0] = std::clamp(mix_a, 0.0F, 1.0F);
+    if (std::isfinite(mix_b)) target_dual_mix_[1] = std::clamp(mix_b, 0.0F, 1.0F);
+    dual_parameter_ramp_remaining_ = parameter_ramp_total_;
+    const float ramp = static_cast<float>(parameter_ramp_total_);
+    for (std::size_t line = 0; line < 2; ++line) {
+        dual_feedback_step_[line] =
+            (target_dual_feedback_[line] - dual_feedback_[line]) / ramp;
+        dual_mix_step_[line] = (target_dual_mix_[line] - dual_mix_[line]) / ramp;
+    }
+
+    target_ping_pong_ = false;
+    target_dual_ = true;
+    if (parameter_ramp_total_ <= 1) {
+        ping_pong_mix_ = 0.0F;
+        ping_pong_step_ = 0.0F;
+        ping_pong_ramp_remaining_ = 0;
+        dual_routing_mix_ = 1.0F;
+        dual_routing_step_ = 0.0F;
+        dual_routing_ramp_remaining_ = 0;
+        return;
+    }
+    ping_pong_step_ = (0.0F - ping_pong_mix_) / ramp;
+    ping_pong_ramp_remaining_ = parameter_ramp_total_;
+    dual_routing_step_ = (1.0F - dual_routing_mix_) / ramp;
+    dual_routing_ramp_remaining_ = parameter_ramp_total_;
 }
 
 void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
@@ -360,11 +414,31 @@ void Delay::set_delay_samples(std::size_t samples) noexcept {
     delay_transition_remaining_ = delay_transition_total_;
 }
 
+void Delay::set_dual_delay_samples(std::uint16_t line, std::size_t samples) noexcept {
+    if (line >= dual_delay_samples_.size()) return;
+    samples = std::clamp(samples, std::size_t{1}, capacity_frames_ - 1);
+    if (samples == dual_delay_samples_[line]) return;
+
+    if (dual_delay_transition_remaining_[line] > 0) {
+        const float progress = static_cast<float>(delay_transition_total_ -
+                                                  dual_delay_transition_remaining_[line]) /
+                              static_cast<float>(delay_transition_total_);
+        dual_transition_from_delay_samples_[line] +=
+            (static_cast<float>(dual_delay_samples_[line]) -
+             dual_transition_from_delay_samples_[line]) * progress;
+    } else {
+        dual_transition_from_delay_samples_[line] =
+            static_cast<float>(dual_delay_samples_[line]);
+    }
+    dual_delay_samples_[line] = samples;
+    dual_delay_transition_remaining_[line] = delay_transition_total_;
+}
+
 float Delay::read_delay(std::size_t delay_samples, std::uint16_t channel) const noexcept {
     const std::size_t read_frame = write_frame_ >= delay_samples
                                        ? write_frame_ - delay_samples
                                        : write_frame_ + capacity_frames_ - delay_samples;
-    return storage_[read_frame * channels_ + channel];
+    return storage_[read_frame * storage_channels_ + channel];
 }
 
 float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) const noexcept {
@@ -374,8 +448,8 @@ float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) c
     const std::size_t first_frame = static_cast<std::size_t>(read_position);
     const std::size_t second_frame = first_frame + 1 == capacity_frames_ ? 0 : first_frame + 1;
     const double fraction = read_position - static_cast<double>(first_frame);
-    const std::size_t first_index = first_frame * channels_ + channel;
-    const std::size_t second_index = second_frame * channels_ + channel;
+    const std::size_t first_index = first_frame * storage_channels_ + channel;
+    const std::size_t second_index = second_frame * storage_channels_ + channel;
     const double first = storage_[first_index];
     const double second = storage_[second_index];
     return static_cast<float>(first + (second - first) * fraction);
@@ -415,17 +489,21 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
     }
     const std::size_t frames = interleaved.size() / channels;
     const float maximum = std::numeric_limits<float>::max();
-    const bool use_ping_pong_path = channels_ == 2 &&
-        (ping_pong_mix_ != 0.0F || ping_pong_ramp_remaining_ > 0);
+    const bool routed_path = ping_pong_mix_ != 0.0F || dual_routing_mix_ != 0.0F ||
+        ping_pong_ramp_remaining_ > 0 || dual_routing_ramp_remaining_ > 0;
+    const auto bound = [maximum](double value) noexcept {
+        return static_cast<float>(std::clamp(
+            value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+    };
     for (std::size_t frame = 0; frame < frames; ++frame) {
         const float transition_progress = delay_transition_remaining_ == 0
             ? 1.0F
             : static_cast<float>(delay_transition_total_ - delay_transition_remaining_) /
                   static_cast<float>(delay_transition_total_);
-        if (!use_ping_pong_path) {
+        if (!routed_path) {
             for (std::uint16_t channel = 0; channel < channels_; ++channel) {
                 const std::size_t input_index = frame * channels_ + channel;
-                const std::size_t write_index = write_frame_ * channels_ + channel;
+                const std::size_t write_index = write_frame_ * storage_channels_ + channel;
                 const float input = std::isfinite(interleaved[input_index])
                                         ? interleaved[input_index]
                                         : 0.0F;
@@ -437,51 +515,118 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                     delayed = old_delay + (new_delay - old_delay) * transition_progress;
                 }
 
-                const double output_value = static_cast<double>(input) *
-                                                (1.0 - static_cast<double>(mix_)) +
+                const double output_value = static_cast<double>(input) * (1.0 - mix_) +
                                             static_cast<double>(delayed) * mix_;
-                interleaved[input_index] = static_cast<float>(std::clamp(
-                    output_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+                interleaved[input_index] = bound(output_value);
                 const double feedback_value = static_cast<double>(input) +
                                               static_cast<double>(delayed) * feedback_;
-                storage_[write_index] = static_cast<float>(std::clamp(
-                    feedback_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
-            }
-        } else {
-            std::array<float, 2> input_samples{};
-            std::array<float, 2> delayed_samples{};
-            for (std::uint16_t channel = 0; channel < 2; ++channel) {
-                const std::size_t input_index = frame * channels_ + channel;
-                input_samples[channel] = std::isfinite(interleaved[input_index])
-                                             ? interleaved[input_index]
-                                             : 0.0F;
-                const float new_delay = read_delay(delay_samples_, channel);
-                delayed_samples[channel] = new_delay;
-                if (delay_transition_remaining_ > 0) {
-                    const float old_delay = read_fractional_delay(
-                        transition_from_delay_samples_, channel);
-                    delayed_samples[channel] = old_delay +
-                        (new_delay - old_delay) * transition_progress;
+                storage_[write_index] = bound(feedback_value);
+                if (channels_ == 1 && dual_capable_) {
+                    storage_[write_frame_ * storage_channels_ + 1] = bound(feedback_value);
                 }
             }
-
-            const float ping_pong_mix = ping_pong_mix_;
+        } else if (channels_ == 2) {
+            std::array<float, 2> inputs{};
+            std::array<float, 2> normal_taps{};
+            std::array<float, 2> dual_taps{};
+            std::array<float, 2> ping_pong_taps{};
+            const float ping_weight = std::clamp(ping_pong_mix_, 0.0F, 1.0F);
+            const float dual_weight = std::clamp(dual_routing_mix_, 0.0F, 1.0F);
+            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight,
+                                                   0.0F, 1.0F);
             for (std::uint16_t channel = 0; channel < 2; ++channel) {
-                const std::uint16_t opposite_channel = static_cast<std::uint16_t>(1 - channel);
-                const float delayed = delayed_samples[channel] +
-                    (delayed_samples[opposite_channel] - delayed_samples[channel]) * ping_pong_mix;
-                const std::size_t input_index = frame * channels_ + channel;
-                const std::size_t write_index = write_frame_ * channels_ + channel;
-                const float input = input_samples[channel];
-                const double output_value = static_cast<double>(input) *
-                                                (1.0 - static_cast<double>(mix_)) +
-                                            static_cast<double>(delayed) * mix_;
-                interleaved[input_index] = static_cast<float>(std::clamp(
-                    output_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
-                const double feedback_value = static_cast<double>(input) +
-                                              static_cast<double>(delayed) * feedback_;
-                storage_[write_index] = static_cast<float>(std::clamp(
-                    feedback_value, -static_cast<double>(maximum), static_cast<double>(maximum)));
+                const std::size_t input_index = frame * 2 + channel;
+                inputs[channel] = std::isfinite(interleaved[input_index])
+                                      ? interleaved[input_index]
+                                      : 0.0F;
+                const float normal_new = read_delay(delay_samples_, channel);
+                normal_taps[channel] = normal_new;
+                if (delay_transition_remaining_ > 0) {
+                    const float normal_old = read_fractional_delay(
+                        transition_from_delay_samples_, channel);
+                    normal_taps[channel] = normal_old +
+                        (normal_new - normal_old) * transition_progress;
+                }
+
+                const float dual_new = read_delay(dual_delay_samples_[channel], channel);
+                dual_taps[channel] = dual_new;
+                if (dual_delay_transition_remaining_[channel] > 0) {
+                    const float dual_progress = static_cast<float>(delay_transition_total_ -
+                        dual_delay_transition_remaining_[channel]) /
+                        static_cast<float>(delay_transition_total_);
+                    const float dual_old = read_fractional_delay(
+                        dual_transition_from_delay_samples_[channel], channel);
+                    dual_taps[channel] = dual_old + (dual_new - dual_old) * dual_progress;
+                }
+            }
+            for (std::uint16_t channel = 0; channel < 2; ++channel) {
+                const std::uint16_t opposite = static_cast<std::uint16_t>(1U - channel);
+                ping_pong_taps[channel] = normal_taps[opposite];
+                const float normal_output = inputs[channel] * (1.0F - mix_) +
+                                            normal_taps[channel] * mix_;
+                const float ping_output = inputs[channel] * (1.0F - mix_) +
+                                          ping_pong_taps[channel] * mix_;
+                const float dual_output = inputs[channel] * (1.0F - dual_mix_[channel]) +
+                                          dual_taps[channel] * dual_mix_[channel];
+                const double output_value =
+                    static_cast<double>(normal_weight) * normal_output +
+                    static_cast<double>(ping_weight) * ping_output +
+                    static_cast<double>(dual_weight) * dual_output;
+                interleaved[frame * 2 + channel] = bound(output_value);
+
+                const float normal_feedback = inputs[channel] +
+                                              normal_taps[channel] * feedback_;
+                const float ping_feedback = inputs[channel] +
+                                            ping_pong_taps[channel] * feedback_;
+                const float dual_feedback = inputs[channel] +
+                                            dual_taps[channel] * dual_feedback_[channel];
+                const double feedback_value =
+                    static_cast<double>(normal_weight) * normal_feedback +
+                    static_cast<double>(ping_weight) * ping_feedback +
+                    static_cast<double>(dual_weight) * dual_feedback;
+                storage_[write_frame_ * storage_channels_ + channel] = bound(feedback_value);
+            }
+        } else {
+            const float input = std::isfinite(interleaved[frame]) ? interleaved[frame] : 0.0F;
+            const float normal_tap = read_delay(delay_samples_, 0);
+            const float normal_delayed = delay_transition_remaining_ > 0
+                ? read_fractional_delay(transition_from_delay_samples_, 0) +
+                      (normal_tap - read_fractional_delay(transition_from_delay_samples_, 0)) *
+                          transition_progress
+                : normal_tap;
+            std::array<float, 2> dual_taps{};
+            for (std::uint16_t line = 0; line < 2; ++line) {
+                const float dual_new = read_delay(dual_delay_samples_[line], line);
+                dual_taps[line] = dual_new;
+                if (dual_delay_transition_remaining_[line] > 0) {
+                    const float dual_progress = static_cast<float>(delay_transition_total_ -
+                        dual_delay_transition_remaining_[line]) /
+                        static_cast<float>(delay_transition_total_);
+                    const float dual_old = read_fractional_delay(
+                        dual_transition_from_delay_samples_[line], line);
+                    dual_taps[line] = dual_old + (dual_new - dual_old) * dual_progress;
+                }
+            }
+            const float ping_weight = std::clamp(ping_pong_mix_, 0.0F, 1.0F);
+            const float dual_weight = std::clamp(dual_routing_mix_, 0.0F, 1.0F);
+            const float normal_weight = std::clamp(1.0F - ping_weight - dual_weight,
+                                                   0.0F, 1.0F);
+            const float normal_output = input * (1.0F - mix_) + normal_delayed * mix_;
+            const float average_dual_mix = 0.5F * (dual_mix_[0] + dual_mix_[1]);
+            const float dual_wet = 0.5F *
+                (dual_taps[0] * dual_mix_[0] + dual_taps[1] * dual_mix_[1]);
+            const float dual_output = input * (1.0F - average_dual_mix) + dual_wet;
+            interleaved[frame] = bound(
+                static_cast<double>(normal_weight + ping_weight) * normal_output +
+                static_cast<double>(dual_weight) * dual_output);
+
+            const float normal_feedback = input + normal_delayed * feedback_;
+            for (std::uint16_t line = 0; line < storage_channels_; ++line) {
+                const float dual_feedback = input + dual_taps[line] * dual_feedback_[line];
+                const double feedback_value =
+                    static_cast<double>(normal_weight + ping_weight) * normal_feedback +
+                    static_cast<double>(dual_weight) * dual_feedback;
+                storage_[write_frame_ * storage_channels_ + line] = bound(feedback_value);
             }
         }
         write_frame_ = write_frame_ + 1 == capacity_frames_ ? 0 : write_frame_ + 1;
@@ -492,12 +637,42 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                 transition_from_delay_samples_ = static_cast<float>(delay_samples_);
             }
         }
+        for (std::uint16_t line = 0; line < 2; ++line) {
+            if (dual_delay_transition_remaining_[line] > 0) {
+                --dual_delay_transition_remaining_[line];
+                if (dual_delay_transition_remaining_[line] == 0) {
+                    dual_transition_from_delay_samples_[line] =
+                        static_cast<float>(dual_delay_samples_[line]);
+                }
+            }
+        }
         if (ping_pong_ramp_remaining_ > 0) {
             ping_pong_mix_ += ping_pong_step_;
             --ping_pong_ramp_remaining_;
             if (ping_pong_ramp_remaining_ == 0) {
                 ping_pong_mix_ = target_ping_pong_ ? 1.0F : 0.0F;
                 ping_pong_step_ = 0.0F;
+            }
+        }
+        if (dual_parameter_ramp_remaining_ > 0) {
+            for (std::size_t line = 0; line < 2; ++line) {
+                dual_feedback_[line] += dual_feedback_step_[line];
+                dual_mix_[line] += dual_mix_step_[line];
+            }
+            --dual_parameter_ramp_remaining_;
+            if (dual_parameter_ramp_remaining_ == 0) {
+                dual_feedback_ = target_dual_feedback_;
+                dual_mix_ = target_dual_mix_;
+                dual_feedback_step_ = {};
+                dual_mix_step_ = {};
+            }
+        }
+        if (dual_routing_ramp_remaining_ > 0) {
+            dual_routing_mix_ += dual_routing_step_;
+            --dual_routing_ramp_remaining_;
+            if (dual_routing_ramp_remaining_ == 0) {
+                dual_routing_mix_ = target_dual_ ? 1.0F : 0.0F;
+                dual_routing_step_ = 0.0F;
             }
         }
     }
@@ -516,6 +691,18 @@ void Delay::reset() noexcept {
     ping_pong_mix_ = target_ping_pong_ ? 1.0F : 0.0F;
     ping_pong_step_ = 0.0F;
     ping_pong_ramp_remaining_ = 0;
+    dual_transition_from_delay_samples_ = {
+        static_cast<float>(dual_delay_samples_[0]),
+        static_cast<float>(dual_delay_samples_[1])};
+    dual_delay_transition_remaining_ = {};
+    dual_feedback_ = target_dual_feedback_;
+    dual_feedback_step_ = {};
+    dual_mix_ = target_dual_mix_;
+    dual_mix_step_ = {};
+    dual_parameter_ramp_remaining_ = 0;
+    dual_routing_mix_ = target_dual_ ? 1.0F : 0.0F;
+    dual_routing_step_ = 0.0F;
+    dual_routing_ramp_remaining_ = 0;
 }
 
 } // namespace tabletfx

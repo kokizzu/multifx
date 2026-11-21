@@ -246,6 +246,45 @@ def check_ping_pong_delay(executable: Path) -> None:
             raise AssertionError("ping-pong echoes did not alternate between stereo channels")
 
 
+def check_independent_dual_delay(executable: Path) -> None:
+    sample_rate = 8000
+    frames = 110
+    source_samples = [0] * (frames * 2)
+    source_samples[0] = 32767
+    source_samples[3] = 16384
+    with tempfile.TemporaryDirectory(prefix="tabletfx-dual-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "stereo-impulses.wav"
+        output = root / "dual-delay.wav"
+        write_pcm16_channels(source, sample_rate, 2, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--delay-dual-a-ms", "4", "--delay-dual-a-feedback", "0.5",
+             "--delay-dual-a-mix", "1", "--delay-dual-b-ms", "6",
+             "--delay-dual-b-feedback", "0.25", "--delay-dual-b-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"dual delay CLI did not instantiate one delay: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<" + "f" * (frames * 2), data[44:44 + frames * 8])
+        peak = 32767 / 32768.0
+        expected = (
+            (32 * 2, peak),
+            (49 * 2 + 1, 0.5),
+            (64 * 2, peak * 0.5),
+            (97 * 2 + 1, 0.125),
+        )
+        for index, value in expected:
+            if abs(samples[index] - value) > 1.0e-6:
+                raise AssertionError(
+                    f"independent dual delay mismatch at sample {index}: "
+                    f"got {samples[index]}, expected {value}"
+                )
+        if abs(samples[32 * 2 + 1]) > 1.0e-7 or abs(samples[49 * 2]) > 1.0e-7:
+            raise AssertionError("independent dual delay leaked echoes between channels")
+
+
 def check_phaser(executable: Path) -> None:
     sample_rate = 48000
     source_samples = [32767] + [0] * 1023
@@ -655,6 +694,7 @@ def main() -> None:
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_ping_pong_delay(args.executable.resolve())
+    check_independent_dual_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -670,7 +710,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, free/tempo-synced delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, free/tempo-synced/ping-pong/independent dual delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

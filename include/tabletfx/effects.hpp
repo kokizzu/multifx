@@ -2,6 +2,7 @@
 
 #include "tabletfx/effect.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -104,7 +105,8 @@ enum class DelayDivision : std::uint8_t {
 class Delay final : public Effect {
 public:
     Delay(float sample_rate, std::uint16_t channels, float max_delay_ms = 2000.0F,
-          float delay_ms = 350.0F, float feedback = 0.25F, float mix = 0.25F);
+          float delay_ms = 350.0F, float feedback = 0.25F, float mix = 0.25F,
+          bool reserve_dual_line = false);
     [[nodiscard]] std::string_view id() const noexcept override { return "delay"; }
     [[nodiscard]] std::size_t memory_bytes() const noexcept override {
         return sizeof(*this) + storage_.capacity() * sizeof(float);
@@ -117,6 +119,7 @@ public:
     [[nodiscard]] float feedback() const noexcept { return target_feedback_; }
     [[nodiscard]] float mix() const noexcept { return target_mix_; }
     [[nodiscard]] bool ping_pong_enabled() const noexcept { return target_ping_pong_; }
+    [[nodiscard]] bool dual_enabled() const noexcept { return target_dual_; }
     [[nodiscard]] float tempo_bpm() const noexcept { return tempo_bpm_; }
     [[nodiscard]] DelayDivision division() const noexcept { return division_; }
     [[nodiscard]] DelayTimeMode time_mode() const noexcept { return time_mode_; }
@@ -124,6 +127,10 @@ public:
     // Stereo wet routing crossfades over 10 ms. A mono instance keeps normal
     // same-channel delay behavior regardless of this setting.
     void configure_ping_pong(bool enabled) noexcept;
+    // Independent stereo L/R delay lines. A mono instance needs the optional
+    // second line reserved at construction and mixes both wet taps to mono.
+    void configure_dual(float delay_a_ms, float feedback_a, float mix_a,
+                        float delay_b_ms, float feedback_b, float mix_b) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
@@ -137,11 +144,14 @@ private:
     [[nodiscard]] float read_fractional_delay(float delay_samples,
                                               std::uint16_t channel) const noexcept;
     void set_delay_samples(std::size_t samples) noexcept;
+    void set_dual_delay_samples(std::uint16_t line, std::size_t samples) noexcept;
     void retarget_parameters() noexcept;
     void advance_ramps() noexcept;
 
     float sample_rate_;
     std::uint16_t channels_;
+    std::size_t storage_channels_;
+    bool dual_capable_;
     std::size_t delay_samples_;
     float transition_from_delay_samples_ = 1.0F;
     std::size_t delay_transition_remaining_ = 0;
@@ -160,10 +170,24 @@ private:
     std::size_t write_frame_ = 0;
     std::size_t capacity_frames_;
     std::vector<float> storage_;
+    std::array<std::size_t, 2> dual_delay_samples_{1, 1};
+    std::array<float, 2> dual_transition_from_delay_samples_{1.0F, 1.0F};
+    std::array<std::size_t, 2> dual_delay_transition_remaining_{};
+    std::array<float, 2> dual_feedback_{};
+    std::array<float, 2> target_dual_feedback_{};
+    std::array<float, 2> dual_feedback_step_{};
+    std::array<float, 2> dual_mix_{};
+    std::array<float, 2> target_dual_mix_{};
+    std::array<float, 2> dual_mix_step_{};
+    std::size_t dual_parameter_ramp_remaining_ = 0;
     bool target_ping_pong_ = false;
     float ping_pong_mix_ = 0.0F;
     float ping_pong_step_ = 0.0F;
     std::size_t ping_pong_ramp_remaining_ = 0;
+    bool target_dual_ = false;
+    float dual_routing_mix_ = 0.0F;
+    float dual_routing_step_ = 0.0F;
+    std::size_t dual_routing_ramp_remaining_ = 0;
 };
 
 } // namespace tabletfx

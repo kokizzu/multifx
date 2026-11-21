@@ -422,6 +422,7 @@
           <select id="delay-routing">
             <option value="normal" selected>Normal</option>
             <option value="ping-pong">Ping-pong stereo</option>
+            <option value="dual">Independent dual</option>
           </select>
         </label>
         <label class="mix-control" for="delay-preset">
@@ -470,6 +471,32 @@
         <label class="mix-control" for="delay-mix">
           <span>Wet mix</span><output id="delay-mix-value" for="delay-mix">25%</output>
           <input id="delay-mix" type="range" min="0" max="1" step="0.01" value="0.25">
+        </label>
+      </div>
+      <div id="delay-dual-controls" class="gain-controls" hidden aria-label="Independent dual delay controls">
+        <label class="mix-control" for="delay-dual-a-ms">
+          <span>Delay A time</span><output id="delay-dual-a-ms-value" for="delay-dual-a-ms">350 ms</output>
+          <input id="delay-dual-a-ms" type="range" min="1" max="2000" step="1" value="350">
+        </label>
+        <label class="mix-control" for="delay-dual-a-feedback">
+          <span>Delay A feedback</span><output id="delay-dual-a-feedback-value" for="delay-dual-a-feedback">25%</output>
+          <input id="delay-dual-a-feedback" type="range" min="0" max="0.95" step="0.01" value="0.25">
+        </label>
+        <label class="mix-control" for="delay-dual-a-mix">
+          <span>Delay A wet</span><output id="delay-dual-a-mix-value" for="delay-dual-a-mix">25%</output>
+          <input id="delay-dual-a-mix" type="range" min="0" max="1" step="0.01" value="0.25">
+        </label>
+        <label class="mix-control" for="delay-dual-b-ms">
+          <span>Delay B time</span><output id="delay-dual-b-ms-value" for="delay-dual-b-ms">525 ms</output>
+          <input id="delay-dual-b-ms" type="range" min="1" max="2000" step="1" value="525">
+        </label>
+        <label class="mix-control" for="delay-dual-b-feedback">
+          <span>Delay B feedback</span><output id="delay-dual-b-feedback-value" for="delay-dual-b-feedback">25%</output>
+          <input id="delay-dual-b-feedback" type="range" min="0" max="0.95" step="0.01" value="0.25">
+        </label>
+        <label class="mix-control" for="delay-dual-b-mix">
+          <span>Delay B wet</span><output id="delay-dual-b-mix-value" for="delay-dual-b-mix">25%</output>
+          <input id="delay-dual-b-mix" type="range" min="0" max="1" step="0.01" value="0.25">
         </label>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>
