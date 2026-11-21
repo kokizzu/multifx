@@ -12,6 +12,7 @@
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
+#include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -173,6 +174,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::RotarySpeaker>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::RingModulator>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -821,6 +825,18 @@ public:
         rotary->set_parameters(parameters);
     }
 
+    void configure_ring_modulator(float frequency_hz, float frequency_multiplier,
+                                  float high_cut_hz, float mix) noexcept {
+        auto* ring_modulator =
+            static_cast<tabletfx::RingModulator*>(effects_[34].effect.get());
+        tabletfx::RingModulatorParameters parameters;
+        parameters.frequency_hz = frequency_hz;
+        parameters.frequency_multiplier = frequency_multiplier;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.mix = mix;
+        ring_modulator->set_parameters(parameters);
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1267,6 +1283,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rotary_speaker(
             hi_time_constant_ms, low_mic_spacing, high_mic_spacing,
             mic_distance, stereo_spread,
             mix, level, balance, input_select);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_ring_modulator(
+    void* opaque, float frequency_hz, float frequency_multiplier,
+    float high_cut_hz, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_ring_modulator(
+            frequency_hz, frequency_multiplier, high_cut_hz, mix);
     }
 }
 

@@ -8,7 +8,8 @@ PYTHON ?= python3
 	publish-hall-reverb-plan publish-hall-reverb publish-plate-reverb-plan publish-plate-reverb \
 	publish-spring-reverb-plan publish-spring-reverb \
 	publish-auto-swell-plan publish-auto-swell \
-	publish-rotary-speaker-plan publish-rotary-speaker
+	publish-rotary-speaker-plan publish-rotary-speaker \
+	publish-ring-mod-plan publish-ring-mod
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -130,3 +131,9 @@ publish-rotary-speaker-plan:
 
 publish-rotary-speaker:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint rotary-speaker
+
+publish-ring-mod-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint ring-mod
+
+publish-ring-mod:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint ring-mod

@@ -167,6 +167,9 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--rotary-mic-distance", "0.25", "--rotary-stereo-spread", "1",
         "--rotary-mix", "1", "--rotary-level", "1", "--rotary-balance", "0",
         "--rotary-input-select", "stereo",
+        "--ring-mod", "--ring-mod-frequency-hz", "713",
+        "--ring-mod-multiplier", "1.75", "--ring-mod-high-cut-hz", "9000",
+        "--ring-mod-mix", "0.83",
     ]
     if delay_character == "tape":
         command.extend([
@@ -189,7 +192,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 36:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 37:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -256,7 +259,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 36-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, and Rotary Speaker, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 37-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, and Ring Modulator, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

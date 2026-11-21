@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">36 of 36</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">37 of 37</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -116,8 +116,9 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="31"><span class="effect-number">32</span><span class="effect-name">Spring reverb</span><span class="effect-default">2.4 s · 35% dwell · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="32"><span class="effect-number">33</span><span class="effect-name">Auto Swell</span><span class="effect-default">250 ms attack · S-taper</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="33"><span class="effect-number">34</span><span class="effect-name">Rotary Speaker</span><span class="effect-default">6 Hz · slow · 100% mix</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="34" checked><span class="effect-number">35</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="35" checked><span class="effect-number">36</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="34"><span class="effect-number">35</span><span class="effect-name">Ring Modulator</span><span class="effect-default">440 Hz · 1× · 20 kHz high cut · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="35" checked><span class="effect-number">36</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="36" checked><span class="effect-number">37</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -191,6 +192,16 @@
           <label class="mix-control" for="rotary-input-select"><span>Input select</span><select id="rotary-input-select"><option value="0" selected>Stereo</option><option value="1">Left</option><option value="2">Right</option><option value="3">Sum</option></select></label>
         </div>
         <p class="hint">Controls expose this project's rotary-speaker model. Tempo mode selects the BPM/beat rate or free-rate control. Stereo spread is a signed scale; bypass uses the effect row checkbox.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Ring modulator controls">
+        <h3>Ring Modulator · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="ring-mod-frequency-hz"><span>Frequency</span><output id="ring-mod-frequency-hz-value" for="ring-mod-frequency-hz">440 Hz</output><input id="ring-mod-frequency-hz" type="range" min="2" max="2000" step="1" value="440"></label>
+          <label class="mix-control" for="ring-mod-multiplier"><span>Frequency multiplier</span><output id="ring-mod-multiplier-value" for="ring-mod-multiplier">1.00×</output><input id="ring-mod-multiplier" type="range" min="0.25" max="4" step="0.01" value="1"></label>
+          <label class="mix-control" for="ring-mod-high-cut-hz"><span>High cut</span><output id="ring-mod-high-cut-hz-value" for="ring-mod-high-cut-hz">20000 Hz</output><input id="ring-mod-high-cut-hz" type="range" min="20" max="20000" step="10" value="20000"></label>
+          <label class="mix-control" for="ring-mod-mix"><span>Mix</span><output id="ring-mod-mix-value" for="ring-mod-mix">100%</output><input id="ring-mod-mix" type="range" min="0" max="100" step="1" value="100"></label>
+        </div>
+        <p class="hint">A free-running sine carrier multiplies the audio. The row checkbox bypasses the block. This project-authored implementation is the classic mode; it does not implement SSB or pitch-tracked variants.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

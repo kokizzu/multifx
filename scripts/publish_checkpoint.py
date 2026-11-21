@@ -368,6 +368,29 @@ ROTARY_SPEAKER_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+RING_MOD_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/ring_modulator.hpp",
+    "src/effects/ring_modulator.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_ring_modulator.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -403,6 +426,8 @@ CHECKPOINTS = {
                    "feat: add project-authored auto swell"),
     "rotary-speaker": (ROTARY_SPEAKER_CHECKPOINT_PATHS,
                        "feat: add project-authored rotary speaker"),
+    "ring-mod": (RING_MOD_CHECKPOINT_PATHS,
+                 "feat: add project-authored ring modulation"),
 }
 
 

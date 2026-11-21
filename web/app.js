@@ -35,6 +35,7 @@ const EFFECT_NAMES = [
   "Spring reverb",
   "Auto Swell",
   "Rotary Speaker",
+  "Ring Modulator",
   "Output level",
   "Peak limiter",
 ];
@@ -69,6 +70,7 @@ const DEFAULT_PARAMETERS = {
   autoSwell: [-36, 250, 250, 6, 6, 1],
   rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
     800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
+  ringModulator: [440, 1, 20000, 1],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -448,6 +450,14 @@ const rotaryLevelValue = document.querySelector("#rotary-level-value");
 const rotaryBalance = document.querySelector("#rotary-balance");
 const rotaryBalanceValue = document.querySelector("#rotary-balance-value");
 const rotaryInputSelect = document.querySelector("#rotary-input-select");
+const ringModFrequency = document.querySelector("#ring-mod-frequency-hz");
+const ringModFrequencyValue = document.querySelector("#ring-mod-frequency-hz-value");
+const ringModMultiplier = document.querySelector("#ring-mod-multiplier");
+const ringModMultiplierValue = document.querySelector("#ring-mod-multiplier-value");
+const ringModHighCut = document.querySelector("#ring-mod-high-cut-hz");
+const ringModHighCutValue = document.querySelector("#ring-mod-high-cut-hz-value");
+const ringModMix = document.querySelector("#ring-mod-mix");
+const ringModMixValue = document.querySelector("#ring-mod-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1662,6 +1672,23 @@ function updateRotarySpeaker() {
   }
 }
 
+function updateRingModulator() {
+  const values = [
+    Number(ringModFrequency.value),
+    Number(ringModMultiplier.value),
+    Number(ringModHighCut.value),
+    Number(ringModMix.value) / 100,
+  ];
+  ringModFrequencyValue.value = `${values[0].toFixed(0)} Hz`;
+  ringModMultiplierValue.value = `${values[1].toFixed(2)}×`;
+  ringModHighCutValue.value = `${values[2].toFixed(0)} Hz`;
+  ringModMixValue.value = `${Math.round(values[3] * 100)}%`;
+  DEFAULT_PARAMETERS.ringModulator = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "ring-modulator", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1719,6 +1746,10 @@ for (const input of [rotaryRate, rotaryTempoBpm, rotaryBeatsPerRotation,
 for (const input of [rotaryTempoSync, rotarySpeed, rotaryInputSelect]) {
   input.addEventListener("change", updateRotarySpeaker);
 }
+for (const input of [ringModFrequency, ringModMultiplier, ringModHighCut, ringModMix]) {
+  input.addEventListener("input", updateRingModulator);
+  input.addEventListener("change", updateRingModulator);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1730,6 +1761,7 @@ updatePlateReverb();
 updateSpringReverb();
 updateAutoSwell();
 updateRotarySpeaker();
+updateRingModulator();
 
 function updateDelayDual() {
   const values = [
@@ -1880,21 +1912,21 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 36 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 36 || effectRows.length !== 36 ||
+    const expectedEffectIds = Array.from({ length: 37 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 37 || effectRows.length !== 37 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
-        initialEffectState[32] || initialEffectState[33] ||
+        initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 36 ordered effects (IDs 0–35) with the reverbs, Auto Swell, and Rotary Speaker disabled by default.");
+      throw new Error("The effect picker must list 37 ordered effects (IDs 0–36) with the reverbs, Auto Swell, Rotary Speaker, and Ring Modulator disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (modulationIds.join(",") !== "15,16,17,18,19,33" ||
-        effectCount.value !== "6 of 36" ||
+    if (modulationIds.join(",") !== "15,16,17,18,19,33,34" ||
+        effectCount.value !== "7 of 37" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1902,8 +1934,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,35" ||
-        effectCount.value !== "7 of 36" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,36" ||
+        effectCount.value !== "7 of 37" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -1911,7 +1943,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 36" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 37" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -1921,12 +1953,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 36") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 37") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "36 of 36" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "37 of 37" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1998,6 +2030,7 @@ async function runBrowserSelfTest() {
         autoSwell: [-90, 100, 150, 6, 0, 0.9],
          rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0.15, 0.75, 1, 0.55, 0.5,
            0.72, 800, 450, 0.4, 0.75, 0.25, 1, 1, 1, 0, 0],
+        ringModulator: [713, 1.75, 9000, 0.83],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],

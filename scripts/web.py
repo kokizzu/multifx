@@ -124,6 +124,7 @@ def build_web() -> None:
         "_tf_chain_set_spring_reverb",
          "_tf_chain_set_auto_swell",
         "_tf_chain_set_rotary_speaker",
+         "_tf_chain_set_ring_modulator",
         "_tf_chain_set_drive",
         "_tf_chain_set_clean_boost",
         "_tf_chain_set_overdrive",
@@ -194,6 +195,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "spring_reverb.cpp"),
          str(ROOT / "src" / "effects" / "auto_swell.cpp"),
          str(ROOT / "src" / "effects" / "rotary_speaker.cpp"),
+         str(ROOT / "src" / "effects" / "ring_modulator.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -590,6 +592,9 @@ def browser_test() -> None:
              "--rotary-mic-distance", "0.25",
             "--rotary-stereo-spread", "1", "--rotary-mix", "1", "--rotary-level", "1",
             "--rotary-balance", "0", "--rotary-input-select", "stereo",
+            "--ring-mod", "--ring-mod-frequency-hz", "713",
+            "--ring-mod-multiplier", "1.75", "--ring-mod-high-cut-hz", "9000",
+            "--ring-mod-mix", "0.83",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

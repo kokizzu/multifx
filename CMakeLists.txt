@@ -36,6 +36,7 @@ add_library(tabletfx_core
     src/effects/spring_reverb.cpp
     src/effects/auto_swell.cpp
     src/effects/rotary_speaker.cpp
+    src/effects/ring_modulator.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -209,6 +210,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_rotary_speaker_tests tests/test_rotary_speaker.cpp)
     target_link_libraries(tabletfx_rotary_speaker_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_rotary_speaker_tests COMMAND tabletfx_rotary_speaker_tests)
+
+    add_executable(tabletfx_ring_modulator_tests tests/test_ring_modulator.cpp)
+    target_link_libraries(tabletfx_ring_modulator_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_ring_modulator_tests COMMAND tabletfx_ring_modulator_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

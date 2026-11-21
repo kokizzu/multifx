@@ -13,6 +13,7 @@
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
+#include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -171,6 +172,8 @@ struct Options {
     tabletfx::AutoSwellParameters auto_swell{};
     bool rotary_speaker_enabled = false;
     tabletfx::RotarySpeakerParameters rotary_speaker{};
+    bool ring_modulator_enabled = false;
+    tabletfx::RingModulatorParameters ring_modulator{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -307,6 +310,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--rotary-speaker") {
             options.rotary_speaker_enabled = true;
+            continue;
+        }
+        if (key == "--ring-mod") {
+            options.ring_modulator_enabled = true;
             continue;
         }
         if (key == "--rotary-tempo-sync") {
@@ -1137,6 +1144,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.auto_swell.volume = value;
             options.auto_swell_enabled = true;
         }
+        else if (key == "--ring-mod-frequency-hz") {
+            options.ring_modulator.frequency_hz = value;
+            options.ring_modulator_enabled = true;
+        }
+        else if (key == "--ring-mod-multiplier") {
+            options.ring_modulator.frequency_multiplier = value;
+            options.ring_modulator_enabled = true;
+        }
+        else if (key == "--ring-mod-high-cut-hz") {
+            options.ring_modulator.high_cut_hz = value;
+            options.ring_modulator_enabled = true;
+        }
+        else if (key == "--ring-mod-mix") {
+            options.ring_modulator.mix = value;
+            options.ring_modulator_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1423,6 +1446,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.rotary_speaker_enabled) {
         effects.push_back(std::make_unique<tabletfx::RotarySpeaker>(
             static_cast<float>(sample_rate), channels, options.rotary_speaker));
+    }
+    if (options.ring_modulator_enabled) {
+        effects.push_back(std::make_unique<tabletfx::RingModulator>(
+            static_cast<float>(sample_rate), channels, options.ring_modulator));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2029,6 +2056,15 @@ void run_bench() {
         return std::make_unique<tabletfx::RotarySpeaker>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("ring-modulator", [=] {
+        tabletfx::RingModulatorParameters parameters;
+        parameters.frequency_hz = 713.0F;
+        parameters.frequency_multiplier = 1.75F;
+        parameters.high_cut_hz = 9000.0F;
+        parameters.mix = 0.83F;
+        return std::make_unique<tabletfx::RingModulator>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
         delay->configure_bbd_style(true);
@@ -2338,6 +2374,9 @@ void print_usage() {
                    " [--rotary-mic-distance 0..1] [--rotary-stereo-spread -2..2]"
                    " [--rotary-mix 0..1] [--rotary-level 0..2] [--rotary-balance -1..1]"
                    " [--rotary-input-select stereo|left|right|sum]\n"
+               << "                 [--ring-mod] [--ring-mod-frequency-hz 2..2000]"
+                  " [--ring-mod-multiplier 0.25..4] [--ring-mod-high-cut-hz 20..20000]"
+                  " [--ring-mod-mix 0..1]\n"
                << "  tabletfx_offline --bench\n";
 }
 

@@ -312,6 +312,34 @@ def check_rotary_speaker(executable: Path) -> None:
             raise AssertionError("Rotary controls did not change the test tone")
 
 
+def check_ring_modulator(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(2400)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-ring-mod-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "ring-mod.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--ring-mod",
+             "--ring-mod-frequency-hz", "700", "--ring-mod-multiplier", "1.5",
+             "--ring-mod-high-cut-hz", "3000", "--ring-mod-mix", "0.75"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Ring Mod controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        source_float = [value / 32768.0 for value in source_samples]
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Ring Mod produced non-finite output")
+        if max(abs(actual - original) for actual, original in
+               zip(values, source_float, strict=True)) < 0.05:
+            raise AssertionError("Ring Mod controls did not modulate the test tone")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1129,6 +1157,7 @@ def main() -> None:
     check_spring_reverb(args.executable.resolve())
     check_auto_swell(args.executable.resolve())
     check_rotary_speaker(args.executable.resolve())
+    check_ring_modulator(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
