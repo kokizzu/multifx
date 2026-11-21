@@ -657,6 +657,45 @@ def check_dimension_chorus(executable: Path) -> None:
                 raise AssertionError(f"Dimension Chorus accepted invalid {selector} {value}")
 
 
+def check_triple_double_chorus(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(2048)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-triple-double-chorus-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-like.wav"
+        output = root / "triple-double-chorus.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--triple-double-chorus", "--triple-double-chorus-preset-switch", "off",
+             "--triple-double-chorus-manual-switch", "on",
+             "--triple-double-chorus-rate-hz", "1.25",
+             "--triple-double-chorus-left-depth-ms", "10",
+             "--triple-double-chorus-center-depth-ms", "6",
+             "--triple-double-chorus-right-depth-ms", "14",
+             "--triple-double-chorus-feedback", "-0.2",
+             "--triple-double-chorus-sparkle", "0.65",
+             "--triple-double-chorus-stereo-switch", "on"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Triple-Double Chorus options did not instantiate one processor")
+        rendered = struct.unpack("<2048f", output.read_bytes()[44:44 + 2048 * 4])
+        if not all(math.isfinite(sample) for sample in rendered) or max(map(abs, rendered)) < 0.1:
+            raise AssertionError("Triple-Double Chorus returned invalid or silent audio")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--triple-double-chorus-stereo-switch", "sometimes"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Triple-Double Chorus accepted an invalid switch value")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -1649,6 +1688,7 @@ def main() -> None:
     check_tape_heads_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_dimension_chorus(args.executable.resolve())
+    check_triple_double_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

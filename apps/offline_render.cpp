@@ -99,6 +99,8 @@ struct Options {
     tabletfx::ChorusParameters chorus{};
     bool dimension_chorus_enabled = false;
     tabletfx::DimensionChorusParameters dimension_chorus{};
+    bool triple_double_chorus_enabled = false;
+    tabletfx::effects::TripleDoubleChorusConfig triple_double_chorus{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -440,6 +442,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--dimension-chorus") {
             options.dimension_chorus_enabled = true;
+            continue;
+        }
+        if (key == "--triple-double-chorus") {
+            options.triple_double_chorus_enabled = true;
             continue;
         }
         if (key == "--rhythmic-slicer") {
@@ -1002,6 +1008,27 @@ Options parse_options(int argc, char** argv, int first) {
             options.envelope_wah_enabled = true;
             continue;
         }
+        if (key == "--triple-double-chorus-preset-switch" ||
+            key == "--triple-double-chorus-manual-switch" ||
+            key == "--triple-double-chorus-stereo-switch") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            if (value != "on" && value != "off") {
+                throw std::invalid_argument("Triple-Double Chorus switches must be on or off");
+            }
+            const bool enabled = value == "on";
+            if (key == "--triple-double-chorus-preset-switch") {
+                options.triple_double_chorus.preset_switch = enabled;
+            } else if (key == "--triple-double-chorus-manual-switch") {
+                options.triple_double_chorus.manual_switch = enabled;
+            } else {
+                options.triple_double_chorus.stereo_switch = enabled;
+            }
+            options.triple_double_chorus_enabled = true;
+            continue;
+        }
         const float value = parse_float(key, argv[++i]);
         if (key == "--gain-db") options.gain_db = value;
         else if (key == "--output-gain-db") options.output_gain_db = value;
@@ -1116,6 +1143,30 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--dimension-chorus-level-db") {
             options.dimension_chorus.level_db = value;
             options.dimension_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-rate-hz") {
+            options.triple_double_chorus.rate_hz = value;
+            options.triple_double_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-left-depth-ms") {
+            options.triple_double_chorus.left_depth_ms = value;
+            options.triple_double_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-center-depth-ms") {
+            options.triple_double_chorus.center_depth_ms = value;
+            options.triple_double_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-right-depth-ms") {
+            options.triple_double_chorus.right_depth_ms = value;
+            options.triple_double_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-feedback") {
+            options.triple_double_chorus.feedback = value;
+            options.triple_double_chorus_enabled = true;
+        }
+        else if (key == "--triple-double-chorus-sparkle") {
+            options.triple_double_chorus.sparkle = value;
+            options.triple_double_chorus_enabled = true;
         }
         else if (key == "--flanger-rate-hz") {
             options.flanger.rate_hz = value;
@@ -2263,6 +2314,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::DimensionChorus>(
             static_cast<float>(sample_rate), channels, options.dimension_chorus));
     }
+    if (options.triple_double_chorus_enabled) {
+        auto chorus = std::make_unique<tabletfx::effects::TripleDoubleChorus>(
+            static_cast<float>(sample_rate));
+        chorus->configure(options.triple_double_chorus);
+        effects.push_back(std::move(chorus));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -2643,6 +2700,11 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     chorus_parameters.mix = 0.2F;
     effects.push_back(std::make_unique<tabletfx::Chorus>(
         static_cast<float>(sample_rate), channels, chorus_parameters));
+    tabletfx::effects::TripleDoubleChorusConfig triple_double_parameters;
+    auto triple_double = std::make_unique<tabletfx::effects::TripleDoubleChorus>(
+        static_cast<float>(sample_rate));
+    triple_double->configure(triple_double_parameters);
+    effects.push_back(std::move(triple_double));
     tabletfx::FlangerParameters flanger_parameters;
     flanger_parameters.rate_hz = 0.25F;
     flanger_parameters.base_delay_ms = 2.0F;
@@ -2962,6 +3024,12 @@ void run_bench() {
         return std::make_unique<tabletfx::DimensionChorus>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("triple-double-chorus", [=] {
+        auto effect = std::make_unique<tabletfx::effects::TripleDoubleChorus>(
+            static_cast<float>(sample_rate));
+        effect->configure({});
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3212,6 +3280,15 @@ void print_usage() {
                   " [--dimension-chorus] [--dimension-chorus-version C|D]"
                   " [--dimension-chorus-mode 1|2|3|4|1+2|1+3|1+4|2+3|2+4|3+4]"
                   " [--dimension-chorus-mix 0..1] [--dimension-chorus-level-db dB]"
+                   " [--triple-double-chorus] [--triple-double-chorus-preset-switch on|off]"
+                   " [--triple-double-chorus-manual-switch on|off]"
+                   " [--triple-double-chorus-rate-hz Hz]"
+                   " [--triple-double-chorus-left-depth-ms ms]"
+                   " [--triple-double-chorus-center-depth-ms ms]"
+                   " [--triple-double-chorus-right-depth-ms ms]"
+                   " [--triple-double-chorus-feedback -0.8..0.8]"
+                   " [--triple-double-chorus-sparkle 0..1]"
+                   " [--triple-double-chorus-stereo-switch on|off]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"

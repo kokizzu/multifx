@@ -84,7 +84,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(48);
+          effects_.reserve(49);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -228,6 +228,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::DimensionChorus>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::effects::TripleDoubleChorus>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -674,6 +677,25 @@ public:
         parameters.level_db = level_db;
         static_cast<tabletfx::DimensionChorus*>(effects_[47].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_triple_double_chorus(
+        std::uint32_t preset_switch, std::uint32_t manual_switch,
+        float rate_hz, float left_depth_ms, float center_depth_ms,
+        float right_depth_ms, float feedback, float sparkle,
+        std::uint32_t stereo_switch) noexcept {
+        tabletfx::effects::TripleDoubleChorusConfig config;
+        config.preset_switch = preset_switch != 0;
+        config.manual_switch = manual_switch != 0;
+        config.rate_hz = rate_hz;
+        config.left_depth_ms = left_depth_ms;
+        config.center_depth_ms = center_depth_ms;
+        config.right_depth_ms = right_depth_ms;
+        config.feedback = feedback;
+        config.sparkle = sparkle;
+        config.stereo_switch = stereo_switch != 0;
+        static_cast<tabletfx::effects::TripleDoubleChorus*>(
+            effects_[48].effect.get())->configure(config);
     }
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
@@ -1790,6 +1812,19 @@ TABLETFX_WASM_EXPORT void tf_chain_set_dimension_chorus(
     float mix, float level_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_dimension_chorus(version, mode, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_triple_double_chorus(
+    void* opaque, std::uint32_t preset_switch, std::uint32_t manual_switch,
+    float rate_hz, float left_depth_ms, float center_depth_ms,
+    float right_depth_ms, float feedback, float sparkle,
+    std::uint32_t stereo_switch) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_triple_double_chorus(
+            preset_switch, manual_switch, rate_hz, left_depth_ms,
+            center_depth_ms, right_depth_ms, feedback, sparkle,
+            stereo_switch);
     }
 }
 

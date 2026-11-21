@@ -49,6 +49,7 @@ const EFFECT_NAMES = [
   "Three-band compressor",
   "Bit Crusher",
   "Dimension Chorus",
+  "Triple-Double Chorus",
   "Output level",
   "Peak limiter",
 ];
@@ -68,6 +69,7 @@ const DEFAULT_PARAMETERS = {
   tremolo: [5, 0.5, 0, 0, 120, 1],
   chorus: [0.8, 15, 7, 0.3],
   dimensionChorus: [0, 0, 0.5, 0],
+  tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -284,6 +286,21 @@ const dimensionChorusMix = document.querySelector("#dimension-chorus-mix");
 const dimensionChorusMixValue = document.querySelector("#dimension-chorus-mix-value");
 const dimensionChorusLevel = document.querySelector("#dimension-chorus-level-db");
 const dimensionChorusLevelValue = document.querySelector("#dimension-chorus-level-value");
+const tripleDoubleChorusPresetSwitch = document.querySelector("#triple-double-chorus-preset-switch");
+const tripleDoubleChorusManualSwitch = document.querySelector("#triple-double-chorus-manual-switch");
+const tripleDoubleChorusRate = document.querySelector("#triple-double-chorus-rate-hz");
+const tripleDoubleChorusRateValue = document.querySelector("#triple-double-chorus-rate-hz-value");
+const tripleDoubleChorusLeftDepth = document.querySelector("#triple-double-chorus-left-depth-ms");
+const tripleDoubleChorusLeftDepthValue = document.querySelector("#triple-double-chorus-left-depth-ms-value");
+const tripleDoubleChorusCenterDepth = document.querySelector("#triple-double-chorus-center-depth-ms");
+const tripleDoubleChorusCenterDepthValue = document.querySelector("#triple-double-chorus-center-depth-ms-value");
+const tripleDoubleChorusRightDepth = document.querySelector("#triple-double-chorus-right-depth-ms");
+const tripleDoubleChorusRightDepthValue = document.querySelector("#triple-double-chorus-right-depth-ms-value");
+const tripleDoubleChorusFeedback = document.querySelector("#triple-double-chorus-feedback");
+const tripleDoubleChorusFeedbackValue = document.querySelector("#triple-double-chorus-feedback-value");
+const tripleDoubleChorusSparkle = document.querySelector("#triple-double-chorus-sparkle");
+const tripleDoubleChorusSparkleValue = document.querySelector("#triple-double-chorus-sparkle-value");
+const tripleDoubleChorusStereoSwitch = document.querySelector("#triple-double-chorus-stereo-switch");
 const flangerRate = document.querySelector("#flanger-rate-hz");
 const flangerRateValue = document.querySelector("#flanger-rate-value");
 const flangerDelay = document.querySelector("#flanger-delay-ms");
@@ -1510,6 +1527,39 @@ for (const control of [dimensionChorusVersion, dimensionChorusMode,
   control.addEventListener("change", updateDimensionChorus);
 }
 
+function updateTripleDoubleChorus() {
+  const values = [
+    Number(tripleDoubleChorusPresetSwitch.value),
+    Number(tripleDoubleChorusManualSwitch.value),
+    Number(tripleDoubleChorusRate.value),
+    Number(tripleDoubleChorusLeftDepth.value),
+    Number(tripleDoubleChorusCenterDepth.value),
+    Number(tripleDoubleChorusRightDepth.value),
+    Number(tripleDoubleChorusFeedback.value),
+    Number(tripleDoubleChorusSparkle.value),
+    Number(tripleDoubleChorusStereoSwitch.value),
+  ];
+  DEFAULT_PARAMETERS.tripleDoubleChorus = values;
+  tripleDoubleChorusRateValue.value = `${Number(tripleDoubleChorusRate.value).toFixed(2)} Hz`;
+  tripleDoubleChorusLeftDepthValue.value = `${Number(tripleDoubleChorusLeftDepth.value).toFixed(1)} ms`;
+  tripleDoubleChorusCenterDepthValue.value = `${Number(tripleDoubleChorusCenterDepth.value).toFixed(1)} ms`;
+  tripleDoubleChorusRightDepthValue.value = `${Number(tripleDoubleChorusRightDepth.value).toFixed(1)} ms`;
+  tripleDoubleChorusFeedbackValue.value = Number(tripleDoubleChorusFeedback.value).toFixed(2);
+  tripleDoubleChorusSparkleValue.value = `${Math.round(Number(tripleDoubleChorusSparkle.value) * 100)}%`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "triple-double-chorus", value: values });
+  }
+}
+
+for (const control of [tripleDoubleChorusPresetSwitch,
+  tripleDoubleChorusManualSwitch, tripleDoubleChorusRate,
+  tripleDoubleChorusLeftDepth, tripleDoubleChorusCenterDepth,
+  tripleDoubleChorusRightDepth, tripleDoubleChorusFeedback,
+  tripleDoubleChorusSparkle, tripleDoubleChorusStereoSwitch]) {
+  control.addEventListener("input", updateTripleDoubleChorus);
+  control.addEventListener("change", updateTripleDoubleChorus);
+}
+
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
@@ -2572,8 +2622,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 50 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 50 || effectRows.length !== 50 ||
+    const expectedEffectIds = Array.from({ length: 51 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 51 || effectRows.length !== 51 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -2581,10 +2631,10 @@ async function runBrowserSelfTest() {
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
         initialEffectState[44] || initialEffectState[45] || initialEffectState[46] ||
-        initialEffectState[47] ||
+        initialEffectState[47] || initialEffectState[48] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 50 ordered, categorized effects (IDs 0–49), with all optional reverbs, modulation, filter, delay, resonator, multiband, Bit Crusher, and Dimension Chorus stages disabled by default.");
+      throw new Error("The effect picker must list 51 ordered, categorized effects (IDs 0–50), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -2597,6 +2647,30 @@ async function runBrowserSelfTest() {
     dimensionChorusMix.value = "65";
     dimensionChorusLevel.value = "-3";
     dimensionChorusMode.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultTripleDoubleChorus = [...DEFAULT_PARAMETERS.tripleDoubleChorus];
+    tripleDoubleChorusPresetSwitch.value = "0";
+    tripleDoubleChorusManualSwitch.value = "1";
+    tripleDoubleChorusRate.value = "1.25";
+    tripleDoubleChorusLeftDepth.value = "10";
+    tripleDoubleChorusCenterDepth.value = "6";
+    tripleDoubleChorusRightDepth.value = "14";
+    tripleDoubleChorusFeedback.value = "-0.2";
+    tripleDoubleChorusSparkle.value = "0.65";
+    tripleDoubleChorusStereoSwitch.value = "0";
+    tripleDoubleChorusManualSwitch.dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.tripleDoubleChorus.join(",") !==
+          "0,1,1.25,10,6,14,-0.2,0.65,0" ||
+        tripleDoubleChorusRateValue.value !== "1.25 Hz" ||
+        tripleDoubleChorusSparkleValue.value !== "65%") {
+      throw new Error("Triple-Double Chorus controls must update project parameters and displayed values.");
+    }
+    [tripleDoubleChorusPresetSwitch.value,
+      tripleDoubleChorusManualSwitch.value, tripleDoubleChorusRate.value,
+      tripleDoubleChorusLeftDepth.value, tripleDoubleChorusCenterDepth.value,
+      tripleDoubleChorusRightDepth.value, tripleDoubleChorusFeedback.value,
+      tripleDoubleChorusSparkle.value, tripleDoubleChorusStereoSwitch.value] =
+      defaultTripleDoubleChorus.map(String);
+    tripleDoubleChorusManualSwitch.dispatchEvent(new Event("input", { bubbles: true }));
     if (DEFAULT_PARAMETERS.dimensionChorus.join(",") !== "1,9,0.65,-3" ||
         dimensionChorusMixValue.value !== "65%" ||
         dimensionChorusLevelValue.value !== "-3.0 dB") {
@@ -2659,8 +2733,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47" ||
-         effectCount.value !== "9 of 50" ||
+    if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
+         effectCount.value !== "10 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2668,8 +2742,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,49" ||
-        effectCount.value !== "8 of 50" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,50" ||
+        effectCount.value !== "8 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2678,7 +2752,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 50" ||
+        effectCount.value !== "7 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -2687,7 +2761,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43,44" ||
-        effectCount.value !== "8 of 50" ||
+        effectCount.value !== "8 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include Step Filter, Notch Filter, Formant Filter, and Harmonic Resonator and preserve the current chain state.");
     }
@@ -2695,7 +2769,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 50" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2703,7 +2777,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 50" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 51" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2713,12 +2787,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 50") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 51") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "50 of 50" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "51 of 51" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2806,6 +2880,7 @@ async function runBrowserSelfTest() {
           -18, 3, 3, 5, 250, -2, 1, 0],
          bitCrusher: [8, 4, 0.65],
         dimensionChorus: [0, 0, 0.5, 0],
+        tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],

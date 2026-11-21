@@ -23,6 +23,7 @@ PYTHON ?= python3
 	publish-multiband-compressor-plan publish-multiband-compressor \
 	publish-bit-crusher-plan publish-bit-crusher \
 	publish-dimension-chorus-plan publish-dimension-chorus \
+	publish-triple-double-chorus-plan publish-triple-double-chorus \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -229,6 +230,12 @@ publish-dimension-chorus-plan:
 
 publish-dimension-chorus:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint dimension-chorus
+
+publish-triple-double-chorus-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint triple-double-chorus
+
+publish-triple-double-chorus:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint triple-double-chorus
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog

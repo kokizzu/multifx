@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">50 of 50</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">51 of 51</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -130,8 +130,9 @@
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="45"><span class="effect-number">46</span><span class="effect-name">Three-band compressor</span><span class="effect-default">250 / 2500 Hz · linked Peak/RMS</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="46"><span class="effect-number">47</span><span class="effect-name">Bit Crusher</span><span class="effect-default">16-bit · sample hold ÷1</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="47"><span class="effect-number">48</span><span class="effect-name">Dimension Chorus</span><span class="effect-default">Version C · Mode 1 · 50% mix · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="48" checked><span class="effect-number">49</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="49" checked><span class="effect-number">50</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="48"><span class="effect-number">49</span><span class="effect-name">Triple-Double Chorus</span><span class="effect-default">Three L/C/R voices · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="49" checked><span class="effect-number">50</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="50" checked><span class="effect-number">51</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -768,6 +769,21 @@
           <span>Level · project-authored range</span><output id="dimension-chorus-level-value" for="dimension-chorus-level-db">0.0 dB</output>
           <input id="dimension-chorus-level-db" type="range" min="-24" max="12" step="0.5" value="0">
         </label>
+      </div>
+      <div class="effect-parameter-group" aria-label="Triple-Double Chorus controls">
+        <h3>Triple-Double Chorus · project-authored DSP</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="triple-double-chorus-preset-switch"><span>Preset Switch</span><select id="triple-double-chorus-preset-switch"><option value="0" selected>Classic</option><option value="1">Wide</option></select></label>
+          <label class="mix-control" for="triple-double-chorus-manual-switch"><span>Manual Switch</span><select id="triple-double-chorus-manual-switch"><option value="0" selected>Off</option><option value="1">On</option></select></label>
+          <label class="mix-control" for="triple-double-chorus-rate-hz"><span>Rate · project-authored range</span><output id="triple-double-chorus-rate-hz-value" for="triple-double-chorus-rate-hz">0.80 Hz</output><input id="triple-double-chorus-rate-hz" type="range" min="0.05" max="8" step="0.01" value="0.8"></label>
+          <label class="mix-control" for="triple-double-chorus-left-depth-ms"><span>Left Depth · project-authored range</span><output id="triple-double-chorus-left-depth-ms-value" for="triple-double-chorus-left-depth-ms">7.0 ms</output><input id="triple-double-chorus-left-depth-ms" type="range" min="0" max="20" step="0.1" value="7"></label>
+          <label class="mix-control" for="triple-double-chorus-center-depth-ms"><span>Center Depth · project-authored range</span><output id="triple-double-chorus-center-depth-ms-value" for="triple-double-chorus-center-depth-ms">5.0 ms</output><input id="triple-double-chorus-center-depth-ms" type="range" min="0" max="20" step="0.1" value="5"></label>
+          <label class="mix-control" for="triple-double-chorus-right-depth-ms"><span>Right Depth · project-authored range</span><output id="triple-double-chorus-right-depth-ms-value" for="triple-double-chorus-right-depth-ms">8.0 ms</output><input id="triple-double-chorus-right-depth-ms" type="range" min="0" max="20" step="0.1" value="8"></label>
+          <label class="mix-control" for="triple-double-chorus-feedback"><span>Feedback · project-authored range</span><output id="triple-double-chorus-feedback-value" for="triple-double-chorus-feedback">0.10</output><input id="triple-double-chorus-feedback" type="range" min="-0.8" max="0.8" step="0.01" value="0.1"></label>
+          <label class="mix-control" for="triple-double-chorus-sparkle"><span>Sparkle · project-authored range</span><output id="triple-double-chorus-sparkle-value" for="triple-double-chorus-sparkle">20%</output><input id="triple-double-chorus-sparkle" type="range" min="0" max="1" step="0.01" value="0.2"></label>
+          <label class="mix-control" for="triple-double-chorus-stereo-switch"><span>Stereo Switch</span><select id="triple-double-chorus-stereo-switch"><option value="1" selected>Stereo spread</option><option value="0">Dual mono</option></select></label>
+        </div>
+        <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 lists Preset Switch, Manual Switch, Rate, L/C/R Depth, Feedback, Sparkle, and Stereo Switch, but gives no numeric ranges or DSP details. This project’s rate/depth/feedback/sparkle bounds, Classic/Wide values, fixed 72/28 dry/wet blend, and stereo behavior are project-authored. No Fender sound or preset parity is claimed. Manual Switch uses the numeric controls; when it is off, Preset Switch selects a project-authored profile. The project exposes no separate Mix control because the guide does not list one.</p>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">
         <label class="mix-control" for="flanger-rate-hz">

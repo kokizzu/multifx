@@ -153,6 +153,7 @@ def build_web() -> None:
         "_tf_chain_set_multiband_band",
         "_tf_chain_set_bit_crusher",
         "_tf_chain_set_dimension_chorus",
+        "_tf_chain_set_triple_double_chorus",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -217,6 +218,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "multiband_compressor.cpp"),
         str(ROOT / "src" / "effects" / "bit_crusher.cpp"),
         str(ROOT / "src" / "effects" / "dimension_chorus.cpp"),
+        str(ROOT / "src" / "effects" / "triple_double_chorus.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -696,6 +698,15 @@ def browser_test() -> None:
             "--dimension-chorus", "--dimension-chorus-version", "C",
             "--dimension-chorus-mode", "1", "--dimension-chorus-mix", "0.5",
             "--dimension-chorus-level-db", "0",
+             "--triple-double-chorus", "--triple-double-chorus-preset-switch", "off",
+             "--triple-double-chorus-manual-switch", "off",
+             "--triple-double-chorus-rate-hz", "0.8",
+             "--triple-double-chorus-left-depth-ms", "7",
+             "--triple-double-chorus-center-depth-ms", "5",
+             "--triple-double-chorus-right-depth-ms", "8",
+             "--triple-double-chorus-feedback", "0.1",
+             "--triple-double-chorus-sparkle", "0.2",
+             "--triple-double-chorus-stereo-switch", "on",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {
