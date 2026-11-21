@@ -63,7 +63,7 @@
       <div class="effect-browser-controls" aria-label="Browse processors">
         <label for="effect-category-filter">Category
           <select id="effect-category-filter" aria-controls="effects-list">
-          <option value="all">All categories</option>
+            <option value="all">All categories</option>
             <option value="utility">Utility</option>
             <option value="dynamics">Dynamics</option>
             <option value="filter">Filters &amp; wah</option>
@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">47 of 47</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">48 of 48</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -127,8 +127,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="42"><span class="effect-number">43</span><span class="effect-name">Sweep Delay</span><span class="effect-default">LFO-swept band-pass · 250 Hz–6 kHz</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="43"><span class="effect-number">44</span><span class="effect-name">Formant Filter</span><span class="effect-default">A–E–I–O–U vowel profile · Q 4</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="44"><span class="effect-number">45</span><span class="effect-name">Harmonic Resonator</span><span class="effect-default">8 tuned partials · 110 Hz root</span><span class="effect-category-tag">Filters &amp; wah</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="45" checked><span class="effect-number">46</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="46" checked><span class="effect-number">47</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="45"><span class="effect-number">46</span><span class="effect-name">Three-band compressor</span><span class="effect-default">250 / 2500 Hz · linked Peak/RMS</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="46" checked><span class="effect-number">47</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="47" checked><span class="effect-number">48</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -277,6 +278,47 @@
           <label class="mix-control" for="harmonic-resonator-mix"><span>Wet mix</span><output id="harmonic-resonator-mix-value" for="harmonic-resonator-mix">50%</output><input id="harmonic-resonator-mix" type="range" min="0" max="100" step="1" value="50"></label>
         </div>
         <p class="hint">Eight resonant band-pass modes ring at integer multiples of Root Frequency. Decay approximates the −60 dB ring time; Brightness changes upper-partial weighting. Controls and topology are project-authored, not a reproduction of a named vendor effect. Wet tails continue while the stage is enabled.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Three-band compressor controls">
+        <h3>Three-band Compressor · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="multiband-low-mid-hz"><span>Low / mid crossover</span><output id="multiband-low-mid-hz-value" for="multiband-low-mid-hz">250 Hz</output><input id="multiband-low-mid-hz" type="range" min="50" max="5000" step="1" value="250"></label>
+          <label class="mix-control" for="multiband-mid-high-hz"><span>Mid / high crossover</span><output id="multiband-mid-high-hz-value" for="multiband-mid-high-hz">2500 Hz</output><input id="multiband-mid-high-hz" type="range" min="100" max="10000" step="1" value="2500"></label>
+          <label class="mix-control" for="multiband-crossover-slope"><span>Crossover slope</span><select id="multiband-crossover-slope"><option value="0">12 dB/oct</option><option value="1" selected>24 dB/oct</option></select></label>
+        </div>
+        <div class="gain-controls">
+          <fieldset class="multiband-band"><legend>Low band</legend>
+            <label class="mix-control" for="multiband-low-threshold"><span>Threshold</span><output id="multiband-low-threshold-value" for="multiband-low-threshold">−24 dB</output><input id="multiband-low-threshold" type="range" min="-60" max="0" step="0.1" value="-24"></label>
+            <label class="mix-control" for="multiband-low-ratio"><span>Ratio</span><output id="multiband-low-ratio-value" for="multiband-low-ratio">2.0:1</output><input id="multiband-low-ratio" type="range" min="1" max="20" step="0.1" value="2"></label>
+            <label class="mix-control" for="multiband-low-knee"><span>Knee</span><output id="multiband-low-knee-value" for="multiband-low-knee">6 dB</output><input id="multiband-low-knee" type="range" min="0" max="18" step="0.1" value="6"></label>
+            <label class="mix-control" for="multiband-low-attack"><span>Attack</span><output id="multiband-low-attack-value" for="multiband-low-attack">10 ms</output><input id="multiband-low-attack" type="range" min="0.1" max="1000" step="0.1" value="10"></label>
+            <label class="mix-control" for="multiband-low-release"><span>Release</span><output id="multiband-low-release-value" for="multiband-low-release">100 ms</output><input id="multiband-low-release" type="range" min="5" max="2000" step="1" value="100"></label>
+            <label class="mix-control" for="multiband-low-level"><span>Band level</span><output id="multiband-low-level-value" for="multiband-low-level">0 dB</output><input id="multiband-low-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
+            <label class="mix-control" for="multiband-low-detector"><span>Detector</span><select id="multiband-low-detector"><option value="0">Peak</option><option value="1" selected>RMS</option></select></label>
+            <label class="toggle-control" for="multiband-low-mute"><input id="multiband-low-mute" type="checkbox"><span>Mute band</span></label>
+          </fieldset>
+          <fieldset class="multiband-band"><legend>Mid band</legend>
+            <label class="mix-control" for="multiband-mid-threshold"><span>Threshold</span><output id="multiband-mid-threshold-value" for="multiband-mid-threshold">−24 dB</output><input id="multiband-mid-threshold" type="range" min="-60" max="0" step="0.1" value="-24"></label>
+            <label class="mix-control" for="multiband-mid-ratio"><span>Ratio</span><output id="multiband-mid-ratio-value" for="multiband-mid-ratio">2.0:1</output><input id="multiband-mid-ratio" type="range" min="1" max="20" step="0.1" value="2"></label>
+            <label class="mix-control" for="multiband-mid-knee"><span>Knee</span><output id="multiband-mid-knee-value" for="multiband-mid-knee">6 dB</output><input id="multiband-mid-knee" type="range" min="0" max="18" step="0.1" value="6"></label>
+            <label class="mix-control" for="multiband-mid-attack"><span>Attack</span><output id="multiband-mid-attack-value" for="multiband-mid-attack">10 ms</output><input id="multiband-mid-attack" type="range" min="0.1" max="1000" step="0.1" value="10"></label>
+            <label class="mix-control" for="multiband-mid-release"><span>Release</span><output id="multiband-mid-release-value" for="multiband-mid-release">100 ms</output><input id="multiband-mid-release" type="range" min="5" max="2000" step="1" value="100"></label>
+            <label class="mix-control" for="multiband-mid-level"><span>Band level</span><output id="multiband-mid-level-value" for="multiband-mid-level">0 dB</output><input id="multiband-mid-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
+            <label class="mix-control" for="multiband-mid-detector"><span>Detector</span><select id="multiband-mid-detector"><option value="0">Peak</option><option value="1" selected>RMS</option></select></label>
+            <label class="toggle-control" for="multiband-mid-mute"><input id="multiband-mid-mute" type="checkbox"><span>Mute band</span></label>
+          </fieldset>
+          <fieldset class="multiband-band"><legend>High band</legend>
+            <label class="mix-control" for="multiband-high-threshold"><span>Threshold</span><output id="multiband-high-threshold-value" for="multiband-high-threshold">−24 dB</output><input id="multiband-high-threshold" type="range" min="-60" max="0" step="0.1" value="-24"></label>
+            <label class="mix-control" for="multiband-high-ratio"><span>Ratio</span><output id="multiband-high-ratio-value" for="multiband-high-ratio">2.0:1</output><input id="multiband-high-ratio" type="range" min="1" max="20" step="0.1" value="2"></label>
+            <label class="mix-control" for="multiband-high-knee"><span>Knee</span><output id="multiband-high-knee-value" for="multiband-high-knee">6 dB</output><input id="multiband-high-knee" type="range" min="0" max="18" step="0.1" value="6"></label>
+            <label class="mix-control" for="multiband-high-attack"><span>Attack</span><output id="multiband-high-attack-value" for="multiband-high-attack">10 ms</output><input id="multiband-high-attack" type="range" min="0.1" max="1000" step="0.1" value="10"></label>
+            <label class="mix-control" for="multiband-high-release"><span>Release</span><output id="multiband-high-release-value" for="multiband-high-release">100 ms</output><input id="multiband-high-release" type="range" min="5" max="2000" step="1" value="100"></label>
+            <label class="mix-control" for="multiband-high-level"><span>Band level</span><output id="multiband-high-level-value" for="multiband-high-level">0 dB</output><input id="multiband-high-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
+            <label class="mix-control" for="multiband-high-detector"><span>Detector</span><select id="multiband-high-detector"><option value="0">Peak</option><option value="1" selected>RMS</option></select></label>
+            <label class="toggle-control" for="multiband-high-mute"><input id="multiband-high-mute" type="checkbox"><span>Mute band</span></label>
+          </fieldset>
+        </div>
+        <p class="hint">Independent Low, Mid, and High Peak/RMS compression with linked stereo detection and per-band Level/Mute. Crossover ranges follow the Fractal guide; other bounds and filter behavior are project-authored. No look-ahead is used. This generic processor does not claim Fractal algorithm parity.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Reverse Delay controls">
         <h3>Reverse Delay · project-authored</h3>

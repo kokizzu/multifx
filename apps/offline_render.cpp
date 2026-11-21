@@ -19,6 +19,7 @@
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
+#include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -192,6 +193,8 @@ struct Options {
     tabletfx::FormantFilterParameters formant_filter{};
     bool harmonic_resonator_enabled = false;
     tabletfx::HarmonicResonatorParameters harmonic_resonator{};
+    bool multiband_compressor_enabled = false;
+    tabletfx::MultibandCompressorParameters multiband_compressor{};
     bool reverse_delay_enabled = false;
     tabletfx::ReverseDelayParameters reverse_delay{};
     bool reverse_delay_running = true;
@@ -418,6 +421,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.harmonic_resonator_enabled = true;
             continue;
         }
+        if (key == "--multiband-compressor") {
+            options.multiband_compressor_enabled = true;
+            continue;
+        }
         if (key == "--reverse-delay") {
             options.reverse_delay_enabled = true;
             continue;
@@ -436,6 +443,55 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--sweep-delay") {
             options.sweep_delay_enabled = true;
+            continue;
+        }
+        if (key == "--multiband-slope" || key == "--multiband-low-detector" ||
+            key == "--multiband-mid-detector" ||
+            key == "--multiband-high-detector" ||
+            key == "--multiband-low-mute" || key == "--multiband-mid-mute" ||
+            key == "--multiband-high-mute") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.multiband_compressor;
+            if (key == "--multiband-slope") {
+                if (value == "db12") {
+                    parameters.crossover_slope =
+                        tabletfx::MultibandCrossoverSlope::Db12;
+                } else if (value == "db24") {
+                    parameters.crossover_slope =
+                        tabletfx::MultibandCrossoverSlope::Db24;
+                } else {
+                    throw std::invalid_argument(
+                        "Multiband slope must be db12 or db24");
+                }
+            } else {
+                const std::size_t band =
+                    key.find("-low-") != std::string_view::npos ? 0U :
+                    key.find("-mid-") != std::string_view::npos ? 1U : 2U;
+                auto& band_parameters = parameters.bands[band];
+                if (key.ends_with("-detector")) {
+                    if (value == "peak") {
+                        band_parameters.detector =
+                            tabletfx::MultibandDetector::Peak;
+                    } else if (value == "rms") {
+                        band_parameters.detector =
+                            tabletfx::MultibandDetector::Rms;
+                    } else {
+                        throw std::invalid_argument(
+                            "Multiband detector must be peak or rms");
+                    }
+                } else if (value == "on") {
+                    band_parameters.mute = true;
+                } else if (value == "off") {
+                    band_parameters.mute = false;
+                } else {
+                    throw std::invalid_argument(
+                        "Multiband mute must be on or off");
+                }
+            }
+            options.multiband_compressor_enabled = true;
             continue;
         }
         if (key == "--modulated-delay-waveform") {
@@ -1543,6 +1599,86 @@ Options parse_options(int argc, char** argv, int first) {
             options.harmonic_resonator.mix = value;
             options.harmonic_resonator_enabled = true;
         }
+        else if (key == "--multiband-low-mid-hz") {
+            options.multiband_compressor.low_mid_crossover_hz = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-high-hz") {
+            options.multiband_compressor.mid_high_crossover_hz = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-threshold-db") {
+            options.multiband_compressor.bands[0].threshold_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-ratio") {
+            options.multiband_compressor.bands[0].ratio = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-knee-db") {
+            options.multiband_compressor.bands[0].knee_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-attack-ms") {
+            options.multiband_compressor.bands[0].attack_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-release-ms") {
+            options.multiband_compressor.bands[0].release_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-low-level-db") {
+            options.multiband_compressor.bands[0].level_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-threshold-db") {
+            options.multiband_compressor.bands[1].threshold_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-ratio") {
+            options.multiband_compressor.bands[1].ratio = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-knee-db") {
+            options.multiband_compressor.bands[1].knee_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-attack-ms") {
+            options.multiband_compressor.bands[1].attack_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-release-ms") {
+            options.multiband_compressor.bands[1].release_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-mid-level-db") {
+            options.multiband_compressor.bands[1].level_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-threshold-db") {
+            options.multiband_compressor.bands[2].threshold_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-ratio") {
+            options.multiband_compressor.bands[2].ratio = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-knee-db") {
+            options.multiband_compressor.bands[2].knee_db = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-attack-ms") {
+            options.multiband_compressor.bands[2].attack_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-release-ms") {
+            options.multiband_compressor.bands[2].release_ms = value;
+            options.multiband_compressor_enabled = true;
+        }
+        else if (key == "--multiband-high-level-db") {
+            options.multiband_compressor.bands[2].level_db = value;
+            options.multiband_compressor_enabled = true;
+        }
         else if (key == "--reverse-delay-time-ms") {
             options.reverse_delay.time_ms = value;
             options.reverse_delay_enabled = true;
@@ -2016,6 +2152,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.harmonic_resonator_enabled) {
         effects.push_back(std::make_unique<tabletfx::HarmonicResonator>(
             static_cast<float>(sample_rate), options.harmonic_resonator));
+    }
+    if (options.multiband_compressor_enabled) {
+        effects.push_back(std::make_unique<tabletfx::MultibandCompressor>(
+            static_cast<float>(sample_rate), options.multiband_compressor));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2648,6 +2788,10 @@ void run_bench() {
         return std::make_unique<tabletfx::HarmonicResonator>(
             static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("multiband-compressor", [=] {
+        return std::make_unique<tabletfx::MultibandCompressor>(
+            static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("room-reverb", [=] {
         tabletfx::RoomReverbParameters parameters;
         parameters.size = tabletfx::RoomSize::large;
@@ -3052,6 +3196,16 @@ void print_usage() {
                       " [--harmonic-resonator-decay-seconds 0.05..8]"
                       " [--harmonic-resonator-brightness 0..1]"
                       " [--harmonic-resonator-mix 0..1]\n"
+                   << "                 [--multiband-compressor] [--multiband-slope db12|db24]"
+                      " [--multiband-low-mid-hz 50..5000] [--multiband-mid-high-hz 100..10000]"
+                      " [--multiband-{low|mid|high}-threshold-db -60..0]"
+                      " [--multiband-{low|mid|high}-ratio 1..20]"
+                      " [--multiband-{low|mid|high}-knee-db 0..18]"
+                      " [--multiband-{low|mid|high}-attack-ms 0.1..1000]"
+                      " [--multiband-{low|mid|high}-release-ms 5..2000]"
+                      " [--multiband-{low|mid|high}-level-db -24..12]"
+                      " [--multiband-{low|mid|high}-detector peak|rms]"
+                      " [--multiband-{low|mid|high}-mute on|off]\n"
                  << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
                     " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
                      " [--reverse-delay-time-mode milliseconds|tempo-sync]"

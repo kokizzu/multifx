@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -224,6 +224,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_formant_filter(this.chain, ...formantFilter);
       const harmonicResonator = parameters.harmonicResonator || [110, 1.2, 0.55, 0.5];
       module._tf_chain_set_harmonic_resonator(this.chain, ...harmonicResonator);
+      const multiband = parameters.multibandCompressor || [250, 2500, 1,
+        -24, 2, 6, 10, 100, 0, 1, 0,
+        -24, 2, 6, 10, 100, 0, 1, 0,
+        -24, 2, 6, 10, 100, 0, 1, 0];
+      this.configureMultiband(multiband);
       const vibrato = parameters.vibrato || [5, 0.35, 1];
       module._tf_chain_set_vibrato(this.chain, ...vibrato);
       const limiter = parameters.limiter || [-1, 80];
@@ -249,6 +254,20 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }).catch((error) => {
       this.port.postMessage({ type: "error", message: String(error) });
     });
+  }
+
+  configureMultiband(values) {
+    if (!this.chain || !Array.isArray(values) || values.length !== 27) return;
+    this.module._tf_chain_set_multiband_crossover(
+      this.chain, values[0], values[1], values[2]);
+    for (let band = 0; band < 3; band += 1) {
+      const offset = 3 + band * 8;
+      this.module._tf_chain_set_multiband_band(
+        this.chain, band,
+        values[offset], values[offset + 1], values[offset + 2],
+        values[offset + 3], values[offset + 4], values[offset + 5],
+        values[offset + 6], values[offset + 7]);
+    }
   }
 
   onMessage(message) {
@@ -317,6 +336,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_formant_filter(this.chain, ...message.value);
     } else if (message.type === "harmonic-resonator" && this.ready) {
       this.module._tf_chain_set_harmonic_resonator(this.chain, ...message.value);
+    } else if (message.type === "multiband-compressor" && this.ready) {
+      this.configureMultiband(message.value);
     } else if (message.type === "reverse-delay" && this.ready) {
       this.module._tf_chain_set_reverse_delay(this.chain, ...message.value);
     } else if (message.type === "reverse-delay-run" && this.ready) {

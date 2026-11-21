@@ -42,6 +42,7 @@ add_library(tabletfx_core
     src/effects/notch_filter.cpp
     src/effects/formant_filter.cpp
     src/effects/harmonic_resonator.cpp
+    src/effects/multiband_compressor.cpp
     src/effects/reverse_delay.cpp
     src/effects/ducking_delay.cpp
     src/effects/modulated_delay.cpp
@@ -244,6 +245,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_harmonic_resonator_tests tests/test_harmonic_resonator.cpp)
     target_link_libraries(tabletfx_harmonic_resonator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_harmonic_resonator_tests COMMAND tabletfx_harmonic_resonator_tests)
+
+    add_executable(tabletfx_multiband_compressor_tests tests/test_multiband_compressor.cpp)
+    target_link_libraries(tabletfx_multiband_compressor_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_multiband_compressor_tests COMMAND tabletfx_multiband_compressor_tests)
 
     add_executable(tabletfx_reverse_delay_tests tests/test_reverse_delay.cpp)
     target_link_libraries(tabletfx_reverse_delay_tests PRIVATE tabletfx_core)

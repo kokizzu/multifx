@@ -46,6 +46,7 @@ const EFFECT_NAMES = [
   "Sweep Delay",
   "Formant Filter",
   "Harmonic Resonator",
+  "Three-band compressor",
   "Output level",
   "Peak limiter",
 ];
@@ -89,6 +90,10 @@ const DEFAULT_PARAMETERS = {
   notchFilter: [1000, 4, 1],
   formantFilter: [0, 4, 1, 0],
   harmonicResonator: [110, 1.2, 0.55, 0.5],
+  multibandCompressor: [250, 2500, 1,
+    -24, 2, 6, 10, 100, 0, 1, 0,
+    -24, 2, 6, 10, 100, 0, 1, 0,
+    -24, 2, 6, 10, 100, 0, 1, 0],
   reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
@@ -580,6 +585,27 @@ const harmonicResonatorBrightness = document.querySelector("#harmonic-resonator-
 const harmonicResonatorBrightnessValue = document.querySelector("#harmonic-resonator-brightness-value");
 const harmonicResonatorMix = document.querySelector("#harmonic-resonator-mix");
 const harmonicResonatorMixValue = document.querySelector("#harmonic-resonator-mix-value");
+const multibandLowMid = document.querySelector("#multiband-low-mid-hz");
+const multibandLowMidValue = document.querySelector("#multiband-low-mid-hz-value");
+const multibandMidHigh = document.querySelector("#multiband-mid-high-hz");
+const multibandMidHighValue = document.querySelector("#multiband-mid-high-hz-value");
+const multibandSlope = document.querySelector("#multiband-crossover-slope");
+const multibandBandControls = ["low", "mid", "high"].map((band) => ({
+  threshold: document.querySelector(`#multiband-${band}-threshold`),
+  thresholdValue: document.querySelector(`#multiband-${band}-threshold-value`),
+  ratio: document.querySelector(`#multiband-${band}-ratio`),
+  ratioValue: document.querySelector(`#multiband-${band}-ratio-value`),
+  knee: document.querySelector(`#multiband-${band}-knee`),
+  kneeValue: document.querySelector(`#multiband-${band}-knee-value`),
+  attack: document.querySelector(`#multiband-${band}-attack`),
+  attackValue: document.querySelector(`#multiband-${band}-attack-value`),
+  release: document.querySelector(`#multiband-${band}-release`),
+  releaseValue: document.querySelector(`#multiband-${band}-release-value`),
+  level: document.querySelector(`#multiband-${band}-level`),
+  levelValue: document.querySelector(`#multiband-${band}-level-value`),
+  detector: document.querySelector(`#multiband-${band}-detector`),
+  mute: document.querySelector(`#multiband-${band}-mute`),
+}));
 const reverseDelayTime = document.querySelector("#reverse-delay-time-ms");
 const reverseDelayTimeValue = document.querySelector("#reverse-delay-time-ms-value");
 const reverseDelayTimeMode = document.querySelector("#reverse-delay-time-mode");
@@ -1149,6 +1175,19 @@ rewindButton.addEventListener("click", () => {
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
 effectSearch.addEventListener("input", updateEffectBrowser);
 updateEffectBrowser();
+
+for (const control of [
+  multibandLowMid,
+  multibandMidHigh,
+  multibandSlope,
+  ...multibandBandControls.flatMap((band) => [
+    band.threshold, band.ratio, band.knee, band.attack, band.release,
+    band.level, band.detector, band.mute,
+  ]),
+]) {
+  control.addEventListener(control.type === "range" ? "input" : "change",
+    updateMultibandCompressor);
+}
 
 for (const checkbox of document.querySelectorAll("[data-effect]")) {
   checkbox.addEventListener("change", () => {
@@ -2008,6 +2047,36 @@ function updateHarmonicResonator() {
   }
 }
 
+function updateMultibandCompressor() {
+  const values = [
+    Number(multibandLowMid.value),
+    Number(multibandMidHigh.value),
+    Number(multibandSlope.value),
+  ];
+  multibandLowMidValue.value = `${Math.round(values[0])} Hz`;
+  multibandMidHighValue.value = `${Math.round(values[1])} Hz`;
+  for (const band of multibandBandControls) {
+    const threshold = Number(band.threshold.value);
+    const ratio = Number(band.ratio.value);
+    const knee = Number(band.knee.value);
+    const attack = Number(band.attack.value);
+    const release = Number(band.release.value);
+    const level = Number(band.level.value);
+    band.thresholdValue.value = `${threshold.toFixed(1)} dB`;
+    band.ratioValue.value = `${ratio.toFixed(1)}:1`;
+    band.kneeValue.value = `${knee.toFixed(1)} dB`;
+    band.attackValue.value = `${attack.toFixed(1)} ms`;
+    band.releaseValue.value = `${Math.round(release)} ms`;
+    band.levelValue.value = `${level.toFixed(1)} dB`;
+    values.push(threshold, ratio, knee, attack, release, level,
+      Number(band.detector.value), Number(band.mute.checked));
+  }
+  DEFAULT_PARAMETERS.multibandCompressor = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "multiband-compressor", value: values });
+  }
+}
+
 function updateReverseDelay() {
   const timeMs = Number(reverseDelayTime.value);
   const timeMode = Number(reverseDelayTimeMode.value);
@@ -2446,18 +2515,18 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 47 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 47 || effectRows.length !== 47 ||
+    const expectedEffectIds = Array.from({ length: 48 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 48 || effectRows.length !== 48 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
         initialEffectState[38] || initialEffectState[39] || initialEffectState[40] ||
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
-        initialEffectState[44] ||
+        initialEffectState[44] || initialEffectState[45] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 47 ordered, categorized effects (IDs 0–46) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Sweep Delay disabled by default.");
+      throw new Error("The effect picker must list 48 ordered, categorized effects (IDs 0–47), with all optional reverbs, modulation, filter, delay, resonator, and multiband stages disabled by default.");
     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
@@ -2500,7 +2569,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 47" ||
+        effectCount.value !== "8 of 48" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2508,8 +2577,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,46" ||
-        effectCount.value !== "7 of 47" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,47" ||
+        effectCount.value !== "8 of 48" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2518,7 +2587,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43,44" ||
-        effectCount.value !== "8 of 47" ||
+        effectCount.value !== "8 of 48" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include Step Filter, Notch Filter, Formant Filter, and Harmonic Resonator and preserve the current chain state.");
     }
@@ -2526,7 +2595,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 47" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 48" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2534,7 +2603,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 47" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 48" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2544,12 +2613,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 47") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 48") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "47 of 47" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "48 of 48" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2631,6 +2700,10 @@ async function runBrowserSelfTest() {
         notchFilter: [713, 6, 0.72],
         formantFilter: [1.5, 6, 0.72, -2],
         harmonicResonator: [220, 0.8, 0.7, 0.65],
+        multibandCompressor: [500, 4000, 0,
+          -30, 4, 0, 1, 30, 6, 0, 0,
+          -24, 2, 6, 10, 100, 0, 1, 0,
+          -18, 3, 3, 5, 250, -2, 1, 0],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
@@ -2718,6 +2791,34 @@ async function runBrowserSelfTest() {
         DEFAULT_PARAMETERS.harmonicResonator[3] !== 0.65) {
       throw new Error("Harmonic Resonator controls must update root, decay, brightness, and mix.");
     }
+    const multibandParameters = testOptions.parameters.multibandCompressor;
+    multibandLowMid.value = String(multibandParameters[0]);
+    multibandMidHigh.value = String(multibandParameters[1]);
+    multibandSlope.value = String(multibandParameters[2]);
+    for (let bandIndex = 0; bandIndex < 3; bandIndex += 1) {
+      const offset = 3 + bandIndex * 8;
+      const band = multibandBandControls[bandIndex];
+      band.threshold.value = String(multibandParameters[offset]);
+      band.ratio.value = String(multibandParameters[offset + 1]);
+      band.knee.value = String(multibandParameters[offset + 2]);
+      band.attack.value = String(multibandParameters[offset + 3]);
+      band.release.value = String(multibandParameters[offset + 4]);
+      band.level.value = String(multibandParameters[offset + 5]);
+      band.detector.value = String(multibandParameters[offset + 6]);
+      band.mute.checked = Boolean(multibandParameters[offset + 7]);
+    }
+    updateMultibandCompressor();
+    const configuredCrossover = multibandLowMid.value;
+    multibandLowMid.value = "350";
+    multibandLowMid.dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.multibandCompressor[0] !== 350 ||
+        multibandLowMidValue.value !== "350 Hz" ||
+        DEFAULT_PARAMETERS.multibandCompressor[2] !== 0 ||
+        DEFAULT_PARAMETERS.multibandCompressor[9] !== 0) {
+      throw new Error("Three-band compressor controls did not update crossover, slope, and band settings.");
+    }
+    multibandLowMid.value = configuredCrossover;
+    multibandLowMid.dispatchEvent(new Event("input", { bubbles: true }));
     const reverseDelayParameters = testOptions.parameters.reverseDelay;
     reverseDelayTime.value = String(reverseDelayParameters[0]);
     reverseDelayFeedback.value = String(reverseDelayParameters[1] * 100);

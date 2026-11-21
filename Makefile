@@ -20,6 +20,8 @@ PYTHON ?= python3
 	publish-sweep-delay-plan publish-sweep-delay \
 	publish-formant-filter-plan publish-formant-filter \
 	publish-harmonic-resonator-plan publish-harmonic-resonator \
+	publish-multiband-compressor-plan publish-multiband-compressor \
+	publish-bit-crusher-plan publish-bit-crusher \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -208,6 +210,18 @@ publish-harmonic-resonator-plan:
 
 publish-harmonic-resonator:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint harmonic-resonator
+
+publish-multiband-compressor-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint multiband-compressor
+
+publish-multiband-compressor:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint multiband-compressor
+
+publish-bit-crusher-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint bit-crusher
+
+publish-bit-crusher:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint bit-crusher
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog

@@ -1505,6 +1505,41 @@ def check_harmonic_resonator(executable: Path) -> None:
             raise AssertionError("Harmonic Resonator did not change the rendered signal")
 
 
+def check_multiband_compressor(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 12000
+    source_samples = [
+        round(15000 * (
+            math.sin(2.0 * math.pi * 90.0 * frame / sample_rate) +
+            0.5 * math.sin(2.0 * math.pi * 1200.0 * frame / sample_rate) +
+            0.25 * math.sin(2.0 * math.pi * 7000.0 * frame / sample_rate)))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-multiband-compressor-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "three-band-tone.wav"
+        output = root / "compressed.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--multiband-compressor", "--multiband-slope", "db12",
+             "--multiband-low-mid-hz", "500", "--multiband-mid-high-hz", "4000",
+             "--multiband-low-threshold-db", "-36", "--multiband-low-ratio", "6",
+             "--multiband-low-knee-db", "0", "--multiband-low-attack-ms", "0.1",
+             "--multiband-low-release-ms", "30", "--multiband-low-level-db", "2",
+             "--multiband-low-detector", "peak", "--multiband-low-mute", "off"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Multiband Compressor options did not enable one processor")
+        rendered = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in rendered):
+            raise AssertionError("Multiband Compressor produced non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 1.0e-3:
+            raise AssertionError("Multiband Compressor controls did not change rendered audio")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -1527,6 +1562,7 @@ def main() -> None:
     check_sweep_delay(args.executable.resolve())
     check_formant_filter(args.executable.resolve())
     check_harmonic_resonator(args.executable.resolve())
+    check_multiband_compressor(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1551,7 +1587,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

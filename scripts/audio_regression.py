@@ -221,6 +221,20 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--harmonic-resonator-decay-seconds", "1.2",
         "--harmonic-resonator-brightness", "0.55",
         "--harmonic-resonator-mix", "0.5",
+        "--multiband-compressor", "--multiband-low-mid-hz", "250",
+        "--multiband-mid-high-hz", "2500", "--multiband-slope", "db24",
+        "--multiband-low-threshold-db", "-24", "--multiband-low-ratio", "2",
+        "--multiband-low-knee-db", "6", "--multiband-low-attack-ms", "10",
+        "--multiband-low-release-ms", "100", "--multiband-low-level-db", "0",
+        "--multiband-low-detector", "rms", "--multiband-low-mute", "off",
+        "--multiband-mid-threshold-db", "-24", "--multiband-mid-ratio", "2",
+        "--multiband-mid-knee-db", "6", "--multiband-mid-attack-ms", "10",
+        "--multiband-mid-release-ms", "100", "--multiband-mid-level-db", "0",
+        "--multiband-mid-detector", "rms", "--multiband-mid-mute", "off",
+        "--multiband-high-threshold-db", "-24", "--multiband-high-ratio", "2",
+        "--multiband-high-knee-db", "6", "--multiband-high-attack-ms", "10",
+        "--multiband-high-release-ms", "100", "--multiband-high-level-db", "0",
+        "--multiband-high-detector", "rms", "--multiband-high-mute", "off",
     ]
     if delay_character == "tape":
         command.extend([
@@ -243,7 +257,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 47:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 48:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -310,7 +324,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 47-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 48-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

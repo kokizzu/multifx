@@ -18,6 +18,7 @@
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
+#include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/reverse_delay.hpp"
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
@@ -82,7 +83,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(44);
+          effects_.reserve(46);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -216,6 +217,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::HarmonicResonator>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::MultibandCompressor>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -960,6 +964,42 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_multiband_crossover(float low_mid_hz, float mid_high_hz,
+                                       std::uint32_t slope) noexcept {
+        auto* compressor = static_cast<tabletfx::MultibandCompressor*>(
+            effects_[45].effect.get());
+        auto parameters = compressor->parameters();
+        parameters.low_mid_crossover_hz = low_mid_hz;
+        parameters.mid_high_crossover_hz = mid_high_hz;
+        parameters.crossover_slope =
+            static_cast<tabletfx::MultibandCrossoverSlope>(slope);
+        compressor->set_parameters(parameters);
+    }
+
+    void configure_multiband_band(std::uint32_t band, float threshold_db,
+                                  float ratio, float knee_db, float attack_ms,
+                                  float release_ms, float level_db,
+                                  std::uint32_t detector,
+                                  std::uint32_t mute) noexcept {
+        if (band >= 3U) {
+            return;
+        }
+        auto* compressor = static_cast<tabletfx::MultibandCompressor*>(
+            effects_[45].effect.get());
+        auto parameters = compressor->parameters();
+        auto& band_parameters = parameters.bands[band];
+        band_parameters.threshold_db = threshold_db;
+        band_parameters.ratio = ratio;
+        band_parameters.knee_db = knee_db;
+        band_parameters.attack_ms = attack_ms;
+        band_parameters.release_ms = release_ms;
+        band_parameters.level_db = level_db;
+        band_parameters.detector =
+            static_cast<tabletfx::MultibandDetector>(detector);
+        band_parameters.mute = mute != 0U;
+        compressor->set_parameters(parameters);
+    }
+
     void configure_reverse_delay(float time_ms, float feedback, float mix,
                                  float crossfade_ms, std::uint32_t time_mode,
                                  std::uint32_t division, float tempo_bpm,
@@ -1578,6 +1618,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_harmonic_resonator(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_harmonic_resonator(
             root_frequency_hz, decay_seconds, brightness, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multiband_crossover(
+    void* opaque, float low_mid_hz, float mid_high_hz,
+    std::uint32_t slope) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multiband_crossover(
+            low_mid_hz, mid_high_hz, slope);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multiband_band(
+    void* opaque, std::uint32_t band, float threshold_db, float ratio,
+    float knee_db, float attack_ms, float release_ms, float level_db,
+    std::uint32_t detector, std::uint32_t mute) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multiband_band(
+            band, threshold_db, ratio, knee_db, attack_ms, release_ms,
+            level_db, detector, mute);
     }
 }
 
