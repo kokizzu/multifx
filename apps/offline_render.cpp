@@ -8,6 +8,7 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
@@ -60,6 +61,8 @@ struct Options {
     float clean_boost_db = 0.0F;
     bool overdrive_enabled = false;
     tabletfx::TransparentOverdriveParameters overdrive{};
+    bool mid_overdrive_enabled = false;
+    tabletfx::MidFocusedOverdriveParameters mid_overdrive{};
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
     bool chorus_enabled = false;
@@ -370,6 +373,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.overdrive.mix = value;
             options.overdrive_enabled = true;
         }
+        else if (key == "--mid-overdrive-drive") {
+            options.mid_overdrive.drive = value;
+            options.mid_overdrive_enabled = true;
+        }
+        else if (key == "--mid-overdrive-boost-db") {
+            options.mid_overdrive.mid_boost_db = value;
+            options.mid_overdrive_enabled = true;
+        }
+        else if (key == "--mid-overdrive-level-db") {
+            options.mid_overdrive.level_db = value;
+            options.mid_overdrive_enabled = true;
+        }
+        else if (key == "--mid-overdrive-mix") {
+            options.mid_overdrive.mix = value;
+            options.mid_overdrive_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -536,6 +555,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.overdrive_enabled) {
         effects.push_back(std::make_unique<tabletfx::TransparentOverdrive>(
             static_cast<float>(sample_rate), options.overdrive));
+    }
+    if (options.mid_overdrive_enabled) {
+        effects.push_back(std::make_unique<tabletfx::MidFocusedOverdrive>(
+            static_cast<float>(sample_rate), options.mid_overdrive));
     }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
@@ -941,6 +964,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::CleanBoost>(3.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::TransparentOverdrive>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::MidFocusedOverdrive>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     tabletfx::TremoloParameters tremolo_parameters;
     tremolo_parameters.rate_hz = 4.0F;
@@ -1128,6 +1153,9 @@ void run_bench() {
     benchmark_one("transparent-overdrive", [=] {
         return std::make_unique<tabletfx::TransparentOverdrive>(static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("mid-focused-overdrive", [=] {
+        return std::make_unique<tabletfx::MidFocusedOverdrive>(static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_signal_controls(sample_rate, channels, block_frames,
                               warmup_blocks, measured_blocks);
     benchmark_level_meters(sample_rate, channels, block_frames,
@@ -1202,6 +1230,8 @@ void print_usage() {
                    " [--vibrato-mix 0..1]"
                     " [--overdrive-drive 0..0.5] [--overdrive-level-db -24..12]"
                     " [--overdrive-mix 0..1]"
+                 " [--mid-overdrive-drive 0..0.5] [--mid-overdrive-boost-db 0..12]"
+                    " [--mid-overdrive-level-db -24..12] [--mid-overdrive-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

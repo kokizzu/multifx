@@ -12,6 +12,7 @@ const EFFECT_NAMES = [
   "Envelope wah",
   "Clean boost",
   "Transparent overdrive",
+  "Mid-focused overdrive",
   "Soft drive",
   "Tremolo",
   "Chorus",
@@ -31,6 +32,7 @@ const DEFAULT_PARAMETERS = {
   noiseGate: [-60, -72, 3, 2, 20, 80],
   cleanBoostDb: 0,
   overdrive: [0.15, -3, 0.35],
+  midOverdrive: [0.18, 6, -4, 0.4],
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -152,6 +154,14 @@ const overdriveLevel = document.querySelector("#overdrive-level-db");
 const overdriveLevelValue = document.querySelector("#overdrive-level-value");
 const overdriveMix = document.querySelector("#overdrive-mix");
 const overdriveMixValue = document.querySelector("#overdrive-mix-value");
+const midOverdriveDrive = document.querySelector("#mid-overdrive-drive");
+const midOverdriveDriveValue = document.querySelector("#mid-overdrive-drive-value");
+const midOverdriveBoost = document.querySelector("#mid-overdrive-boost-db");
+const midOverdriveBoostValue = document.querySelector("#mid-overdrive-boost-value");
+const midOverdriveLevel = document.querySelector("#mid-overdrive-level-db");
+const midOverdriveLevelValue = document.querySelector("#mid-overdrive-level-value");
+const midOverdriveMix = document.querySelector("#mid-overdrive-mix");
+const midOverdriveMixValue = document.querySelector("#mid-overdrive-mix-value");
 const tunerReference = document.querySelector("#tuner-reference-hz");
 const tunerReferenceValue = document.querySelector("#tuner-reference-value");
 const tunerMuteOutput = document.querySelector("#tuner-mute-output");
@@ -860,6 +870,23 @@ for (const control of [overdriveDrive, overdriveLevel, overdriveMix]) {
   control.addEventListener("change", updateOverdrive);
 }
 
+function updateMidOverdrive() {
+  const values = [Number(midOverdriveDrive.value), Number(midOverdriveBoost.value),
+    Number(midOverdriveLevel.value), Number(midOverdriveMix.value)];
+  DEFAULT_PARAMETERS.midOverdrive = values;
+  midOverdriveDriveValue.value = Number(midOverdriveDrive.value).toFixed(2);
+  midOverdriveBoostValue.value = `${Number(midOverdriveBoost.value).toFixed(1)} dB`;
+  midOverdriveLevelValue.value = `${Number(midOverdriveLevel.value).toFixed(1)} dB`;
+  midOverdriveMixValue.value = `${Math.round(Number(midOverdriveMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "mid-overdrive", value: values });
+}
+
+for (const control of [midOverdriveDrive, midOverdriveBoost,
+  midOverdriveLevel, midOverdriveMix]) {
+  control.addEventListener("input", updateMidOverdrive);
+  control.addEventListener("change", updateMidOverdrive);
+}
+
 function updateTremolo() {
   const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
   const values = [
@@ -1097,7 +1124,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-        enabled: Array.from({ length: 22 }, () => true),
+        enabled: Array.from({ length: 23 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1108,6 +1135,7 @@ async function runBrowserSelfTest() {
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
         overdrive: [0.15, -3, 0.35],
+        midOverdrive: [0.18, 6, -4, 0.4],
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -1158,6 +1186,10 @@ async function runBrowserSelfTest() {
     overdriveDrive.value = "0.15";
     overdriveLevel.value = "-3";
     overdriveMix.value = "0.35";
+    midOverdriveDrive.value = "0.18";
+    midOverdriveBoost.value = "6";
+    midOverdriveLevel.value = "-4";
+    midOverdriveMix.value = "0.4";
     tremoloRate.value = "4";
     tremoloDepth.value = "0.2";
     tremoloWaveform.value = "sine";
@@ -1191,6 +1223,7 @@ async function runBrowserSelfTest() {
     updateWah();
     updateEnvelopeWah();
     updateOverdrive();
+    updateMidOverdrive();
     updateTremolo();
     updateChorus();
     updateFlanger();

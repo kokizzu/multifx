@@ -4,7 +4,7 @@ const EFFECTS = [
   "input-trim", "volume-pedal", "high-pass", "low-pass", "noise-gate",
   "pedal-compressor", "compressor", "wah", "envelope-wah", "clean-boost",
   "transparent-overdrive",
-  "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
+  "mid-focused-overdrive", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
@@ -60,7 +60,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     this.enabled = config.enabled || [true, true, false, false, false, false,
       true, false, false, false, false, false, false, false, false, false,
-      false, false, false, false, true, true];
+      false, false, false, false, false, true, true];
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -124,6 +124,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_clean_boost(this.chain, parameters.cleanBoostDb ?? 0);
       const overdrive = parameters.overdrive || [0.15, -3, 0.35];
       module._tf_chain_set_overdrive(this.chain, ...overdrive);
+      const midOverdrive = parameters.midOverdrive || [0.18, 6, -4, 0.4];
+      module._tf_chain_set_mid_overdrive(this.chain, ...midOverdrive);
       const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1];
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
@@ -203,6 +205,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_clean_boost(this.chain, Number(message.value));
     } else if (message.type === "overdrive" && this.ready) {
       this.module._tf_chain_set_overdrive(this.chain, ...message.value);
+    } else if (message.type === "mid-overdrive" && this.ready) {
+      this.module._tf_chain_set_mid_overdrive(this.chain, ...message.value);
     } else if (message.type === "tremolo" && this.ready) {
       this.module._tf_chain_set_tremolo(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {

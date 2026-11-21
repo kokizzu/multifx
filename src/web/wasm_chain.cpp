@@ -7,6 +7,7 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
@@ -60,7 +61,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(20);
+        effects_.reserve(21);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -92,6 +93,9 @@ public:
                                 0.0F, static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::TransparentOverdrive>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::MidFocusedOverdrive>(
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::SoftDrive>(3.0F), false});
@@ -311,7 +315,7 @@ public:
     }
 
     void configure_drive(float drive) noexcept {
-        static_cast<tabletfx::SoftDrive*>(effects_[11].effect.get())->set_drive(drive);
+        static_cast<tabletfx::SoftDrive*>(effects_[12].effect.get())->set_drive(drive);
     }
 
     void configure_clean_boost(float gain_db) noexcept {
@@ -327,19 +331,31 @@ public:
         overdrive->configure(parameters);
     }
 
+    void configure_mid_overdrive(float drive, float boost_db, float level_db,
+                                 float mix) noexcept {
+        auto* overdrive = static_cast<tabletfx::MidFocusedOverdrive*>(
+            effects_[11].effect.get());
+        tabletfx::MidFocusedOverdriveParameters parameters;
+        parameters.drive = drive;
+        parameters.mid_boost_db = boost_db;
+        parameters.level_db = level_db;
+        parameters.mix = mix;
+        overdrive->configure(parameters);
+    }
+
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[17].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[18].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[18].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[19].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
     void configure_pitch(float semitones) noexcept {
-        static_cast<tabletfx::PolyPitchShifter*>(effects_[19].effect.get())
+        static_cast<tabletfx::PolyPitchShifter*>(effects_[20].effect.get())
             ->set_pitch_semitones(semitones);
     }
 
@@ -429,7 +445,7 @@ public:
     void configure_tremolo(float rate_hz, float depth, std::uint32_t waveform,
                            std::uint32_t tempo_sync, float tempo_bpm,
                            float beats_per_cycle) noexcept {
-        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[12].effect.get());
+        auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[13].effect.get());
         tremolo->set_rate_hz(rate_hz);
         switch (waveform) {
         case 1:
@@ -453,7 +469,7 @@ public:
         parameters.base_delay_ms = base_delay_ms;
         parameters.depth_ms = depth_ms;
         parameters.mix = mix;
-        static_cast<tabletfx::Chorus*>(effects_[13].effect.get())
+        static_cast<tabletfx::Chorus*>(effects_[14].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -469,7 +485,7 @@ public:
             ? tabletfx::FlangerFeedbackPolarity::Negative
             : tabletfx::FlangerFeedbackPolarity::Positive;
         parameters.mix = mix;
-        static_cast<tabletfx::Flanger*>(effects_[14].effect.get())
+        static_cast<tabletfx::Flanger*>(effects_[15].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -483,7 +499,7 @@ public:
         parameters.feedback = feedback;
         parameters.stages = static_cast<std::uint8_t>(stages);
         parameters.mix = mix;
-        static_cast<tabletfx::Phaser*>(effects_[15].effect.get())
+        static_cast<tabletfx::Phaser*>(effects_[16].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -492,7 +508,7 @@ public:
         parameters.rate_hz = rate_hz;
         parameters.depth_ms = depth_ms;
         parameters.mix = mix;
-        static_cast<tabletfx::Vibrato*>(effects_[16].effect.get())
+        static_cast<tabletfx::Vibrato*>(effects_[17].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -941,6 +957,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_overdrive(
     void* opaque, float drive, float level_db, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_overdrive(drive, level_db, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_mid_overdrive(
+    void* opaque, float drive, float boost_db, float level_db, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_mid_overdrive(drive, boost_db, level_db, mix);
     }
 }
 

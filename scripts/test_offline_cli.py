@@ -342,6 +342,40 @@ def check_overdrive(executable: Path) -> None:
             raise AssertionError(f"Overdrive CLI did not apply its bounded soft clip: {values[-1]}")
 
 
+def check_mid_overdrive(executable: Path) -> None:
+    sample_rate = 48000
+    with tempfile.TemporaryDirectory(prefix="tabletfx-mid-overdrive-test-") as directory:
+        root = Path(directory)
+        rms_values = []
+        for label, frequency in (("bass", 90.0), ("mids", 800.0)):
+            source = root / f"{label}.wav"
+            output = root / f"{label}-processed.wav"
+            frames = sample_rate
+            values = [round(8192 * math.sin(2.0 * math.pi * frequency * frame / sample_rate))
+                      for frame in range(frames)]
+            write_pcm16(source, sample_rate, values)
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output),
+                 "--mid-overdrive-drive", "0",
+                 "--mid-overdrive-boost-db", "12",
+                 "--mid-overdrive-level-db", "0",
+                 "--mid-overdrive-mix", "1"],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"Mid-focused overdrive was not constructed: {result.stdout}")
+            data = output.read_bytes()
+            samples = struct.unpack("<" + "f" * frames, data[44:])
+            if not all(math.isfinite(sample) for sample in samples):
+                raise AssertionError(f"Mid-focused overdrive produced non-finite {label} audio")
+            tail = samples[sample_rate // 2:]
+            rms_values.append(math.sqrt(sum(sample * sample for sample in tail) / len(tail)))
+        if rms_values[1] <= rms_values[0] * 1.25:
+            raise AssertionError(
+                f"Mid-focused CLI should emphasize 800 Hz over 90 Hz: bass={rms_values[0]}, mids={rms_values[1]}"
+            )
+
+
 def check_envelope_wah(executable: Path) -> None:
     sample_rate = 48000
     samples = [round(16384 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
@@ -493,11 +527,12 @@ def main() -> None:
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
     check_overdrive(args.executable.resolve())
+    check_mid_overdrive(args.executable.resolve())
     check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/overdrive/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent and mid-focused overdrive/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
