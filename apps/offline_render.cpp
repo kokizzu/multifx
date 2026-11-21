@@ -105,6 +105,8 @@ struct Options {
     tabletfx::FourBandResonatorParameters four_band_resonator{};
     bool diatonic_harmonizer_enabled = false;
     tabletfx::effects::DiatonicHarmonizerConfig diatonic_harmonizer{};
+    bool grain_delay_enabled = false;
+    tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -531,6 +533,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.diatonic_harmonizer_enabled = true;
             continue;
         }
+        if (key == "--grain-delay") {
+            options.grain_delay_enabled = true;
+            continue;
+        }
         if (key.starts_with("--diatonic-harmonizer-")) {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for " + std::string(key));
@@ -585,6 +591,31 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.diatonic_harmonizer_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--grain-delay-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--grain-delay-").size());
+            const float value = parse_float(key, argv[++i]);
+            auto& parameters = options.grain_delay;
+            if (setting == "time-ms") parameters.time_ms = value;
+            else if (setting == "feedback") parameters.feedback = value;
+            else if (setting == "mix") parameters.mix = value;
+            else if (setting == "grain-size-ms") parameters.grain_size_ms = value;
+            else if (setting == "overlap") {
+                parameters.overlap = static_cast<std::uint8_t>(
+                    std::clamp(std::lround(value), 0L, 255L));
+            } else if (setting == "pitch-semitones") {
+                parameters.pitch_semitones = value;
+            } else if (setting == "spray-ms") {
+                parameters.spray_ms = value;
+            } else {
+                throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.grain_delay_enabled = true;
             continue;
         }
         if (key.starts_with("--four-band-resonator-")) {
@@ -2532,6 +2563,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         harmonizer->configure(options.diatonic_harmonizer);
         effects.push_back(std::move(harmonizer));
     }
+    if (options.grain_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::GrainDelay>(
+            static_cast<float>(sample_rate), channels, options.grain_delay));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -3257,6 +3292,18 @@ void run_bench() {
         effect->configure(parameters);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("grain-delay-worst-case", [=] {
+        tabletfx::GrainDelayParameters parameters;
+        parameters.time_ms = 2000.0F;
+        parameters.feedback = 0.7F;
+        parameters.mix = 0.7F;
+        parameters.grain_size_ms = 250.0F;
+        parameters.overlap = 4U;
+        parameters.pitch_semitones = -24.0F;
+        parameters.spray_ms = 100.0F;
+        return std::make_unique<tabletfx::GrainDelay>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3537,6 +3584,10 @@ void print_usage() {
                     " [--diatonic-harmonizer-feedback 0..0.85]"
                     " [--diatonic-harmonizer-tap-division free|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth]"
                     " [--diatonic-harmonizer-tempo-bpm BPM]"
+                  " [--grain-delay] [--grain-delay-time-ms 20..2000]"
+                  " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
+                  " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"
+                  " [--grain-delay-pitch-semitones -24..24] [--grain-delay-spray-ms 0..100]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"

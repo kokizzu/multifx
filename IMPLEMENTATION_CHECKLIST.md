@@ -4,7 +4,7 @@ Generated once from `GOAL.md`. The requirement text is preserved from the source
 
 Mark an implementation and automated-test box only after the code and relevant automated checks pass. Mark device/listening only with direct evidence from the named hardware and route. The requirement box is complete only when all required evidence exists.
 
-Latest integrated verification (2026-11-22) covers 53 effect stages, including the experimental scale-aware monophonic Diatonic Harmonizer in the categorized Pitch picker. Its native, CLI, browser/WASM, prerecorded-audio, and benchmark checks pass. First-note control response is estimated at 26.7 ms at 48 kHz, exceeding the provisional 20 ms live-transposition gate; device listening remains open. Older stage counts in individual evidence notes refer to their earlier test runs.
+Latest integrated verification (2026-11-22) covers 54 effect stages, including the experimental scale-aware monophonic Diatonic Harmonizer in Pitch and project-authored Grain Delay in Delay. Grain Delay's controls and DSP are not a HeadRush Prime match. Native, CLI, browser/WASM, prerecorded-audio, and isolated benchmark checks pass. The harmonizer's first-note control response is estimated at 26.7 ms at 48 kHz, exceeding the provisional 20 ms live-transposition gate; device listening remains open. Older stage counts in individual evidence notes refer to their earlier test runs.
 
 | Done | ID | Priority | Requirement | Implementation | Automated | Device/listening | Evidence or remaining limit |
 |---|---|---|---|---|---|---|---|
@@ -110,7 +110,7 @@ Latest integrated verification (2026-11-22) covers 53 effect stages, including t
 | [ ] | `DLY-13` | P1 | Pitch-shifted feedback delay. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DLY-14` | P1 | Swell delay. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DLY-15` | P2 | Resonant delay. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `DLY-16` | P2 | Granular/glitch delay. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `DLY-16` | P2 | Granular/glitch delay. | [x] | [x] | [ ] | Project-authored `grain-delay` is listed in the categorized Delay picker and available in the native core, offline CLI, and WebAssembly. Controls/defaults: Time 350 ms (20–2,000), Feedback 0.25 (0–0.9), Mix 0.25 (0–1), Grain Size 80 ms (10–250), Overlap 2 (1–4), Pitch 0 semitones (−24…+24), Spray 0 ms (0–100). Hann-windowed overlapping grains use fixed construction-time storage and allocate nothing in `process()`. Native tests include pitch-ratio measurement and irregular-block/no-allocation checks; CLI, 54-stage browser/native parity, and the five-pickup plus stereo-DI prerecorded render pass. The 48 kHz stereo state is 895,156 B and isolated p50/p95/p99/p99.9/max CPU is 0.3079/0.3600/0.4976/0.8160/1.9407% of a 2.667 ms deadline. HeadRush Prime v4.1.0/current product documentation establishes the Grain Delay name/category, but its manual controls were not readable; no HeadRush control/DSP parity is claimed. The all-effects audio render is a stability check, not a listening-quality measurement. Hardware listening remains open. |
 | [ ] | `DLY-17` | P1 | Hold/freeze delay with defined retrigger behavior. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DLY-18` | P1 | Lo-fi delay. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `DLY-19` | P1 | Controlled self-oscillation mode with output protection and panic behavior. | [ ] | [ ] | [ ] | Not started |

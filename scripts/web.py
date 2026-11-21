@@ -157,6 +157,7 @@ def build_web() -> None:
         "_tf_chain_set_triple_double_chorus",
         "_tf_chain_set_four_band_resonator",
         "_tf_chain_set_diatonic_harmonizer",
+        "_tf_chain_set_grain_delay",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -224,6 +225,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "triple_double_chorus.cpp"),
         str(ROOT / "src" / "effects" / "four_band_resonator.cpp"),
         str(ROOT / "src" / "effects" / "diatonic_harmonizer.cpp"),
+        str(ROOT / "src" / "effects" / "grain_delay.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -737,6 +739,10 @@ def browser_test() -> None:
              "--diatonic-harmonizer-feedback", "0.2",
              "--diatonic-harmonizer-tap-division", "free",
              "--diatonic-harmonizer-tempo-bpm", "120",
+             "--grain-delay-time-ms", "350",
+             "--grain-delay-feedback", "0.25", "--grain-delay-mix", "0.35",
+             "--grain-delay-grain-size-ms", "80", "--grain-delay-overlap", "2",
+             "--grain-delay-pitch-semitones", "7", "--grain-delay-spray-ms", "35",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

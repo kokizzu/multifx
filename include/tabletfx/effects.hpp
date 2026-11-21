@@ -5,6 +5,7 @@
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/four_band_resonator.hpp"
 #include "tabletfx/effects/diatonic_harmonizer.hpp"
+#include "tabletfx/effects/grain_delay.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"

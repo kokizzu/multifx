@@ -16,6 +16,7 @@ add_library(tabletfx_core
     src/effects/dimension_chorus.cpp
     src/effects/four_band_resonator.cpp
     src/effects/diatonic_harmonizer.cpp
+    src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
     src/effects/phaser.cpp
@@ -142,6 +143,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_diatonic_harmonizer_tests tests/test_diatonic_harmonizer.cpp)
     target_link_libraries(tabletfx_diatonic_harmonizer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_diatonic_harmonizer_tests COMMAND tabletfx_diatonic_harmonizer_tests)
+
+    add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
+    target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_grain_delay_tests COMMAND tabletfx_grain_delay_tests)
 
     add_executable(tabletfx_flanger_tests tests/test_flanger.cpp)
     target_link_libraries(tabletfx_flanger_tests PRIVATE tabletfx_core)

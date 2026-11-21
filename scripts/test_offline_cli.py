@@ -772,6 +772,36 @@ def check_diatonic_harmonizer(executable: Path) -> None:
             raise AssertionError("Diatonic Harmonizer accepted an unknown scale")
 
 
+def check_grain_delay(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-grain-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "grain-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--grain-delay-time-ms", "40", "--grain-delay-feedback", "0.2",
+             "--grain-delay-mix", "1", "--grain-delay-grain-size-ms", "80",
+             "--grain-delay-overlap", "2", "--grain-delay-pitch-semitones", "12",
+             "--grain-delay-spray-ms", "10"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Grain Delay controls did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Grain Delay returned non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.05:
+            raise AssertionError("Grain Delay controls did not change rendered guitar audio")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -1767,6 +1797,7 @@ def main() -> None:
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())
     check_diatonic_harmonizer(args.executable.resolve())
+    check_grain_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

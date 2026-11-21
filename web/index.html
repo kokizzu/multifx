@@ -79,7 +79,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">52 of 52</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">54 of 54</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -134,8 +134,9 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="48"><span class="effect-number">49</span><span class="effect-name">Triple-Double Chorus</span><span class="effect-default">Three L/C/R voices · project-authored DSP</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="resonator"><input type="checkbox" data-effect="49"><span class="effect-number">50</span><span class="effect-name">Four-band resonator</span><span class="effect-default">Manual or chord mode · project-authored DSP</span><span class="effect-category-tag">Resonator</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="50"><span class="effect-number">51</span><span class="effect-name">Diatonic Harmonizer</span><span class="effect-default">Monophonic pitch tracking · project-authored DSP</span><span class="effect-category-tag">Pitch</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="51" checked><span class="effect-number">52</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="52" checked><span class="effect-number">53</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="51"><span class="effect-number">52</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="52" checked><span class="effect-number">53</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="53" checked><span class="effect-number">54</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -807,6 +808,19 @@
           <label class="mix-control" for="diatonic-harmonizer-tempo"><span>Tempo</span><output id="diatonic-harmonizer-tempo-value" for="diatonic-harmonizer-tempo">120 BPM</output><input id="diatonic-harmonizer-tempo" type="range" min="30" max="300" step="1" value="120"></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro v1.1.100 Model Guide names Mix, Pitch, Key, Tone, Scale, Delay, Feedback, Tap Division, and Spillover, and says the effect typically works best with single notes. This project exposes project-authored Mix, interval, key, scale, tone, delay/tap, feedback, and tempo controls with a monophonic tracker. Its STFT shifter has about 5.33 ms nominal stream latency at 48 kHz; the 1,024-sample note-analysis frame makes first-note control response about 26.7 ms before host/browser buffering, above the current 20 ms response target. Chord tracking, Fender sound parity, a browser Spillover control, and spillover-aware stage bypass are not implemented.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Grain Delay controls">
+        <h3>Grain Delay · project-authored</h3>
+        <p class="hint">HeadRush Prime firmware v4.1.0 introduced its original Grain Delay, and the current Prime catalog lists it under Delay. Public manufacturer material checked here does not expose this effect’s control ranges or algorithm details. All controls and DSP below are project-authored; they do not claim HeadRush settings or sound parity.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="grain-delay-time"><span>Time</span><output id="grain-delay-time-value" for="grain-delay-time">350 ms</output><input id="grain-delay-time" type="range" min="20" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="grain-delay-feedback"><span>Feedback</span><output id="grain-delay-feedback-value" for="grain-delay-feedback">25%</output><input id="grain-delay-feedback" type="range" min="0" max="0.9" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="grain-delay-mix"><span>Mix</span><output id="grain-delay-mix-value" for="grain-delay-mix">25%</output><input id="grain-delay-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="grain-delay-size"><span>Grain size</span><output id="grain-delay-size-value" for="grain-delay-size">80 ms</output><input id="grain-delay-size" type="range" min="10" max="250" step="1" value="80"></label>
+          <label class="mix-control" for="grain-delay-overlap"><span>Overlap</span><output id="grain-delay-overlap-value" for="grain-delay-overlap">2 grains</output><input id="grain-delay-overlap" type="range" min="1" max="4" step="1" value="2"></label>
+          <label class="mix-control" for="grain-delay-pitch"><span>Pitch</span><output id="grain-delay-pitch-value" for="grain-delay-pitch">0 semitones</output><input id="grain-delay-pitch" type="range" min="-24" max="24" step="0.5" value="0"></label>
+          <label class="mix-control" for="grain-delay-spray"><span>Spray</span><output id="grain-delay-spray-value" for="grain-delay-spray">0 ms</output><input id="grain-delay-spray" type="range" min="0" max="100" step="1" value="0"></label>
+        </div>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">
         <label class="mix-control" for="flanger-rate-hz">

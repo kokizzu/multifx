@@ -239,6 +239,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::GrainDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -773,6 +776,22 @@ public:
         config.spillover = false;
         static_cast<tabletfx::effects::DiatonicHarmonizer*>(effects_[50].effect.get())
             ->configure(config);
+    }
+
+    void configure_grain_delay(float time_ms, float feedback, float mix,
+                               float grain_size_ms, std::uint32_t overlap,
+                               float pitch_semitones, float spray_ms) noexcept {
+        tabletfx::GrainDelayParameters parameters;
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.grain_size_ms = grain_size_ms;
+        parameters.overlap = static_cast<std::uint8_t>(
+            std::clamp(overlap, 0U, 255U));
+        parameters.pitch_semitones = pitch_semitones;
+        parameters.spray_ms = spray_ms;
+        static_cast<tabletfx::GrainDelay*>(effects_[51].effect.get())
+            ->configure(parameters);
     }
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
@@ -1920,6 +1939,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_diatonic_harmonizer(
         as_chain(opaque)->configure_diatonic_harmonizer(
             mix, pitch_interval, key, scale, tone_hz, delay_ms, feedback,
             tap_division, tempo_bpm);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_grain_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float grain_size_ms, std::uint32_t overlap, float pitch_semitones,
+    float spray_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_grain_delay(
+            time_ms, feedback, mix, grain_size_ms, overlap,
+            pitch_semitones, spray_ms);
     }
 }
 

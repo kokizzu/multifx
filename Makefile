@@ -26,6 +26,8 @@ PYTHON ?= python3
 	publish-triple-double-chorus-plan publish-triple-double-chorus \
 	publish-four-band-resonator-plan publish-four-band-resonator \
 	publish-diatonic-harmonizer-plan publish-diatonic-harmonizer \
+	publish-grain-delay-plan publish-grain-delay \
+	publish-pitch-arpeggiator-plan publish-pitch-arpeggiator \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -250,6 +252,18 @@ publish-diatonic-harmonizer-plan:
 
 publish-diatonic-harmonizer:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint diatonic-harmonizer
+
+publish-grain-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint grain-delay
+
+publish-grain-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint grain-delay
+
+publish-pitch-arpeggiator-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint pitch-arpeggiator
+
+publish-pitch-arpeggiator:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint pitch-arpeggiator
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog
