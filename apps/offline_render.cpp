@@ -87,6 +87,9 @@ struct Options {
     float delay_ms = 0.0F;
     float delay_feedback = 0.25F;
     float delay_mix = 0.0F;
+    bool delay_tempo_enabled = false;
+    float delay_tempo_bpm = 120.0F;
+    tabletfx::DelayDivision delay_division = tabletfx::DelayDivision::quarter;
     bool pitch_enabled = false;
     float pitch_semitones = 0.0F;
     bool compressor_enabled = false;
@@ -115,6 +118,22 @@ float parse_float(std::string_view name, const char* raw) {
     return value;
 }
 
+tabletfx::DelayDivision parse_delay_division(std::string_view value) {
+    if (value == "whole") return tabletfx::DelayDivision::whole;
+    if (value == "dotted-half") return tabletfx::DelayDivision::dotted_half;
+    if (value == "half") return tabletfx::DelayDivision::half;
+    if (value == "dotted-quarter") return tabletfx::DelayDivision::dotted_quarter;
+    if (value == "quarter") return tabletfx::DelayDivision::quarter;
+    if (value == "quarter-triplet") return tabletfx::DelayDivision::quarter_triplet;
+    if (value == "dotted-eighth") return tabletfx::DelayDivision::dotted_eighth;
+    if (value == "eighth") return tabletfx::DelayDivision::eighth;
+    if (value == "eighth-triplet") return tabletfx::DelayDivision::eighth_triplet;
+    if (value == "dotted-sixteenth") return tabletfx::DelayDivision::dotted_sixteenth;
+    if (value == "sixteenth") return tabletfx::DelayDivision::sixteenth;
+    if (value == "sixteenth-triplet") return tabletfx::DelayDivision::sixteenth_triplet;
+    throw std::invalid_argument("Unsupported delay division: " + std::string(value));
+}
+
 Options parse_options(int argc, char** argv, int first) {
     Options options;
     for (int i = first; i < argc; ++i) {
@@ -128,6 +147,11 @@ Options parse_options(int argc, char** argv, int first) {
             else if (value == "mono" || value == "1") options.output_channels = 1;
             else if (value == "stereo" || value == "2") options.output_channels = 2;
             else throw std::invalid_argument("Output channels must be preserve, mono, or stereo");
+            continue;
+        }
+        if (key == "--delay-division") {
+            options.delay_division = parse_delay_division(argv[++i]);
+            options.delay_tempo_enabled = true;
             continue;
         }
         if (key == "--mono-sum") {
@@ -463,6 +487,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.clean_boost_enabled = true;
         }
         else if (key == "--delay-ms") options.delay_ms = value;
+        else if (key == "--delay-sync-bpm") {
+            options.delay_tempo_bpm = value;
+            options.delay_tempo_enabled = true;
+        }
         else if (key == "--delay-feedback") options.delay_feedback = value;
         else if (key == "--delay-mix") options.delay_mix = value;
         else if (key == "--pitch-semitones") {
@@ -641,10 +669,16 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                       options.eq_band3_frequency_hz, options.eq_band3_gain_db, options.eq_band3_q);
         effects.push_back(std::move(eq));
     }
-    if (options.delay_ms > 0.0F && options.delay_mix > 0.0F) {
-        effects.push_back(std::make_unique<tabletfx::Delay>(
-            static_cast<float>(sample_rate), channels, 5000.0F, options.delay_ms,
-            options.delay_feedback, options.delay_mix));
+    if ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F) {
+        auto delay = std::make_unique<tabletfx::Delay>(
+            static_cast<float>(sample_rate), channels, 5000.0F,
+            options.delay_ms > 0.0F ? options.delay_ms : 350.0F,
+            options.delay_feedback, options.delay_mix);
+        if (options.delay_tempo_enabled) {
+            delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
+                                   options.delay_feedback, options.delay_mix);
+        }
+        effects.push_back(std::move(delay));
     }
     if (options.pitch_enabled) {
         auto pitch = std::make_unique<tabletfx::PolyPitchShifter>(
@@ -1303,7 +1337,9 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                 " [--drive 1..20] [--delay-ms ms] [--delay-feedback 0..0.95] [--delay-mix 0..1]"
+                  " [--drive 1..20] [--delay-ms ms] [--delay-sync-bpm 20..300]"
+                  " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
+                  " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
                  " [--pitch-semitones -12..12]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
                  " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"

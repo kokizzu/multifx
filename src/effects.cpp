@@ -223,51 +223,232 @@ void SoftDrive::process(std::span<float> interleaved, std::uint16_t channels) no
 Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
              float delay_ms, float feedback, float mix)
     : sample_rate_(sample_rate), channels_(channels), delay_samples_(1), feedback_(0.0F),
-      mix_(0.0F), write_frame_(0), capacity_frames_(0) {
-    if (sample_rate <= 0.0F || channels == 0 || max_delay_ms <= 0.0F) {
-        throw std::invalid_argument("Delay requires a positive sample rate, channel count, and maximum delay");
+      target_feedback_(0.0F), mix_(0.0F), target_mix_(0.0F), write_frame_(0),
+      capacity_frames_(0) {
+    if (!std::isfinite(sample_rate_) || sample_rate_ <= 0.0F ||
+        sample_rate_ > 384000.0F || channels_ == 0 || channels_ > 2 ||
+        !std::isfinite(max_delay_ms) || max_delay_ms <= 0.0F) {
+        throw std::invalid_argument(
+            "Delay requires a finite supported sample rate, mono/stereo layout, and positive maximum delay");
     }
-    const double maximum_frames = std::ceil(static_cast<double>(sample_rate_) * max_delay_ms / 1000.0);
-    if (maximum_frames > static_cast<double>(std::numeric_limits<std::size_t>::max() - 1)) {
+    const double requested_frames = std::ceil(static_cast<double>(sample_rate_) *
+                                              static_cast<double>(max_delay_ms) / 1000.0);
+    if (!std::isfinite(requested_frames) || requested_frames < 1.0 ||
+        requested_frames >= static_cast<double>(std::numeric_limits<std::size_t>::max() - 1)) {
         throw std::length_error("Delay buffer size is too large");
     }
-    capacity_frames_ = static_cast<std::size_t>(maximum_frames) + 1;
+    const std::size_t maximum_frames = static_cast<std::size_t>(requested_frames);
+    capacity_frames_ = maximum_frames + 1;
+    if (capacity_frames_ > storage_.max_size() / static_cast<std::size_t>(channels_)) {
+        throw std::length_error("Delay buffer size is too large");
+    }
     storage_.assign(capacity_frames_ * channels_, 0.0F);
+    const double ramp_frames = std::ceil(static_cast<double>(sample_rate_) * 0.010);
+    const std::size_t ramp_samples = ramp_frames >= 1.0
+                                         ? static_cast<std::size_t>(ramp_frames)
+                                         : 0;
+    parameter_ramp_total_ = std::max<std::size_t>(ramp_samples, 1);
+    delay_transition_total_ = parameter_ramp_total_;
     configure(delay_ms, feedback, mix);
+    reset();
 }
 
 void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
-    const float maximum_ms = static_cast<float>(capacity_frames_ - 1) * 1000.0F / sample_rate_;
-    const float bounded_ms = std::clamp(delay_ms, 1.0F, maximum_ms);
-    delay_samples_ = std::clamp(static_cast<std::size_t>(std::llround(bounded_ms * sample_rate_ / 1000.0F)),
-                                std::size_t{1}, capacity_frames_ - 1);
-    feedback_ = std::clamp(feedback, 0.0F, 0.95F);
-    mix_ = std::clamp(mix, 0.0F, 1.0F);
+    if (std::isfinite(delay_ms)) set_delay_samples(samples_for_ms(delay_ms));
+    if (std::isfinite(feedback)) target_feedback_ = std::clamp(feedback, 0.0F, 0.95F);
+    if (std::isfinite(mix)) target_mix_ = std::clamp(mix, 0.0F, 1.0F);
+    time_mode_ = DelayTimeMode::milliseconds;
+    retarget_parameters();
+}
+
+void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
+                            float mix) noexcept {
+    tempo_bpm_ = std::isfinite(bpm) ? std::clamp(bpm, 20.0F, 300.0F) : 120.0F;
+    switch (division) {
+    case DelayDivision::whole:
+    case DelayDivision::dotted_half:
+    case DelayDivision::half:
+    case DelayDivision::dotted_quarter:
+    case DelayDivision::quarter:
+    case DelayDivision::quarter_triplet:
+    case DelayDivision::dotted_eighth:
+    case DelayDivision::eighth:
+    case DelayDivision::eighth_triplet:
+    case DelayDivision::dotted_sixteenth:
+    case DelayDivision::sixteenth:
+    case DelayDivision::sixteenth_triplet:
+        division_ = division;
+        break;
+    default:
+        division_ = DelayDivision::quarter;
+        break;
+    }
+
+    const float beats = beats_for_division(division_);
+    const float delay_ms = (60000.0F / tempo_bpm_) * beats;
+    set_delay_samples(samples_for_ms(delay_ms));
+    if (std::isfinite(feedback)) target_feedback_ = std::clamp(feedback, 0.0F, 0.95F);
+    if (std::isfinite(mix)) target_mix_ = std::clamp(mix, 0.0F, 1.0F);
+    time_mode_ = DelayTimeMode::tempo_sync;
+    retarget_parameters();
+}
+
+std::size_t Delay::samples_for_ms(float delay_ms) const noexcept {
+    const std::size_t maximum_samples = capacity_frames_ - 1;
+    const double minimum_ms_samples = std::ceil(static_cast<double>(sample_rate_) / 1000.0);
+    const std::size_t minimum_samples = std::min(
+        maximum_samples,
+        std::max<std::size_t>(1, static_cast<std::size_t>(minimum_ms_samples)));
+    const double requested = static_cast<double>(delay_ms) *
+                             static_cast<double>(sample_rate_) / 1000.0;
+    if (!std::isfinite(requested) || requested >= static_cast<double>(maximum_samples)) {
+        return maximum_samples;
+    }
+    if (requested <= static_cast<double>(minimum_samples)) return minimum_samples;
+    return std::clamp(static_cast<std::size_t>(std::llround(requested)),
+                      minimum_samples, maximum_samples);
+}
+
+float Delay::beats_for_division(DelayDivision division) noexcept {
+    switch (division) {
+    case DelayDivision::whole: return 4.0F;
+    case DelayDivision::dotted_half: return 3.0F;
+    case DelayDivision::half: return 2.0F;
+    case DelayDivision::dotted_quarter: return 1.5F;
+    case DelayDivision::quarter: return 1.0F;
+    case DelayDivision::quarter_triplet: return 2.0F / 3.0F;
+    case DelayDivision::dotted_eighth: return 0.75F;
+    case DelayDivision::eighth: return 0.5F;
+    case DelayDivision::eighth_triplet: return 1.0F / 3.0F;
+    case DelayDivision::dotted_sixteenth: return 0.375F;
+    case DelayDivision::sixteenth: return 0.25F;
+    case DelayDivision::sixteenth_triplet: return 1.0F / 6.0F;
+    }
+    return 1.0F;
+}
+
+void Delay::set_delay_samples(std::size_t samples) noexcept {
+    samples = std::clamp(samples, std::size_t{1}, capacity_frames_ - 1);
+    if (samples == delay_samples_) return;
+
+    if (delay_transition_remaining_ > 0) {
+        const float progress = static_cast<float>(delay_transition_total_ -
+                                                  delay_transition_remaining_) /
+                              static_cast<float>(delay_transition_total_);
+        transition_from_delay_samples_ +=
+            (static_cast<float>(delay_samples_) - transition_from_delay_samples_) * progress;
+    } else {
+        transition_from_delay_samples_ = static_cast<float>(delay_samples_);
+    }
+    delay_samples_ = samples;
+    delay_transition_remaining_ = delay_transition_total_;
+}
+
+float Delay::read_delay(std::size_t delay_samples, std::uint16_t channel) const noexcept {
+    const std::size_t read_frame = write_frame_ >= delay_samples
+                                       ? write_frame_ - delay_samples
+                                       : write_frame_ + capacity_frames_ - delay_samples;
+    return storage_[read_frame * channels_ + channel];
+}
+
+float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) const noexcept {
+    double read_position = static_cast<double>(write_frame_) -
+                           static_cast<double>(delay_samples);
+    if (read_position < 0.0) read_position += static_cast<double>(capacity_frames_);
+    const std::size_t first_frame = static_cast<std::size_t>(read_position);
+    const std::size_t second_frame = first_frame + 1 == capacity_frames_ ? 0 : first_frame + 1;
+    const double fraction = read_position - static_cast<double>(first_frame);
+    const std::size_t first_index = first_frame * channels_ + channel;
+    const std::size_t second_index = second_frame * channels_ + channel;
+    const double first = storage_[first_index];
+    const double second = storage_[second_index];
+    return static_cast<float>(first + (second - first) * fraction);
+}
+
+void Delay::retarget_parameters() noexcept {
+    if (parameter_ramp_total_ <= 1) {
+        feedback_ = target_feedback_;
+        mix_ = target_mix_;
+        feedback_step_ = 0.0F;
+        mix_step_ = 0.0F;
+        parameter_ramp_remaining_ = 0;
+        return;
+    }
+    parameter_ramp_remaining_ = parameter_ramp_total_;
+    const float count = static_cast<float>(parameter_ramp_total_);
+    feedback_step_ = (target_feedback_ - feedback_) / count;
+    mix_step_ = (target_mix_ - mix_) / count;
+}
+
+void Delay::advance_ramps() noexcept {
+    if (parameter_ramp_remaining_ == 0) return;
+    feedback_ += feedback_step_;
+    mix_ += mix_step_;
+    --parameter_ramp_remaining_;
+    if (parameter_ramp_remaining_ == 0) {
+        feedback_ = target_feedback_;
+        mix_ = target_mix_;
+        feedback_step_ = 0.0F;
+        mix_step_ = 0.0F;
+    }
 }
 
 void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexcept {
-    if (channels != channels_ || channels == 0 || mix_ <= 0.0F) {
+    if (channels != channels_ || channels == 0) {
         return;
     }
     const std::size_t frames = interleaved.size() / channels;
+    const float maximum = std::numeric_limits<float>::max();
     for (std::size_t frame = 0; frame < frames; ++frame) {
-        const std::size_t read_frame = (write_frame_ + capacity_frames_ - delay_samples_) % capacity_frames_;
+        const float transition_progress = delay_transition_remaining_ == 0
+            ? 1.0F
+            : static_cast<float>(delay_transition_total_ - delay_transition_remaining_) /
+                  static_cast<float>(delay_transition_total_);
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t input_index = frame * channels_ + channel;
-            const std::size_t delay_index = read_frame * channels_ + channel;
             const std::size_t write_index = write_frame_ * channels_ + channel;
-            const float input = interleaved[input_index];
-            const float delayed = storage_[delay_index];
-            interleaved[input_index] = input * (1.0F - mix_) + delayed * mix_;
-            storage_[write_index] = input + delayed * feedback_;
+            const float input = std::isfinite(interleaved[input_index]) ? interleaved[input_index] : 0.0F;
+            const float new_delay = read_delay(delay_samples_, channel);
+            float delayed = new_delay;
+            if (delay_transition_remaining_ > 0) {
+                const float old_delay = read_fractional_delay(transition_from_delay_samples_, channel);
+                delayed = old_delay + (new_delay - old_delay) * transition_progress;
+            }
+
+            const double output_value = static_cast<double>(input) * (1.0 - static_cast<double>(mix_)) +
+                                        static_cast<double>(delayed) * static_cast<double>(mix_);
+            const double bounded_output = std::clamp(output_value,
+                                                      -static_cast<double>(maximum),
+                                                      static_cast<double>(maximum));
+            interleaved[input_index] = static_cast<float>(bounded_output);
+            const double feedback_value = static_cast<double>(input) +
+                                          static_cast<double>(delayed) * feedback_;
+            const double bounded_feedback = std::clamp(feedback_value,
+                                                       -static_cast<double>(maximum),
+                                                       static_cast<double>(maximum));
+            storage_[write_index] = static_cast<float>(bounded_feedback);
         }
-        write_frame_ = (write_frame_ + 1) % capacity_frames_;
+        write_frame_ = write_frame_ + 1 == capacity_frames_ ? 0 : write_frame_ + 1;
+        advance_ramps();
+        if (delay_transition_remaining_ > 0) {
+            --delay_transition_remaining_;
+            if (delay_transition_remaining_ == 0) {
+                transition_from_delay_samples_ = static_cast<float>(delay_samples_);
+            }
+        }
     }
 }
 
 void Delay::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
     write_frame_ = 0;
+    feedback_ = target_feedback_;
+    mix_ = target_mix_;
+    feedback_step_ = 0.0F;
+    mix_step_ = 0.0F;
+    parameter_ramp_remaining_ = 0;
+    transition_from_delay_samples_ = static_cast<float>(delay_samples_);
+    delay_transition_remaining_ = 0;
 }
 
 } // namespace tabletfx

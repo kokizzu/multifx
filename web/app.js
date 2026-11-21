@@ -49,6 +49,7 @@ const DEFAULT_PARAMETERS = {
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
+  delayTempo: [0, 120, 4],
   pitchSemitones: 0,
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -233,6 +234,16 @@ const vibratoDepth = document.querySelector("#vibrato-depth-ms");
 const vibratoDepthValue = document.querySelector("#vibrato-depth-value");
 const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
+const delayMode = document.querySelector("#delay-time-mode");
+const delayMs = document.querySelector("#delay-time-ms");
+const delayMsValue = document.querySelector("#delay-time-ms-value");
+const delayBpm = document.querySelector("#delay-tempo-bpm");
+const delayBpmValue = document.querySelector("#delay-tempo-bpm-value");
+const delayDivision = document.querySelector("#delay-division");
+const delayFeedback = document.querySelector("#delay-feedback");
+const delayFeedbackValue = document.querySelector("#delay-feedback-value");
+const delayMix = document.querySelector("#delay-mix");
+const delayMixValue = document.querySelector("#delay-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1056,6 +1067,35 @@ for (const control of [vibratoRate, vibratoDepth, vibratoMix]) {
   control.addEventListener("change", updateVibrato);
 }
 
+function updateDelay() {
+  const tempoSync = delayMode.value === "tempo";
+  delayMs.disabled = tempoSync;
+  delayBpm.disabled = !tempoSync;
+  delayDivision.disabled = !tempoSync;
+  const delayMsNumber = Number(delayMs.value);
+  const bpm = Number(delayBpm.value);
+  const division = Number(delayDivision.value);
+  const feedback = Number(delayFeedback.value);
+  const mix = Number(delayMix.value);
+  DEFAULT_PARAMETERS.delay = [delayMsNumber, feedback, mix];
+  DEFAULT_PARAMETERS.delayTempo = [tempoSync ? 1 : 0, bpm, division];
+  delayMsValue.value = `${delayMsNumber.toFixed(0)} ms`;
+  delayBpmValue.value = `${bpm.toFixed(0)} BPM`;
+  delayFeedbackValue.value = `${Math.round(feedback * 100)}%`;
+  delayMixValue.value = `${Math.round(mix * 100)}%`;
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "delay",
+      value: { tempoSync, delayMs: delayMsNumber, bpm, division, feedback, mix },
+    });
+  }
+}
+
+for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
+  control.addEventListener("input", updateDelay);
+  control.addEventListener("change", updateDelay);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -1207,6 +1247,7 @@ async function runBrowserSelfTest() {
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
+        delayTempo: [1, 120, 7],
         pitchSemitones: 5,
         filters: [80, 12000],
         pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -1276,6 +1317,12 @@ async function runBrowserSelfTest() {
     vibratoRate.value = "5";
     vibratoDepth.value = "0.35";
     vibratoMix.value = "0.35";
+    delayMode.value = "tempo";
+    delayMs.value = "180";
+    delayBpm.value = "120";
+    delayDivision.value = "7";
+    delayFeedback.value = "0.25";
+    delayMix.value = "0.2";
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();
@@ -1288,6 +1335,7 @@ async function runBrowserSelfTest() {
     updateFlanger();
     updatePhaser();
     updateVibrato();
+    updateDelay();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

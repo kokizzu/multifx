@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add round fuzz effect"
+COMMIT_MESSAGE = "feat: add tempo-synced digital delay"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -47,6 +47,7 @@ CHECKPOINT_PATHS = (
     "tests/test_mid_overdrive.cpp",
     "tests/test_high_gain_distortion.cpp",
     "tests/test_round_fuzz.cpp",
+    "tests/test_delay.cpp",
     "tests/test_chorus.cpp",
     "tests/test_envelope_wah.cpp",
     "include/tabletfx/effects/filters.hpp",

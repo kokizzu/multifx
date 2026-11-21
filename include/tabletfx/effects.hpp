@@ -81,6 +81,26 @@ private:
     float normalization_;
 };
 
+enum class DelayTimeMode : std::uint8_t {
+    milliseconds,
+    tempo_sync,
+};
+
+enum class DelayDivision : std::uint8_t {
+    whole,
+    dotted_half,
+    half,
+    dotted_quarter,
+    quarter,
+    quarter_triplet,
+    dotted_eighth,
+    eighth,
+    eighth_triplet,
+    dotted_sixteenth,
+    sixteenth,
+    sixteenth_triplet,
+};
+
 class Delay final : public Effect {
 public:
     Delay(float sample_rate, std::uint16_t channels, float max_delay_ms = 2000.0F,
@@ -89,16 +109,50 @@ public:
     [[nodiscard]] std::size_t memory_bytes() const noexcept override {
         return sizeof(*this) + storage_.capacity() * sizeof(float);
     }
+    [[nodiscard]] std::size_t delay_samples() const noexcept { return delay_samples_; }
+    [[nodiscard]] float delay_time_ms() const noexcept {
+        return static_cast<float>(static_cast<double>(delay_samples_) * 1000.0 /
+                                  static_cast<double>(sample_rate_));
+    }
+    [[nodiscard]] float feedback() const noexcept { return target_feedback_; }
+    [[nodiscard]] float mix() const noexcept { return target_mix_; }
+    [[nodiscard]] float tempo_bpm() const noexcept { return tempo_bpm_; }
+    [[nodiscard]] DelayDivision division() const noexcept { return division_; }
+    [[nodiscard]] DelayTimeMode time_mode() const noexcept { return time_mode_; }
     void configure(float delay_ms, float feedback, float mix) noexcept;
+    void configure_tempo(float bpm, DelayDivision division, float feedback,
+                         float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
+    [[nodiscard]] std::size_t samples_for_ms(float delay_ms) const noexcept;
+    [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
+    [[nodiscard]] float read_delay(std::size_t delay_samples,
+                                   std::uint16_t channel) const noexcept;
+    [[nodiscard]] float read_fractional_delay(float delay_samples,
+                                              std::uint16_t channel) const noexcept;
+    void set_delay_samples(std::size_t samples) noexcept;
+    void retarget_parameters() noexcept;
+    void advance_ramps() noexcept;
+
     float sample_rate_;
     std::uint16_t channels_;
     std::size_t delay_samples_;
+    float transition_from_delay_samples_ = 1.0F;
+    std::size_t delay_transition_remaining_ = 0;
+    std::size_t delay_transition_total_ = 1;
     float feedback_;
+    float target_feedback_;
+    float feedback_step_ = 0.0F;
     float mix_;
+    float target_mix_;
+    float mix_step_ = 0.0F;
+    std::size_t parameter_ramp_remaining_ = 0;
+    std::size_t parameter_ramp_total_ = 1;
+    float tempo_bpm_ = 120.0F;
+    DelayDivision division_ = DelayDivision::quarter;
+    DelayTimeMode time_mode_ = DelayTimeMode::milliseconds;
     std::size_t write_frame_ = 0;
     std::size_t capacity_frames_;
     std::vector<float> storage_;

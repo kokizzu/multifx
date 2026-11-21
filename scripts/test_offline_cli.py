@@ -168,6 +168,35 @@ def check_flanger(executable: Path) -> None:
             )
 
 
+def check_delay_time_modes(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [32767] + [0] * 2049
+    with tempfile.TemporaryDirectory(prefix="tabletfx-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        cases = (
+            ("free", ["--delay-ms", "8"], 64),
+            ("tempo", ["--delay-sync-bpm", "120", "--delay-division", "eighth"], 2000),
+        )
+        for label, time_args, expected_frame in cases:
+            output = root / f"{label}.wav"
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output), *time_args,
+                 "--delay-feedback", "0", "--delay-mix", "1"],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"{label} delay option did not instantiate one processor: {result.stdout}")
+            data = output.read_bytes()
+            samples = struct.unpack("<2050f", data[44:44 + 2050 * 4])
+            expected = 32767 / 32768.0
+            if abs(samples[0]) > 1.0e-7 or abs(samples[expected_frame] - expected) > 1.0e-6:
+                raise AssertionError(
+                    f"{label} delay impulse should appear at frame {expected_frame}; got {samples[expected_frame]}"
+                )
+
+
 def check_phaser(executable: Path) -> None:
     sample_rate = 48000
     source_samples = [32767] + [0] * 1023
@@ -575,6 +604,7 @@ def main() -> None:
     args = parser.parse_args()
     check_render(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
+    check_delay_time_modes(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -590,7 +620,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused and high-gain distortion/round fuzz/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, free/tempo-synced delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

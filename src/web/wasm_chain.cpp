@@ -385,6 +385,15 @@ public:
             ->configure(delay_ms, feedback, mix);
     }
 
+    void configure_delay_tempo(float bpm, std::uint32_t division,
+                               float feedback, float mix) noexcept {
+        const auto safe_division = division <= 11U
+            ? static_cast<tabletfx::DelayDivision>(division)
+            : static_cast<tabletfx::DelayDivision>(255U);
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_tempo(bpm, safe_division, feedback, mix);
+    }
+
     void configure_pitch(float semitones) noexcept {
         static_cast<tabletfx::PolyPitchShifter*>(effects_[22].effect.get())
             ->set_pitch_semitones(semitones);
@@ -1039,6 +1048,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,
                                              float feedback, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay(delay_ms, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_tempo(void* opaque, float bpm,
+                                                   std::uint32_t division,
+                                                   float feedback, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_tempo(bpm, division, feedback, mix);
     }
 }
 

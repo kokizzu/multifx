@@ -121,7 +121,8 @@ def build_web() -> None:
         "_tf_chain_set_mid_overdrive",
         "_tf_chain_set_high_gain_distortion",
         "_tf_chain_set_round_fuzz",
-        "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_pitch",
+        "_tf_chain_set_eq", "_tf_chain_set_delay", "_tf_chain_set_delay_tempo",
+        "_tf_chain_set_pitch",
         "_tf_chain_set_filters",
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
@@ -492,7 +493,8 @@ def browser_test() -> None:
             "--eq-band2-q", "0.707",
             "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "1",
             "--eq-band3-q", "0.707",
-            "--delay-ms", "180", "--delay-feedback", "0.25", "--delay-mix", "0.2",
+            "--delay-sync-bpm", "120", "--delay-division", "eighth",
+            "--delay-feedback", "0.25", "--delay-mix", "0.2",
             "--pitch-semitones", "5",
         ]
         run(renderer_command, cwd=ROOT)

@@ -151,6 +151,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_round_fuzz_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_round_fuzz_tests COMMAND tabletfx_round_fuzz_tests)
 
+    add_executable(tabletfx_delay_tests tests/test_delay.cpp)
+    target_link_libraries(tabletfx_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_delay_tests COMMAND tabletfx_delay_tests)
+
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_wah_tests COMMAND tabletfx_wah_tests)
