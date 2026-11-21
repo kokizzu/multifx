@@ -5,7 +5,7 @@ PYTHON ?= python3
 	test-audio-fixtures windows-cross-build web-toolchain-bootstrap web-toolchain-verify \
 	web-build web-browser-test web-test web-serve diff-check publish-plan publish-checkpoint \
 	publish-picker-plan publish-picker publish-room-reverb-plan publish-room-reverb \
-	publish-hall-reverb-plan publish-hall-reverb
+	publish-hall-reverb-plan publish-hall-reverb publish-plate-reverb-plan publish-plate-reverb
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -103,3 +103,9 @@ publish-hall-reverb-plan:
 
 publish-hall-reverb:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint hall-reverb
+
+publish-plate-reverb-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint plate-reverb
+
+publish-plate-reverb:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint plate-reverb

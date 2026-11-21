@@ -32,6 +32,7 @@ add_library(tabletfx_core
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
+    src/effects/plate_reverb.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -189,6 +190,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_hall_reverb_tests tests/test_hall_reverb.cpp)
     target_link_libraries(tabletfx_hall_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_hall_reverb_tests COMMAND tabletfx_hall_reverb_tests)
+
+    add_executable(tabletfx_plate_reverb_tests tests/test_plate_reverb.cpp)
+    target_link_libraries(tabletfx_plate_reverb_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_plate_reverb_tests COMMAND tabletfx_plate_reverb_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

@@ -261,6 +261,30 @@ HALL_REVERB_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+PLATE_REVERB_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/plate_reverb.hpp",
+    "src/effects/plate_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_plate_reverb.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -287,6 +311,8 @@ CHECKPOINTS = {
                     "feat: add project-authored room reverb"),
     "hall-reverb": (HALL_REVERB_CHECKPOINT_PATHS,
                     "feat: add project-authored hall reverb"),
+    "plate-reverb": (PLATE_REVERB_CHECKPOINT_PATHS,
+                     "feat: add project-authored plate reverb"),
 }
 
 

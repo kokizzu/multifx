@@ -143,6 +143,10 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--hall-pre-delay-ms", "32", "--hall-damping-hz", "9000",
         "--hall-low-cut-hz", "100", "--hall-mix", "0.25",
         "--hall-level-db", "0",
+        "--plate-reverb", "--plate-decay-s", "1.8",
+        "--plate-pre-delay-ms", "0", "--plate-damping-hz", "7500",
+        "--plate-diffusion", "0.82", "--plate-balance", "0.5",
+        "--plate-mix", "0.2", "--plate-level-db", "0",
     ]
     if delay_character == "tape":
         command.extend([
@@ -165,7 +169,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 32:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 33:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -232,7 +236,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 32-effect chain, including Room and Hall Reverb, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 33-effect chain, including Room, Hall, and Plate Reverb, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

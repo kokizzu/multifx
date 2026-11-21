@@ -8,6 +8,7 @@
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/hall_reverb.hpp"
+#include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -69,7 +70,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(30);
+        effects_.reserve(31);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -159,6 +160,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::HallReverb>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::PlateReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -184,7 +188,7 @@ public:
         if (index >= effects_.size()) {
             return false;
         }
-        if ((index == 28U || index == 29U) && effects_[index].enabled && !enabled) {
+        if ((index >= 28U && index <= 30U) && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -722,6 +726,21 @@ public:
         reverb->configure(parameters);
     }
 
+    void configure_plate_reverb(float decay_seconds, float pre_delay_ms,
+                                float damping_hz, float diffusion, float balance,
+                                float mix, float level_db) noexcept {
+        auto* reverb = static_cast<tabletfx::PlateReverb*>(effects_[30].effect.get());
+        tabletfx::PlateReverbParameters parameters;
+        parameters.decay_seconds = decay_seconds;
+        parameters.pre_delay_ms = pre_delay_ms;
+        parameters.damping_hz = damping_hz;
+        parameters.diffusion = diffusion;
+        parameters.balance = balance;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        reverb->configure(parameters);
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1121,6 +1140,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_hall_reverb(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_hall_reverb(
             decay_seconds, pre_delay_ms, damping_hz, low_cut_hz, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plate_reverb(
+    void* opaque, float decay_seconds, float pre_delay_ms, float damping_hz,
+    float diffusion, float balance, float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plate_reverb(
+            decay_seconds, pre_delay_ms, damping_hz, diffusion, balance, mix, level_db);
     }
 }
 

@@ -31,6 +31,7 @@ const EFFECT_NAMES = [
   "Shelf / tilt EQ",
   "Room reverb",
   "Hall reverb",
+  "Plate reverb",
   "Output level",
   "Peak limiter",
 ];
@@ -60,6 +61,7 @@ const DEFAULT_PARAMETERS = {
   shelfTiltEQ: [0, 1000, 0],
   roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
   hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
+  plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -361,6 +363,20 @@ const hallReverbMix = document.querySelector("#hall-reverb-mix");
 const hallReverbMixValue = document.querySelector("#hall-reverb-mix-value");
 const hallReverbLevel = document.querySelector("#hall-reverb-level-db");
 const hallReverbLevelValue = document.querySelector("#hall-reverb-level-value");
+const plateReverbDecay = document.querySelector("#plate-reverb-decay-seconds");
+const plateReverbDecayValue = document.querySelector("#plate-reverb-decay-value");
+const plateReverbPreDelay = document.querySelector("#plate-reverb-pre-delay-ms");
+const plateReverbPreDelayValue = document.querySelector("#plate-reverb-pre-delay-value");
+const plateReverbDamping = document.querySelector("#plate-reverb-damping-hz");
+const plateReverbDampingValue = document.querySelector("#plate-reverb-damping-value");
+const plateReverbDiffusion = document.querySelector("#plate-reverb-diffusion");
+const plateReverbDiffusionValue = document.querySelector("#plate-reverb-diffusion-value");
+const plateReverbBalance = document.querySelector("#plate-reverb-balance");
+const plateReverbBalanceValue = document.querySelector("#plate-reverb-balance-value");
+const plateReverbMix = document.querySelector("#plate-reverb-mix");
+const plateReverbMixValue = document.querySelector("#plate-reverb-mix-value");
+const plateReverbLevel = document.querySelector("#plate-reverb-level-db");
+const plateReverbLevelValue = document.querySelector("#plate-reverb-level-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1461,6 +1477,29 @@ function updateHallReverb() {
   }
 }
 
+function updatePlateReverb() {
+  const values = [
+    Number(plateReverbDecay.value),
+    Number(plateReverbPreDelay.value),
+    Number(plateReverbDamping.value),
+    Number(plateReverbDiffusion.value) / 100,
+    Number(plateReverbBalance.value) / 100,
+    Number(plateReverbMix.value) / 100,
+    Number(plateReverbLevel.value),
+  ];
+  plateReverbDecayValue.value = `${values[0].toFixed(2)} s`;
+  plateReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
+  plateReverbDampingValue.value = `${values[2].toFixed(0)} Hz`;
+  plateReverbDiffusionValue.value = `${Math.round(values[3] * 100)}%`;
+  plateReverbBalanceValue.value = `${Math.round(values[4] * 100)}% late`;
+  plateReverbMixValue.value = `${Math.round(values[5] * 100)}%`;
+  plateReverbLevelValue.value = `${values[6].toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.plateReverb = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "plate-reverb", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1491,6 +1530,11 @@ for (const input of [hallReverbDecay, hallReverbPreDelay, hallReverbDamping,
   input.addEventListener("input", updateHallReverb);
   input.addEventListener("change", updateHallReverb);
 }
+for (const input of [plateReverbDecay, plateReverbPreDelay, plateReverbDamping,
+  plateReverbDiffusion, plateReverbBalance, plateReverbMix, plateReverbLevel]) {
+  input.addEventListener("input", updatePlateReverb);
+  input.addEventListener("change", updatePlateReverb);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1498,6 +1542,7 @@ updateBassGraphicEQ();
 updateShelfTiltEQ();
 updateRoomReverb();
 updateHallReverb();
+updatePlateReverb();
 
 function updateDelayDual() {
   const values = [
@@ -1648,20 +1693,20 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 32 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 32 || effectRows.length !== 32 ||
+    const expectedEffectIds = Array.from({ length: 33 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 33 || effectRows.length !== 33 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
-        initialEffectState[29] ||
+        initialEffectState[29] || initialEffectState[30] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 32 ordered effects (IDs 0–31) with Room and Hall Reverb disabled by default.");
+      throw new Error("The effect picker must list 33 ordered effects (IDs 0–32) with Room, Hall, and Plate Reverb disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 32" ||
+        effectCount.value !== "5 of 33" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1669,9 +1714,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29" || effectCount.value !== "2 of 32" ||
+    if (reverbIds.join(",") !== "28,29,30" || effectCount.value !== "3 of 33" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Reverb filter must return Room and Hall Reverb without changing enabled state.");
+      throw new Error("The Reverb filter must return Room, Hall, and Plate Reverb without changing enabled state.");
     }
     effectCategoryFilter.value = "all";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1679,12 +1724,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 32") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 33") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "32 of 32" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "33 of 33" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1751,6 +1796,7 @@ async function runBrowserSelfTest() {
         shelfTiltEQ: [2, 1200, 2],
         roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
         hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
+        plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
