@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely publish the reviewed vibrato/DSP checkpoint to upstream main."""
+"""Safely publish the reviewed DSP checkpoint to upstream main."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency vibrato effect"
+COMMIT_MESSAGE = "feat: add transparent low-gain overdrive"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -133,10 +133,13 @@ CHECKPOINT_PATHS = (
     "include/tabletfx/effects/flanger.hpp",
     "include/tabletfx/effects/phaser.hpp",
     "include/tabletfx/effects/vibrato.hpp",
+    "include/tabletfx/effects/overdrive.hpp",
     "src/effects/phaser.cpp",
     "src/effects/vibrato.cpp",
+    "src/effects/overdrive.cpp",
     "tests/test_phaser.cpp",
     "tests/test_vibrato.cpp",
+    "tests/test_overdrive.cpp",
     "src/effects/flanger.cpp",
     "tests/test_flanger.cpp",
 )

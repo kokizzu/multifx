@@ -319,6 +319,29 @@ def check_clean_boost(executable: Path) -> None:
             raise AssertionError(f"Clean boost did not apply transparent level gain: {values}")
 
 
+def check_overdrive(executable: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="tabletfx-overdrive-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        output = root / "output.wav"
+        write_pcm16(source, 48000, [16384] * 2400)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--overdrive-drive", "0.5", "--overdrive-level-db", "0",
+             "--overdrive-mix", "1"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Overdrive was not constructed: {result.stdout}")
+        values = struct.unpack("<" + "f" * 2400, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Overdrive CLI produced non-finite audio")
+        if not 0.97 < values[-1] < 1.0:
+            raise AssertionError(f"Overdrive CLI did not apply its bounded soft clip: {values[-1]}")
+
+
 def check_envelope_wah(executable: Path) -> None:
     sample_rate = 48000
     samples = [round(16384 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
@@ -469,11 +492,12 @@ def main() -> None:
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
+    check_overdrive(args.executable.resolve())
     check_envelope_wah(args.executable.resolve())
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/overdrive/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

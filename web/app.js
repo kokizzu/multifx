@@ -11,6 +11,7 @@ const EFFECT_NAMES = [
   "Wah",
   "Envelope wah",
   "Clean boost",
+  "Transparent overdrive",
   "Soft drive",
   "Tremolo",
   "Chorus",
@@ -29,6 +30,7 @@ const DEFAULT_PARAMETERS = {
   volumePedal: [1, -96, 0, 1],
   noiseGate: [-60, -72, 3, 2, 20, 80],
   cleanBoostDb: 0,
+  overdrive: [0.15, -3, 0.35],
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -144,6 +146,12 @@ const touchWahSmoothing = document.querySelector("#touch-wah-smoothing-ms");
 const touchWahSmoothingValue = document.querySelector("#touch-wah-smoothing-value");
 const cleanBoost = document.querySelector("#clean-boost-db");
 const cleanBoostValue = document.querySelector("#clean-boost-value");
+const overdriveDrive = document.querySelector("#overdrive-drive");
+const overdriveDriveValue = document.querySelector("#overdrive-drive-value");
+const overdriveLevel = document.querySelector("#overdrive-level-db");
+const overdriveLevelValue = document.querySelector("#overdrive-level-value");
+const overdriveMix = document.querySelector("#overdrive-mix");
+const overdriveMixValue = document.querySelector("#overdrive-mix-value");
 const tunerReference = document.querySelector("#tuner-reference-hz");
 const tunerReferenceValue = document.querySelector("#tuner-reference-value");
 const tunerMuteOutput = document.querySelector("#tuner-mute-output");
@@ -837,6 +845,21 @@ cleanBoost.addEventListener("input", () => {
   if (workletNode) workletNode.port.postMessage({ type: "clean-boost", value });
 });
 
+function updateOverdrive() {
+  const values = [Number(overdriveDrive.value), Number(overdriveLevel.value),
+    Number(overdriveMix.value)];
+  DEFAULT_PARAMETERS.overdrive = values;
+  overdriveDriveValue.value = Number(overdriveDrive.value).toFixed(2);
+  overdriveLevelValue.value = `${Number(overdriveLevel.value).toFixed(1)} dB`;
+  overdriveMixValue.value = `${Math.round(Number(overdriveMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "overdrive", value: values });
+}
+
+for (const control of [overdriveDrive, overdriveLevel, overdriveMix]) {
+  control.addEventListener("input", updateOverdrive);
+  control.addEventListener("change", updateOverdrive);
+}
+
 function updateTremolo() {
   const waveform = { sine: 0, triangle: 1, square: 2 }[tremoloWaveform.value] ?? 0;
   const values = [
@@ -1074,7 +1097,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: Array.from({ length: 21 }, () => true),
+        enabled: Array.from({ length: 22 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1084,6 +1107,7 @@ async function runBrowserSelfTest() {
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
+        overdrive: [0.15, -3, 0.35],
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
@@ -1131,6 +1155,9 @@ async function runBrowserSelfTest() {
     touchWahSmoothing.value = "5";
     cleanBoost.value = "3";
     cleanBoostValue.value = "3.0 dB";
+    overdriveDrive.value = "0.15";
+    overdriveLevel.value = "-3";
+    overdriveMix.value = "0.35";
     tremoloRate.value = "4";
     tremoloDepth.value = "0.2";
     tremoloWaveform.value = "sine";
@@ -1163,6 +1190,7 @@ async function runBrowserSelfTest() {
     updateLimiter();
     updateWah();
     updateEnvelopeWah();
+    updateOverdrive();
     updateTremolo();
     updateChorus();
     updateFlanger();

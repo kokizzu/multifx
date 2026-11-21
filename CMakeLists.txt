@@ -15,6 +15,7 @@ add_library(tabletfx_core
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
     src/effects/phaser.cpp
+    src/effects/overdrive.cpp
     src/effects/filters.cpp
     src/effects/pedal_compressor.cpp
     src/effects/peak_limiter.cpp
@@ -130,6 +131,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_vibrato_tests COMMAND tabletfx_vibrato_tests)
+
+    add_executable(tabletfx_overdrive_tests tests/test_overdrive.cpp)
+    target_link_libraries(tabletfx_overdrive_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_overdrive_tests COMMAND tabletfx_overdrive_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

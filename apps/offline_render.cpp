@@ -8,6 +8,7 @@
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
+#include "tabletfx/effects/overdrive.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/phaser.hpp"
@@ -57,6 +58,8 @@ struct Options {
     tabletfx::EnvelopeWahParameters envelope_wah{};
     bool clean_boost_enabled = false;
     float clean_boost_db = 0.0F;
+    bool overdrive_enabled = false;
+    tabletfx::TransparentOverdriveParameters overdrive{};
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
     bool chorus_enabled = false;
@@ -355,6 +358,18 @@ Options parse_options(int argc, char** argv, int first) {
             options.vibrato.mix = value;
             options.vibrato_enabled = true;
         }
+        else if (key == "--overdrive-drive") {
+            options.overdrive.drive = value;
+            options.overdrive_enabled = true;
+        }
+        else if (key == "--overdrive-level-db") {
+            options.overdrive.level_db = value;
+            options.overdrive_enabled = true;
+        }
+        else if (key == "--overdrive-mix") {
+            options.overdrive.mix = value;
+            options.overdrive_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -517,6 +532,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.clean_boost_enabled) {
         effects.push_back(std::make_unique<tabletfx::CleanBoost>(
             options.clean_boost_db, static_cast<float>(sample_rate)));
+    }
+    if (options.overdrive_enabled) {
+        effects.push_back(std::make_unique<tabletfx::TransparentOverdrive>(
+            static_cast<float>(sample_rate), options.overdrive));
     }
     if (options.drive > 1.0001F) {
         effects.push_back(std::make_unique<tabletfx::SoftDrive>(options.drive));
@@ -920,6 +939,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     effects.push_back(std::make_unique<tabletfx::EnvelopeWah>(
         static_cast<float>(sample_rate), channels, envelope_wah_parameters));
     effects.push_back(std::make_unique<tabletfx::CleanBoost>(3.0F, static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::TransparentOverdrive>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::SoftDrive>(3.0F));
     tabletfx::TremoloParameters tremolo_parameters;
     tremolo_parameters.rate_hz = 4.0F;
@@ -1104,6 +1125,9 @@ void run_bench() {
     benchmark_one("clean-boost", [=] {
         return std::make_unique<tabletfx::CleanBoost>(6.0F, static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("transparent-overdrive", [=] {
+        return std::make_unique<tabletfx::TransparentOverdrive>(static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_signal_controls(sample_rate, channels, block_frames,
                               warmup_blocks, measured_blocks);
     benchmark_level_meters(sample_rate, channels, block_frames,
@@ -1176,6 +1200,8 @@ void print_usage() {
                    " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
                    " [--vibrato-rate-hz 0.1..10] [--vibrato-depth-ms 0..1.5]"
                    " [--vibrato-mix 0..1]"
+                    " [--overdrive-drive 0..0.5] [--overdrive-level-db -24..12]"
+                    " [--overdrive-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

@@ -71,17 +71,18 @@
         <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Pedal wah</span><span class="effect-default">350–2200 Hz · Q 4</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Envelope wah</span><span class="effect-default">Touch sensitive · up/down</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Clean boost</span><span class="effect-default">0–24 dB · unity default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="10"><span class="effect-number">11</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="18"><span class="effect-number">19</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="19" checked><span class="effect-number">20</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="20" checked><span class="effect-number">21</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="10"><span class="effect-number">11</span><span class="effect-name">Transparent overdrive</span><span class="effect-default">0.15 drive · −3 dB · 35% mix</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="18"><span class="effect-number">19</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="19"><span class="effect-number">20</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="20" checked><span class="effect-number">21</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="21" checked><span class="effect-number">22</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
@@ -217,6 +218,20 @@
         <label class="mix-control" for="clean-boost-db">
           <span>Clean boost</span><output id="clean-boost-value" for="clean-boost-db">0.0 dB</output>
           <input id="clean-boost-db" type="range" min="0" max="24" step="0.5" value="0">
+        </label>
+      </div>
+      <div class="gain-controls" aria-label="Transparent overdrive controls">
+        <label class="mix-control" for="overdrive-drive">
+          <span>Overdrive drive</span><output id="overdrive-drive-value" for="overdrive-drive">0.15</output>
+          <input id="overdrive-drive" type="range" min="0" max="0.5" step="0.01" value="0.15">
+        </label>
+        <label class="mix-control" for="overdrive-level-db">
+          <span>Overdrive level</span><output id="overdrive-level-value" for="overdrive-level-db">−3.0 dB</output>
+          <input id="overdrive-level-db" type="range" min="-24" max="12" step="0.5" value="-3">
+        </label>
+        <label class="mix-control" for="overdrive-mix">
+          <span>Overdrive mix</span><output id="overdrive-mix-value" for="overdrive-mix">35%</output>
+          <input id="overdrive-mix" type="range" min="0" max="1" step="0.01" value="0.35">
         </label>
       </div>
       <div class="gain-controls tuner-controls" aria-label="Chromatic tuner">
