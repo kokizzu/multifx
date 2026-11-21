@@ -3,7 +3,8 @@ PYTHON ?= python3
 .PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench audio-regression \
 	audio-fixtures-plan audio-fixtures-fetch audio-fixtures-verify audio-fixtures-inspect \
 	test-audio-fixtures windows-cross-build web-toolchain-bootstrap web-toolchain-verify \
-	web-build web-browser-test web-test web-serve diff-check publish-plan publish-checkpoint
+	web-build web-browser-test web-test web-serve diff-check publish-plan publish-checkpoint \
+	publish-picker-plan publish-picker publish-room-reverb-plan publish-room-reverb
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -83,3 +84,15 @@ publish-plan:
 
 publish-checkpoint:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "$(CHECKPOINT)"
+
+publish-picker-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint picker
+
+publish-picker:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint picker
+
+publish-room-reverb-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint room-reverb
+
+publish-room-reverb:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint room-reverb

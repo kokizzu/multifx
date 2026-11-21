@@ -93,6 +93,11 @@ const TUNER_CONFIDENCE = EFFECT_NAMES.length + 14;
 const TUNER_TIME = EFFECT_NAMES.length + 15;
 
 const fileInput = document.querySelector("#audio-file");
+const effectCategoryFilter = document.querySelector("#effect-category-filter");
+const effectSearch = document.querySelector("#effect-search");
+const effectsList = document.querySelector("#effects-list");
+const effectCount = document.querySelector("#effect-count");
+const effectsEmpty = document.querySelector("#effects-empty");
 const playButton = document.querySelector("#play-button");
 const stopButton = document.querySelector("#stop-button");
 const rewindButton = document.querySelector("#rewind-button");
@@ -374,6 +379,23 @@ function bytesLabel(bytes) {
 
 function enabledEffects() {
   return [...document.querySelectorAll("[data-effect]")].map((box) => box.checked);
+}
+
+function updateEffectBrowser() {
+  const category = effectCategoryFilter.value;
+  const query = effectSearch.value.trim().toLocaleLowerCase();
+  const rows = [...effectsList.querySelectorAll(".effect-row")];
+  let visibleCount = 0;
+
+  for (const row of rows) {
+    const matchesCategory = category === "all" || row.dataset.category === category;
+    const matchesQuery = !query || row.textContent.toLocaleLowerCase().includes(query);
+    row.hidden = !(matchesCategory && matchesQuery);
+    if (!row.hidden) visibleCount += 1;
+  }
+
+  effectCount.value = `${visibleCount} of ${rows.length}`;
+  effectsEmpty.hidden = visibleCount !== 0;
 }
 
 function buildStatsBuffer() {
@@ -802,6 +824,10 @@ rewindButton.addEventListener("click", () => {
   progressFill.style.width = "0%";
   if (decodedAudio) setAudioStatus("Rewound", "ready");
 });
+
+effectCategoryFilter.addEventListener("change", updateEffectBrowser);
+effectSearch.addEventListener("input", updateEffectBrowser);
+updateEffectBrowser();
 
 for (const checkbox of document.querySelectorAll("[data-effect]")) {
   checkbox.addEventListener("change", () => {
@@ -1537,6 +1563,38 @@ async function runBrowserSelfTest() {
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
+    }
+    const effectRows = [...effectsList.querySelectorAll(".effect-row")];
+    const initialEffectState = enabledEffects();
+    const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
+    if (effectRows.length !== EFFECT_NAMES.length ||
+        effectIds.some((id, index) => id !== index) ||
+        effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
+          !row.querySelector(".effect-category-tag"))) {
+      throw new Error("The categorized effect browser is missing a category or changed signal-chain order.");
+    }
+    effectCategoryFilter.value = "modulation";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const modulationIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (modulationIds.join(",") !== "15,16,17,18,19" ||
+        effectCount.value !== "5 of 30" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
+    }
+    effectCategoryFilter.value = "all";
+    effectSearch.value = "guitar graphic";
+    effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    const searchIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 30") {
+      throw new Error("Searching the effect browser returned the wrong processor.");
+    }
+    effectSearch.value = "";
+    effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    if (effectCount.value !== "30 of 30" || effectRows.some((row) => row.hidden)) {
+      throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
     await context.resume();

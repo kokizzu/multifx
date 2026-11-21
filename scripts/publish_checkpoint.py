@@ -18,6 +18,7 @@ CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
     "GOAL.md",
     "IMPLEMENTATION_CHECKLIST.md",
     "LATENCY_AND_QUALITY.md",
@@ -151,7 +152,9 @@ CHECKPOINT_PATHS = (
     "tests/test_vibrato.cpp",
     "tests/test_overdrive.cpp",
     "src/effects/flanger.cpp",
+    "src/effects/room_reverb.cpp",
     "tests/test_flanger.cpp",
+    "tests/test_room_reverb.cpp",
 )
 
 FEATURE_MODULE_PATHS = (
@@ -194,6 +197,37 @@ DLY08_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
 )
+PICKER_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/index.html",
+    "web/style.css",
+)
+ROOM_REVERB_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "src/effects.cpp",
+    "src/effects/room_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_room_reverb.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "EFFECTS_MATRIX.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+)
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -214,6 +248,10 @@ CHECKPOINTS = {
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
     "effect-modules": (EFFECT_MODULE_CHECKPOINT_PATHS,
                        "feat: add optical, FET and graphic EQ processors"),
+    "picker": (PICKER_CHECKPOINT_PATHS,
+               "feat: add flagship comparison and categorized picker"),
+    "room-reverb": (ROOM_REVERB_CHECKPOINT_PATHS,
+                    "feat: add project-authored room reverb"),
 }
 
 

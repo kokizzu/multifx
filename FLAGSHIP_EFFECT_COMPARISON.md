@@ -1,0 +1,104 @@
+# Flagship effects comparison and implementation checklist
+
+Research snapshot: **2026-11-21**. This compares manufacturer-documented categories and representative features for the six named flagship processors. It is a focused documentation check, not a fresh audit of every algorithm in every firmware or of the whole effects catalogue. Product names below identify documented examples; TabletFX implementations should use project-authored names, controls, and signal paths rather than copy proprietary presets or imply circuit emulation.
+
+## Evidence rules
+
+- **Documented model/category** means a manufacturer page or guide names a category or effect. It does not by itself verify every parameter, firmware availability, audio quality, or simultaneous use.
+- **Parameter evidence** is listed only where a model-specific guide or manual gives controls. Broad controls such as Mix, Level, and Time are not assumed to exist on every algorithm.
+- **Unknown** means the available source did not establish the detail; it does not mean the device lacks it.
+- Firmware notes identify model additions or changes. A model guide from an older firmware is not a complete current catalogue.
+- Captures, amp/cab/IR assets, external loops, routing utilities, tuners, and MIDI/instrument engines are kept distinct from ordinary audio-effect algorithms.
+
+## Source-backed comparison by model
+
+### Melofty Axom Max
+
+**Evidence:** Melofty-branded Axom Max User Manual V1.7.4, dated 2026-08-31. The PDF is hosted on RockBoard/Warwick's distributor CDN; I could not verify a copy or corresponding release notes on Melofty's own site. The manual revision is not proof of the device's installed firmware. [User Manual V1.7.4](https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf)
+
+- **Effect browsing / resources:** The manual describes opening an effect slot into a module list, repeated module instances, two chains (A/B) with nine slots each, and dynamic CPU limits (p. 11). It documents serial, parallel, split/merge, A/B-to-Y, and Y-to-A/B routing (p. 12). The manual does not provide a complete readable stompbox model catalogue or per-model parameter tables.
+- **Instrument simulation / synth:** The model picker names `Inst.Sim` and `Synth` as categories (p. 17). `DeepSynth` provides system-preset instrument-simulation and synth tones (p. 27). These are separate features; their names do not establish a guitar-tracked polyphonic synthesizer.
+- **Delay / modulation:** The manual mentions BPM synchronization for `DELAY` and `MOD` types (p. 17), but does not establish the complete algorithms or their individual control sets.
+- **Captures / routing:** MFIM capture and cabinet assets belong to the capture/amp/cab system, not a confirmed list of native effect algorithms (pp. 3, 50–51). FX Send/Return/Loop are external routing blocks (pp. 24–27).
+- **Checklist result:** category-level evidence exists for instrument simulation, synth, delay, and modulation; exact stompbox inventory and its parameters remain **unverified** from the available manufacturer documentation.
+
+### Fender Tone Master Pro
+
+**Evidence:** Fender's Model Guide is for firmware **v1.1.100**, so its parameter tables are useful for the models it documents but not a complete current list. Fender's release-notes page identifies **v1.8.85 (2026-11-18)** as the latest firmware/app release checked here. [Product page and model guide](https://www.fender.com/products/tone-master-pro), [Model Guide PDF](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf), [firmware and Pro Control release notes](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates).
+
+- **Drive / fuzz:** The guide categorizes Stompbox effects and documents examples such as Greenbox (Level, Overdrive, Tone, Blend), Pugilist Distortion (two gain/tone engines, Level, Blend), and Maximus Drive (Gain, Resonance, EQ, Boost).
+- **Dynamics / EQ / filters:** Categories include Dynamics + EQ and Filters + Pitch. Documented examples include pedal/studio/simple/dynamic compressors, Sustain, EQ3 parametric, EQ5/EQ7 graphic, gates, Volume Pedal, Auto Swell, custom/Teardrop/Vocal Wah, and feedback generation. Studio Compressor exposes Gain, Threshold, Ratio, Attack, Release, Knee, and Blend.
+- **Modulation:** Examples include Tremolo (Rate, Intensity, Duty Cycle, tap division, Shape, LFO Clip), Vibratone (Drive, Tone, Level, fast/slow speeds, ramp, sensitivity), Flanger Mono (Rate, Depth, Resonance, Manual), and Uni-Verse Vibe (Speed, Intensity, Volume, tap division, modes).
+- **Delay / reverb:** Delay models include digital, dynamic, echo-filter, reverse, and stereo types with model-specific timing/feedback/mix and modulation/filter controls. Reverb examples include spring, hall, room, plate, Cloud, Celestial, Nebula, and Shimmer. The guide limits convolution reverb to one block at a time, including a convolution reverb built into a combo amp.
+- **Pitch / synth / firmware changes:** The guide describes Chromatic Pitch Shifter and Diatonic Harmonizer as typically best with single notes; this is not evidence of polyphonic tracking. Current v1.8.85 notes rename Lightyear Overdrive to Greer Amps Lightspeed and describe Virtual Capo as a polyphonic low-latency ±12-semitone shifter; Resolution and Tracking controls were removed. v1.8.58 notes add Aethon, Cerberus, and Wavemorph Polysynths, without publishing their parameter tables. v1.8.45 adds Step Tremolo, Step Filter, Step Filter Delay, Pitch Sequencer, and other effects; the later crash fix is recorded in v1.8.58.
+- **Checklist result:** many families and representative parameters are explicitly documented, but the v1.1.100 guide and release notes must be combined carefully. Do not infer controls for newer synths or step effects from older models.
+
+### Line 6 Helix Stadium XL
+
+**Evidence:** The official Rev D v1.3 manual documents the block types and DSP rules; the live model catalogue includes models marked as first appearing in v1.4. The manual selector offers newer revisions, so Rev D v1.3 must not be labelled the latest manual. The manual states that Stadium XL and Stadium share the same effect blocks; XL adds Instrument 1+2 input choices. [Manual selector](https://manuals.line6.com/en/helix-stadium), [Rev D v1.3 Effect Blocks](https://manuals.line6.com/en/helix-stadium/rev-d-v1.3/effect-blocks), [current model catalogue](https://line6.com/helix-stadium-models/), [Rev D v1.3 Dynamic DSP](https://manuals.line6.com/en/helix-stadium/rev-d-v1.3/dynamic-dsp).
+
+- **Categories:** Distortion, Delay, Reverb, Modulation, Dynamics, EQ, Pitch/Synth, Wah/Filter, and Volume/Pan. Amp/preamp, cab/IR, clones, looper, FX loop, split/merge, and input/output blocks are separately identifiable and should not be counted as stompbox effects.
+- **Drive / dynamics / EQ / modulation:** The current catalogue includes boost, overdrive, distortion, and fuzz models, plus compressors, gates, autoswell, Feedbacker, modulation, EQ, and wah/filter categories. Specific model availability must follow each catalogue entry's initial-appearance version.
+- **Delay / reverb:** Dedicated categories are documented; common controls include Time, Feedback, Decay, Predelay, Mix, Level, Trails, and filtering, where supported by the individual block.
+- **Pitch / synth distinction:** The catalogue separates 3 OSC Synth, Poly Pitch/Wham/Capo, Pitch Wham and other tracked pitch effects, 3 Note Generator, and 4 OSC Generator. Do not infer input-note polyphony from oscillator or generated-voice counts. The manual lists common parameter families such as Drive/Gain, Bass/Mid/Treble, Rate/Speed, Depth, Spread, Headroom, Low/High Cut, and Sidechain; they are not controls on every algorithm.
+- **DSP caveat:** Rev D v1.3 allows only one effect from the combined Feedbacker / Poly Sustain / Poly Detune / Poly Pitch / Poly Wham / Poly Capo / 12 String group on a given path. This is a per-path limit, not a claim that only one may appear in a whole preset, and DSP still constrains combinations.
+- **Checklist result:** strong category and model-name coverage; use the model catalogue's version column for current applicability and the block-specific inspector for exact controls.
+
+### Fractal FM9 Mark II Turbo
+
+**Evidence:** Fractal's current product page identifies the FM9 Mark II Turbo. The downloads page lists firmware v12.0 (2026-07-07) as compatible with FM9 Original and FM9 Turbo, but does not explicitly name “Mark II Turbo.” The detailed Blocks Guide is a 2021-era document and the FM9 Owner's Manual is v3.x (2022); both predate v12.0. Treat their detailed inventory as documented evidence, not a complete current v12.0 audit. [FM9 Mark II Turbo product page](https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit?sort=newest), [FM9 downloads / firmware compatibility](https://www.fractalaudio.com/fm9-downloads/), [Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf), [FM9 Owner's Manual](https://www.fractalaudio.com/downloads/manuals/FM9/FM9-Owners-Manual.pdf).
+
+- **Categories in the Blocks Guide:** Chorus, Compressor, Crossover, Delay, Drive, Enhancer, Filter, Flanger, Formant, Gate/Expander, Graphic EQ, Megatap Delay, Mixer, Multitap Delay, Multiband Compressor, Multiplexer, Parametric EQ, Phaser, Pitch Shift, Plex Delay, Resonator, Reverb, Ring Mod, Rotary, Synth, Ten-Tap Delay, Tremolo, Volume/Pan, Wah, and utility/routing blocks such as Send/Return and Looper.
+- **Parameter evidence:** The guide has dedicated blocks and control sections. Examples include compressor Threshold/Ratio/Attack/Release; filter Frequency/Order/Q/Gain/Feedback and LFO controls; multitap delay timing, pan, filtering, and modulation; and reverb diffusion/decay controls. Each is algorithm-specific.
+- **Pitch / synth distinction:** The guide's Synth block is a three-oscillator, monophonic pitch-tracked synth. It does not document chord/polyphonic input tracking. Pitch Shift is a separate block. Amp, Cab, DynaCab, and cab IR support are not additional stompbox algorithms.
+- **Age and scope caveat:** Guide entries marked “not included in FM9” (such as Vocoder, Dynamic Distortion, and IR Player) are historical guide statements, not proof of absence on current firmware. Firmware v12.0 release documentation would be needed to resolve changes.
+- **Checklist result:** broad historical block and parameter evidence; current Mark II Turbo/v12.0 applicability is **partly unresolved**.
+
+### HeadRush Prime
+
+**Evidence:** The official product page lists FX categories, and the Downloads page provides a Prime-specific User Guide v5.2. The guide was not readable through the available research tool, so its model-specific parameter tables were not verified. [Prime product page](https://www.headrushfx.com/products/prime/), [official downloads](https://www.headrushfx.com/downloads), [Prime User Guide v5.2 PDF](https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf).
+
+- **Categories on the Prime page:** Vocal FX, Overdrive, Distortion/Fuzz, EQ, Compressor, Delay, Reverb, Chorus, Phaser/Flanger, Vib/Trem/Rotary, Wah/Filter, Synth, Rhythmic, Pitch, Volume/Dynamics, and Utility.
+- **Representative names:** Vocal FX include Auto-Tune, De-Esser, Vocal Harmony, Vocoder, and Vocal Stutter; categories also name Auto Swell, Wah/Filter, rhythmic effects, and synth/pitch families. The web page's own category counts disagree with its visible entries (Overdrive says 16 but lists 18; Pitch says 7 but lists 8); do not treat these counts as an audited inventory.
+- **Parameter evidence:** exact Prime v5.2 algorithm parameters remain unverified here. HeadRush's separate Effect and Control List explicitly applies to Pedalboard, Gigboard, and MX5, not Prime, so it is not used to fill this gap.
+- **Checklist result:** broad official category evidence; individual current model names and parameters should be verified from the Prime guide before matching controls.
+
+### XRecer XR1
+
+**Evidence:** The official product page and FAQ report 111 effect entries and a model-specific category list. Its manual link leads to a wiki that returned no readable manual content. The product launched/preorders in November 2026; the available pages do not establish detailed algorithm controls. [XR1 product page](https://www.xrecer.com/products/xr1), [official FAQ](https://www.xrecer.com/pages/faq), [download center](https://www.xrecer.com/pages/download), [manual wiki](https://wiki.xrecer.com/).
+
+- **Listed categories:** overdrive, EQ, dynamics, modulation, reverb, pitch, filters, delay, wah, volume, vocal, loop, IR Loader, FX Loop, CapX, NAM, and NAM Lite.
+- **Resource/routing notes:** the FAQ describes up to four chains with eight blocks each, subject to CPU availability, and an on-device CPU indicator. These are architecture/resource facts, not proof that every effect can run simultaneously.
+- **Effect vs assets/routing:** IR Loader, CapX, NAM/NAM Lite, and FX Loop are separate asset/capture/routing families in the displayed taxonomy; do not count each as a built-in effect algorithm without detailed manual evidence. `Loop` remains ambiguous between an audio effect and a utility from the available category description.
+- **Checklist result:** category-level evidence only; the 111-entry count is not a verified list of 111 distinct algorithms. Exact names and controls remain **unknown** until the manual or model catalog becomes accessible.
+
+## What TabletFX has now
+
+The checked-in project-authored processors are summarized in [`EFFECTS_MATRIX.md`](EFFECTS_MATRIX.md) and requirement rows in [`IMPLEMENTATION_CHECKLIST.md`](IMPLEMENTATION_CHECKLIST.md). `[x]` below means the generic feature and its automated checks are recorded as implemented; it does not mean hardware listening or a branded model emulation is complete.
+
+| Effect family | Current project state | Checklist gaps highlighted by these comparisons |
+|---|---|---|
+| Dynamics | Noise gate, pedal/studio compressors, optical/FET-style compressors, limiter | [ ] hard gate, expander/noise reduction, parallel/multiband compression, transient shaping, auto swell, sustain, sidechain ducking, de-esser (`DYN-02…16`) |
+| EQ / filters / wah | High/low pass, 3-band parametric EQ, guitar/bass graphic EQ, shelf/tilt, pedal and envelope wah | [ ] notch/dynamic EQ, more wah voicings, LFO auto-wah, resonant/formant/step/random filters (`EQF-06…16`) |
+| Drive / fuzz | Clean boost, transparent and mid-focused overdrive, high-gain distortion, round fuzz, Soft Drive | [ ] treble boost, asymmetric/dynamic/tube/bass drive, additional fuzz circuits, octave-up fuzz, wavefolder, bit/sample-rate reduction and lo-fi controls (`DRV-02`, `DRV-05…22`) |
+| Modulation | Chorus, flanger, phaser, vibrato, amplitude tremolo | [ ] multi-voice/dimension/bass chorus, through-zero flanger, vibe, harmonic tremolo, auto-pan, rotary, slicer, ring modulation, frequency shifting (`MOD-02…19`) |
+| Delay | Digital tempo delay, slapback, ping-pong, dual, four-tap, BBD/tape character, multi-head | [ ] reverse, ducking, modulated, filtered, pitch-shifted, swell, resonant, granular, hold/freeze, lo-fi and protected self-oscillation (`DLY-09…19`) |
+| Reverb | No reverb processor yet | [ ] room, hall, plate, spring, ambience, modulation, shimmer/pitch-fed, gated/reverse, freeze, spectral/granular, convolution and ducking (`REV-01…17`) |
+| Pitch / synth | Polyphonic ±12-semitone phase-vocoder transposer; tuner is separate | [ ] virtual capo workflow, mono tracker, detune, octave/harmony/pitch bend, sequencer, synth engines, MIDI instrument source and other synthesis (`PIT-02…18`, `SYN-01…19`) |
+| Vocal / special | No dedicated vocal path or vocal/synth effect catalogue | [ ] vocal harmony/vocoder/de-esser and additional special processing; preserve distinct effect, utility, and instrument-engine categories (`DYN-16`, `SYN-13…19`, plus relevant effect IDs) |
+| Assets / routing / utilities | Input/output gain, volume, bypass/mute, meters, tuner, mono/stereo conversion and routing utilities exist in the shared core | [ ] live native picker, preset graph/FX loop and external device routing remain separate app/architecture requirements; amp/cab/IR, capture, NAM, looper, and MIDI-tone engines are not stompbox effects |
+
+For the complete per-requirement status and evidence, use the linked checklist IDs rather than duplicating every project requirement here. They should only be marked complete after their implementation and automated-test boxes pass; device/listening evidence remains a separate column.
+
+## Recommended implementation order
+
+This order favors categories documented across the named units, while limiting DSP cost and keeping distinct algorithms separate. It is a work queue, not a claim that all processors share identical models or controls.
+
+1. **Room reverb (`REV-01`)** — first shared reverb foundation. Project-authored algorithm; expose bounded decay/size, damping, predelay, dry/wet, and output level only after defining stable behavior. Measure fixed memory and callback-deadline CPU; test tail decay, stereo behavior, bounded feedback, reset, irregular blocks, denormals/non-finite input, and no process-time allocation.
+2. **Hall, plate, and spring (`REV-02…05`)** — implement as verified distinct modes/algorithms rather than labels over one unchanged response. Keep convolution assets and hardware amp spring models separate.
+3. **Auto swell and rotary (`DYN-13`, `MOD-15`)** — both are repeatedly represented in the reviewed catalogues; tests need retrigger/tail behavior and slow/fast transition smoothing respectively.
+4. **Ring modulation, slicer, and sequenced modulation/filter (`MOD-16…18`, `EQF-14`)** — keep rhythm/tempo controls explicit and bound high-frequency/aliasing behavior.
+5. **Delay variants (`DLY-09…19`)** — prioritize reverse/ducked/filtered after documenting their buffering, latency, feedback stability, and tail/bypass rules; add hold/granular modes only with bounded memory.
+6. **Pitch/synth and vocal families (`PIT-*`, `SYN-*`, `DYN-16`)** — higher tracking, latency, polyphony, and resource risk. Require chord tests, latency reporting, and a strict distinction among mono tracking, polyphonic audio transposition, sampled tones, oscillators, and MIDI triggering.
+
+For each implementation, update the relevant row in `IMPLEMENTATION_CHECKLIST.md` only after native tests and browser/Windows integration checks pass. Record Linux CPU as a percentage of the callback deadline, fixed state/memory, algorithmic latency, and manual listening status in the project's existing benchmark/evidence documents.

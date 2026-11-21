@@ -60,38 +60,59 @@
         <label><input id="global-bypass" type="checkbox"> Global bypass</label>
         <label><input id="input-mute" type="checkbox"> Input mute</label>
       </div>
-      <div class="effects-list">
-        <label class="effect-row"><input type="checkbox" data-effect="0" checked><span class="effect-number">01</span><span class="effect-name">Input trim</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="1" checked><span class="effect-number">02</span><span class="effect-name">Volume pedal</span><span class="effect-default">Audio taper · 0–100%</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="2"><span class="effect-number">03</span><span class="effect-name">High-pass</span><span class="effect-default">80 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="3"><span class="effect-number">04</span><span class="effect-name">Low-pass</span><span class="effect-default">12 kHz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Noise gate</span><span class="effect-default">−60 dB · 3 dB hysteresis</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="5"><span class="effect-number">06</span><span class="effect-name">Pedal compressor</span><span class="effect-default">Sens / Sustain / Attack / Level</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="6" checked><span class="effect-number">07</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Pedal wah</span><span class="effect-default">350–2200 Hz · Q 4</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Envelope wah</span><span class="effect-default">Touch sensitive · up/down</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Clean boost</span><span class="effect-default">0–24 dB · unity default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="10"><span class="effect-number">11</span><span class="effect-name">Transparent overdrive</span><span class="effect-default">0.15 drive · −3 dB · 35% mix</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Mid-focused overdrive</span><span class="effect-default">6 dB mid boost · −4 dB · 40% mix</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">High-gain distortion</span><span class="effect-default">Pre/post filters · 0.75 drive</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Round fuzz</span><span class="effect-default">0.55 fuzz · −6 dB · 85% mix</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="18"><span class="effect-number">19</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="19"><span class="effect-number">20</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="20"><span class="effect-number">21</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="21"><span class="effect-number">22</span><span class="effect-name">Digital delay</span><span class="effect-default">350 ms · 25% feedback · 25% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="23"><span class="effect-number">24</span><span class="effect-name">Optical-style compressor</span><span class="effect-default">Linked RMS · program-dependent release</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="24"><span class="effect-number">25</span><span class="effect-name">FET-style compressor</span><span class="effect-default">Fast peak detector · fixed release</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="26"><span class="effect-number">27</span><span class="effect-name">Bass graphic EQ</span><span class="effect-default">4- or 7-band</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="27"><span class="effect-number">28</span><span class="effect-name">Shelf / tilt EQ</span><span class="effect-default">Low shelf · high shelf · complementary tilt</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="28" checked><span class="effect-number">29</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="29" checked><span class="effect-number">30</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+      <div class="effect-browser-controls" aria-label="Browse processors">
+        <label for="effect-category-filter">Category
+          <select id="effect-category-filter" aria-controls="effects-list">
+            <option value="all">All categories</option>
+            <option value="utility">Utility</option>
+            <option value="dynamics">Dynamics</option>
+            <option value="filter">Filters &amp; wah</option>
+            <option value="drive">Drive &amp; fuzz</option>
+            <option value="modulation">Modulation</option>
+            <option value="eq">Equalizer</option>
+            <option value="delay">Delay</option>
+            <option value="pitch">Pitch</option>
+          </select>
+        </label>
+        <label for="effect-search">Search processors
+          <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
+        </label>
+        <output id="effect-count" class="effect-count" aria-live="polite">30 of 30</output>
       </div>
+      <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
+      <div id="effects-list" class="effects-list">
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="0" checked><span class="effect-number">01</span><span class="effect-name">Input trim</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="1" checked><span class="effect-number">02</span><span class="effect-name">Volume pedal</span><span class="effect-default">Audio taper · 0–100%</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="2"><span class="effect-number">03</span><span class="effect-name">High-pass</span><span class="effect-default">80 Hz</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="3"><span class="effect-number">04</span><span class="effect-name">Low-pass</span><span class="effect-default">12 kHz</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="4"><span class="effect-number">05</span><span class="effect-name">Noise gate</span><span class="effect-default">−60 dB · 3 dB hysteresis</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="5"><span class="effect-number">06</span><span class="effect-name">Pedal compressor</span><span class="effect-default">Sens / Sustain / Attack / Level</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="6" checked><span class="effect-number">07</span><span class="effect-name">Studio compressor</span><span class="effect-default">3:1 · 8 / 100 ms</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="7"><span class="effect-number">08</span><span class="effect-name">Pedal wah</span><span class="effect-default">350–2200 Hz · Q 4</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="8"><span class="effect-number">09</span><span class="effect-name">Envelope wah</span><span class="effect-default">Touch sensitive · up/down</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="9"><span class="effect-number">10</span><span class="effect-name">Clean boost</span><span class="effect-default">0–24 dB · unity default</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="10"><span class="effect-number">11</span><span class="effect-name">Transparent overdrive</span><span class="effect-default">0.15 drive · −3 dB · 35% mix</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="11"><span class="effect-number">12</span><span class="effect-name">Mid-focused overdrive</span><span class="effect-default">6 dB mid boost · −4 dB · 40% mix</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">High-gain distortion</span><span class="effect-default">Pre/post filters · 0.75 drive</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Round fuzz</span><span class="effect-default">0.55 fuzz · −6 dB · 85% mix</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Soft drive</span><span class="effect-default">3×</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Tremolo</span><span class="effect-default">5 Hz · 50% · sine</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="18"><span class="effect-number">19</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="19"><span class="effect-number">20</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="20"><span class="effect-number">21</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span><span class="effect-category-tag">Equalizer</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="21"><span class="effect-number">22</span><span class="effect-name">Digital delay</span><span class="effect-default">350 ms · 25% feedback · 25% wet</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="23"><span class="effect-number">24</span><span class="effect-name">Optical-style compressor</span><span class="effect-default">Linked RMS · program-dependent release</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="24"><span class="effect-number">25</span><span class="effect-name">FET-style compressor</span><span class="effect-default">Fast peak detector · fixed release</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="26"><span class="effect-number">27</span><span class="effect-name">Bass graphic EQ</span><span class="effect-default">4- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="27"><span class="effect-number">28</span><span class="effect-name">Shelf / tilt EQ</span><span class="effect-default">Low shelf · high shelf · complementary tilt</span><span class="effect-category-tag">Equalizer</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="28" checked><span class="effect-number">29</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="29" checked><span class="effect-number">30</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+      </div>
+      <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
           <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
