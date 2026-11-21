@@ -379,6 +379,54 @@ void test_multitap_controls_clamp_and_retarget_safely() {
             "invalid multi-tap controls must not poison the output");
 }
 
+void test_bbd_style_colors_echoes_without_allocating() {
+    tabletfx::Delay digital(48000.0F, 1, 2.0F, 1.0F, 0.0F, 1.0F);
+    tabletfx::Delay bbd(48000.0F, 1, 2.0F, 1.0F, 0.0F, 1.0F);
+    bbd.configure_bbd_style(true);
+    bbd.reset();
+
+    std::array<float, 128> digital_impulse{};
+    std::array<float, 128> bbd_impulse{};
+    digital_impulse[0] = 1.0F;
+    bbd_impulse[0] = 1.0F;
+    digital.process(digital_impulse, 1);
+    const std::size_t allocations_before = allocation_count.load(std::memory_order_relaxed);
+    bbd.process(bbd_impulse, 1);
+    const std::size_t allocations_after = allocation_count.load(std::memory_order_relaxed);
+    require(allocations_after == allocations_before,
+            "BBD-style delay processing must not allocate");
+
+    require(near(digital_impulse[48], 1.0F),
+            "digital mode must retain its single-sample impulse echo");
+    require(bbd_impulse[48] > 0.40F && bbd_impulse[48] < 0.46F,
+            "BBD-style mode must soften the first impulse echo with its bandwidth limit");
+    require(bbd_impulse[49] > 0.20F && bbd_impulse[49] < bbd_impulse[48],
+            "BBD-style mode must have a decaying, bandwidth-limited impulse tail");
+    for (const float sample : bbd_impulse) {
+        require(std::isfinite(sample) && std::abs(sample) <= 1.0F,
+                "BBD-style delay must keep finite bounded output for a full-scale impulse");
+    }
+
+    tabletfx::Delay stereo(48000.0F, 2, 2.0F, 1.0F, 0.2F, 1.0F);
+    stereo.configure_bbd_style(true);
+    stereo.reset();
+    std::array<float, 256> stereo_impulse{};
+    stereo_impulse[0] = 1.0F;
+    const std::size_t stereo_allocations_before =
+        allocation_count.load(std::memory_order_relaxed);
+    stereo.process(stereo_impulse, 2);
+    const std::size_t stereo_allocations_after =
+        allocation_count.load(std::memory_order_relaxed);
+    require(stereo_allocations_after == stereo_allocations_before,
+            "stereo BBD-style delay processing must not allocate");
+    require(stereo_impulse[48 * 2] > 0.40F &&
+                std::abs(stereo_impulse[48 * 2 + 1]) < 1.0e-7F,
+            "stereo BBD-style delay must preserve independent left/right lines");
+    require(std::all_of(stereo_impulse.begin(), stereo_impulse.end(),
+                        [](float sample) { return std::isfinite(sample); }),
+            "stereo BBD-style delay must remain finite through feedback repeats");
+}
+
 void test_tempo_change_crossfades_without_discontinuity() {
     tabletfx::Delay delay(1000.0F, 1, 1000.0F, 100.0F, 0.0F, 1.0F);
     std::array<float, 700> fill{};
@@ -481,6 +529,7 @@ int main() {
         test_multitap_levels_pan_feedback_and_no_allocation();
         test_multitap_route_and_tap_changes_are_smoothed();
         test_multitap_controls_clamp_and_retarget_safely();
+        test_bbd_style_colors_echoes_without_allocating();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_layout_invalid_audio_and_process_allocation();

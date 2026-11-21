@@ -385,6 +385,11 @@ public:
             ->configure(delay_ms, feedback, mix);
     }
 
+    void configure_delay_bbd_style(bool enabled) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_bbd_style(enabled);
+    }
+
     void configure_delay_tempo(float bpm, std::uint32_t division,
                                float feedback, float mix) noexcept {
         const auto safe_division = division <= 11U
@@ -1071,6 +1076,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,
                                              float feedback, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay(delay_ms, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_bbd_style(
+    void* opaque, std::uint32_t enabled) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_bbd_style(enabled != 0U);
     }
 }
 

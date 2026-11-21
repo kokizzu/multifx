@@ -126,6 +126,9 @@ public:
     [[nodiscard]] DelayDivision division() const noexcept { return division_; }
     [[nodiscard]] DelayTimeMode time_mode() const noexcept { return time_mode_; }
     void configure(float delay_ms, float feedback, float mix) noexcept;
+    // Project-authored BBD-style coloration: bandwidth-limited, mildly saturated
+    // repeats. This reuses the existing delay ring and adds no processor stage.
+    void configure_bbd_style(bool enabled) noexcept;
     // Stereo wet routing crossfades over 10 ms. A mono instance keeps normal
     // same-channel delay behavior regardless of this setting.
     void configure_ping_pong(bool enabled) noexcept;
@@ -150,6 +153,8 @@ private:
                                    std::uint16_t channel) const noexcept;
     [[nodiscard]] float read_fractional_delay(float delay_samples,
                                               std::uint16_t channel) const noexcept;
+    [[nodiscard]] float shape_bbd_feedback(float value,
+                                           std::uint16_t channel) noexcept;
     void set_delay_samples(std::size_t samples) noexcept;
     void set_dual_delay_samples(std::uint16_t line, std::size_t samples) noexcept;
     void retarget_parameters() noexcept;
@@ -200,6 +205,12 @@ private:
     std::array<float, maximum_delay_taps> target_multitap_pan_right_{};
     std::array<float, maximum_delay_taps> multitap_pan_right_step_{};
     std::array<std::size_t, maximum_delay_taps> multitap_parameter_ramp_remaining_{};
+    float bbd_mix_ = 0.0F;
+    float target_bbd_mix_ = 0.0F;
+    float bbd_mix_step_ = 0.0F;
+    std::size_t bbd_ramp_remaining_ = 0;
+    float bbd_filter_alpha_ = 0.5F;
+    std::array<float, 2> bbd_filter_state_{};
     bool target_multitap_ = false;
     float multitap_route_mix_ = 0.0F;
     float multitap_route_step_ = 0.0F;

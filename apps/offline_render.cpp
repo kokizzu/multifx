@@ -93,6 +93,7 @@ struct Options {
     tabletfx::DelayDivision delay_division = tabletfx::DelayDivision::quarter;
     bool delay_ping_pong = false;
     bool delay_dual_enabled = false;
+    bool delay_bbd_style = false;
     float delay_dual_a_ms = 350.0F;
     float delay_dual_a_feedback = 0.25F;
     float delay_dual_a_mix = 0.25F;
@@ -159,6 +160,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.delay_multitap_enabled = true;
             continue;
         }
+        if (key == "--delay-bbd") {
+            options.delay_bbd_style = true;
+            continue;
+        }
         if (i + 1 >= argc) {
             throw std::invalid_argument("Missing value for " + std::string(key));
         }
@@ -177,13 +182,21 @@ Options parse_options(int argc, char** argv, int first) {
                 options.delay_feedback = 0.25F;
                 options.delay_mix = 0.25F;
                 options.delay_tempo_enabled = false;
+                options.delay_bbd_style = false;
             } else if (value == "slapback") {
                 options.delay_ms = 110.0F;
                 options.delay_feedback = 0.12F;
                 options.delay_mix = 0.25F;
                 options.delay_tempo_enabled = false;
+                options.delay_bbd_style = false;
+            } else if (value == "bbd") {
+                options.delay_ms = 280.0F;
+                options.delay_feedback = 0.28F;
+                options.delay_mix = 0.25F;
+                options.delay_tempo_enabled = false;
+                options.delay_bbd_style = true;
             } else {
-                throw std::invalid_argument("Delay preset must be digital or slapback");
+                throw std::invalid_argument("Delay preset must be digital, slapback, or bbd");
             }
             continue;
         }
@@ -755,6 +768,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::move(eq));
     }
     if (options.delay_multitap_enabled || options.delay_dual_enabled ||
+        options.delay_bbd_style ||
         ((options.delay_ms > 0.0F || options.delay_tempo_enabled) && options.delay_mix > 0.0F)) {
         auto delay = std::make_unique<tabletfx::Delay>(
             static_cast<float>(sample_rate), channels, 5000.0F,
@@ -764,6 +778,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
                                    options.delay_feedback, options.delay_mix);
         }
+        delay->configure_bbd_style(options.delay_bbd_style);
         if (options.delay_multitap_enabled) {
             for (std::size_t tap = 0; tap < tabletfx::maximum_delay_taps; ++tap) {
                 delay->configure_multitap_tap(tap, options.delay_multitap_ms[tap],
@@ -1297,6 +1312,16 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-bbd-mono", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
+        delay->configure_bbd_style(true);
+        return delay;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-bbd-stereo", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 2, 2000.0F);
+        delay->configure_bbd_style(true);
+        return delay;
+    }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-ping-pong", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
         delay->configure_ping_pong(true);
@@ -1484,7 +1509,7 @@ void print_usage() {
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"
                  " [--gate-hysteresis-db dB] [--gate-attack-ms ms] [--gate-hold-ms ms]"
                  " [--gate-release-ms ms]"
-                   " [--drive 1..20] [--delay-preset digital|slapback] [--delay-ms ms] [--delay-sync-bpm 20..300]"
+                   " [--drive 1..20] [--delay-preset digital|slapback|bbd] [--delay-bbd] [--delay-ms ms] [--delay-sync-bpm 20..300]"
                    " [--delay-ping-pong]"
                     " [--delay-dual] [--delay-dual-a-ms ms] [--delay-dual-a-feedback 0..0.95]"
                     " [--delay-dual-a-mix 0..1] [--delay-dual-b-ms ms]"

@@ -252,6 +252,9 @@ Delay::Delay(float sample_rate, std::uint16_t channels, float max_delay_ms,
                                          : 0;
     parameter_ramp_total_ = std::max<std::size_t>(ramp_samples, 1);
     delay_transition_total_ = parameter_ramp_total_;
+    const float bbd_cutoff_hz = std::min(4500.0F, sample_rate_ * 0.45F);
+    bbd_filter_alpha_ = 1.0F - std::exp(
+        -6.2831853071795864769F * bbd_cutoff_hz / sample_rate_);
     configure(delay_ms, feedback, mix);
     dual_delay_samples_ = {delay_samples_, delay_samples_};
     dual_transition_from_delay_samples_ = {
@@ -279,6 +282,19 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
     if (std::isfinite(mix)) target_mix_ = std::clamp(mix, 0.0F, 1.0F);
     time_mode_ = DelayTimeMode::milliseconds;
     retarget_parameters();
+}
+
+void Delay::configure_bbd_style(bool enabled) noexcept {
+    target_bbd_mix_ = enabled ? 1.0F : 0.0F;
+    if (parameter_ramp_total_ <= 1) {
+        bbd_mix_ = target_bbd_mix_;
+        bbd_mix_step_ = 0.0F;
+        bbd_ramp_remaining_ = 0;
+        return;
+    }
+    bbd_mix_step_ = (target_bbd_mix_ - bbd_mix_) /
+                    static_cast<float>(parameter_ramp_total_);
+    bbd_ramp_remaining_ = parameter_ramp_total_;
 }
 
 void Delay::configure_ping_pong(bool enabled) noexcept {
@@ -545,6 +561,31 @@ float Delay::read_fractional_delay(float delay_samples, std::uint16_t channel) c
     return static_cast<float>(first + (second - first) * fraction);
 }
 
+float Delay::shape_bbd_feedback(float value, std::uint16_t channel) noexcept {
+    if (channel >= bbd_filter_state_.size() || !std::isfinite(value)) {
+        return std::isfinite(value) ? value : 0.0F;
+    }
+    if (bbd_mix_ <= 0.0F && bbd_ramp_remaining_ == 0) {
+        bbd_filter_state_[channel] = value;
+        return value;
+    }
+
+    const double prior = static_cast<double>(bbd_filter_state_[channel]);
+    const double input = static_cast<double>(value);
+    const double filtered_value = prior + static_cast<double>(bbd_filter_alpha_) *
+                                             (input - prior);
+    const double bounded_filter = std::clamp(
+        filtered_value,
+        -static_cast<double>(std::numeric_limits<float>::max()),
+        static_cast<double>(std::numeric_limits<float>::max()));
+    const float filtered = static_cast<float>(bounded_filter);
+    bbd_filter_state_[channel] = filtered;
+    const double saturated = static_cast<double>(filtered) /
+        (1.0 + 0.08 * std::abs(static_cast<double>(filtered)));
+    const double blend = static_cast<double>(std::clamp(bbd_mix_, 0.0F, 1.0F));
+    return static_cast<float>(input + (saturated - input) * blend);
+}
+
 void Delay::retarget_parameters() noexcept {
     if (parameter_ramp_total_ <= 1) {
         feedback_ = target_feedback_;
@@ -561,15 +602,24 @@ void Delay::retarget_parameters() noexcept {
 }
 
 void Delay::advance_ramps() noexcept {
-    if (parameter_ramp_remaining_ == 0) return;
-    feedback_ += feedback_step_;
-    mix_ += mix_step_;
-    --parameter_ramp_remaining_;
-    if (parameter_ramp_remaining_ == 0) {
-        feedback_ = target_feedback_;
-        mix_ = target_mix_;
-        feedback_step_ = 0.0F;
-        mix_step_ = 0.0F;
+    if (parameter_ramp_remaining_ > 0) {
+        feedback_ += feedback_step_;
+        mix_ += mix_step_;
+        --parameter_ramp_remaining_;
+        if (parameter_ramp_remaining_ == 0) {
+            feedback_ = target_feedback_;
+            mix_ = target_mix_;
+            feedback_step_ = 0.0F;
+            mix_step_ = 0.0F;
+        }
+    }
+    if (bbd_ramp_remaining_ > 0) {
+        bbd_mix_ += bbd_mix_step_;
+        --bbd_ramp_remaining_;
+        if (bbd_ramp_remaining_ == 0) {
+            bbd_mix_ = target_bbd_mix_;
+            bbd_mix_step_ = 0.0F;
+        }
     }
 }
 
@@ -647,9 +697,11 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                 interleaved[input_index] = bound(output_value);
                 const double feedback_value = static_cast<double>(input) +
                                               static_cast<double>(delayed) * feedback_;
-                storage_[write_index] = bound(feedback_value);
+                const float shaped_feedback = shape_bbd_feedback(
+                    bound(feedback_value), channel);
+                storage_[write_index] = shaped_feedback;
                 if (channels_ == 1 && dual_capable_) {
-                    storage_[write_frame_ * storage_channels_ + 1] = bound(feedback_value);
+                    storage_[write_frame_ * storage_channels_ + 1] = shaped_feedback;
                 }
             }
         } else if (channels_ == 2) {
@@ -718,7 +770,8 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                     static_cast<double>(ping_weight) * ping_feedback +
                     static_cast<double>(dual_weight) * dual_feedback +
                     static_cast<double>(multitap_weight) * multitap_feedback;
-                storage_[write_frame_ * storage_channels_ + channel] = bound(feedback_value);
+                storage_[write_frame_ * storage_channels_ + channel] =
+                    shape_bbd_feedback(bound(feedback_value), channel);
             }
         } else {
             const float input = std::isfinite(interleaved[frame]) ? interleaved[frame] : 0.0F;
@@ -766,7 +819,8 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
                     static_cast<double>(normal_weight + ping_weight) * normal_feedback +
                     static_cast<double>(dual_weight) * dual_feedback +
                     static_cast<double>(multitap_weight) * multitap_feedback;
-                storage_[write_frame_ * storage_channels_ + line] = bound(feedback_value);
+                storage_[write_frame_ * storage_channels_ + line] =
+                    shape_bbd_feedback(bound(feedback_value), line);
             }
         }
         write_frame_ = write_frame_ + 1 == capacity_frames_ ? 0 : write_frame_ + 1;
@@ -889,6 +943,10 @@ void Delay::reset() noexcept {
     dual_routing_mix_ = target_dual_ ? 1.0F : 0.0F;
     dual_routing_step_ = 0.0F;
     dual_routing_ramp_remaining_ = 0;
+    bbd_mix_ = target_bbd_mix_;
+    bbd_mix_step_ = 0.0F;
+    bbd_ramp_remaining_ = 0;
+    bbd_filter_state_ = {};
 }
 
 } // namespace tabletfx

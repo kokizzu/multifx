@@ -216,6 +216,37 @@ def check_delay_time_modes(executable: Path) -> None:
             )
 
 
+def check_bbd_style_delay(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [0] * 700
+    source_samples[480] = 32767
+    with tempfile.TemporaryDirectory(prefix="tabletfx-bbd-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "warmed-impulse.wav"
+        output = root / "bbd-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--delay-preset", "bbd", "--delay-ms", "1",
+             "--delay-feedback", "0", "--delay-mix", "1", "--delay-bbd"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"BBD-style delay did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<700f", data[44:44 + 700 * 4])
+        first_echo = samples[528]
+        next_echo_sample = samples[529]
+        if abs(samples[527]) > 1.0e-7:
+            raise AssertionError("BBD-style delay moved its first echo before the selected delay time")
+        if not 0.40 < first_echo < 0.46:
+            raise AssertionError(f"BBD-style first echo was not bandwidth-limited: {first_echo}")
+        if not 0.20 < next_echo_sample < first_echo:
+            raise AssertionError("BBD-style first echo did not have a decaying filtered tail")
+        if not all(math.isfinite(sample) for sample in samples):
+            raise AssertionError("BBD-style delay produced a non-finite sample")
+
+
 def check_ping_pong_delay(executable: Path) -> None:
     sample_rate = 8000
     frames = 80
@@ -723,6 +754,7 @@ def main() -> None:
     check_render(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
+    check_bbd_style_delay(args.executable.resolve())
     check_ping_pong_delay(args.executable.resolve())
     check_independent_dual_delay(args.executable.resolve())
     check_multitap_delay(args.executable.resolve())

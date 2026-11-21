@@ -49,6 +49,7 @@ const DEFAULT_PARAMETERS = {
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
+  delayBbd: false,
   delayTempo: [0, 120, 4],
   delayPingPong: false,
   delayDualEnabled: false,
@@ -241,6 +242,7 @@ const vibratoDepthValue = document.querySelector("#vibrato-depth-value");
 const vibratoMix = document.querySelector("#vibrato-mix");
 const vibratoMixValue = document.querySelector("#vibrato-mix-value");
 const delayPreset = document.querySelector("#delay-preset");
+const delayCharacter = document.querySelector("#delay-character");
 const delayRouting = document.querySelector("#delay-routing");
 const delayDualControls = document.querySelector("#delay-dual-controls");
 const delayDualAms = document.querySelector("#delay-dual-a-ms");
@@ -1138,6 +1140,12 @@ function applyDelayPreset() {
 }
 
 delayPreset.addEventListener("change", applyDelayPreset);
+function updateDelayCharacter() {
+  const enabled = delayCharacter.value === "bbd";
+  DEFAULT_PARAMETERS.delayBbd = enabled;
+  if (workletNode) workletNode.port.postMessage({ type: "delay-bbd", value: enabled });
+}
+delayCharacter.addEventListener("change", updateDelayCharacter);
 function updateDelayRouting() {
   const mode = delayRouting.value;
   const pingPong = mode === "ping-pong";
@@ -1368,6 +1376,7 @@ async function runBrowserSelfTest() {
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
+        delayBbd: true,
         delayTempo: [0, 120, 7],
         delayPingPong: false,
         delayDualEnabled: false,
@@ -1450,6 +1459,13 @@ async function runBrowserSelfTest() {
         DEFAULT_PARAMETERS.delay[2] !== 0.25 || delayMode.value !== "free") {
       throw new Error("The slapback preset did not set its advertised delay controls.");
     }
+    delayCharacter.value = "bbd";
+    updateDelayCharacter();
+    if (!DEFAULT_PARAMETERS.delayBbd) {
+      throw new Error("The BBD-style delay character did not update Worklet state.");
+    }
+    delayCharacter.value = "digital";
+    updateDelayCharacter();
     delayMs.value = "120";
     delayMs.dispatchEvent(new Event("input", { bubbles: true }));
     if (delayPreset.value !== "custom" || DEFAULT_PARAMETERS.delay[0] !== 120) {
