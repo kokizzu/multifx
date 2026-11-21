@@ -465,6 +465,7 @@ REVERSE_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "README.md",
     "apps/offline_render.cpp",
+    "include/tabletfx/effects/delay_timing.hpp",
     "include/tabletfx/effects/reverse_delay.hpp",
     "src/effects/reverse_delay.cpp",
     "tests/test_reverse_delay.cpp",
@@ -699,7 +700,10 @@ def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
             "Refusing to publish with staged changes outside the selected checkpoint: "
             + ", ".join(unexpected_staged)
         )
-    unexpected = sorted(set(paths) - (set(CHECKPOINT_PATHS) | checkpoint_paths))
+    known_checkpoint_paths = set(CHECKPOINT_PATHS)
+    for allowed_paths, _message in CHECKPOINTS.values():
+        known_checkpoint_paths.update(allowed_paths)
+    unexpected = sorted(set(paths) - known_checkpoint_paths)
     if unexpected:
         raise SystemExit("Dirty files outside the reviewed checkpoint: " + ", ".join(unexpected))
     workflows = [path for path in paths if path.startswith(".github/workflows/")]
