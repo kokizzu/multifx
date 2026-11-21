@@ -4,7 +4,7 @@ Generated once from `GOAL.md`. The requirement text is preserved from the source
 
 Mark an implementation and automated-test box only after the code and relevant automated checks pass. Mark device/listening only with direct evidence from the named hardware and route. The requirement box is complete only when all required evidence exists.
 
-Latest integrated verification (2026-11-22) covers 52 effect stages including Triple-Double Chorus, Dimension Chorus, Bit Crusher, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch Filter, manual Formant Filter, Harmonic and four-band Resonators, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Filter Delay. Triple-Double Chorus, Dimension Chorus, Bit Crusher, Formant Filter, both Resonators, and Multiband Compressor pass native, CLI, browser/WASM, prerecorded-audio, and Windows cross-build checks. Reverse Delay includes tempo sync, repeat EQ, a forward-delay tap, and block-bypass spillover. Hardware listening remains open; automatic humanizer movement and exact commercial Resonator/compressor parity remain unimplemented. Older stage counts in individual evidence notes refer to their earlier test runs.
+Latest integrated verification (2026-11-22) covers 53 effect stages, including the experimental scale-aware monophonic Diatonic Harmonizer in the categorized Pitch picker. Its native, CLI, browser/WASM, prerecorded-audio, and benchmark checks pass. First-note control response is estimated at 26.7 ms at 48 kHz, exceeding the provisional 20 ms live-transposition gate; device listening remains open. Older stage counts in individual evidence notes refer to their earlier test runs.
 
 | Done | ID | Priority | Requirement | Implementation | Automated | Device/listening | Evidence or remaining limit |
 |---|---|---|---|---|---|---|---|
@@ -140,7 +140,7 @@ Latest integrated verification (2026-11-22) covers 52 effect stages including Tr
 | [ ] | `PIT-06` | P1 | Polyphonic octave layers with independently mixed dry/up/down voices. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `PIT-07` | P1 | Classic monophonic sub-octave generator. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `PIT-08` | P1 | Fixed-interval harmony, independent voice level/pan. | [ ] | [ ] | [ ] | Not started |
-| [ ] | `PIT-09` | P1 | Key/scale-aware monophonic harmony. | [ ] | [ ] | [ ] | Not started |
+| [ ] | `PIT-09` | P1 | Key/scale-aware monophonic harmony. | [x] | [x] | [ ] | Experimental project-authored Diatonic Harmonizer: monophonic YIN-style tracker, one scale-degree voice, key C…B and 13 scales; nearest-scale-note correction is verified. Mix, interval, scale, tone, delay/tap, and feedback are exposed in the Pitch picker; native config has a Spillover flag, but the browser control and spillover-aware chain bypass are not implemented. Native/CLI/browser-WASM parity and 53-stage prerecorded regression pass. Estimated first-note control response is 26.7 ms at 48 kHz (1,280 samples), above the provisional ≤20 ms gate before host/device buffering; chord tracking, live transients, device use, and listening remain unverified. This is not Fender algorithm or sound parity. |
 | [ ] | `PIT-10` | P2 | Two-voice intelligent harmony and user-defined scales. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `PIT-11` | P1 | Expression-controlled pitch bend/whammy; label its verified mono/poly behavior. | [ ] | [ ] | [ ] | Not started |
 | [ ] | `PIT-12` | P2 | Polyphonic continuous bend if it passes chord/latency tests. | [ ] | [ ] | [ ] | Not started |

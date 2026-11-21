@@ -1,8 +1,12 @@
 # Latency, quality, and DSP-load protocol
 
-## Latest DSP verification (four-band Resonator and 52-stage browser/audio chain, 2026-11-22)
+## Latest DSP verification (Diatonic Harmonizer and 53-stage browser/audio chain, 2026-11-22)
 
-The project-authored four-band feedback-delay Resonator adds no fixed dry-path latency and owns 31,136 B at 48 kHz stereo. The isolated Linux benchmark measured 0.3432% p50 / 0.5318% p95 / 0.6319% p99 / 1.9103% p99.9 / 2.0985% maximum of the 2.667 ms callback deadline. The full 52-effect chain plus signal controls/meters measured 18.1929% p50 / 23.6661% p95 / 27.9240% p99 / 33.2338% p99.9 / 38.1689% maximum and owns 6,538,848 B. The Release benchmark used an AMD Ryzen 9 5950X, GCC 13.3.0, 48 kHz stereo, 128-frame blocks, 2,000 warm-up blocks and 5,000 measured blocks. `make web-test` and `make audio-regression` passed for the 52-stage chain; manual listening and actual device behavior remain open. These are processor-call measurements, not live-device load.
+The experimental project-authored Diatonic Harmonizer owns 1,024,648 B in its stereo configuration. At 48 kHz its STFT output path buffers 256 samples (5.333 ms), while its 1,024-sample detector frame plus shifter estimates about 1,280 samples (26.7 ms) before first-note control; host/device buffering is additional. It therefore exceeds the provisional ≤20 ms live-transposition response gate. The Linux Ryzen 9 5950X / GCC 13.3.0 Release benchmark at 48 kHz stereo/128-frame blocks (2,000 warm-up and 5,000 measured calls) recorded p50/p95/p99/p99.9/max of 15.3938/19.1837/23.0121/30.9399/39.0078% of the 2.667 ms callback deadline. `make web-test` and `make audio-regression` passed for the 53-stage chain. The benchmarked aggregate chain below is still the earlier 52-stage build; its figures do not include this harmonizer. Manual listening and actual device behavior remain open. These are processor-call measurements, not live-device load.
+
+### Previous 52-stage aggregate benchmark (2026-11-22)
+
+The project-authored four-band feedback-delay Resonator adds no fixed dry-path latency and owns 31,136 B at 48 kHz stereo. The isolated Linux benchmark measured 0.3432% p50 / 0.5318% p95 / 0.6319% p99 / 1.9103% p99.9 / 2.0985% maximum of the 2.667 ms callback deadline. The full 52-effect chain plus signal controls/meters measured 18.1929% p50 / 23.6661% p95 / 27.9240% p99 / 33.2338% p99.9 / 38.1689% maximum and owns 6,538,848 B. This remains the 52-stage run; do not read those aggregate figures as the current 53-stage chain cost.
 
 ## Earlier DSP verification (Triple-Double Chorus and 51-stage browser/audio chain, 2026-11-22)
 

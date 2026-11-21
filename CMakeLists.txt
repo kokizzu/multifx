@@ -15,6 +15,7 @@ add_library(tabletfx_core
     src/effects/triple_double_chorus.cpp
     src/effects/dimension_chorus.cpp
     src/effects/four_band_resonator.cpp
+    src/effects/diatonic_harmonizer.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
     src/effects/phaser.cpp
@@ -137,6 +138,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_four_band_resonator_tests tests/test_four_band_resonator.cpp)
     target_link_libraries(tabletfx_four_band_resonator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_four_band_resonator_tests COMMAND tabletfx_four_band_resonator_tests)
+
+    add_executable(tabletfx_diatonic_harmonizer_tests tests/test_diatonic_harmonizer.cpp)
+    target_link_libraries(tabletfx_diatonic_harmonizer_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_diatonic_harmonizer_tests COMMAND tabletfx_diatonic_harmonizer_tests)
 
     add_executable(tabletfx_flanger_tests tests/test_flanger.cpp)
     target_link_libraries(tabletfx_flanger_tests PRIVATE tabletfx_core)

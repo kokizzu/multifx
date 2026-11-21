@@ -103,6 +103,8 @@ struct Options {
     tabletfx::effects::TripleDoubleChorusConfig triple_double_chorus{};
     bool four_band_resonator_enabled = false;
     tabletfx::FourBandResonatorParameters four_band_resonator{};
+    bool diatonic_harmonizer_enabled = false;
+    tabletfx::effects::DiatonicHarmonizerConfig diatonic_harmonizer{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -523,6 +525,66 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--four-band-resonator") {
             options.four_band_resonator_enabled = true;
+            continue;
+        }
+        if (key == "--diatonic-harmonizer") {
+            options.diatonic_harmonizer_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--diatonic-harmonizer-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.diatonic_harmonizer;
+            const std::string_view setting = key.substr(
+                std::string_view("--diatonic-harmonizer-").size());
+            if (setting == "mix") {
+                parameters.mix = parse_float(key, argv[i]);
+            } else if (setting == "interval") {
+                parameters.pitch_interval = static_cast<int>(
+                    std::lround(parse_float(key, argv[i])));
+            } else if (setting == "key") {
+                parameters.key = static_cast<int>(
+                    std::lround(parse_float(key, argv[i])));
+            } else if (setting == "scale") {
+                if (value == "major") parameters.scale = tabletfx::effects::DiatonicScale::Major;
+                else if (value == "natural-minor") parameters.scale = tabletfx::effects::DiatonicScale::NaturalMinor;
+                else if (value == "dorian") parameters.scale = tabletfx::effects::DiatonicScale::Dorian;
+                else if (value == "phrygian") parameters.scale = tabletfx::effects::DiatonicScale::Phrygian;
+                else if (value == "lydian") parameters.scale = tabletfx::effects::DiatonicScale::Lydian;
+                else if (value == "mixolydian") parameters.scale = tabletfx::effects::DiatonicScale::Mixolydian;
+                else if (value == "locrian") parameters.scale = tabletfx::effects::DiatonicScale::Locrian;
+                else if (value == "harmonic-minor") parameters.scale = tabletfx::effects::DiatonicScale::HarmonicMinor;
+                else if (value == "melodic-minor") parameters.scale = tabletfx::effects::DiatonicScale::MelodicMinor;
+                else if (value == "major-pentatonic") parameters.scale = tabletfx::effects::DiatonicScale::MajorPentatonic;
+                else if (value == "minor-pentatonic") parameters.scale = tabletfx::effects::DiatonicScale::MinorPentatonic;
+                else if (value == "blues") parameters.scale = tabletfx::effects::DiatonicScale::Blues;
+                else if (value == "chromatic") parameters.scale = tabletfx::effects::DiatonicScale::Chromatic;
+                else throw std::invalid_argument("Unknown diatonic harmonizer scale");
+            } else if (setting == "tone-hz") {
+                parameters.tone_hz = parse_float(key, argv[i]);
+            } else if (setting == "delay-ms") {
+                parameters.delay_ms = parse_float(key, argv[i]);
+            } else if (setting == "feedback") {
+                parameters.feedback = parse_float(key, argv[i]);
+            } else if (setting == "tap-division") {
+                if (value == "free") parameters.tap_division = tabletfx::effects::TapDivision::Free;
+                else if (value == "half") parameters.tap_division = tabletfx::effects::TapDivision::Half;
+                else if (value == "quarter") parameters.tap_division = tabletfx::effects::TapDivision::Quarter;
+                else if (value == "dotted-quarter") parameters.tap_division = tabletfx::effects::TapDivision::DottedQuarter;
+                else if (value == "quarter-triplet") parameters.tap_division = tabletfx::effects::TapDivision::QuarterTriplet;
+                else if (value == "eighth") parameters.tap_division = tabletfx::effects::TapDivision::Eighth;
+                else if (value == "dotted-eighth") parameters.tap_division = tabletfx::effects::TapDivision::DottedEighth;
+                else if (value == "eighth-triplet") parameters.tap_division = tabletfx::effects::TapDivision::EighthTriplet;
+                else if (value == "sixteenth") parameters.tap_division = tabletfx::effects::TapDivision::Sixteenth;
+                else throw std::invalid_argument("Unknown diatonic harmonizer tap division");
+            } else if (setting == "tempo-bpm") {
+                parameters.tempo_bpm = parse_float(key, argv[i]);
+            } else {
+                throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.diatonic_harmonizer_enabled = true;
             continue;
         }
         if (key.starts_with("--four-band-resonator-")) {
@@ -2464,6 +2526,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::FourBandResonator>(
             static_cast<float>(sample_rate), options.four_band_resonator));
     }
+    if (options.diatonic_harmonizer_enabled) {
+        auto harmonizer = std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
+            static_cast<float>(sample_rate));
+        harmonizer->configure(options.diatonic_harmonizer);
+        effects.push_back(std::move(harmonizer));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -3180,6 +3248,15 @@ void run_bench() {
         return std::make_unique<tabletfx::FourBandResonator>(
             static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("diatonic-harmonizer", [=] {
+        auto effect = std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
+            static_cast<float>(sample_rate));
+        tabletfx::effects::DiatonicHarmonizerConfig parameters;
+        parameters.mix = 1.0F;
+        parameters.pitch_interval = 2;
+        effect->configure(parameters);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3453,6 +3530,13 @@ void print_usage() {
                    " [--four-band-resonator-master-level value] [--four-band-resonator-master-pan -1..1]"
                    " [--four-band-resonator-master-feedback 0..1] [--four-band-resonator-master-q 0.1..4]"
                    " [--four-band-resonator-mix 0..1]"
+                    " [--diatonic-harmonizer] [--diatonic-harmonizer-mix 0..1]"
+                    " [--diatonic-harmonizer-interval -7..7] [--diatonic-harmonizer-key 0..11]"
+                    " [--diatonic-harmonizer-scale major|natural-minor|dorian|phrygian|lydian|mixolydian|locrian|harmonic-minor|melodic-minor|major-pentatonic|minor-pentatonic|blues|chromatic]"
+                    " [--diatonic-harmonizer-tone-hz Hz] [--diatonic-harmonizer-delay-ms ms]"
+                    " [--diatonic-harmonizer-feedback 0..0.85]"
+                    " [--diatonic-harmonizer-tap-division free|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth]"
+                    " [--diatonic-harmonizer-tempo-bpm BPM]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"

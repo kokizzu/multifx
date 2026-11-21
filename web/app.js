@@ -51,6 +51,7 @@ const EFFECT_NAMES = [
   "Dimension Chorus",
   "Triple-Double Chorus",
   "Four-band resonator",
+  "Diatonic Harmonizer",
   "Output level",
   "Peak limiter",
 ];
@@ -74,6 +75,7 @@ const DEFAULT_PARAMETERS = {
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
     -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5],
+  diatonicHarmonizer: [0.35, 2, 0, 0, 8000, 0, 0.2, 0, 120],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -152,6 +154,17 @@ const effectsList = document.querySelector("#effects-list");
 const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
 const fourBandResonatorControls = document.querySelector("#four-band-resonator-controls");
+const diatonicHarmonizerControls = [
+  document.querySelector("#diatonic-harmonizer-mix"),
+  document.querySelector("#diatonic-harmonizer-interval"),
+  document.querySelector("#diatonic-harmonizer-key"),
+  document.querySelector("#diatonic-harmonizer-scale"),
+  document.querySelector("#diatonic-harmonizer-tone"),
+  document.querySelector("#diatonic-harmonizer-delay"),
+  document.querySelector("#diatonic-harmonizer-feedback"),
+  document.querySelector("#diatonic-harmonizer-division"),
+  document.querySelector("#diatonic-harmonizer-tempo"),
+];
 
 function appendResonatorControl(parent, labelText, index, options) {
   const label = document.createElement("label");
@@ -1697,6 +1710,33 @@ for (const control of fourBandResonatorControls.querySelectorAll("[data-resonato
 }
 updateFourBandResonator();
 
+function updateDiatonicHarmonizer() {
+  const values = diatonicHarmonizerControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.diatonicHarmonizer = values;
+  const [mix, interval, , , tone, delay, feedback, , tempo] = values;
+  diatonicHarmonizerControls[0].parentElement.querySelector("output").value =
+    `${Math.round(mix * 100)}%`;
+  diatonicHarmonizerControls[1].parentElement.querySelector("output").value =
+    `${interval > 0 ? "+" : ""}${interval} degrees`;
+  diatonicHarmonizerControls[4].parentElement.querySelector("output").value =
+    `${Math.round(tone)} Hz`;
+  diatonicHarmonizerControls[5].parentElement.querySelector("output").value =
+    `${Math.round(delay)} ms`;
+  diatonicHarmonizerControls[6].parentElement.querySelector("output").value =
+    `${Math.round(feedback * 100)}%`;
+  diatonicHarmonizerControls[8].parentElement.querySelector("output").value =
+    `${Math.round(tempo)} BPM`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "diatonic-harmonizer", value: values });
+  }
+}
+
+for (const control of diatonicHarmonizerControls) {
+  control.addEventListener("input", updateDiatonicHarmonizer);
+  control.addEventListener("change", updateDiatonicHarmonizer);
+}
+updateDiatonicHarmonizer();
+
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
@@ -2759,8 +2799,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 52 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 52 || effectRows.length !== 52 ||
+    const expectedEffectIds = Array.from({ length: 53 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 53 || effectRows.length !== 53 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -2769,9 +2809,10 @@ async function runBrowserSelfTest() {
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
         initialEffectState[44] || initialEffectState[45] || initialEffectState[46] ||
         initialEffectState[47] || initialEffectState[48] || initialEffectState[49] ||
+        initialEffectState[50] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 52 ordered, categorized effects (IDs 0–51), with optional effects disabled by default.");
+      throw new Error("The effect picker must list 53 ordered, categorized effects (IDs 0–52), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -2888,7 +2929,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-         effectCount.value !== "10 of 52" ||
+          effectCount.value !== "10 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2896,8 +2937,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,51" ||
-        effectCount.value !== "8 of 52" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,52" ||
+        effectCount.value !== "8 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -2906,7 +2947,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 52" ||
+        effectCount.value !== "7 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -2915,7 +2956,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 52" ||
+        effectCount.value !== "7 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -2923,15 +2964,23 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 52" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
+    }
+    effectCategoryFilter.value = "pitch";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const pitchIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (pitchIds.join(",") !== "22,50" || effectCount.value !== "2 of 53" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Pitch category must list polyphonic transposition and the distinct monophonic Diatonic Harmonizer.");
     }
     effectCategoryFilter.value = "delay";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 52" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42" || effectCount.value !== "6 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -2939,7 +2988,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 52" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 53" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2949,14 +2998,25 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 52") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 53") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "52 of 52" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "53 of 53" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
+    const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
+    diatonicHarmonizerControls[1].value = "-3";
+    diatonicHarmonizerControls[1].dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.diatonicHarmonizer[1] !== -3 ||
+        diatonicHarmonizerControls[1].parentElement.querySelector("output").value !== "-3 degrees") {
+      throw new Error("Diatonic Harmonizer controls did not update the selected scale interval.");
+    }
+    defaultDiatonicHarmonizer.forEach((value, index) => {
+      diatonicHarmonizerControls[index].value = String(value);
+    });
+    updateDiatonicHarmonizer();
     const context = await getAudioContext();
     await context.resume();
     const stopClock = startSilentClock(context);
@@ -3046,6 +3106,7 @@ async function runBrowserSelfTest() {
         fourBandResonator: [1, 2, 1.1, 220, 330, 440, 660, 220,
           0.65, 0.55, 0.45, 0.35, 2, 2.5, 3, 3.5, 0.8, 0.7, 0.6, 0.5,
           -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65],
+        diatonicHarmonizer: [0.7, 2, 7, 0, 8000, 120, 0.2, 0, 120],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],

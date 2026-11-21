@@ -156,6 +156,7 @@ def build_web() -> None:
         "_tf_chain_set_dimension_chorus",
         "_tf_chain_set_triple_double_chorus",
         "_tf_chain_set_four_band_resonator",
+        "_tf_chain_set_diatonic_harmonizer",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -222,6 +223,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "dimension_chorus.cpp"),
         str(ROOT / "src" / "effects" / "triple_double_chorus.cpp"),
         str(ROOT / "src" / "effects" / "four_band_resonator.cpp"),
+        str(ROOT / "src" / "effects" / "diatonic_harmonizer.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -726,6 +728,15 @@ def browser_test() -> None:
              "--four-band-resonator-master-feedback", "0.75",
              "--four-band-resonator-master-q", "1.2",
              "--four-band-resonator-mix", "0.65",
+             "--diatonic-harmonizer-mix", "0.7",
+             "--diatonic-harmonizer-interval", "2",
+             "--diatonic-harmonizer-key", "7",
+             "--diatonic-harmonizer-scale", "major",
+             "--diatonic-harmonizer-tone-hz", "8000",
+             "--diatonic-harmonizer-delay-ms", "120",
+             "--diatonic-harmonizer-feedback", "0.2",
+             "--diatonic-harmonizer-tap-division", "free",
+             "--diatonic-harmonizer-tempo-bpm", "120",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

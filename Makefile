@@ -25,6 +25,7 @@ PYTHON ?= python3
 	publish-dimension-chorus-plan publish-dimension-chorus \
 	publish-triple-double-chorus-plan publish-triple-double-chorus \
 	publish-four-band-resonator-plan publish-four-band-resonator \
+	publish-diatonic-harmonizer-plan publish-diatonic-harmonizer \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -243,6 +244,12 @@ publish-four-band-resonator-plan:
 
 publish-four-band-resonator:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint four-band-resonator
+
+publish-diatonic-harmonizer-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint diatonic-harmonizer
+
+publish-diatonic-harmonizer:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint diatonic-harmonizer
 
 publish-flagship-catalog-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint flagship-catalog

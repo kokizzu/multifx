@@ -733,6 +733,45 @@ def check_four_band_resonator(executable: Path) -> None:
             raise AssertionError("Four-band resonator accepted an incomplete frequency list")
 
 
+def check_diatonic_harmonizer(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(8192)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-diatonic-harmonizer-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "single-note.wav"
+        output = root / "harmonized.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--diatonic-harmonizer-mix", "1",
+             "--diatonic-harmonizer-interval", "2",
+             "--diatonic-harmonizer-key", "0",
+             "--diatonic-harmonizer-scale", "major",
+             "--diatonic-harmonizer-tone-hz", "8000",
+             "--diatonic-harmonizer-delay-ms", "0",
+             "--diatonic-harmonizer-feedback", "0",
+             "--diatonic-harmonizer-tap-division", "free",
+             "--diatonic-harmonizer-tempo-bpm", "120"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Diatonic Harmonizer options did not instantiate one processor")
+        rendered = struct.unpack("<8192f", output.read_bytes()[44:44 + 8192 * 4])
+        if not all(math.isfinite(sample) for sample in rendered) or max(map(abs, rendered)) < 0.01:
+            raise AssertionError("Diatonic Harmonizer returned invalid or silent audio")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--diatonic-harmonizer-scale", "not-a-scale"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Diatonic Harmonizer accepted an unknown scale")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -1727,6 +1766,7 @@ def main() -> None:
     check_dimension_chorus(args.executable.resolve())
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())
+    check_diatonic_harmonizer(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())
@@ -1742,7 +1782,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting and Diatonic Harmonizer, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

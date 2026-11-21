@@ -781,6 +781,29 @@ FOUR_BAND_RESONATOR_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "scripts/publish_checkpoint.py",
 )
+DIATONIC_HARMONIZER_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/diatonic_harmonizer.hpp",
+    "src/effects/diatonic_harmonizer.cpp",
+    "tests/test_diatonic_harmonizer.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+)
 FLAGSHIP_CATALOG_CHECKPOINT_PATHS = (
     "Makefile",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -840,6 +863,8 @@ CHECKPOINTS = {
                               "feat: add categorized triple-double chorus"),
     "four-band-resonator": (FOUR_BAND_RESONATOR_CHECKPOINT_PATHS,
                             "feat: add categorized four-band resonator"),
+    "diatonic-harmonizer": (DIATONIC_HARMONIZER_CHECKPOINT_PATHS,
+                            "feat: add categorized diatonic harmonizer"),
     "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,
                          "docs: expand flagship effects catalog"),
 }

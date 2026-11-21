@@ -85,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(50);
+          effects_.reserve(52);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -236,6 +236,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::FourBandResonator>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -273,6 +276,10 @@ public:
         if (index == 38U) {
             static_cast<tabletfx::ReverseDelay*>(effects_[index].effect.get())
                 ->set_enabled(enabled);
+        }
+        if (index == 50U) {
+            static_cast<tabletfx::effects::DiatonicHarmonizer*>(
+                effects_[index].effect.get())->set_enabled(enabled);
         }
         effects_[index].enabled = enabled;
         return true;
@@ -746,6 +753,26 @@ public:
         parameters.mix = values[33];
         static_cast<tabletfx::FourBandResonator*>(effects_[49].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_diatonic_harmonizer(float mix, float pitch_interval,
+                                        std::uint32_t key, std::uint32_t scale,
+                                        float tone_hz, float delay_ms,
+                                        float feedback, std::uint32_t tap_division,
+                                        float tempo_bpm) noexcept {
+        tabletfx::effects::DiatonicHarmonizerConfig config;
+        config.mix = mix;
+        config.pitch_interval = static_cast<int>(std::lround(pitch_interval));
+        config.key = static_cast<int>(key);
+        config.scale = static_cast<tabletfx::effects::DiatonicScale>(scale);
+        config.tone_hz = tone_hz;
+        config.delay_ms = delay_ms;
+        config.feedback = feedback;
+        config.tap_division = static_cast<tabletfx::effects::TapDivision>(tap_division);
+        config.tempo_bpm = tempo_bpm;
+        config.spillover = false;
+        static_cast<tabletfx::effects::DiatonicHarmonizer*>(effects_[50].effect.get())
+            ->configure(config);
     }
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
@@ -1882,6 +1909,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_four_band_resonator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_four_band_resonator(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_diatonic_harmonizer(
+    void* opaque, float mix, float pitch_interval, std::uint32_t key,
+    std::uint32_t scale, float tone_hz, float delay_ms, float feedback,
+    std::uint32_t tap_division, float tempo_bpm) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_diatonic_harmonizer(
+            mix, pitch_interval, key, scale, tone_hz, delay_ms, feedback,
+            tap_division, tempo_bpm);
     }
 }
 

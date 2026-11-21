@@ -113,6 +113,15 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--triple-double-chorus-sparkle", "0.2",
         "--triple-double-chorus-stereo-switch", "on",
         "--four-band-resonator",
+        "--diatonic-harmonizer-mix", "0.35",
+        "--diatonic-harmonizer-interval", "2",
+        "--diatonic-harmonizer-key", "0",
+        "--diatonic-harmonizer-scale", "major",
+        "--diatonic-harmonizer-tone-hz", "8000",
+        "--diatonic-harmonizer-delay-ms", "0",
+        "--diatonic-harmonizer-feedback", "0.2",
+        "--diatonic-harmonizer-tap-division", "free",
+        "--diatonic-harmonizer-tempo-bpm", "120",
         "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "2",
         "--flanger-depth-ms", "1", "--flanger-feedback", "0.35",
         "--flanger-feedback-polarity", "positive", "--flanger-mix", "0.2",
@@ -271,7 +280,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 52:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 53:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -338,7 +347,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 52-stage chain, including Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 53-stage chain, including Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, monophonic Diatonic Harmonizer, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":
