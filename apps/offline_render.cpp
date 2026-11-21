@@ -474,6 +474,41 @@ Options parse_options(int argc, char** argv, int first) {
             options.reverse_delay_enabled = true;
             continue;
         }
+        if (key == "--reverse-delay-time-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --reverse-delay-time-mode");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "milliseconds" || value == "ms") {
+                options.reverse_delay.time_mode = tabletfx::DelayTimeMode::milliseconds;
+            } else if (value == "tempo-sync") {
+                options.reverse_delay.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+            } else {
+                throw std::invalid_argument(
+                    "Reverse-delay time mode must be milliseconds or tempo-sync");
+            }
+            options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--reverse-delay-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --reverse-delay-division");
+            }
+            options.reverse_delay.division = parse_delay_division(argv[++i]);
+            options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--reverse-delay-spillover") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --reverse-delay-spillover");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.reverse_delay.spillover = true;
+            else if (value == "off") options.reverse_delay.spillover = false;
+            else throw std::invalid_argument("Reverse-delay spillover must be on or off");
+            options.reverse_delay_enabled = true;
+            continue;
+        }
         if (key == "--rotary-tempo-sync") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --rotary-tempo-sync");
@@ -1476,6 +1511,22 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--reverse-delay-crossfade-ms") {
             options.reverse_delay.crossfade_ms = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-tempo-bpm") {
+            options.reverse_delay.tempo_bpm = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-low-cut-hz") {
+            options.reverse_delay.low_cut_hz = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-high-cut-hz") {
+            options.reverse_delay.high_cut_hz = value;
+            options.reverse_delay_enabled = true;
+        }
+        else if (key == "--reverse-delay-forward-level") {
+            options.reverse_delay.forward_level = value;
             options.reverse_delay_enabled = true;
         }
         else if (key == "--ducking-delay-time-ms") {
@@ -2929,7 +2980,14 @@ void print_usage() {
                    " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
                  << "                 [--reverse-delay] [--reverse-delay-time-ms 1..2000]"
                     " [--reverse-delay-feedback 0..0.95] [--reverse-delay-mix 0..1]"
-                    " [--reverse-delay-crossfade-ms 0..50] [--reverse-delay-run on|off]\n"
+                     " [--reverse-delay-time-mode milliseconds|tempo-sync]"
+                     " [--reverse-delay-tempo-bpm 20..300]"
+                     " [--reverse-delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
+                     " [--reverse-delay-low-cut-hz 0..1000]"
+                     " [--reverse-delay-high-cut-hz 0..20000]"
+                     " [--reverse-delay-forward-level 0..1]"
+                     " [--reverse-delay-crossfade-ms 0..50] [--reverse-delay-run on|off]"
+                     " [--reverse-delay-spillover on|off]\n"
                  << "                 [--ducking-delay] [--ducking-delay-time-ms 1..2000]"
                     " [--ducking-delay-feedback 0..0.95] [--ducking-delay-mix 0..1]"
                     " [--ducking-delay-threshold-db -72..0]"

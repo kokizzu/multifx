@@ -106,6 +106,121 @@ void test_processing_is_independent_of_block_boundaries() {
             "Reverse Delay output must not depend on process block boundaries");
 }
 
+void test_tempo_sync_and_division_bounds() {
+    tabletfx::ReverseDelayParameters parameters;
+    parameters.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+    parameters.division = tabletfx::DelayDivision::quarter;
+    parameters.tempo_bpm = 120.0F;
+    parameters.time_ms = 350.0F;
+    tabletfx::ReverseDelay delay(1000.0F, 1, 1000.0F, parameters);
+    require(delay.effective_time_ms() == 500.0F,
+            "quarter-note sync at 120 BPM must use 500 ms");
+
+    parameters.division = tabletfx::DelayDivision::dotted_eighth;
+    delay.set_parameters(parameters);
+    require(delay.effective_time_ms() == 375.0F,
+            "dotted-eighth sync at 120 BPM must use 375 ms");
+
+    parameters.division = tabletfx::DelayDivision::whole;
+    parameters.tempo_bpm = 1000.0F;
+    delay.set_parameters(parameters);
+    require(delay.parameters().tempo_bpm == 300.0F &&
+                delay.effective_time_ms() == 800.0F,
+            "tempo and synced delay time must stay within project bounds");
+
+    parameters.division = static_cast<tabletfx::DelayDivision>(255);
+    delay.set_parameters(parameters);
+    require(delay.parameters().division == tabletfx::DelayDivision::quarter,
+            "invalid tap division must fall back to quarter note");
+}
+
+void test_repeat_filters_leave_the_dry_path_unchanged() {
+    tabletfx::ReverseDelayParameters plain_parameters;
+    plain_parameters.time_ms = 4.0F;
+    plain_parameters.feedback = 0.0F;
+    plain_parameters.mix = 1.0F;
+    plain_parameters.crossfade_ms = 0.0F;
+    tabletfx::ReverseDelayParameters filtered_parameters = plain_parameters;
+    filtered_parameters.high_cut_hz = 100.0F;
+    tabletfx::ReverseDelay plain(1000.0F, 1, 1000.0F, plain_parameters);
+    tabletfx::ReverseDelay filtered(1000.0F, 1, 1000.0F,
+                                    filtered_parameters);
+    std::array<float, 12> plain_audio{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    auto filtered_audio = plain_audio;
+    plain.process(plain_audio, 1);
+    filtered.process(filtered_audio, 1);
+    require(plain_audio != filtered_audio,
+            "repeat High Cut must alter the reversed wet repeats");
+
+    filtered_parameters.mix = 0.0F;
+    tabletfx::ReverseDelay dry_only(1000.0F, 1, 1000.0F,
+                                    filtered_parameters);
+    std::array<float, 12> dry{0.1F, -0.3F, 0.7F, -0.9F, 0.2F, 0.4F,
+                              -0.6F, 0.8F, -0.1F, 0.5F, -0.7F, 0.3F};
+    const auto original = dry;
+    dry_only.process(dry, 1);
+    require(dry == original,
+            "repeat filters must not change the immediate dry signal");
+}
+
+void test_forward_level_is_a_separate_delayed_tap() {
+    tabletfx::ReverseDelayParameters parameters;
+    parameters.time_ms = 4.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.crossfade_ms = 0.0F;
+    parameters.forward_level = 0.0F;
+    tabletfx::ReverseDelay reverse_only(1000.0F, 1, 1000.0F, parameters);
+    std::array<float, 8> reverse_audio{1, 2, 3, 4, 5, 6, 7, 8};
+    reverse_only.process(reverse_audio, 1);
+    require(reverse_audio[4] == 4.0F,
+            "zero Forward Level must leave only the reverse tap");
+
+    parameters.forward_level = 1.0F;
+    tabletfx::ReverseDelay with_forward(1000.0F, 1, 1000.0F, parameters);
+    std::array<float, 8> combined_audio{1, 2, 3, 4, 5, 6, 7, 8};
+    with_forward.process(combined_audio, 1);
+    require(combined_audio[4] == 5.0F,
+            "Forward Level must add a distinct forward delayed tap");
+}
+
+void test_spillover_bypass_drains_old_tail_without_recording_new_input() {
+    tabletfx::ReverseDelayParameters parameters;
+    parameters.time_ms = 4.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.crossfade_ms = 0.0F;
+    parameters.spillover = true;
+    tabletfx::ReverseDelay delay(1000.0F, 1, 1000.0F, parameters);
+    std::array<float, 4> captured{1, 2, 3, 4};
+    delay.process(captured, 1);
+    delay.set_enabled(false);
+    std::array<float, 4> tail{};
+    delay.process(tail, 1);
+    require(tail == std::array<float, 4>{4, 3, 2, 1},
+            "spillover bypass must output the captured tail without new input");
+
+    delay.set_enabled(true);
+    std::array<float, 4> new_capture{7, 8, 9, 10};
+    delay.process(new_capture, 1);
+    require(new_capture == std::array<float, 4>{0, 0, 0, 0},
+            "reenabling must wait for a fresh snippet rather than replay stale ring data");
+    std::array<float, 4> fresh_tail{};
+    delay.process(fresh_tail, 1);
+    require(fresh_tail == std::array<float, 4>{10, 9, 8, 7},
+            "the reenabled processor must reverse its newly captured snippet");
+
+    parameters.spillover = false;
+    tabletfx::ReverseDelay no_tail(1000.0F, 1, 1000.0F, parameters);
+    std::array<float, 4> no_tail_capture{1, 2, 3, 4};
+    no_tail.process(no_tail_capture, 1);
+    no_tail.set_enabled(false);
+    std::array<float, 4> bypassed{0, 0, 0, 0};
+    no_tail.process(bypassed, 1);
+    require(bypassed == std::array<float, 4>{0, 0, 0, 0},
+            "disabled spillover must bypass without outputting a tail");
+}
+
 void test_bounds_reset_and_invalid_audio() {
     tabletfx::ReverseDelay delay;
     auto parameters = delay.parameters();
@@ -113,10 +228,18 @@ void test_bounds_reset_and_invalid_audio() {
     parameters.feedback = 4.0F;
     parameters.mix = -2.0F;
     parameters.crossfade_ms = 900.0F;
+    parameters.low_cut_hz = 5000.0F;
+    parameters.high_cut_hz = 50000.0F;
+    parameters.forward_level = 2.0F;
+    parameters.tempo_bpm = 1000.0F;
     delay.set_parameters(parameters);
     auto sanitized = delay.parameters();
     require(sanitized.time_ms == 2000.0F && sanitized.feedback == 0.95F &&
-                sanitized.mix == 0.0F && sanitized.crossfade_ms <= 50.0F,
+                sanitized.mix == 0.0F && sanitized.crossfade_ms <= 50.0F &&
+                sanitized.low_cut_hz == 1000.0F &&
+                sanitized.high_cut_hz == 20000.0F &&
+                sanitized.forward_level == 1.0F &&
+                sanitized.tempo_bpm == 300.0F,
             "reverse-delay controls must stay within project-authored bounds");
     require(delay.id() == "reverse-delay" && delay.memory_bytes() > sizeof(delay),
             "reverse-delay identity or state-memory accounting is incorrect");
@@ -151,6 +274,10 @@ int main() {
         test_channels_are_independent_and_crossfade_is_finite();
         test_run_mutes_wet_and_restart_restarts_capture_window();
         test_processing_is_independent_of_block_boundaries();
+        test_tempo_sync_and_division_bounds();
+        test_repeat_filters_leave_the_dry_path_unchanged();
+        test_forward_level_is_a_separate_delayed_tap();
+        test_spillover_bypass_drains_old_tail_without_recording_new_input();
         test_bounds_reset_and_invalid_audio();
         std::cout << "Reverse Delay tests passed\n";
     } catch (const std::exception& exception) {

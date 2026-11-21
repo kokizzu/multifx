@@ -206,7 +206,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_phaser(this.chain, ...phaser);
       const notchFilter = parameters.notchFilter || [1000, 4, 1];
       module._tf_chain_set_notch_filter(this.chain, ...notchFilter);
-      const reverseDelay = parameters.reverseDelay || [350, 0.25, 0.35, 10];
+      const reverseDelay = parameters.reverseDelay ||
+        [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0];
       module._tf_chain_set_reverse_delay(this.chain, ...reverseDelay);
       module._tf_chain_set_reverse_delay_run(this.chain,
         parameters.reverseDelayRun === false ? 0 : 1);

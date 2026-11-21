@@ -194,9 +194,10 @@ public:
         effects_.push_back({std::make_unique<tabletfx::NotchFilter>(
                                 static_cast<float>(sample_rate)),
                             false});
-        effects_.push_back({std::make_unique<tabletfx::ReverseDelay>(
-                                static_cast<float>(sample_rate), channels),
-                            false});
+        auto reverse_delay = std::make_unique<tabletfx::ReverseDelay>(
+            static_cast<float>(sample_rate), channels);
+        reverse_delay->set_enabled(false);
+        effects_.push_back({std::move(reverse_delay), false});
         effects_.push_back({std::make_unique<tabletfx::DuckingDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
@@ -240,8 +241,9 @@ public:
         if (index == 32U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
-        if (index == 38U && effects_[index].enabled && !enabled) {
-            effects_[index].effect->reset();
+        if (index == 38U) {
+            static_cast<tabletfx::ReverseDelay*>(effects_[index].effect.get())
+                ->set_enabled(enabled);
         }
         effects_[index].enabled = enabled;
         return true;
@@ -263,7 +265,8 @@ public:
     }
 
     void process_effect(std::uint32_t index) noexcept {
-        if (frames_ == 0 || index >= effects_.size() || !effects_[index].enabled) {
+        if (frames_ == 0 || index >= effects_.size() ||
+            (!effects_[index].enabled && index != 38U)) {
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
@@ -927,10 +930,17 @@ public:
     }
 
     void configure_reverse_delay(float time_ms, float feedback, float mix,
-                                 float crossfade_ms) noexcept {
+                                 float crossfade_ms, std::uint32_t time_mode,
+                                 std::uint32_t division, float tempo_bpm,
+                                 float low_cut_hz, float high_cut_hz,
+                                 float forward_level, bool spillover) noexcept {
         auto* delay = static_cast<tabletfx::ReverseDelay*>(
             effects_[38].effect.get());
-        delay->set_parameters({time_ms, feedback, mix, crossfade_ms});
+        delay->set_parameters({
+            time_ms, feedback, mix, crossfade_ms,
+            static_cast<tabletfx::DelayTimeMode>(time_mode),
+            static_cast<tabletfx::DelayDivision>(division), tempo_bpm,
+            low_cut_hz, high_cut_hz, forward_level, spillover});
     }
 
     void set_reverse_delay_running(bool running) noexcept {
@@ -1524,10 +1534,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_notch_filter(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_reverse_delay(
     void* opaque, float time_ms, float feedback, float mix,
-    float crossfade_ms) noexcept {
+    float crossfade_ms, std::uint32_t time_mode, std::uint32_t division,
+    float tempo_bpm, float low_cut_hz, float high_cut_hz,
+    float forward_level, std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_reverse_delay(time_ms, feedback, mix,
-                                                 crossfade_ms);
+            crossfade_ms, time_mode, division, tempo_bpm, low_cut_hz,
+            high_cut_hz, forward_level, spillover != 0U);
     }
 }
 

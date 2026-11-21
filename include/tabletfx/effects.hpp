@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tabletfx/effect.hpp"
+#include "tabletfx/effects/delay_timing.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
 
 #include <array>
@@ -81,26 +82,6 @@ public:
 private:
     float drive_;
     float normalization_;
-};
-
-enum class DelayTimeMode : std::uint8_t {
-    milliseconds,
-    tempo_sync,
-};
-
-enum class DelayDivision : std::uint8_t {
-    whole,
-    dotted_half,
-    half,
-    dotted_quarter,
-    quarter,
-    quarter_triplet,
-    dotted_eighth,
-    eighth,
-    eighth_triplet,
-    dotted_sixteenth,
-    sixteenth,
-    sixteenth_triplet,
 };
 
 inline constexpr std::size_t maximum_delay_taps = 4;

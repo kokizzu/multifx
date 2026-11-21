@@ -1,7 +1,9 @@
 #pragma once
 
 #include "tabletfx/effect.hpp"
+#include "tabletfx/effects/delay_timing.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -14,6 +16,13 @@ struct ReverseDelayParameters {
     float feedback = 0.25F;
     float mix = 0.35F;
     float crossfade_ms = 10.0F;
+    DelayTimeMode time_mode = DelayTimeMode::milliseconds;
+    DelayDivision division = DelayDivision::quarter;
+    float tempo_bpm = 120.0F;
+    float low_cut_hz = 0.0F;
+    float high_cut_hz = 0.0F;
+    float forward_level = 0.0F;
+    bool spillover = false;
 };
 
 /*
@@ -49,13 +58,17 @@ struct ReverseDelayParameters {
  *   but does not publish its controls or ranges:
  *   https://www.headrushfx.com/products/prime/
  *
- * This project implements the shared Time, Feedback, and Mix behavior plus
- * Fractal's Run, Trigger Restart, and Crossfade controls. Tempo/tap sync, wet
- * High/Low Cut filters, Forward Level, and Spillover are tracked in the
- * comparison checklist and are not implemented by this module yet.
- * These are project-authored bounds: Time 1–2000 ms, Feedback 0–0.95, Mix 0–1,
- * and Crossfade 0–50 ms, with the effective crossfade additionally limited to
- * less than half of Time. The audio thread performs no allocations.
+ * Fender's exact-model guide also names Tap Division, wet High/Low Cut,
+ * Forward Level, and a Spillover Switch; it publishes no numeric ranges. This
+ * project provides independently authored bounds: free Time 1–2000 ms,
+ * Feedback 0–0.95, Mix 0–1, Crossfade 0–50 ms (also limited below half of
+ * effective Time), BPM 20–300, Low Cut 0–1000 Hz, High Cut 0–20000 Hz
+ * subject to sample-rate limits (zero disables that filter), and Forward Level
+ * 0–1 relative to the wet reverse level. Forward Level is implemented as a
+ * parallel forward delay tap;
+ * this is a project interpretation, not a claim about Fender's internal
+ * topology. Spillover applies only to this block's bypass, not preset/scene
+ * transitions. The audio thread performs no allocations.
  */
 class ReverseDelay final : public Effect {
 public:
@@ -77,6 +90,12 @@ public:
     }
     void set_running(bool running) noexcept { running_ = running; }
     [[nodiscard]] bool running() const noexcept { return running_; }
+    void set_enabled(bool enabled) noexcept;
+    [[nodiscard]] bool enabled() const noexcept { return enabled_; }
+    [[nodiscard]] float effective_time_ms() const noexcept {
+        return static_cast<float>(static_cast<double>(delay_samples_) * 1000.0 /
+                                  static_cast<double>(sample_rate_));
+    }
     void trigger_restart() noexcept;
 
     void process(std::span<float> interleaved,
@@ -91,14 +110,28 @@ private:
     static constexpr float kDefaultFeedback = 0.25F;
     static constexpr float kDefaultMix = 0.35F;
     static constexpr float kDefaultCrossfadeMs = 10.0F;
+    static constexpr float kDefaultTempoBpm = 120.0F;
+    static constexpr float kDefaultLowCutHz = 0.0F;
+    static constexpr float kDefaultHighCutHz = 0.0F;
+    static constexpr float kDefaultForwardLevel = 0.0F;
     static constexpr float kMaximumCrossfadeMs = 50.0F;
     static constexpr float kParameterSmoothingMs = 10.0F;
 
+    struct RepeatFilterState {
+        float highpass_previous_input = 0.0F;
+        float highpass_previous_output = 0.0F;
+        float lowpass_output = 0.0F;
+    };
+
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
+    [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
     [[nodiscard]] std::size_t samples_for_ms(float milliseconds) const noexcept;
     [[nodiscard]] float read_age(std::size_t age,
                                  std::uint16_t channel) const noexcept;
+    [[nodiscard]] float filter_repeat_sample(
+        float input, std::uint16_t channel,
+        std::array<RepeatFilterState, 2>& state) noexcept;
     void advance_parameters() noexcept;
 
     float sample_rate_ = kDefaultSampleRate;
@@ -108,6 +141,7 @@ private:
     std::size_t write_frame_ = 0;
     std::uint64_t write_count_ = 0;
     std::uint64_t capture_start_frame_ = 0;
+    std::size_t valid_frames_ = 0;
     std::size_t delay_samples_ = 1;
     std::size_t crossfade_samples_ = 0;
     std::vector<float> storage_;
@@ -116,9 +150,18 @@ private:
     float feedback_step_ = 0.0F;
     float mix_ = 0.0F;
     float mix_step_ = 0.0F;
+    float forward_level_ = kDefaultForwardLevel;
+    float forward_level_step_ = 0.0F;
+    float highpass_alpha_ = 0.0F;
+    float highpass_alpha_step_ = 0.0F;
+    float lowpass_alpha_ = 0.0F;
+    float lowpass_alpha_step_ = 0.0F;
+    std::array<RepeatFilterState, 2> reverse_filter_state_{};
+    std::array<RepeatFilterState, 2> forward_filter_state_{};
     std::size_t ramp_remaining_ = 0;
     std::size_t ramp_total_ = 1;
     bool running_ = true;
+    bool enabled_ = true;
 };
 
 } // namespace tabletfx

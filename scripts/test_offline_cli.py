@@ -456,10 +456,21 @@ def check_reverse_delay(executable: Path) -> None:
         source = root / "sequence.wav"
         wet_output = root / "reversed.wav"
         muted_output = root / "muted.wav"
+        sync_source = root / "sync-sequence.wav"
+        sync_output = root / "sync-reversed.wav"
         write_pcm16(source, sample_rate, source_samples)
+        sync_source_samples = [((frame * 997) % 24000) - 12000 for frame in range(4800)]
+        write_pcm16(sync_source, sample_rate, sync_source_samples)
         options = ["--reverse-delay", "--reverse-delay-time-ms", "1",
                    "--reverse-delay-feedback", "0", "--reverse-delay-mix", "1",
-                   "--reverse-delay-crossfade-ms", "0"]
+                   "--reverse-delay-crossfade-ms", "0",
+                   "--reverse-delay-time-mode", "milliseconds",
+                   "--reverse-delay-tempo-bpm", "120",
+                   "--reverse-delay-division", "quarter",
+                   "--reverse-delay-low-cut-hz", "0",
+                   "--reverse-delay-high-cut-hz", "0",
+                   "--reverse-delay-forward-level", "0",
+                   "--reverse-delay-spillover", "off"]
         wet_result = subprocess.run(
             [str(executable), "render", str(source), str(wet_output), *options],
             capture_output=True, text=True, check=True,
@@ -480,6 +491,30 @@ def check_reverse_delay(executable: Path) -> None:
             raise AssertionError("Reverse Delay did not play its captured segment backward")
         if any(abs(value) > 1e-6 for value in muted):
             raise AssertionError("Reverse Delay Run off must mute wet-only output")
+        sync_result = subprocess.run(
+            [str(executable), "render", str(sync_source), str(sync_output),
+             "--reverse-delay", "--reverse-delay-time-ms", "1",
+             "--reverse-delay-time-mode", "tempo-sync",
+             "--reverse-delay-tempo-bpm", "300",
+             "--reverse-delay-division", "sixteenth-triplet",
+             "--reverse-delay-feedback", "0", "--reverse-delay-mix", "1",
+             "--reverse-delay-crossfade-ms", "0"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in sync_result.stdout:
+            raise AssertionError("Tempo-synced Reverse Delay did not enable one processor")
+        synced = struct.unpack(
+            "<" + "f" * len(sync_source_samples), sync_output.read_bytes()[44:],
+        )
+        sync_delay_frames = 1600
+        if any(abs(value) > 1e-6 for value in synced[:sync_delay_frames]):
+            raise AssertionError("Tempo-synced Reverse Delay started before its division")
+        expected_sync = [sample / 32768.0
+                         for sample in reversed(sync_source_samples[:sync_delay_frames])]
+        if any(abs(actual - target) > 1 / 32768
+               for actual, target in zip(
+                   synced[sync_delay_frames:sync_delay_frames * 2], expected_sync)):
+            raise AssertionError("Reverse Delay tempo division did not set the capture window")
 
 
 def check_ducking_delay(executable: Path) -> None:

@@ -85,7 +85,7 @@ const DEFAULT_PARAMETERS = {
     0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   notchFilter: [1000, 4, 1],
-  reverseDelay: [350, 0.25, 0.35, 10],
+  reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   filteredDelay: [350, 0.25, 0.25, 120, 6000],
@@ -562,6 +562,10 @@ const notchFilterMix = document.querySelector("#notch-filter-mix");
 const notchFilterMixValue = document.querySelector("#notch-filter-mix-value");
 const reverseDelayTime = document.querySelector("#reverse-delay-time-ms");
 const reverseDelayTimeValue = document.querySelector("#reverse-delay-time-ms-value");
+const reverseDelayTimeMode = document.querySelector("#reverse-delay-time-mode");
+const reverseDelayTempo = document.querySelector("#reverse-delay-tempo-bpm");
+const reverseDelayTempoValue = document.querySelector("#reverse-delay-tempo-bpm-value");
+const reverseDelayDivision = document.querySelector("#reverse-delay-division");
 const reverseDelayFeedback = document.querySelector("#reverse-delay-feedback");
 const reverseDelayFeedbackValue = document.querySelector("#reverse-delay-feedback-value");
 const reverseDelayMix = document.querySelector("#reverse-delay-mix");
@@ -569,6 +573,13 @@ const reverseDelayMixValue = document.querySelector("#reverse-delay-mix-value");
 const reverseDelayCrossfade = document.querySelector("#reverse-delay-crossfade-ms");
 const reverseDelayCrossfadeValue = document.querySelector("#reverse-delay-crossfade-ms-value");
 const reverseDelayRun = document.querySelector("#reverse-delay-run");
+const reverseDelayLowCut = document.querySelector("#reverse-delay-low-cut-hz");
+const reverseDelayLowCutValue = document.querySelector("#reverse-delay-low-cut-hz-value");
+const reverseDelayHighCut = document.querySelector("#reverse-delay-high-cut-hz");
+const reverseDelayHighCutValue = document.querySelector("#reverse-delay-high-cut-hz-value");
+const reverseDelayForwardLevel = document.querySelector("#reverse-delay-forward-level");
+const reverseDelayForwardLevelValue = document.querySelector("#reverse-delay-forward-level-value");
+const reverseDelaySpillover = document.querySelector("#reverse-delay-spillover");
 const reverseDelayRestart = document.querySelector("#reverse-delay-restart");
 const duckingDelayTime = document.querySelector("#ducking-delay-time-ms");
 const duckingDelayTimeValue = document.querySelector("#ducking-delay-time-ms-value");
@@ -1939,7 +1950,15 @@ function updateNotchFilter() {
 
 function updateReverseDelay() {
   const timeMs = Number(reverseDelayTime.value);
-  const maximumCrossfade = Math.min(50, timeMs / 2);
+  const timeMode = Number(reverseDelayTimeMode.value);
+  const division = Number(reverseDelayDivision.value);
+  const tempoBpm = Number(reverseDelayTempo.value);
+  const beatsPerDivision = [4, 3, 2, 1.5, 1, 2 / 3, 0.75, 0.5,
+    1 / 3, 0.375, 0.25, 1 / 6];
+  const effectiveTimeMs = timeMode === 1
+    ? (60000 * beatsPerDivision[division]) / tempoBpm
+    : timeMs;
+  const maximumCrossfade = Math.min(50, effectiveTimeMs / 2);
   reverseDelayCrossfade.max = String(maximumCrossfade);
   if (Number(reverseDelayCrossfade.value) > maximumCrossfade) {
     reverseDelayCrossfade.value = String(maximumCrossfade);
@@ -1949,11 +1968,22 @@ function updateReverseDelay() {
     Number(reverseDelayFeedback.value) / 100,
     Number(reverseDelayMix.value) / 100,
     Number(reverseDelayCrossfade.value),
+    timeMode,
+    division,
+    tempoBpm,
+    Number(reverseDelayLowCut.value),
+    Number(reverseDelayHighCut.value),
+    Number(reverseDelayForwardLevel.value) / 100,
+    reverseDelaySpillover.checked ? 1 : 0,
   ];
-  reverseDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  reverseDelayTimeValue.value = `${effectiveTimeMs.toFixed(0)} ms${timeMode === 1 ? " (sync)" : ""}`;
+  reverseDelayTempoValue.value = `${tempoBpm.toFixed(0)} BPM`;
   reverseDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
   reverseDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
   reverseDelayCrossfadeValue.value = `${values[3].toFixed(1)} ms`;
+  reverseDelayLowCutValue.value = values[7] <= 0 ? "Off" : `${values[7].toFixed(0)} Hz`;
+  reverseDelayHighCutValue.value = values[8] <= 0 ? "Off" : `${values[8].toFixed(0)} Hz`;
+  reverseDelayForwardLevelValue.value = `${Math.round(values[9] * 100)}%`;
   DEFAULT_PARAMETERS.reverseDelay = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "reverse-delay", value: values });
@@ -2137,9 +2167,14 @@ for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
   input.addEventListener("change", updateNotchFilter);
 }
-for (const input of [reverseDelayTime, reverseDelayFeedback, reverseDelayMix,
-  reverseDelayCrossfade]) {
+for (const input of [reverseDelayTime, reverseDelayTempo,
+  reverseDelayFeedback, reverseDelayMix, reverseDelayCrossfade,
+  reverseDelayLowCut, reverseDelayHighCut, reverseDelayForwardLevel]) {
   input.addEventListener("input", updateReverseDelay);
+  input.addEventListener("change", updateReverseDelay);
+}
+for (const input of [reverseDelayTimeMode, reverseDelayDivision,
+  reverseDelaySpillover]) {
   input.addEventListener("change", updateReverseDelay);
 }
 for (const input of [duckingDelayTime, duckingDelayFeedback, duckingDelayMix,
@@ -2521,7 +2556,7 @@ async function runBrowserSelfTest() {
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
-         reverseDelay: [350, 0.25, 0.35, 10],
+          reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
         sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
@@ -2588,6 +2623,13 @@ async function runBrowserSelfTest() {
     reverseDelayFeedback.value = String(reverseDelayParameters[1] * 100);
     reverseDelayMix.value = String(reverseDelayParameters[2] * 100);
     reverseDelayCrossfade.value = String(reverseDelayParameters[3]);
+    reverseDelayTimeMode.value = String(reverseDelayParameters[4]);
+    reverseDelayDivision.value = String(reverseDelayParameters[5]);
+    reverseDelayTempo.value = String(reverseDelayParameters[6]);
+    reverseDelayLowCut.value = String(reverseDelayParameters[7]);
+    reverseDelayHighCut.value = String(reverseDelayParameters[8]);
+    reverseDelayForwardLevel.value = String(reverseDelayParameters[9] * 100);
+    reverseDelaySpillover.checked = Boolean(reverseDelayParameters[10]);
     reverseDelayRun.checked = testOptions.parameters.reverseDelayRun;
     updateReverseDelay();
     updateReverseDelayRun();
