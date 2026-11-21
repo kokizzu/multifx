@@ -340,6 +340,41 @@ def check_ring_modulator(executable: Path) -> None:
             raise AssertionError("Ring Mod controls did not modulate the test tone")
 
 
+def check_rhythmic_slicer(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(8000)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-rhythmic-slicer-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "sliced.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        pattern = "1,0," + ",".join(["1", "0"] * 7)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--rhythmic-slicer", "--rhythmic-slicer-tempo-sync", "on",
+             "--rhythmic-slicer-tempo-bpm", "120",
+             "--rhythmic-slicer-division", "sixteenth",
+             "--rhythmic-slicer-depth", "1", "--rhythmic-slicer-shape", "0",
+             "--rhythmic-slicer-attack-ms", "0", "--rhythmic-slicer-release-ms", "0",
+             "--rhythmic-slicer-phase", "0", "--rhythmic-slicer-steps", pattern],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Rhythmic Slicer controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Rhythmic Slicer produced non-finite output")
+        first_step = values[100:900]
+        second_step = values[1100:1900]
+        if max(abs(value) for value in first_step) < 0.25:
+            raise AssertionError("Rhythmic Slicer did not pass the on-step audio")
+        if max(abs(value) for value in second_step) > 1.0e-6:
+            raise AssertionError("Rhythmic Slicer did not mute the off-step audio")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1158,6 +1193,7 @@ def main() -> None:
     check_auto_swell(args.executable.resolve())
     check_rotary_speaker(args.executable.resolve())
     check_ring_modulator(args.executable.resolve())
+    check_rhythmic_slicer(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1182,7 +1218,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, Rotary Speaker, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

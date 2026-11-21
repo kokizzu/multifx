@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">37 of 37</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">38 of 38</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -117,8 +117,9 @@
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="32"><span class="effect-number">33</span><span class="effect-name">Auto Swell</span><span class="effect-default">250 ms attack · S-taper</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="33"><span class="effect-number">34</span><span class="effect-name">Rotary Speaker</span><span class="effect-default">6 Hz · slow · 100% mix</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="34"><span class="effect-number">35</span><span class="effect-name">Ring Modulator</span><span class="effect-default">440 Hz · 1× · 20 kHz high cut · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="35" checked><span class="effect-number">36</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="36" checked><span class="effect-number">37</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="35"><span class="effect-number">36</span><span class="effect-name">Rhythmic Slicer</span><span class="effect-default">16 steps · 120 BPM · sixteenth</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="36" checked><span class="effect-number">37</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="37" checked><span class="effect-number">38</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -202,6 +203,22 @@
           <label class="mix-control" for="ring-mod-mix"><span>Mix</span><output id="ring-mod-mix-value" for="ring-mod-mix">100%</output><input id="ring-mod-mix" type="range" min="0" max="100" step="1" value="100"></label>
         </div>
         <p class="hint">A free-running sine carrier multiplies the audio. The row checkbox bypasses the block. This project-authored implementation is the classic mode; it does not implement SSB or pitch-tracked variants.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Rhythmic Slicer controls">
+        <h3>Rhythmic Slicer · project-authored</h3>
+        <div class="slicer-global-controls">
+          <label class="slicer-sync" for="rhythmic-slicer-tempo-sync"><input id="rhythmic-slicer-tempo-sync" type="checkbox" checked><span>Tempo sync</span></label>
+          <label class="mix-control" for="rhythmic-slicer-tempo-bpm"><span>Tempo</span><output id="rhythmic-slicer-tempo-bpm-value" for="rhythmic-slicer-tempo-bpm">120 BPM</output><input id="rhythmic-slicer-tempo-bpm" type="range" min="30" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="rhythmic-slicer-division"><span>Step division</span><select id="rhythmic-slicer-division"><option value="0">Whole</option><option value="1">Half</option><option value="2">Quarter</option><option value="3">Dotted quarter</option><option value="4">Quarter triplet</option><option value="5">Eighth</option><option value="6">Dotted eighth</option><option value="7">Eighth triplet</option><option value="8" selected>Sixteenth</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth triplet</option><option value="11">Thirty-second</option><option value="12">Thirty-second triplet</option></select></label>
+          <label class="mix-control" for="rhythmic-slicer-rate-hz"><span>Free rate</span><output id="rhythmic-slicer-rate-value" for="rhythmic-slicer-rate-hz">8.00 Hz</output><input id="rhythmic-slicer-rate-hz" type="range" min="0.05" max="60" step="0.05" value="8"></label>
+          <label class="mix-control" for="rhythmic-slicer-depth"><span>Depth</span><output id="rhythmic-slicer-depth-value" for="rhythmic-slicer-depth">100%</output><input id="rhythmic-slicer-depth" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="rhythmic-slicer-shape"><span>Step transition</span><output id="rhythmic-slicer-shape-value" for="rhythmic-slicer-shape">15%</output><input id="rhythmic-slicer-shape" type="range" min="0" max="100" step="1" value="15"></label>
+          <label class="mix-control" for="rhythmic-slicer-attack-ms"><span>Attack</span><output id="rhythmic-slicer-attack-value" for="rhythmic-slicer-attack-ms">1.0 ms</output><input id="rhythmic-slicer-attack-ms" type="range" min="0" max="100" step="0.1" value="1"></label>
+          <label class="mix-control" for="rhythmic-slicer-release-ms"><span>Release</span><output id="rhythmic-slicer-release-value" for="rhythmic-slicer-release-ms">1.0 ms</output><input id="rhythmic-slicer-release-ms" type="range" min="0" max="100" step="0.1" value="1"></label>
+          <label class="mix-control" for="rhythmic-slicer-phase"><span>Start phase</span><output id="rhythmic-slicer-phase-value" for="rhythmic-slicer-phase">0%</output><input id="rhythmic-slicer-phase" type="range" min="0" max="100" step="1" value="0"></label>
+        </div>
+        <div id="rhythmic-slicer-steps" class="slicer-step-grid" aria-label="16-step amplitude pattern"></div>
+        <p class="hint">Sixteen pattern values run from 0% (mute) to 100% (full level). The project-authored gate has its own tempo divisions, interpolation, and edge smoothing; this is not an emulation of a manufacturer effect.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

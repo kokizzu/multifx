@@ -36,6 +36,7 @@ const EFFECT_NAMES = [
   "Auto Swell",
   "Rotary Speaker",
   "Ring Modulator",
+  "Rhythmic Slicer",
   "Output level",
   "Peak limiter",
 ];
@@ -71,6 +72,8 @@ const DEFAULT_PARAMETERS = {
   rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
     800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
   ringModulator: [440, 1, 20000, 1],
+  rhythmicSlicer: [1, 120, 8, 8, 1, 0.15, 1, 1, 0,
+    1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -458,6 +461,41 @@ const ringModHighCut = document.querySelector("#ring-mod-high-cut-hz");
 const ringModHighCutValue = document.querySelector("#ring-mod-high-cut-hz-value");
 const ringModMix = document.querySelector("#ring-mod-mix");
 const ringModMixValue = document.querySelector("#ring-mod-mix-value");
+const rhythmicSlicerTempoSync = document.querySelector("#rhythmic-slicer-tempo-sync");
+const rhythmicSlicerTempoBpm = document.querySelector("#rhythmic-slicer-tempo-bpm");
+const rhythmicSlicerTempoBpmValue = document.querySelector("#rhythmic-slicer-tempo-bpm-value");
+const rhythmicSlicerDivision = document.querySelector("#rhythmic-slicer-division");
+const rhythmicSlicerRate = document.querySelector("#rhythmic-slicer-rate-hz");
+const rhythmicSlicerRateValue = document.querySelector("#rhythmic-slicer-rate-value");
+const rhythmicSlicerDepth = document.querySelector("#rhythmic-slicer-depth");
+const rhythmicSlicerDepthValue = document.querySelector("#rhythmic-slicer-depth-value");
+const rhythmicSlicerShape = document.querySelector("#rhythmic-slicer-shape");
+const rhythmicSlicerShapeValue = document.querySelector("#rhythmic-slicer-shape-value");
+const rhythmicSlicerAttack = document.querySelector("#rhythmic-slicer-attack-ms");
+const rhythmicSlicerAttackValue = document.querySelector("#rhythmic-slicer-attack-value");
+const rhythmicSlicerRelease = document.querySelector("#rhythmic-slicer-release-ms");
+const rhythmicSlicerReleaseValue = document.querySelector("#rhythmic-slicer-release-value");
+const rhythmicSlicerPhase = document.querySelector("#rhythmic-slicer-phase");
+const rhythmicSlicerPhaseValue = document.querySelector("#rhythmic-slicer-phase-value");
+const rhythmicSlicerStepsRoot = document.querySelector("#rhythmic-slicer-steps");
+const rhythmicSlicerSteps = Array.from({ length: 16 }, (_, index) => {
+  const label = document.createElement("label");
+  label.className = "slicer-step";
+  const name = document.createElement("span");
+  name.textContent = String(index + 1).padStart(2, "0");
+  const output = document.createElement("output");
+  output.textContent = index % 2 === 0 ? "100%" : "0%";
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = "0";
+  input.max = "1";
+  input.step = "0.01";
+  input.value = index % 2 === 0 ? "1" : "0";
+  input.setAttribute("aria-label", `Rhythmic Slicer step ${index + 1} level`);
+  label.append(name, output, input);
+  rhythmicSlicerStepsRoot.append(label);
+  return { input, output };
+});
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1689,6 +1727,36 @@ function updateRingModulator() {
   }
 }
 
+function updateRhythmicSlicer() {
+  const stepValues = rhythmicSlicerSteps.map(({ input }) => Number(input.value));
+  const values = [
+    rhythmicSlicerTempoSync.checked ? 1 : 0,
+    Number(rhythmicSlicerTempoBpm.value),
+    Number(rhythmicSlicerDivision.value),
+    Number(rhythmicSlicerRate.value),
+    Number(rhythmicSlicerDepth.value) / 100,
+    Number(rhythmicSlicerShape.value) / 100,
+    Number(rhythmicSlicerAttack.value),
+    Number(rhythmicSlicerRelease.value),
+    Number(rhythmicSlicerPhase.value) / 100,
+    ...stepValues,
+  ];
+  rhythmicSlicerTempoBpmValue.value = `${values[1].toFixed(0)} BPM`;
+  rhythmicSlicerRateValue.value = `${values[3].toFixed(2)} Hz`;
+  rhythmicSlicerDepthValue.value = `${Math.round(values[4] * 100)}%`;
+  rhythmicSlicerShapeValue.value = `${Math.round(values[5] * 100)}%`;
+  rhythmicSlicerAttackValue.value = `${values[6].toFixed(1)} ms`;
+  rhythmicSlicerReleaseValue.value = `${values[7].toFixed(1)} ms`;
+  rhythmicSlicerPhaseValue.value = `${Math.round(values[8] * 100)}%`;
+  rhythmicSlicerSteps.forEach(({ output }, index) => {
+    output.value = `${Math.round(stepValues[index] * 100)}%`;
+  });
+  DEFAULT_PARAMETERS.rhythmicSlicer = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "rhythmic-slicer", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1750,6 +1818,15 @@ for (const input of [ringModFrequency, ringModMultiplier, ringModHighCut, ringMo
   input.addEventListener("input", updateRingModulator);
   input.addEventListener("change", updateRingModulator);
 }
+for (const input of [rhythmicSlicerTempoBpm, rhythmicSlicerRate,
+  rhythmicSlicerDepth, rhythmicSlicerShape, rhythmicSlicerAttack,
+  rhythmicSlicerRelease, rhythmicSlicerPhase, ...rhythmicSlicerSteps.map(({ input: step }) => step)]) {
+  input.addEventListener("input", updateRhythmicSlicer);
+  input.addEventListener("change", updateRhythmicSlicer);
+}
+for (const input of [rhythmicSlicerTempoSync, rhythmicSlicerDivision]) {
+  input.addEventListener("change", updateRhythmicSlicer);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1762,6 +1839,7 @@ updateSpringReverb();
 updateAutoSwell();
 updateRotarySpeaker();
 updateRingModulator();
+updateRhythmicSlicer();
 
 function updateDelayDual() {
   const values = [
@@ -1912,21 +1990,22 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 37 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 37 || effectRows.length !== 37 ||
+    const expectedEffectIds = Array.from({ length: 38 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 38 || effectRows.length !== 38 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
+        initialEffectState[35] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 37 ordered effects (IDs 0–36) with the reverbs, Auto Swell, Rotary Speaker, and Ring Modulator disabled by default.");
+      throw new Error("The effect picker must list 38 ordered effects (IDs 0–37) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, and Rhythmic Slicer disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (modulationIds.join(",") !== "15,16,17,18,19,33,34" ||
-        effectCount.value !== "7 of 37" ||
+    if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
+        effectCount.value !== "8 of 38" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -1934,8 +2013,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,36" ||
-        effectCount.value !== "7 of 37" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,37" ||
+        effectCount.value !== "7 of 38" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -1943,7 +2022,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 37" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 38" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -1953,12 +2032,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 37") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 38") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "37 of 37" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "38 of 38" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2031,6 +2110,9 @@ async function runBrowserSelfTest() {
          rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0.15, 0.75, 1, 0.55, 0.5,
            0.72, 800, 450, 0.4, 0.75, 0.25, 1, 1, 1, 0, 0],
         ringModulator: [713, 1.75, 9000, 0.83],
+        rhythmicSlicer: [1, 120, 8, 8, 0.4, 0.15, 0.5, 1, 0,
+          1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25,
+          1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -2052,6 +2134,20 @@ async function runBrowserSelfTest() {
       captureBuffer,
       captureControl,
     };
+    const slicerParameters = testOptions.parameters.rhythmicSlicer;
+    rhythmicSlicerTempoSync.checked = slicerParameters[0] !== 0;
+    rhythmicSlicerTempoBpm.value = String(slicerParameters[1]);
+    rhythmicSlicerDivision.value = String(slicerParameters[2]);
+    rhythmicSlicerRate.value = String(slicerParameters[3]);
+    rhythmicSlicerDepth.value = String(slicerParameters[4] * 100);
+    rhythmicSlicerShape.value = String(slicerParameters[5] * 100);
+    rhythmicSlicerAttack.value = String(slicerParameters[6]);
+    rhythmicSlicerRelease.value = String(slicerParameters[7]);
+    rhythmicSlicerPhase.value = String(slicerParameters[8] * 100);
+    rhythmicSlicerSteps.forEach(({ input }, index) => {
+      input.value = String(slicerParameters[index + 9]);
+    });
+    updateRhythmicSlicer();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";
     volumeMaximum.value = "0";

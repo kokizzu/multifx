@@ -170,6 +170,16 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--ring-mod", "--ring-mod-frequency-hz", "713",
         "--ring-mod-multiplier", "1.75", "--ring-mod-high-cut-hz", "9000",
         "--ring-mod-mix", "0.83",
+        "--rhythmic-slicer", "--rhythmic-slicer-tempo-sync", "on",
+        "--rhythmic-slicer-tempo-bpm", "120",
+        "--rhythmic-slicer-division", "sixteenth",
+        "--rhythmic-slicer-rate-hz", "8", "--rhythmic-slicer-depth", "0.4",
+        "--rhythmic-slicer-shape", "0.15",
+        "--rhythmic-slicer-attack-ms", "0.5",
+        "--rhythmic-slicer-release-ms", "1",
+        "--rhythmic-slicer-phase", "0",
+        "--rhythmic-slicer-steps",
+        "1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25",
     ]
     if delay_character == "tape":
         command.extend([
@@ -192,7 +202,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 37:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 38:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -259,7 +269,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 37-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, and Ring Modulator, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 38-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, and Rhythmic Slicer, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

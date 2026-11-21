@@ -9,7 +9,8 @@ PYTHON ?= python3
 	publish-spring-reverb-plan publish-spring-reverb \
 	publish-auto-swell-plan publish-auto-swell \
 	publish-rotary-speaker-plan publish-rotary-speaker \
-	publish-ring-mod-plan publish-ring-mod
+	publish-ring-mod-plan publish-ring-mod \
+	publish-rhythmic-slicer-plan publish-rhythmic-slicer
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -137,3 +138,9 @@ publish-ring-mod-plan:
 
 publish-ring-mod:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint ring-mod
+
+publish-rhythmic-slicer-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint rhythmic-slicer
+
+publish-rhythmic-slicer:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint rhythmic-slicer

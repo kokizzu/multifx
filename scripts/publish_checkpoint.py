@@ -391,6 +391,30 @@ RING_MOD_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+RHYTHMIC_SLICER_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/rhythmic_slicer.hpp",
+    "src/effects/rhythmic_slicer.cpp",
+    "tests/test_rhythmic_slicer.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -428,6 +452,8 @@ CHECKPOINTS = {
                        "feat: add project-authored rotary speaker"),
     "ring-mod": (RING_MOD_CHECKPOINT_PATHS,
                  "feat: add project-authored ring modulation"),
+    "rhythmic-slicer": (RHYTHMIC_SLICER_CHECKPOINT_PATHS,
+                        "feat: add project-authored rhythmic slicer"),
 }
 
 

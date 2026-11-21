@@ -13,6 +13,7 @@
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
+#include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -178,6 +179,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::RingModulator>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::RhythmicSlicer>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -837,6 +841,25 @@ public:
         ring_modulator->set_parameters(parameters);
     }
 
+    void configure_rhythmic_slicer(
+        std::uint32_t tempo_sync, float tempo_bpm, std::uint32_t division,
+        float rate_hz, float depth, float shape, float attack_ms,
+        float release_ms, float phase, const std::array<float, 16>& steps) noexcept {
+        auto* slicer = static_cast<tabletfx::RhythmicSlicer*>(
+            effects_[35].effect.get());
+        const float previous_phase = slicer->parameters().phase;
+        slicer->set_tempo_sync(tempo_sync != 0U, tempo_bpm,
+                               static_cast<tabletfx::RhythmicDivision>(division));
+        slicer->set_rate_hz(rate_hz);
+        slicer->set_depth(depth);
+        slicer->set_shape(shape);
+        slicer->set_edge_times_ms(attack_ms, release_ms);
+        slicer->set_steps(steps);
+        if (phase != previous_phase) {
+            slicer->set_phase(phase);
+        }
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1292,6 +1315,24 @@ TABLETFX_WASM_EXPORT void tf_chain_set_ring_modulator(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ring_modulator(
             frequency_hz, frequency_multiplier, high_cut_hz, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_rhythmic_slicer(
+    void* opaque, std::uint32_t tempo_sync, float tempo_bpm,
+    std::uint32_t division, float rate_hz, float depth, float shape,
+    float attack_ms, float release_ms, float phase,
+    float step_1, float step_2, float step_3, float step_4,
+    float step_5, float step_6, float step_7, float step_8,
+    float step_9, float step_10, float step_11, float step_12,
+    float step_13, float step_14, float step_15, float step_16) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_rhythmic_slicer(
+            tempo_sync, tempo_bpm, division, rate_hz, depth, shape,
+            attack_ms, release_ms, phase,
+            {step_1, step_2, step_3, step_4, step_5, step_6, step_7, step_8,
+             step_9, step_10, step_11, step_12, step_13, step_14, step_15,
+             step_16});
     }
 }
 
