@@ -6,7 +6,8 @@ PYTHON ?= python3
 	web-build web-browser-test web-test web-serve diff-check publish-plan publish-checkpoint \
 	publish-picker-plan publish-picker publish-room-reverb-plan publish-room-reverb \
 	publish-hall-reverb-plan publish-hall-reverb publish-plate-reverb-plan publish-plate-reverb \
-	publish-spring-reverb-plan publish-spring-reverb
+	publish-spring-reverb-plan publish-spring-reverb \
+	publish-auto-swell-plan publish-auto-swell
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -116,3 +117,9 @@ publish-spring-reverb-plan:
 
 publish-spring-reverb:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint spring-reverb
+
+publish-auto-swell-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint auto-swell
+
+publish-auto-swell:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint auto-swell

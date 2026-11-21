@@ -11,6 +11,7 @@
 #include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
+#include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -165,6 +166,8 @@ struct Options {
     tabletfx::PlateReverbParameters plate_reverb{};
     bool spring_reverb_enabled = false;
     tabletfx::SpringReverbParameters spring_reverb{};
+    bool auto_swell_enabled = false;
+    tabletfx::AutoSwellParameters auto_swell{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -293,6 +296,26 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--spring-reverb") {
             options.spring_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell") {
+            options.auto_swell_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell-taper") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --auto-swell-taper");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "linear") options.auto_swell.taper = tabletfx::AutoSwellTaper::Linear;
+            else if (value == "log30a") options.auto_swell.taper = tabletfx::AutoSwellTaper::Log30A;
+            else if (value == "log20a") options.auto_swell.taper = tabletfx::AutoSwellTaper::Log20A;
+            else if (value == "log15a") options.auto_swell.taper = tabletfx::AutoSwellTaper::Log15A;
+            else if (value == "log10a") options.auto_swell.taper = tabletfx::AutoSwellTaper::Log10A;
+            else if (value == "log5a") options.auto_swell.taper = tabletfx::AutoSwellTaper::Log5A;
+            else if (value == "s-taper") options.auto_swell.taper = tabletfx::AutoSwellTaper::SwellS;
+            else throw std::invalid_argument("Auto Swell taper must be linear, log30a, log20a, log15a, log10a, log5a, or s-taper");
+            options.auto_swell_enabled = true;
             continue;
         }
         if (i + 1 >= argc) {
@@ -1052,6 +1075,26 @@ Options parse_options(int argc, char** argv, int first) {
             options.spring_reverb.level_db = value;
             options.spring_reverb_enabled = true;
         }
+        else if (key == "--auto-swell-threshold-db") {
+            options.auto_swell.threshold_db = value;
+            options.auto_swell_enabled = true;
+        }
+        else if (key == "--auto-swell-attack-ms") {
+            options.auto_swell.attack_ms = value;
+            options.auto_swell_enabled = true;
+        }
+        else if (key == "--auto-swell-release-ms") {
+            options.auto_swell.release_ms = value;
+            options.auto_swell_enabled = true;
+        }
+        else if (key == "--auto-swell-hysteresis-db") {
+            options.auto_swell.hysteresis_db = value;
+            options.auto_swell_enabled = true;
+        }
+        else if (key == "--auto-swell-volume") {
+            options.auto_swell.volume = value;
+            options.auto_swell_enabled = true;
+        }
         else if (set_graphic_eq_band_gain(key, "--guitar-eq-band",
                                           options.guitar_graphic_eq_gains,
                                           options.guitar_graphic_eq_enabled, value)) {}
@@ -1254,6 +1297,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.spring_reverb_enabled) {
         effects.push_back(std::make_unique<tabletfx::SpringReverb>(
             static_cast<float>(sample_rate), channels, options.spring_reverb));
+    }
+    if (options.auto_swell_enabled) {
+        effects.push_back(std::make_unique<tabletfx::AutoSwell>(
+            static_cast<float>(sample_rate), options.auto_swell));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -1713,6 +1760,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels, plate_reverb_parameters));
     effects.push_back(std::make_unique<tabletfx::SpringReverb>(
         static_cast<float>(sample_rate), channels));
+    effects.push_back(std::make_unique<tabletfx::AutoSwell>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -1845,6 +1894,10 @@ void run_bench() {
     benchmark_one("spring-reverb", [=] {
         return std::make_unique<tabletfx::SpringReverb>(
             static_cast<float>(sample_rate), channels);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("auto-swell", [=] {
+        return std::make_unique<tabletfx::AutoSwell>(
+            static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
@@ -2138,6 +2191,11 @@ void print_usage() {
                   " [--spring-pre-delay-ms 0..120] [--spring-damping-hz Hz]"
                   " [--spring-dwell 0..1] [--spring-mix 0..1]"
                   " [--spring-level-db -24..12]\n"
+               << "                 [--auto-swell] [--auto-swell-threshold-db -90..0]"
+                  " [--auto-swell-attack-ms 1..5000] [--auto-swell-release-ms 1..5000]"
+                  " [--auto-swell-hysteresis-db 0..36]"
+                  " [--auto-swell-taper linear|log30a|log20a|log15a|log10a|log5a|s-taper]"
+                  " [--auto-swell-volume 0..2]\n"
                << "  tabletfx_offline --bench\n";
 }
 

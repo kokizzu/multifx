@@ -191,6 +191,9 @@ FEATURE_MODULE_PATHS = (
     "include/tabletfx/effects/rotary_speaker.hpp",
     "src/effects/rotary_speaker.cpp",
     "tests/test_rotary_speaker.cpp",
+    "include/tabletfx/effects/rhythmic_slicer.hpp",
+    "src/effects/rhythmic_slicer.cpp",
+    "tests/test_rhythmic_slicer.cpp",
 )
 
 CHECKPOINT_PATHS = CHECKPOINT_PATHS + FEATURE_MODULE_PATHS
@@ -316,6 +319,29 @@ SPRING_REVERB_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+AUTO_SWELL_CHECKPOINT_PATHS = (
+    "Makefile",
+    "README.md",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/auto_swell.hpp",
+    "src/effects/auto_swell.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_auto_swell.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 EFFECT_MODULE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -347,6 +373,8 @@ CHECKPOINTS = {
                      "feat: add project-authored plate reverb"),
     "spring-reverb": (SPRING_REVERB_CHECKPOINT_PATHS,
                       "feat: add project-authored spring reverb"),
+    "auto-swell": (AUTO_SWELL_CHECKPOINT_PATHS,
+                   "feat: add project-authored auto swell"),
 }
 
 

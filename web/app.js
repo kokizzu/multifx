@@ -33,6 +33,7 @@ const EFFECT_NAMES = [
   "Hall reverb",
   "Plate reverb",
   "Spring reverb",
+  "Auto Swell",
   "Output level",
   "Peak limiter",
 ];
@@ -64,6 +65,7 @@ const DEFAULT_PARAMETERS = {
   hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
   plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
   springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
+  autoSwell: [-36, 250, 250, 6, 6, 1],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -391,6 +393,17 @@ const springReverbMix = document.querySelector("#spring-reverb-mix");
 const springReverbMixValue = document.querySelector("#spring-reverb-mix-value");
 const springReverbLevel = document.querySelector("#spring-reverb-level-db");
 const springReverbLevelValue = document.querySelector("#spring-reverb-level-value");
+const autoSwellThreshold = document.querySelector("#auto-swell-threshold-db");
+const autoSwellThresholdValue = document.querySelector("#auto-swell-threshold-db-value");
+const autoSwellAttack = document.querySelector("#auto-swell-attack-ms");
+const autoSwellAttackValue = document.querySelector("#auto-swell-attack-ms-value");
+const autoSwellRelease = document.querySelector("#auto-swell-release-ms");
+const autoSwellReleaseValue = document.querySelector("#auto-swell-release-ms-value");
+const autoSwellHysteresis = document.querySelector("#auto-swell-hysteresis-db");
+const autoSwellHysteresisValue = document.querySelector("#auto-swell-hysteresis-db-value");
+const autoSwellTaper = document.querySelector("#auto-swell-taper");
+const autoSwellVolume = document.querySelector("#auto-swell-volume");
+const autoSwellVolumeValue = document.querySelector("#auto-swell-volume-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -1535,6 +1548,26 @@ function updateSpringReverb() {
   }
 }
 
+function updateAutoSwell() {
+  const values = [
+    Number(autoSwellThreshold.value),
+    Number(autoSwellAttack.value),
+    Number(autoSwellRelease.value),
+    Number(autoSwellHysteresis.value),
+    Number(autoSwellTaper.value),
+    Number(autoSwellVolume.value) / 100,
+  ];
+  autoSwellThresholdValue.value = `${values[0].toFixed(1)} dB`;
+  autoSwellAttackValue.value = `${values[1].toFixed(0)} ms`;
+  autoSwellReleaseValue.value = `${values[2].toFixed(0)} ms`;
+  autoSwellHysteresisValue.value = `${values[3].toFixed(1)} dB`;
+  autoSwellVolumeValue.value = `${Math.round(values[5] * 100)}%`;
+  DEFAULT_PARAMETERS.autoSwell = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "auto-swell", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1575,6 +1608,11 @@ for (const input of [springReverbDecay, springReverbPreDelay, springReverbDampin
   input.addEventListener("input", updateSpringReverb);
   input.addEventListener("change", updateSpringReverb);
 }
+for (const input of [autoSwellThreshold, autoSwellAttack, autoSwellRelease,
+  autoSwellHysteresis, autoSwellTaper, autoSwellVolume]) {
+  input.addEventListener("input", updateAutoSwell);
+  input.addEventListener("change", updateAutoSwell);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1584,6 +1622,7 @@ updateRoomReverb();
 updateHallReverb();
 updatePlateReverb();
 updateSpringReverb();
+updateAutoSwell();
 
 function updateDelayDual() {
   const values = [
@@ -1734,28 +1773,38 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 34 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 34 || effectRows.length !== 34 ||
+    const expectedEffectIds = Array.from({ length: 35 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 35 || effectRows.length !== 35 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
+        initialEffectState[32] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 34 ordered effects (IDs 0–33) with Room, Hall, Plate, and Spring Reverb disabled by default.");
+      throw new Error("The effect picker must list 35 ordered effects (IDs 0–34) with the reverbs and Auto Swell disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19" ||
-        effectCount.value !== "5 of 34" ||
+        effectCount.value !== "5 of 35" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
+    }
+    effectCategoryFilter.value = "dynamics";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const dynamicsIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,34" ||
+        effectCount.value !== "7 of 35" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 34" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 35" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -1765,12 +1814,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 34") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 35") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "34 of 34" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "35 of 35" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -1839,6 +1888,7 @@ async function runBrowserSelfTest() {
         hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
         plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
         springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
+        autoSwell: [-90, 100, 150, 6, 0, 0.9],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],

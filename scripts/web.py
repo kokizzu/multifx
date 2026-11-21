@@ -122,6 +122,7 @@ def build_web() -> None:
         "_tf_chain_set_hall_reverb",
         "_tf_chain_set_plate_reverb",
         "_tf_chain_set_spring_reverb",
+         "_tf_chain_set_auto_swell",
         "_tf_chain_set_drive",
         "_tf_chain_set_clean_boost",
         "_tf_chain_set_overdrive",
@@ -190,6 +191,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "hall_reverb.cpp"),
         str(ROOT / "src" / "effects" / "plate_reverb.cpp"),
         str(ROOT / "src" / "effects" / "spring_reverb.cpp"),
+         str(ROOT / "src" / "effects" / "auto_swell.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -570,6 +572,10 @@ def browser_test() -> None:
             "--spring-pre-delay-ms", "0", "--spring-damping-hz", "8000",
             "--spring-dwell", "0.35", "--spring-mix", "0.2",
             "--spring-level-db", "0",
+             "--auto-swell", "--auto-swell-threshold-db", "-90",
+             "--auto-swell-attack-ms", "100", "--auto-swell-release-ms", "150",
+             "--auto-swell-hysteresis-db", "6", "--auto-swell-taper", "linear",
+             "--auto-swell-volume", "0.9",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

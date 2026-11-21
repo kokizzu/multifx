@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">34 of 34</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">35 of 35</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -114,8 +114,9 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="29"><span class="effect-number">30</span><span class="effect-name">Hall reverb</span><span class="effect-default">3.2 s · 32 ms · 25% mix</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="30"><span class="effect-number">31</span><span class="effect-name">Plate reverb</span><span class="effect-default">1.8 s · 82% diffusion · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="31"><span class="effect-number">32</span><span class="effect-name">Spring reverb</span><span class="effect-default">2.4 s · 35% dwell · 20% mix</span><span class="effect-category-tag">Reverb</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="32" checked><span class="effect-number">33</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="33" checked><span class="effect-number">34</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="32"><span class="effect-number">33</span><span class="effect-name">Auto Swell</span><span class="effect-default">250 ms attack · S-taper</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="33" checked><span class="effect-number">34</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="34" checked><span class="effect-number">35</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -149,6 +150,18 @@
           <label class="mix-control" for="fet-makeup-db"><span>Makeup gain</span><output id="fet-makeup-db-value" for="fet-makeup-db">0.0 dB</output><input id="fet-makeup-db" type="range" min="-12" max="18" step="0.5" value="0"></label>
         </div>
         <p class="hint">Fast peak detection with a soft knee and fixed release; this is not a particular FET circuit or product emulation.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Auto Swell controls">
+        <h3>Auto Swell · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="auto-swell-threshold-db"><span>Threshold</span><output id="auto-swell-threshold-db-value" for="auto-swell-threshold-db">−36.0 dB</output><input id="auto-swell-threshold-db" type="range" min="-90" max="0" step="1" value="-36"></label>
+          <label class="mix-control" for="auto-swell-attack-ms"><span>Attack</span><output id="auto-swell-attack-ms-value" for="auto-swell-attack-ms">250 ms</output><input id="auto-swell-attack-ms" type="range" min="1" max="5000" step="1" value="250"></label>
+          <label class="mix-control" for="auto-swell-release-ms"><span>Release</span><output id="auto-swell-release-ms-value" for="auto-swell-release-ms">250 ms</output><input id="auto-swell-release-ms" type="range" min="1" max="5000" step="1" value="250"></label>
+          <label class="mix-control" for="auto-swell-hysteresis-db"><span>Hysteresis</span><output id="auto-swell-hysteresis-db-value" for="auto-swell-hysteresis-db">6.0 dB</output><input id="auto-swell-hysteresis-db" type="range" min="0" max="36" step="0.5" value="6"></label>
+          <label class="mix-control" for="auto-swell-taper"><span>Taper</span><select id="auto-swell-taper"><option value="0">Linear</option><option value="1">Log 30A</option><option value="2">Log 20A</option><option value="3">Log 15A</option><option value="4">Log 10A</option><option value="5">Log 5A</option><option value="6" selected>S-taper</option></select></label>
+          <label class="mix-control" for="auto-swell-volume"><span>Volume</span><output id="auto-swell-volume-value" for="auto-swell-volume">100%</output><input id="auto-swell-volume" type="range" min="0" max="200" step="1" value="100"></label>
+        </div>
+        <p class="hint">Control names follow Fractal's documented Auto Swell controls. This project's detector, taper curves, numeric ranges, and DSP are project-authored; the guide does not publish exact taper curves or numeric control limits.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>
@@ -225,7 +238,7 @@
         <h3>Spring reverb · project-authored</h3>
         <div class="gain-controls">
           <label class="mix-control" for="spring-reverb-decay-seconds"><span>Decay</span><output id="spring-reverb-decay-value" for="spring-reverb-decay-seconds">2.40 s</output><input id="spring-reverb-decay-seconds" type="range" min="0.2" max="8" step="0.05" value="2.4"></label>
-          <label class="mix-control" for="spring-reverb-pre-delay-ms"><span>Wet pre-delay</span><output id="spring-reverb-pre-delay-value" for="spring-reverb-pre-delay-ms">0.0 ms</output><input id="spring-reverb-pre-delay-ms" type="range" min="0" max="120" step="0.5" value="0"></label>
+          <label class="mix-control" for="spring-reverb-pre-delay-ms"><span>Wet pre-delay</span><output id="spring-reverb-pre-delay-value" for="spring-reverb-pre-delay-ms">0.0 ms</output><input id="spring-reverb-pre-delay-ms" type="range" min="0" max="80" step="0.5" value="0"></label>
           <label class="mix-control" for="spring-reverb-damping-hz"><span>Damping</span><output id="spring-reverb-damping-value" for="spring-reverb-damping-hz">8000 Hz</output><input id="spring-reverb-damping-hz" type="range" min="200" max="18000" step="100" value="8000"></label>
           <label class="mix-control" for="spring-reverb-dwell"><span>Dwell</span><output id="spring-reverb-dwell-value" for="spring-reverb-dwell">35%</output><input id="spring-reverb-dwell" type="range" min="0" max="100" step="1" value="35"></label>
           <label class="mix-control" for="spring-reverb-mix"><span>Mix</span><output id="spring-reverb-mix-value" for="spring-reverb-mix">20%</output><input id="spring-reverb-mix" type="range" min="0" max="100" step="1" value="20"></label>

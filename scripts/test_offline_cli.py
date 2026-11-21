@@ -233,6 +233,45 @@ def check_spring_reverb(executable: Path) -> None:
             raise AssertionError("Spring reverb impulse response did not produce an audible tail")
 
 
+def check_auto_swell(executable: Path) -> None:
+    sample_rate = 8000
+    frames_below_threshold = 128
+    frames_above_threshold = 4096
+    frames_release = 4096
+    source_samples = (
+        [655] * frames_below_threshold
+        + [16384] * frames_above_threshold
+        + [0] * frames_release
+    )
+    with tempfile.TemporaryDirectory(prefix="tabletfx-auto-swell-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-onset.wav"
+        output = root / "guitar-swell.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--auto-swell",
+             "--auto-swell-threshold-db", "-30", "--auto-swell-attack-ms", "100",
+             "--auto-swell-release-ms", "100", "--auto-swell-hysteresis-db", "6",
+             "--auto-swell-taper", "linear", "--auto-swell-volume", "0.8"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Auto Swell controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Auto Swell produced non-finite output")
+        onset = values[frames_below_threshold]
+        peak = max(abs(value) for value in values[
+            frames_below_threshold:frames_below_threshold + frames_above_threshold])
+        tail = values[-1]
+        if abs(values[0]) > 1.0e-8 or not 0.0 < abs(onset) < 0.05:
+            raise AssertionError("Auto Swell did not suppress sub-threshold input and the note onset")
+        if not 0.38 <= peak <= 0.41:
+            raise AssertionError(f"Auto Swell attack/volume controls produced unexpected peak {peak}")
+        if abs(tail) > 1.0e-6:
+            raise AssertionError(f"Auto Swell did not return to silence after release: {tail}")
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1048,6 +1087,7 @@ def main() -> None:
     check_hall_reverb(args.executable.resolve())
     check_plate_reverb(args.executable.resolve())
     check_spring_reverb(args.executable.resolve())
+    check_auto_swell(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())
@@ -1072,7 +1112,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET compressors, guitar/bass graphic and shelf/tilt EQs, room/hall/plate/spring reverb, Auto Swell, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

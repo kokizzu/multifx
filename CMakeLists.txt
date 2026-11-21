@@ -34,6 +34,7 @@ add_library(tabletfx_core
     src/effects/hall_reverb.cpp
     src/effects/plate_reverb.cpp
     src/effects/spring_reverb.cpp
+    src/effects/auto_swell.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -199,6 +200,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_spring_reverb_tests tests/test_spring_reverb.cpp)
     target_link_libraries(tabletfx_spring_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_spring_reverb_tests COMMAND tabletfx_spring_reverb_tests)
+
+    add_executable(tabletfx_auto_swell_tests tests/test_auto_swell.cpp)
+    target_link_libraries(tabletfx_auto_swell_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_auto_swell_tests COMMAND tabletfx_auto_swell_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

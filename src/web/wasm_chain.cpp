@@ -10,6 +10,7 @@
 #include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
+#include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -71,7 +72,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(32);
+        effects_.reserve(40);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -167,6 +168,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::SpringReverb>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::AutoSwell>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -193,6 +197,9 @@ public:
             return false;
         }
         if ((index >= 28U && index <= 31U) && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 32U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -759,6 +766,20 @@ public:
         reverb->configure(parameters);
     }
 
+    void configure_auto_swell(float threshold_db, float attack_ms,
+                              float release_ms, float hysteresis_db,
+                              std::uint32_t taper, float volume) noexcept {
+        auto* swell = static_cast<tabletfx::AutoSwell*>(effects_[32].effect.get());
+        tabletfx::AutoSwellParameters parameters;
+        parameters.threshold_db = threshold_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.hysteresis_db = hysteresis_db;
+        parameters.taper = static_cast<tabletfx::AutoSwellTaper>(taper);
+        parameters.volume = volume;
+        swell->configure(static_cast<float>(sample_rate_), parameters);
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1176,6 +1197,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_spring_reverb(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_spring_reverb(
             decay_seconds, pre_delay_ms, damping_hz, dwell, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_auto_swell(
+    void* opaque, float threshold_db, float attack_ms, float release_ms,
+    float hysteresis_db, std::uint32_t taper, float volume) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_auto_swell(
+            threshold_db, attack_ms, release_ms, hysteresis_db, taper, volume);
     }
 }
 
