@@ -13,6 +13,7 @@
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/tremolo.hpp"
+#include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -58,7 +59,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(18);
+        effects_.reserve(19);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -100,6 +101,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::Phaser>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::Vibrato>(
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -312,17 +316,17 @@ public:
 
     void configure_eq(float f1, float g1, float q1, float f2, float g2, float q2,
                       float f3, float g3, float q3) noexcept {
-        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[15].effect.get())
+        static_cast<tabletfx::ThreeBandParametricEQ*>(effects_[16].effect.get())
             ->configure(f1, g1, q1, f2, g2, q2, f3, g3, q3);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
-        static_cast<tabletfx::Delay*>(effects_[16].effect.get())
+        static_cast<tabletfx::Delay*>(effects_[17].effect.get())
             ->configure(delay_ms, feedback, mix);
     }
 
     void configure_pitch(float semitones) noexcept {
-        static_cast<tabletfx::PolyPitchShifter*>(effects_[17].effect.get())
+        static_cast<tabletfx::PolyPitchShifter*>(effects_[18].effect.get())
             ->set_pitch_semitones(semitones);
     }
 
@@ -467,6 +471,15 @@ public:
         parameters.stages = static_cast<std::uint8_t>(stages);
         parameters.mix = mix;
         static_cast<tabletfx::Phaser*>(effects_[14].effect.get())
+            ->set_parameters(parameters);
+    }
+
+    void configure_vibrato(float rate_hz, float depth_ms, float mix) noexcept {
+        tabletfx::VibratoParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.depth_ms = depth_ms;
+        parameters.mix = mix;
+        static_cast<tabletfx::Vibrato*>(effects_[15].effect.get())
             ->set_parameters(parameters);
     }
 
@@ -901,6 +914,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_phaser(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_phaser(rate_hz, minimum_hz, maximum_hz,
                                            feedback, stages, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_vibrato(
+    void* opaque, float rate_hz, float depth_ms, float mix) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_vibrato(rate_hz, depth_ms, mix);
     }
 }
 

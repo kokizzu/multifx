@@ -16,6 +16,7 @@ const EFFECT_NAMES = [
   "Chorus",
   "Flanger",
   "Phaser",
+  "Vibrato",
   "Three-band parametric EQ",
   "Stereo delay",
   "Polyphonic pitch shifter",
@@ -35,6 +36,7 @@ const DEFAULT_PARAMETERS = {
   chorus: [0.8, 15, 7, 0.3],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
+  vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -185,6 +187,12 @@ const phaserFeedbackValue = document.querySelector("#phaser-feedback-value");
 const phaserStages = document.querySelector("#phaser-stages");
 const phaserMix = document.querySelector("#phaser-mix");
 const phaserMixValue = document.querySelector("#phaser-mix-value");
+const vibratoRate = document.querySelector("#vibrato-rate-hz");
+const vibratoRateValue = document.querySelector("#vibrato-rate-value");
+const vibratoDepth = document.querySelector("#vibrato-depth-ms");
+const vibratoDepthValue = document.querySelector("#vibrato-depth-value");
+const vibratoMix = document.querySelector("#vibrato-mix");
+const vibratoMixValue = document.querySelector("#vibrato-mix-value");
 const loadRows = document.querySelector("#load-rows");
 const browserVersion = document.querySelector("#browser-version");
 const isolationNote = document.querySelector("#isolation-note");
@@ -926,6 +934,21 @@ for (const control of [phaserRate, phaserMinimum, phaserMaximum,
   control.addEventListener("change", updatePhaser);
 }
 
+function updateVibrato() {
+  const values = [Number(vibratoRate.value), Number(vibratoDepth.value),
+    Number(vibratoMix.value)];
+  DEFAULT_PARAMETERS.vibrato = values;
+  vibratoRateValue.value = `${Number(vibratoRate.value).toFixed(1)} Hz`;
+  vibratoDepthValue.value = `${Number(vibratoDepth.value).toFixed(2)} ms`;
+  vibratoMixValue.value = `${Math.round(Number(vibratoMix.value) * 100)}%`;
+  if (workletNode) workletNode.port.postMessage({ type: "vibrato", value: values });
+}
+
+for (const control of [vibratoRate, vibratoDepth, vibratoMix]) {
+  control.addEventListener("input", updateVibrato);
+  control.addEventListener("change", updateVibrato);
+}
+
 setInterval(() => {
   if (stats) {
     const load = readLoadWindow();
@@ -1051,7 +1074,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const testOptions = {
-      enabled: Array.from({ length: 20 }, () => true),
+      enabled: Array.from({ length: 21 }, () => true),
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -1068,6 +1091,7 @@ async function runBrowserSelfTest() {
         chorus: [0.8, 15, 7, 0.2],
         flanger: [0.25, 2, 1, 0.35, 1, 0.2],
         phaser: [0.5, 250, 1600, 0.15, 6, 0.2],
+        vibrato: [5, 0.35, 0.35],
         compressor: [-18, 3, 6, 8, 100, 0],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -1131,6 +1155,9 @@ async function runBrowserSelfTest() {
     phaserFeedback.value = "0.15";
     phaserStages.value = "6";
     phaserMix.value = "0.2";
+    vibratoRate.value = "5";
+    vibratoDepth.value = "0.35";
+    vibratoMix.value = "0.35";
     updateVolumePedal();
     updateNoiseGate();
     updateLimiter();
@@ -1140,6 +1167,7 @@ async function runBrowserSelfTest() {
     updateChorus();
     updateFlanger();
     updatePhaser();
+    updateVibrato();
     for (const checkbox of document.querySelectorAll("[data-effect]")) {
       checkbox.checked = testOptions.enabled[Number(checkbox.dataset.effect)];
     }

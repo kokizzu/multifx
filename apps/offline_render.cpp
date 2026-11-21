@@ -14,6 +14,7 @@
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
+#include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -64,6 +65,8 @@ struct Options {
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
     tabletfx::PhaserParameters phaser{};
+    bool vibrato_enabled = false;
+    tabletfx::VibratoParameters vibrato{};
     float high_pass_hz = 0.0F;
     float low_pass_hz = 0.0F;
     bool noise_gate_enabled = false;
@@ -340,6 +343,18 @@ Options parse_options(int argc, char** argv, int first) {
             options.phaser.mix = value;
             options.phaser_enabled = true;
         }
+        else if (key == "--vibrato-rate-hz") {
+            options.vibrato.rate_hz = value;
+            options.vibrato_enabled = true;
+        }
+        else if (key == "--vibrato-depth-ms") {
+            options.vibrato.depth_ms = value;
+            options.vibrato_enabled = true;
+        }
+        else if (key == "--vibrato-mix") {
+            options.vibrato.mix = value;
+            options.vibrato_enabled = true;
+        }
         else if (key == "--high-pass-hz") options.high_pass_hz = value;
         else if (key == "--low-pass-hz") options.low_pass_hz = value;
         else if (key == "--gate-threshold-db") {
@@ -521,6 +536,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.phaser_enabled) {
         effects.push_back(std::make_unique<tabletfx::Phaser>(
             static_cast<float>(sample_rate), channels, options.phaser));
+    }
+    if (options.vibrato_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Vibrato>(
+            static_cast<float>(sample_rate), channels, options.vibrato));
     }
     if (options.eq_enabled) {
         auto eq = std::make_unique<tabletfx::ThreeBandParametricEQ>(
@@ -926,6 +945,10 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     phaser_parameters.mix = 0.2F;
     effects.push_back(std::make_unique<tabletfx::Phaser>(
         static_cast<float>(sample_rate), channels, phaser_parameters));
+    tabletfx::VibratoParameters vibrato_parameters;
+    vibrato_parameters.mix = 0.35F;
+    effects.push_back(std::make_unique<tabletfx::Vibrato>(
+        static_cast<float>(sample_rate), channels, vibrato_parameters));
     effects.push_back(std::move(eq));
     effects.push_back(std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F,
                                                         125.0F, 0.2F, 0.1F));
@@ -1122,6 +1145,11 @@ void run_bench() {
         return std::make_unique<tabletfx::Phaser>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("vibrato", [=] {
+        tabletfx::VibratoParameters parameters;
+        return std::make_unique<tabletfx::Vibrato>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_full_chain(sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
 }
 
@@ -1146,6 +1174,8 @@ void print_usage() {
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
                    " [--phaser-rate-hz Hz] [--phaser-min-hz Hz] [--phaser-max-hz Hz]"
                    " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
+                   " [--vibrato-rate-hz 0.1..10] [--vibrato-depth-ms 0..1.5]"
+                   " [--vibrato-mix 0..1]"
                  " [--boost-db 0..24]"
                  " [--high-pass-hz Hz]"
                  " [--low-pass-hz Hz] [--gate-threshold-db dB] [--gate-attenuation-db dB]"

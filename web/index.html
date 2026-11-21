@@ -76,11 +76,12 @@
         <label class="effect-row"><input type="checkbox" data-effect="12"><span class="effect-number">13</span><span class="effect-name">Chorus</span><span class="effect-default">0.8 Hz · 15 ms · 30% wet</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="13"><span class="effect-number">14</span><span class="effect-name">Flanger</span><span class="effect-default">0.25 Hz · 2 ms · positive feedback</span></label>
         <label class="effect-row"><input type="checkbox" data-effect="14"><span class="effect-number">15</span><span class="effect-name">Phaser</span><span class="effect-default">4 stages · 0.5 Hz · 50% wet</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="18" checked><span class="effect-number">19</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
-        <label class="effect-row"><input type="checkbox" data-effect="19" checked><span class="effect-number">20</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="15"><span class="effect-number">16</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="16"><span class="effect-number">17</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="17"><span class="effect-number">18</span><span class="effect-name">Stereo delay</span><span class="effect-default">350 ms</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="18"><span class="effect-number">19</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="19" checked><span class="effect-number">20</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span></label>
+        <label class="effect-row"><input type="checkbox" data-effect="20" checked><span class="effect-number">21</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span></label>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
@@ -323,6 +324,20 @@
         <label class="mix-control" for="phaser-mix">
           <span>Phaser wet mix</span><output id="phaser-mix-value" for="phaser-mix">50%</output>
           <input id="phaser-mix" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+      </div>
+      <div class="gain-controls" aria-label="Vibrato controls">
+        <label class="mix-control" for="vibrato-rate-hz">
+          <span>Vibrato rate</span><output id="vibrato-rate-value" for="vibrato-rate-hz">5.0 Hz</output>
+          <input id="vibrato-rate-hz" type="range" min="0.1" max="10" step="0.1" value="5">
+        </label>
+        <label class="mix-control" for="vibrato-depth-ms">
+          <span>Pitch depth</span><output id="vibrato-depth-value" for="vibrato-depth-ms">0.35 ms</output>
+          <input id="vibrato-depth-ms" type="range" min="0" max="1.5" step="0.01" value="0.35">
+        </label>
+        <label class="mix-control" for="vibrato-mix">
+          <span>Vibrato wet mix</span><output id="vibrato-mix-value" for="vibrato-mix">100%</output>
+          <input id="vibrato-mix" type="range" min="0" max="1" step="0.01" value="1">
         </label>
       </div>
       <p class="hint">Effect order is fixed for this test build. Gain changes ramp over 10 ms; processor state and memory are prepared before playback.</p>

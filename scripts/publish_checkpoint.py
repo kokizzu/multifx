@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely publish the reviewed DSP and Windows-backend checkpoint to upstream main."""
+"""Safely publish the reviewed vibrato/DSP checkpoint to upstream main."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMIT_MESSAGE = "feat: add low-latency selectable-stage phaser"
+COMMIT_MESSAGE = "feat: add low-latency vibrato effect"
 CHECKPOINT_PATHS = (
     ".gitignore",
     "ARCHITECTURE.md",
@@ -132,8 +132,11 @@ CHECKPOINT_PATHS = (
     "third_party/stft-pitch-shift/StftPitchShift/Vocoder.h",
     "include/tabletfx/effects/flanger.hpp",
     "include/tabletfx/effects/phaser.hpp",
+    "include/tabletfx/effects/vibrato.hpp",
     "src/effects/phaser.cpp",
+    "src/effects/vibrato.cpp",
     "tests/test_phaser.cpp",
+    "tests/test_vibrato.cpp",
     "src/effects/flanger.cpp",
     "tests/test_flanger.cpp",
 )

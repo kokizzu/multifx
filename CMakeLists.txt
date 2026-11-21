@@ -20,6 +20,7 @@ add_library(tabletfx_core
     src/effects/peak_limiter.cpp
     src/effects/poly_pitch_shifter.cpp
     src/effects/tremolo.cpp
+    src/effects/vibrato.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -125,6 +126,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tremolo_tests tests/test_tremolo.cpp)
     target_link_libraries(tabletfx_tremolo_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tremolo_tests COMMAND tabletfx_tremolo_tests)
+
+    add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
+    target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_vibrato_tests COMMAND tabletfx_vibrato_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

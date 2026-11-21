@@ -193,6 +193,32 @@ def check_phaser(executable: Path) -> None:
             raise AssertionError(f"Phaser CLI did not apply the selected wet chain: {samples[0]}")
 
 
+def check_vibrato(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [32767] + [0] * 1023
+    with tempfile.TemporaryDirectory(prefix="tabletfx-vibrato-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        output = root / "vibrato.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--vibrato-rate-hz", "5", "--vibrato-depth-ms", "0",
+             "--vibrato-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Vibrato options did not instantiate one processor: {result.stdout}")
+        data = output.read_bytes()
+        samples = struct.unpack("<1024f", data[44:44 + 1024 * 4])
+        expected = 32767 / 32768.0
+        if any(abs(sample) > 1.0e-7 for sample in samples[:96]) or \
+                abs(samples[96] - expected) > 1.0e-5:
+            raise AssertionError(
+                f"Vibrato CLI should output its center-delay impulse at frame 96; got {samples[96]}"
+            )
+
+
 def check_compressor(executable: Path) -> None:
     sample_rate = 48000
     input_samples = [16384] * sample_rate
@@ -439,6 +465,7 @@ def main() -> None:
     check_chorus(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
+    check_vibrato(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_noise_gate(args.executable.resolve())
     check_clean_boost(args.executable.resolve())
@@ -446,7 +473,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/phaser/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressor/gate/clean boost/envelope wah/chorus/flanger/phaser/vibrato/pitch shifting, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
