@@ -375,6 +375,43 @@ def check_rhythmic_slicer(executable: Path) -> None:
             raise AssertionError("Rhythmic Slicer did not mute the off-step audio")
 
 
+def check_step_filter(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(sample_rate)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-step-filter-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "filtered.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        pattern = "0,1," + ",".join(["0", "1"] * 7)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--step-filter", "--step-filter-mode", "lowpass",
+             "--step-filter-tempo-sync", "on", "--step-filter-tempo-bpm", "120",
+             "--step-filter-division", "sixteenth", "--step-filter-depth", "1",
+             "--step-filter-min-cutoff-hz", "100",
+             "--step-filter-max-cutoff-hz", "2000",
+             "--step-filter-resonance-q", "0.707", "--step-filter-shape", "0",
+             "--step-filter-smoothing-ms", "0", "--step-filter-mix", "1",
+             "--step-filter-phase", "0", "--step-filter-steps", pattern],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Step Filter options did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Step Filter produced non-finite output")
+        low_step_rms = math.sqrt(sum(value * value for value in values[100:900]) / 800)
+        high_step_rms = math.sqrt(sum(value * value for value in values[1100:1900]) / 800)
+        if high_step_rms < low_step_rms * 2.0:
+            raise AssertionError(
+                f"Step Filter did not sweep the cutoff: low={low_step_rms} high={high_step_rms}"
+            )
+
+
 def check_pitch_shifter(executable: Path) -> None:
     sample_rate = 48000
     frame_count = sample_rate
@@ -1194,6 +1231,7 @@ def main() -> None:
     check_rotary_speaker(args.executable.resolve())
     check_ring_modulator(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
+    check_step_filter(args.executable.resolve())
     check_pitch_shifter(args.executable.resolve())
     check_delay_time_modes(args.executable.resolve())
     check_bbd_style_delay(args.executable.resolve())

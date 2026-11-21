@@ -126,6 +126,7 @@ def build_web() -> None:
         "_tf_chain_set_rotary_speaker",
          "_tf_chain_set_ring_modulator",
         "_tf_chain_set_rhythmic_slicer",
+        "_tf_chain_set_step_filter",
         "_tf_chain_set_drive",
         "_tf_chain_set_clean_boost",
         "_tf_chain_set_overdrive",
@@ -198,6 +199,7 @@ def build_web() -> None:
          str(ROOT / "src" / "effects" / "rotary_speaker.cpp"),
          str(ROOT / "src" / "effects" / "ring_modulator.cpp"),
         str(ROOT / "src" / "effects" / "rhythmic_slicer.cpp"),
+        str(ROOT / "src" / "effects" / "step_filter.cpp"),
         str(ROOT / "src" / "effects" / "tremolo.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
@@ -606,6 +608,14 @@ def browser_test() -> None:
              "--rhythmic-slicer-release-ms", "1",
              "--rhythmic-slicer-phase", "0",
              "--rhythmic-slicer-steps", "1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25",
+              "--step-filter", "--step-filter-mode", "lowpass",
+              "--step-filter-tempo-sync", "on", "--step-filter-tempo-bpm", "120",
+              "--step-filter-division", "sixteenth", "--step-filter-rate-hz", "8",
+              "--step-filter-min-cutoff-hz", "120", "--step-filter-max-cutoff-hz", "6000",
+              "--step-filter-resonance-q", "0.707", "--step-filter-depth", "0.65",
+              "--step-filter-shape", "0.4", "--step-filter-smoothing-ms", "3",
+              "--step-filter-mix", "0.7", "--step-filter-phase", "0",
+              "--step-filter-steps", "0,0.75,0.2,0.9,0.35,0.6,0.1,1,0.25,0.8,0.15,0.95,0.4,0.7,0.05,0.85",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

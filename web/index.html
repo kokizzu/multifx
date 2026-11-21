@@ -78,7 +78,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">38 of 38</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">39 of 39</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -118,8 +118,9 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="33"><span class="effect-number">34</span><span class="effect-name">Rotary Speaker</span><span class="effect-default">6 Hz · slow · 100% mix</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="34"><span class="effect-number">35</span><span class="effect-name">Ring Modulator</span><span class="effect-default">440 Hz · 1× · 20 kHz high cut · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="35"><span class="effect-number">36</span><span class="effect-name">Rhythmic Slicer</span><span class="effect-default">16 steps · 120 BPM · sixteenth</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="36" checked><span class="effect-number">37</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="37" checked><span class="effect-number">38</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="36"><span class="effect-number">37</span><span class="effect-name">Step Filter</span><span class="effect-default">16 steps · resonant low-pass</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="37" checked><span class="effect-number">38</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="38" checked><span class="effect-number">39</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -219,6 +220,26 @@
         </div>
         <div id="rhythmic-slicer-steps" class="slicer-step-grid" aria-label="16-step amplitude pattern"></div>
         <p class="hint">Sixteen pattern values run from 0% (mute) to 100% (full level). The project-authored gate has its own tempo divisions, interpolation, and edge smoothing; this is not an emulation of a manufacturer effect.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Step Filter controls">
+        <h3>Step Filter · project-authored</h3>
+        <div class="slicer-global-controls">
+          <label class="slicer-sync" for="step-filter-tempo-sync"><input id="step-filter-tempo-sync" type="checkbox" checked><span>Tempo sync</span></label>
+          <label class="mix-control" for="step-filter-tempo-bpm"><span>Tempo</span><output id="step-filter-tempo-bpm-value" for="step-filter-tempo-bpm">120 BPM</output><input id="step-filter-tempo-bpm" type="range" min="30" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="step-filter-division"><span>Step division</span><select id="step-filter-division"><option value="0">Whole</option><option value="1">Half</option><option value="2">Quarter</option><option value="3">Dotted quarter</option><option value="4">Quarter triplet</option><option value="5">Eighth</option><option value="6">Dotted eighth</option><option value="7">Eighth triplet</option><option value="8" selected>Sixteenth</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth triplet</option><option value="11">Thirty-second</option><option value="12">Thirty-second triplet</option></select></label>
+          <label class="mix-control" for="step-filter-rate-hz"><span>Free rate</span><output id="step-filter-rate-hz-value" for="step-filter-rate-hz">8.00 Hz</output><input id="step-filter-rate-hz" type="range" min="0.05" max="60" step="0.05" value="8"></label>
+          <label class="mix-control" for="step-filter-mode"><span>Response</span><select id="step-filter-mode"><option value="0" selected>Low-pass</option><option value="1">Band-pass</option><option value="2">High-pass</option><option value="3">Notch</option></select></label>
+          <label class="mix-control" for="step-filter-min-cutoff-hz"><span>Minimum cutoff</span><output id="step-filter-min-cutoff-hz-value" for="step-filter-min-cutoff-hz">120 Hz</output><input id="step-filter-min-cutoff-hz" type="range" min="20" max="18000" step="1" value="120"></label>
+          <label class="mix-control" for="step-filter-max-cutoff-hz"><span>Maximum cutoff</span><output id="step-filter-max-cutoff-hz-value" for="step-filter-max-cutoff-hz">6000 Hz</output><input id="step-filter-max-cutoff-hz" type="range" min="20" max="18000" step="10" value="6000"></label>
+          <label class="mix-control" for="step-filter-resonance-q"><span>Resonance Q</span><output id="step-filter-resonance-q-value" for="step-filter-resonance-q">0.71</output><input id="step-filter-resonance-q" type="range" min="0.5" max="12" step="0.01" value="0.707"></label>
+          <label class="mix-control" for="step-filter-depth"><span>Depth</span><output id="step-filter-depth-value" for="step-filter-depth">100%</output><input id="step-filter-depth" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="step-filter-shape"><span>Transition shape</span><output id="step-filter-shape-value" for="step-filter-shape">15%</output><input id="step-filter-shape" type="range" min="0" max="100" step="1" value="15"></label>
+          <label class="mix-control" for="step-filter-smoothing-ms"><span>Cutoff smoothing</span><output id="step-filter-smoothing-ms-value" for="step-filter-smoothing-ms">4.0 ms</output><input id="step-filter-smoothing-ms" type="range" min="0" max="100" step="0.1" value="4"></label>
+          <label class="mix-control" for="step-filter-mix"><span>Mix</span><output id="step-filter-mix-value" for="step-filter-mix">100%</output><input id="step-filter-mix" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="step-filter-phase"><span>Start phase</span><output id="step-filter-phase-value" for="step-filter-phase">0%</output><input id="step-filter-phase" type="range" min="0" max="100" step="1" value="0"></label>
+        </div>
+        <div id="step-filter-steps" class="slicer-step-grid" aria-label="16-step filter cutoff pattern"></div>
+        <p class="hint">Pattern values sweep logarithmically between the minimum and maximum cutoff. Choose low-pass, band-pass, high-pass, or notch response. This sequenced filter is distinct from the amplitude-gate Rhythmic Slicer, and uses project-authored controls rather than a manufacturer parameter match.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Guitar graphic equalizer controls">
         <h3>Guitar graphic EQ</h3>

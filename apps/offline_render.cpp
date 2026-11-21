@@ -15,6 +15,7 @@
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
+#include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -177,6 +178,8 @@ struct Options {
     tabletfx::RingModulatorParameters ring_modulator{};
     bool rhythmic_slicer_enabled = false;
     tabletfx::RhythmicSlicerParameters rhythmic_slicer{};
+    bool step_filter_enabled = false;
+    tabletfx::StepFilterParameters step_filter{};
 };
 
 float parse_float(std::string_view name, const char* raw) {
@@ -204,17 +207,26 @@ tabletfx::RhythmicDivision parse_rhythmic_division(std::string_view value) {
     if (value == "sixteenth-triplet") return RhythmicDivision::SixteenthTriplet;
     if (value == "thirty-second") return RhythmicDivision::ThirtySecond;
     if (value == "thirty-second-triplet") return RhythmicDivision::ThirtySecondTriplet;
-    throw std::invalid_argument("Unsupported rhythmic-slicer subdivision");
+    throw std::invalid_argument("Unsupported rhythmic subdivision");
 }
 
-std::array<float, 16> parse_rhythmic_slicer_steps(std::string_view value) {
+tabletfx::StepFilterMode parse_step_filter_mode(std::string_view value) {
+    using tabletfx::StepFilterMode;
+    if (value == "lowpass") return StepFilterMode::LowPass;
+    if (value == "bandpass") return StepFilterMode::BandPass;
+    if (value == "highpass") return StepFilterMode::HighPass;
+    if (value == "notch") return StepFilterMode::Notch;
+    throw std::invalid_argument("Step-filter mode must be lowpass, bandpass, highpass, or notch");
+}
+
+std::array<float, 16> parse_step_pattern(std::string_view value) {
     std::array<float, 16> steps{};
     std::size_t start = 0;
     for (std::size_t index = 0; index < steps.size(); ++index) {
         const std::size_t separator = value.find(',', start);
         if ((index + 1U < steps.size() && separator == std::string_view::npos) ||
             (index + 1U == steps.size() && separator != std::string_view::npos)) {
-            throw std::invalid_argument("Rhythmic-slicer steps require exactly 16 comma-separated values");
+            throw std::invalid_argument("Step pattern requires exactly 16 comma-separated values");
         }
         const std::string_view item = value.substr(
             start, separator == std::string_view::npos ? value.size() - start
@@ -223,7 +235,7 @@ std::array<float, 16> parse_rhythmic_slicer_steps(std::string_view value) {
         std::size_t parsed = 0;
         const float step = std::stof(text, &parsed);
         if (parsed != text.size() || !std::isfinite(step)) {
-            throw std::invalid_argument("Rhythmic-slicer steps must be finite numbers");
+            throw std::invalid_argument("Step pattern values must be finite numbers");
         }
         steps[index] = step;
         if (separator != std::string_view::npos) {
@@ -367,6 +379,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.rhythmic_slicer_enabled = true;
             continue;
         }
+        if (key == "--step-filter") {
+            options.step_filter_enabled = true;
+            continue;
+        }
         if (key == "--rotary-tempo-sync") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --rotary-tempo-sync");
@@ -414,8 +430,43 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Missing value for --rhythmic-slicer-steps");
             }
             options.rhythmic_slicer.steps =
-                parse_rhythmic_slicer_steps(argv[++i]);
+                parse_step_pattern(argv[++i]);
             options.rhythmic_slicer_enabled = true;
+            continue;
+        }
+        if (key == "--step-filter-tempo-sync") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --step-filter-tempo-sync");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.step_filter.tempo_sync = true;
+            else if (value == "off") options.step_filter.tempo_sync = false;
+            else throw std::invalid_argument("Step-filter tempo sync must be on or off");
+            options.step_filter_enabled = true;
+            continue;
+        }
+        if (key == "--step-filter-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --step-filter-division");
+            }
+            options.step_filter.division = parse_rhythmic_division(argv[++i]);
+            options.step_filter_enabled = true;
+            continue;
+        }
+        if (key == "--step-filter-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --step-filter-mode");
+            }
+            options.step_filter.mode = parse_step_filter_mode(argv[++i]);
+            options.step_filter_enabled = true;
+            continue;
+        }
+        if (key == "--step-filter-steps") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --step-filter-steps");
+            }
+            options.step_filter.steps = parse_step_pattern(argv[++i]);
+            options.step_filter_enabled = true;
             continue;
         }
         if (key == "--rotary-input-select") {
@@ -1268,6 +1319,46 @@ Options parse_options(int argc, char** argv, int first) {
             options.rhythmic_slicer.phase = value;
             options.rhythmic_slicer_enabled = true;
         }
+        else if (key == "--step-filter-tempo-bpm") {
+            options.step_filter.tempo_bpm = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-rate-hz") {
+            options.step_filter.rate_hz = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-min-cutoff-hz") {
+            options.step_filter.minimum_cutoff_hz = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-max-cutoff-hz") {
+            options.step_filter.maximum_cutoff_hz = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-resonance-q") {
+            options.step_filter.resonance_q = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-depth") {
+            options.step_filter.depth = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-shape") {
+            options.step_filter.shape = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-smoothing-ms") {
+            options.step_filter.smoothing_ms = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-mix") {
+            options.step_filter.mix = value;
+            options.step_filter_enabled = true;
+        }
+        else if (key == "--step-filter-phase") {
+            options.step_filter.phase = value;
+            options.step_filter_enabled = true;
+        }
         else if (key == "--rotary-rate-hz") {
             options.rotary_speaker.rate_hz = value;
             options.rotary_speaker_enabled = true;
@@ -1562,6 +1653,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.rhythmic_slicer_enabled) {
         effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(
             static_cast<float>(sample_rate), options.rhythmic_slicer));
+    }
+    if (options.step_filter_enabled) {
+        effects.push_back(std::make_unique<tabletfx::StepFilter>(
+            static_cast<float>(sample_rate), options.step_filter));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -2025,6 +2120,22 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::RotarySpeaker>(
         static_cast<float>(sample_rate), channels));
+    tabletfx::RingModulatorParameters ring_parameters;
+    ring_parameters.frequency_hz = 713.0F;
+    ring_parameters.frequency_multiplier = 1.75F;
+    ring_parameters.high_cut_hz = 9000.0F;
+    ring_parameters.mix = 0.83F;
+    effects.push_back(std::make_unique<tabletfx::RingModulator>(
+        static_cast<float>(sample_rate), channels, ring_parameters));
+    tabletfx::RhythmicSlicerParameters slicer_parameters;
+    slicer_parameters.depth = 0.4F;
+    slicer_parameters.shape = 0.15F;
+    slicer_parameters.attack_ms = 0.5F;
+    slicer_parameters.release_ms = 1.0F;
+    effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(
+        static_cast<float>(sample_rate), slicer_parameters));
+    effects.push_back(std::make_unique<tabletfx::StepFilter>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::Gain>(-1.0F, static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::PeakLimiter>(sample_rate, -1.0F, 80.0F));
     tabletfx::SignalControls signal_controls(static_cast<float>(sample_rate));
@@ -2181,6 +2292,11 @@ void run_bench() {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
         return std::make_unique<tabletfx::RhythmicSlicer>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("step-filter", [=] {
+        tabletfx::StepFilterParameters parameters;
+        return std::make_unique<tabletfx::StepFilter>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-bbd-mono", [=] {
@@ -2502,6 +2618,14 @@ void print_usage() {
                    " [--rhythmic-slicer-shape 0..1] [--rhythmic-slicer-attack-ms 0..100]"
                    " [--rhythmic-slicer-release-ms 0..100] [--rhythmic-slicer-phase 0..1]"
                    " [--rhythmic-slicer-steps 16 comma-separated values in 0..1]\n"
+                << "                 [--step-filter] [--step-filter-mode lowpass|bandpass|highpass|notch]"
+                   " [--step-filter-tempo-sync on|off] [--step-filter-tempo-bpm 30..300]"
+                   " [--step-filter-division whole|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth|dotted-sixteenth|sixteenth-triplet|thirty-second|thirty-second-triplet]"
+                   " [--step-filter-rate-hz 0.05..60] [--step-filter-min-cutoff-hz 20..18000]"
+                   " [--step-filter-max-cutoff-hz 20..18000] [--step-filter-resonance-q 0.5..12]"
+                   " [--step-filter-depth 0..1] [--step-filter-shape 0..1]"
+                   " [--step-filter-smoothing-ms 0..100] [--step-filter-mix 0..1]"
+                   " [--step-filter-phase 0..1] [--step-filter-steps 16 values in 0..1]\n"
                << "  tabletfx_offline --bench\n";
 }
 

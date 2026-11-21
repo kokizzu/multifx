@@ -38,6 +38,7 @@ add_library(tabletfx_core
     src/effects/rotary_speaker.cpp
     src/effects/ring_modulator.cpp
     src/effects/rhythmic_slicer.cpp
+    src/effects/step_filter.cpp
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/wah.cpp
@@ -219,6 +220,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_rhythmic_slicer_tests tests/test_rhythmic_slicer.cpp)
     target_link_libraries(tabletfx_rhythmic_slicer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_rhythmic_slicer_tests COMMAND tabletfx_rhythmic_slicer_tests)
+
+    add_executable(tabletfx_step_filter_tests tests/test_step_filter.cpp)
+    target_link_libraries(tabletfx_step_filter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_step_filter_tests COMMAND tabletfx_step_filter_tests)
 
     add_executable(tabletfx_wah_tests tests/test_wah.cpp)
     target_link_libraries(tabletfx_wah_tests PRIVATE tabletfx_core)

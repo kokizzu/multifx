@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-   "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -135,6 +135,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
         ];
         module._tf_chain_set_rhythmic_slicer(this.chain, ...rhythmicSlicer);
+       const stepFilter = parameters.stepFilter || [
+         1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
+         0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
+         0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84,
+       ];
+       module._tf_chain_set_step_filter(this.chain, ...stepFilter);
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
@@ -283,6 +289,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_ring_modulator(this.chain, ...message.value);
       } else if (message.type === "rhythmic-slicer" && this.ready) {
         this.module._tf_chain_set_rhythmic_slicer(this.chain, ...message.value);
+      } else if (message.type === "step-filter" && this.ready) {
+        this.module._tf_chain_set_step_filter(this.chain, ...message.value);
     } else if (message.type === "volume-pedal" && this.ready) {
       this.module._tf_chain_set_volume_pedal(this.chain, ...message.value);
     } else if (message.type === "noise-gate" && this.ready) {

@@ -37,6 +37,7 @@ const EFFECT_NAMES = [
   "Rotary Speaker",
   "Ring Modulator",
   "Rhythmic Slicer",
+  "Step Filter",
   "Output level",
   "Peak limiter",
 ];
@@ -74,6 +75,9 @@ const DEFAULT_PARAMETERS = {
   ringModulator: [440, 1, 20000, 1],
   rhythmicSlicer: [1, 120, 8, 8, 1, 0.15, 1, 1, 0,
     1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+  stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
+    0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
+    0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   delay: [350, 0.25, 0.25],
@@ -494,6 +498,48 @@ const rhythmicSlicerSteps = Array.from({ length: 16 }, (_, index) => {
   input.setAttribute("aria-label", `Rhythmic Slicer step ${index + 1} level`);
   label.append(name, output, input);
   rhythmicSlicerStepsRoot.append(label);
+  return { input, output };
+});
+const stepFilterTempoSync = document.querySelector("#step-filter-tempo-sync");
+const stepFilterTempoBpm = document.querySelector("#step-filter-tempo-bpm");
+const stepFilterTempoBpmValue = document.querySelector("#step-filter-tempo-bpm-value");
+const stepFilterDivision = document.querySelector("#step-filter-division");
+const stepFilterRate = document.querySelector("#step-filter-rate-hz");
+const stepFilterRateValue = document.querySelector("#step-filter-rate-hz-value");
+const stepFilterMode = document.querySelector("#step-filter-mode");
+const stepFilterMinimumCutoff = document.querySelector("#step-filter-min-cutoff-hz");
+const stepFilterMinimumCutoffValue = document.querySelector("#step-filter-min-cutoff-hz-value");
+const stepFilterMaximumCutoff = document.querySelector("#step-filter-max-cutoff-hz");
+const stepFilterMaximumCutoffValue = document.querySelector("#step-filter-max-cutoff-hz-value");
+const stepFilterResonance = document.querySelector("#step-filter-resonance-q");
+const stepFilterResonanceValue = document.querySelector("#step-filter-resonance-q-value");
+const stepFilterDepth = document.querySelector("#step-filter-depth");
+const stepFilterDepthValue = document.querySelector("#step-filter-depth-value");
+const stepFilterShape = document.querySelector("#step-filter-shape");
+const stepFilterShapeValue = document.querySelector("#step-filter-shape-value");
+const stepFilterSmoothing = document.querySelector("#step-filter-smoothing-ms");
+const stepFilterSmoothingValue = document.querySelector("#step-filter-smoothing-ms-value");
+const stepFilterMix = document.querySelector("#step-filter-mix");
+const stepFilterMixValue = document.querySelector("#step-filter-mix-value");
+const stepFilterPhase = document.querySelector("#step-filter-phase");
+const stepFilterPhaseValue = document.querySelector("#step-filter-phase-value");
+const stepFilterStepsRoot = document.querySelector("#step-filter-steps");
+const stepFilterSteps = Array.from({ length: 16 }, (_, index) => {
+  const label = document.createElement("label");
+  label.className = "slicer-step";
+  const name = document.createElement("span");
+  name.textContent = String(index + 1).padStart(2, "0");
+  const output = document.createElement("output");
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = "0";
+  input.max = "1";
+  input.step = "0.01";
+  input.value = String(DEFAULT_PARAMETERS.stepFilter[index + 13]);
+  output.textContent = `${Math.round(Number(input.value) * 100)}%`;
+  input.setAttribute("aria-label", `Step Filter step ${index + 1} cutoff position`);
+  label.append(name, output, input);
+  stepFilterStepsRoot.append(label);
   return { input, output };
 });
 const loadRows = document.querySelector("#load-rows");
@@ -1757,6 +1803,43 @@ function updateRhythmicSlicer() {
   }
 }
 
+function updateStepFilter() {
+  const stepValues = stepFilterSteps.map(({ input }) => Number(input.value));
+  const values = [
+    stepFilterTempoSync.checked ? 1 : 0,
+    Number(stepFilterTempoBpm.value),
+    Number(stepFilterDivision.value),
+    Number(stepFilterRate.value),
+    Number(stepFilterMode.value),
+    Number(stepFilterMinimumCutoff.value),
+    Number(stepFilterMaximumCutoff.value),
+    Number(stepFilterResonance.value),
+    Number(stepFilterDepth.value) / 100,
+    Number(stepFilterShape.value) / 100,
+    Number(stepFilterSmoothing.value),
+    Number(stepFilterMix.value) / 100,
+    Number(stepFilterPhase.value) / 100,
+    ...stepValues,
+  ];
+  stepFilterTempoBpmValue.value = `${values[1].toFixed(0)} BPM`;
+  stepFilterRateValue.value = `${values[3].toFixed(2)} Hz`;
+  stepFilterMinimumCutoffValue.value = `${values[5].toFixed(0)} Hz`;
+  stepFilterMaximumCutoffValue.value = `${values[6].toFixed(0)} Hz`;
+  stepFilterResonanceValue.value = values[7].toFixed(2);
+  stepFilterDepthValue.value = `${Math.round(values[8] * 100)}%`;
+  stepFilterShapeValue.value = `${Math.round(values[9] * 100)}%`;
+  stepFilterSmoothingValue.value = `${values[10].toFixed(1)} ms`;
+  stepFilterMixValue.value = `${Math.round(values[11] * 100)}%`;
+  stepFilterPhaseValue.value = `${Math.round(values[12] * 100)}%`;
+  stepFilterSteps.forEach(({ output }, index) => {
+    output.value = `${Math.round(stepValues[index] * 100)}%`;
+  });
+  DEFAULT_PARAMETERS.stepFilter = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "step-filter", value: values });
+  }
+}
+
 for (const controls of [opticalCompressorControls, fetCompressorControls]) {
   for (const { input } of controls) {
     input.addEventListener("input", controls === opticalCompressorControls
@@ -1827,6 +1910,16 @@ for (const input of [rhythmicSlicerTempoBpm, rhythmicSlicerRate,
 for (const input of [rhythmicSlicerTempoSync, rhythmicSlicerDivision]) {
   input.addEventListener("change", updateRhythmicSlicer);
 }
+for (const input of [stepFilterTempoBpm, stepFilterRate, stepFilterMinimumCutoff,
+  stepFilterMaximumCutoff, stepFilterResonance, stepFilterDepth, stepFilterShape,
+  stepFilterSmoothing, stepFilterMix, stepFilterPhase,
+  ...stepFilterSteps.map(({ input: step }) => step)]) {
+  input.addEventListener("input", updateStepFilter);
+  input.addEventListener("change", updateStepFilter);
+}
+for (const input of [stepFilterTempoSync, stepFilterDivision, stepFilterMode]) {
+  input.addEventListener("change", updateStepFilter);
+}
 updateOpticalCompressor();
 updateFetCompressor();
 updateGuitarGraphicEQ();
@@ -1840,6 +1933,7 @@ updateAutoSwell();
 updateRotarySpeaker();
 updateRingModulator();
 updateRhythmicSlicer();
+updateStepFilter();
 
 function updateDelayDual() {
   const values = [
@@ -1990,22 +2084,22 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 38 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 38 || effectRows.length !== 38 ||
+    const expectedEffectIds = Array.from({ length: 39 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 39 || effectRows.length !== 39 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
-        initialEffectState[35] ||
+        initialEffectState[35] || initialEffectState[36] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 38 ordered effects (IDs 0–37) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, and Rhythmic Slicer disabled by default.");
+      throw new Error("The effect picker must list 39 ordered effects (IDs 0–38) with the reverbs, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, and Step Filter disabled by default.");
     }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35" ||
-        effectCount.value !== "8 of 38" ||
+        effectCount.value !== "8 of 39" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -2013,16 +2107,25 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,37" ||
-        effectCount.value !== "7 of 38" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,38" ||
+        effectCount.value !== "7 of 39" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
+    }
+    effectCategoryFilter.value = "filter";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const filterIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (filterIds.join(",") !== "2,3,7,8,36" ||
+        effectCount.value !== "5 of 39" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Filters category must include Step Filter and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 38" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 39" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -2032,12 +2135,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 38") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 39") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "38 of 38" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "39 of 39" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const context = await getAudioContext();
@@ -2113,6 +2216,9 @@ async function runBrowserSelfTest() {
         rhythmicSlicer: [1, 120, 8, 8, 0.4, 0.15, 0.5, 1, 0,
           1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25,
           1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25],
+         stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 0.65, 0.4, 3, 0.7, 0,
+           0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
+           0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -2148,6 +2254,24 @@ async function runBrowserSelfTest() {
       input.value = String(slicerParameters[index + 9]);
     });
     updateRhythmicSlicer();
+    const stepFilterParameters = testOptions.parameters.stepFilter;
+    stepFilterTempoSync.checked = stepFilterParameters[0] !== 0;
+    stepFilterTempoBpm.value = String(stepFilterParameters[1]);
+    stepFilterDivision.value = String(stepFilterParameters[2]);
+    stepFilterRate.value = String(stepFilterParameters[3]);
+    stepFilterMode.value = String(stepFilterParameters[4]);
+    stepFilterMinimumCutoff.value = String(stepFilterParameters[5]);
+    stepFilterMaximumCutoff.value = String(stepFilterParameters[6]);
+    stepFilterResonance.value = String(stepFilterParameters[7]);
+    stepFilterDepth.value = String(stepFilterParameters[8] * 100);
+    stepFilterShape.value = String(stepFilterParameters[9] * 100);
+    stepFilterSmoothing.value = String(stepFilterParameters[10]);
+    stepFilterMix.value = String(stepFilterParameters[11] * 100);
+    stepFilterPhase.value = String(stepFilterParameters[12] * 100);
+    stepFilterSteps.forEach(({ input }, index) => {
+      input.value = String(stepFilterParameters[index + 13]);
+    });
+    updateStepFilter();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";
     volumeMaximum.value = "0";

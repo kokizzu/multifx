@@ -144,3 +144,9 @@ publish-rhythmic-slicer-plan:
 
 publish-rhythmic-slicer:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint rhythmic-slicer
+
+publish-step-filter-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint step-filter
+
+publish-step-filter:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint step-filter

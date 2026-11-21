@@ -180,6 +180,15 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--rhythmic-slicer-phase", "0",
         "--rhythmic-slicer-steps",
         "1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25,1,0.25",
+        "--step-filter", "--step-filter-mode", "lowpass",
+        "--step-filter-tempo-sync", "on", "--step-filter-tempo-bpm", "120",
+        "--step-filter-division", "sixteenth", "--step-filter-rate-hz", "8",
+        "--step-filter-min-cutoff-hz", "120", "--step-filter-max-cutoff-hz", "6000",
+        "--step-filter-resonance-q", "0.707", "--step-filter-depth", "0.65",
+        "--step-filter-shape", "0.4", "--step-filter-smoothing-ms", "3",
+        "--step-filter-mix", "0.7", "--step-filter-phase", "0",
+        "--step-filter-steps",
+        "0,0.75,0.2,0.9,0.35,0.6,0.1,1,0.25,0.8,0.15,0.95,0.4,0.7,0.05,0.85",
     ]
     if delay_character == "tape":
         command.extend([
@@ -202,7 +211,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 38:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 39:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -269,7 +278,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 38-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, and Rhythmic Slicer, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 39-effect chain, including Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, and Step Filter, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

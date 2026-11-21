@@ -14,6 +14,7 @@
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
+#include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
@@ -181,6 +182,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::RhythmicSlicer>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::StepFilter>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -860,6 +864,37 @@ public:
         }
     }
 
+    void configure_step_filter(
+        std::uint32_t tempo_sync, float tempo_bpm, std::uint32_t division,
+        float rate_hz, std::uint32_t mode, float minimum_cutoff_hz,
+        float maximum_cutoff_hz, float resonance_q, float depth, float shape,
+        float smoothing_ms, float mix, float phase,
+        const std::array<float, 16>& steps) noexcept {
+        auto* step_filter = static_cast<tabletfx::StepFilter*>(
+            effects_[36].effect.get());
+        const float previous_phase = step_filter->parameters().phase;
+        auto parameters = step_filter->parameters();
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.division =
+            static_cast<tabletfx::RhythmicDivision>(division);
+        parameters.rate_hz = rate_hz;
+        parameters.mode = static_cast<tabletfx::StepFilterMode>(mode);
+        parameters.minimum_cutoff_hz = minimum_cutoff_hz;
+        parameters.maximum_cutoff_hz = maximum_cutoff_hz;
+        parameters.resonance_q = resonance_q;
+        parameters.depth = depth;
+        parameters.shape = shape;
+        parameters.smoothing_ms = smoothing_ms;
+        parameters.mix = mix;
+        parameters.phase = phase;
+        parameters.steps = steps;
+        step_filter->set_parameters(parameters);
+        if (phase != previous_phase) {
+            step_filter->reset();
+        }
+    }
+
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
         output_limiter_.set_ceiling_db(ceiling_db);
         output_limiter_.set_release_ms(release_ms);
@@ -1330,6 +1365,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rhythmic_slicer(
         as_chain(opaque)->configure_rhythmic_slicer(
             tempo_sync, tempo_bpm, division, rate_hz, depth, shape,
             attack_ms, release_ms, phase,
+            {step_1, step_2, step_3, step_4, step_5, step_6, step_7, step_8,
+             step_9, step_10, step_11, step_12, step_13, step_14, step_15,
+             step_16});
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_step_filter(
+    void* opaque, std::uint32_t tempo_sync, float tempo_bpm,
+    std::uint32_t division, float rate_hz, std::uint32_t mode,
+    float minimum_cutoff_hz, float maximum_cutoff_hz, float resonance_q,
+    float depth, float shape, float smoothing_ms, float mix, float phase,
+    float step_1, float step_2, float step_3, float step_4,
+    float step_5, float step_6, float step_7, float step_8,
+    float step_9, float step_10, float step_11, float step_12,
+    float step_13, float step_14, float step_15, float step_16) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_step_filter(
+            tempo_sync, tempo_bpm, division, rate_hz, mode,
+            minimum_cutoff_hz, maximum_cutoff_hz, resonance_q, depth, shape,
+            smoothing_ms, mix, phase,
             {step_1, step_2, step_3, step_4, step_5, step_6, step_7, step_8,
              step_9, step_10, step_11, step_12, step_13, step_14, step_15,
              step_16});
