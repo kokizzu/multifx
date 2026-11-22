@@ -162,6 +162,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_mono_guitar_synth_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_mono_guitar_synth_tests COMMAND tabletfx_mono_guitar_synth_tests)
 
+    add_executable(tabletfx_note_generator_tests tests/test_note_generator.cpp)
+    target_link_libraries(tabletfx_note_generator_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_note_generator_tests COMMAND tabletfx_note_generator_tests)
+
     add_executable(tabletfx_looper_tests tests/test_looper.cpp)
     target_link_libraries(tabletfx_looper_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_looper_tests COMMAND tabletfx_looper_tests)

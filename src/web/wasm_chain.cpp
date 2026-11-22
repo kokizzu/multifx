@@ -88,7 +88,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(60);
+          effects_.reserve(64);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -248,6 +248,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::MonoGuitarSynth>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::NoteGenerator>(
+                                static_cast<float>(sample_rate)),
+                            false});
         effects_.push_back({std::make_unique<tabletfx::GrainDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
@@ -315,9 +318,6 @@ public:
         if (index == 52U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
-        if (index == 54U && effects_[index].enabled && !enabled) {
-            effects_[index].effect->reset();
-        }
         if (index == 55U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
@@ -325,6 +325,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 57U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 58U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -560,12 +563,12 @@ public:
             {f1, g1, q1}, {f2, g2, q2}, {f3, g3, q3},
             {f4, g4, q4}, {f5, g5, q5},
         }};
-        static_cast<tabletfx::FiveBandParametricEQ*>(effects_[58].effect.get())
+        static_cast<tabletfx::FiveBandParametricEQ*>(effects_[59].effect.get())
             ->configure(bands);
     }
 
     [[nodiscard]] bool looper_command(std::uint32_t command) noexcept {
-        auto* looper = static_cast<tabletfx::Looper*>(effects_[59].effect.get());
+        auto* looper = static_cast<tabletfx::Looper*>(effects_[60].effect.get());
         switch (command) {
         case 0U: return looper->record();
         case 1U: return looper->play();
@@ -582,7 +585,7 @@ public:
 
     void configure_looper(bool reverse, bool half_speed,
                           float overdub_level) noexcept {
-        auto* looper = static_cast<tabletfx::Looper*>(effects_[59].effect.get());
+        auto* looper = static_cast<tabletfx::Looper*>(effects_[60].effect.get());
         looper->set_reverse(reverse);
         looper->set_half_speed(half_speed);
         looper->set_overdub_level(overdub_level);
@@ -590,13 +593,13 @@ public:
 
     [[nodiscard]] std::uint32_t looper_state() const noexcept {
         const auto* looper = static_cast<const tabletfx::Looper*>(
-            effects_[59].effect.get());
+            effects_[60].effect.get());
         return static_cast<std::uint32_t>(looper->state());
     }
 
     [[nodiscard]] std::uint32_t looper_frames() const noexcept {
         const auto* looper = static_cast<const tabletfx::Looper*>(
-            effects_[59].effect.get());
+            effects_[60].effect.get());
         const std::size_t frames = looper->loop_frames();
         return frames > std::numeric_limits<std::uint32_t>::max()
                    ? std::numeric_limits<std::uint32_t>::max()
@@ -949,6 +952,39 @@ public:
             ->configure(config);
     }
 
+    void configure_note_generator(const float* values,
+                                  std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 14U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        const auto integer = [](float value, int minimum, int maximum,
+                                int fallback) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return static_cast<int>(std::lround(std::clamp(
+                value, static_cast<float>(minimum), static_cast<float>(maximum))));
+        };
+        tabletfx::effects::NoteGeneratorParameters parameters;
+        parameters.voice_count = static_cast<std::uint8_t>(selector(values[0], 3U));
+        for (std::size_t voice = 0; voice < parameters.voices.size(); ++voice) {
+            const std::size_t offset = 1U + voice * 4U;
+            parameters.voices[voice].waveform =
+                static_cast<tabletfx::effects::NoteGeneratorWaveform>(
+                    selector(values[offset], 3U));
+            parameters.voices[voice].note_number =
+                integer(values[offset + 1U], 0, 127, 60);
+            parameters.voices[voice].octave =
+                integer(values[offset + 2U], -2, 2, 0);
+            parameters.voices[voice].level = values[offset + 3U];
+        }
+        parameters.output_level = values[13U];
+        static_cast<tabletfx::effects::NoteGenerator*>(effects_[53].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_grain_delay(float time_ms, float feedback, float mix,
                                float grain_size_ms, std::uint32_t overlap,
                                float pitch_semitones, float spray_ms) noexcept {
@@ -961,7 +997,7 @@ public:
             std::clamp(overlap, 0U, 255U));
         parameters.pitch_semitones = pitch_semitones;
         parameters.spray_ms = spray_ms;
-        static_cast<tabletfx::GrainDelay*>(effects_[53].effect.get())
+        static_cast<tabletfx::GrainDelay*>(effects_[54].effect.get())
             ->configure(parameters);
     }
 
@@ -972,7 +1008,7 @@ public:
         parameters.feedback = feedback;
         parameters.mix = mix;
         parameters.pitch_semitones = pitch_semitones;
-        static_cast<tabletfx::PitchFeedbackDelay*>(effects_[54].effect.get())
+        static_cast<tabletfx::PitchFeedbackDelay*>(effects_[55].effect.get())
             ->configure(parameters);
     }
 
@@ -988,7 +1024,7 @@ public:
         parameters.dry_kill = static_cast<tabletfx::effects::FeedbackGeneratorDryKill>(dry_kill);
         parameters.dry_level = dry_level;
         parameters.silence_threshold_db = silence_threshold_db;
-        static_cast<tabletfx::effects::FeedbackGenerator*>(effects_[55].effect.get())
+        static_cast<tabletfx::effects::FeedbackGenerator*>(effects_[56].effect.get())
             ->configure(parameters);
     }
 
@@ -1004,7 +1040,7 @@ public:
         parameters.shimmer_intensity = values[6];
         parameters.mix = values[7];
         parameters.level_db = values[8];
-        static_cast<tabletfx::ShimmerReverb*>(effects_[56].effect.get())
+        static_cast<tabletfx::ShimmerReverb*>(effects_[57].effect.get())
             ->configure(parameters);
     }
 
@@ -1012,7 +1048,7 @@ public:
         tabletfx::ConvolutionReverbParameters parameters;
         parameters.mix = mix;
         parameters.level_db = level_db;
-        static_cast<tabletfx::ConvolutionReverb*>(effects_[57].effect.get())
+        static_cast<tabletfx::ConvolutionReverb*>(effects_[58].effect.get())
             ->configure(parameters);
     }
 
@@ -1027,7 +1063,7 @@ public:
         const std::size_t sample_count = static_cast<std::size_t>(frames) *
                                          static_cast<std::size_t>(ir_channels);
         return static_cast<tabletfx::ConvolutionReverb*>(
-                   effects_[57].effect.get())
+                   effects_[58].effect.get())
             ->load_impulse_response(
                 std::span<const float>(samples, sample_count),
                 static_cast<std::uint16_t>(ir_channels), ir_sample_rate);
@@ -2192,6 +2228,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_mono_guitar_synth(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_mono_guitar_synth(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_note_generator(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_note_generator(values, value_count);
     }
 }
 

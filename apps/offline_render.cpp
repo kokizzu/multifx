@@ -113,6 +113,8 @@ struct Options {
     tabletfx::effects::PitchArpeggiatorParameters pitch_arpeggiator{};
     bool mono_guitar_synth_enabled = false;
     tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
+    bool note_generator_enabled = false;
+    tabletfx::effects::NoteGeneratorParameters note_generator{};
     bool pitch_feedback_delay_enabled = false;
     tabletfx::PitchFeedbackDelayParameters pitch_feedback_delay{};
     bool feedback_generator_enabled = false;
@@ -583,6 +585,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.mono_guitar_synth_enabled = true;
             continue;
         }
+        if (key == "--note-generator") {
+            options.note_generator_enabled = true;
+            continue;
+        }
         if (key == "--pitch-feedback-delay") {
             options.pitch_feedback_delay_enabled = true;
             continue;
@@ -812,6 +818,58 @@ Options parse_options(int argc, char** argv, int first) {
                 else if (setting == "portamento-ms") parameters.portamento_ms = number;
                 else throw std::invalid_argument("Unknown option: " + std::string(key));
             }
+            continue;
+        }
+        if (key.starts_with("--note-generator-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.note_generator;
+            const std::string_view setting = key.substr(
+                std::string_view("--note-generator-").size());
+            if (setting == "voice-count") {
+                const long count = std::lround(parse_float(key, argv[i]));
+                parameters.voice_count = static_cast<std::uint8_t>(
+                    std::clamp(count, 1L, 3L));
+            } else if (setting == "output-level") {
+                parameters.output_level = parse_float(key, argv[i]);
+            } else if (setting.starts_with("voice-")) {
+                const std::string_view voice_setting = setting.substr(6U);
+                if (voice_setting.size() < 3U || voice_setting[1] != '-' ||
+                    voice_setting[0] < '1' || voice_setting[0] > '3') {
+                    throw std::invalid_argument(
+                        "Note Generator voice options must use voice-1 through voice-3");
+                }
+                auto& voice = parameters.voices[
+                    static_cast<std::size_t>(voice_setting[0] - '1')];
+                const std::string_view field = voice_setting.substr(2U);
+                if (field == "waveform") {
+                    using Waveform = tabletfx::effects::NoteGeneratorWaveform;
+                    if (value == "sine") voice.waveform = Waveform::Sine;
+                    else if (value == "triangle") voice.waveform = Waveform::Triangle;
+                    else if (value == "sawtooth") voice.waveform = Waveform::Sawtooth;
+                    else if (value == "square") voice.waveform = Waveform::Square;
+                    else throw std::invalid_argument(
+                        "Note Generator waveform must be sine, triangle, sawtooth, or square");
+                } else {
+                    const float number = parse_float(key, argv[i]);
+                    if (field == "note") {
+                        voice.note_number = static_cast<int>(std::lround(std::clamp(
+                            number, 0.0F, 127.0F)));
+                    } else if (field == "octave") {
+                        voice.octave = static_cast<int>(std::lround(std::clamp(
+                            number, -2.0F, 2.0F)));
+                    } else if (field == "level") {
+                        voice.level = number;
+                    } else {
+                        throw std::invalid_argument("Unknown option: " + std::string(key));
+                    }
+                }
+            } else {
+                throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.note_generator_enabled = true;
             continue;
         }
         if (key.starts_with("--pitch-feedback-delay-")) {
@@ -2870,6 +2928,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.mono_guitar_synth_enabled) {
         effects.push_back(std::make_unique<tabletfx::effects::MonoGuitarSynth>(
             static_cast<float>(sample_rate), options.mono_guitar_synth));
+    }
+    if (options.note_generator_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::NoteGenerator>(
+            static_cast<float>(sample_rate), options.note_generator));
     }
     if (options.grain_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(

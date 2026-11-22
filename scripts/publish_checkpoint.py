@@ -1019,9 +1019,29 @@ PHRASE_LOOPER_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "scripts/publish_checkpoint.py",
 )
-DEFERRED_AGENT_DRAFT_PATHS = (
+NOTE_GENERATOR_CHECKPOINT_PATHS = (
+    "Makefile",
+    "make/publish.mk",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
     "include/tabletfx/effects/note_generator.hpp",
     "tests/test_note_generator.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+)
+DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/enhancer.hpp",
     "tests/test_enhancer.cpp",
 )
@@ -1098,6 +1118,8 @@ CHECKPOINTS = {
                      "feat: add project-authored five-band EQ"),
     "phrase-looper": (PHRASE_LOOPER_CHECKPOINT_PATHS,
                       "feat: add categorized phrase looper"),
+    "note-generator": (NOTE_GENERATOR_CHECKPOINT_PATHS,
+                       "feat: add categorized note generator"),
 }
 
 

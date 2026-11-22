@@ -2047,6 +2047,35 @@ def check_five_band_parametric_eq(executable: Path) -> None:
                 f"Five-band parametric EQ did not boost its center tone: {source_rms} -> {actual_rms}")
 
 
+def check_note_generator(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 256
+    with tempfile.TemporaryDirectory(prefix="tabletfx-note-generator-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "silence.wav"
+        output = root / "generated.wav"
+        write_pcm16(source, sample_rate, [0] * frame_count)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--note-generator", "--note-generator-voice-count", "1",
+                "--note-generator-voice-1-note", "69",
+                "--note-generator-voice-1-level", "1",
+                "--note-generator-output-level", "1",
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Note Generator CLI did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        expected = math.sin(2.0 * math.pi * 440.0 / sample_rate)
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Note Generator produced non-finite audio")
+        if abs(values[0]) > 1.0e-6 or abs(values[1] - expected) > 1.0e-4:
+            raise AssertionError(
+                f"Note Generator did not synthesize MIDI note 69 from silence: {values[:2]}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -2088,6 +2117,7 @@ def main() -> None:
     check_diatonic_harmonizer(args.executable.resolve())
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
+    check_note_generator(args.executable.resolve())
     check_pitch_feedback_delay(args.executable.resolve())
     check_feedback_generator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
@@ -2106,7 +2136,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
