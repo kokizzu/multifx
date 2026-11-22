@@ -1214,6 +1214,40 @@ def check_cloud_reverb(executable: Path) -> None:
             raise AssertionError("Cloud Reverb controls did not change rendered guitar audio")
 
 
+def check_three_stage_distortion(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-three-stage-distortion-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "three-stage-distortion.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--three-stage-distortion", "--three-stage-distortion-drive", "0.65",
+             "--three-stage-distortion-drive-2", "0.72",
+             "--three-stage-distortion-bass-db", "2",
+             "--three-stage-distortion-mid-db", "-1.5",
+             "--three-stage-distortion-treble-db", "1",
+             "--three-stage-distortion-bright-1", "on",
+             "--three-stage-distortion-bright-2", "on",
+             "--three-stage-distortion-level-db", "-3"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Three-Stage Distortion did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Three-Stage Distortion returned non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.02:
+            raise AssertionError("Three-Stage Distortion controls did not change rendered guitar audio")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -2507,6 +2541,7 @@ def main() -> None:
     check_plex_delay(args.executable.resolve())
     check_celestial_reverb(args.executable.resolve())
     check_cloud_reverb(args.executable.resolve())
+    check_three_stage_distortion(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

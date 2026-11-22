@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Three-Stage Distortion and 83-entry picker (2026-11-23)
+
+The project-authored Drive & fuzz stage has three smoothed soft-clipping gain stages with active Bass/Mid/Treble shaping, two Bright switches, and Level. Tests cover parameter bounds, reset, finite-sample recovery, no process-time allocation, and the expected effect on a driven signal. The native CLI smoke confirms finite output that differs from dry. `make web-test` passes the 83-entry picker and 70-active-stage browser/native comparison (maximum absolute error 0.0000139687; RMS error 0.0000026858); the separate local generated-guitar Play smoke at slot 80 captured peak 0.7934932 and 47,999 active samples. The full chain uses 20,630,044 B of processor state plus 10,364 B tuner state in a fixed 20 MiB WASM heap; this does not isolate the distortion's memory cost. No isolated CPU benchmark, human listening, device route, aliasing/quality evaluation, or Line 6 DSP parity has been established. Chrome 151 exposes only millisecond-fallback AudioWorklet timing here.
+
 ## Cloud Reverb and 82-entry picker (2026-11-23)
 
 Project-authored Cloud Reverb uses bounded mono/stereo state, smoothed controls, and no allocation in `process()`. Its browser/WASM smoke ran on a generated guitar-like input; the general browser/native comparison disables it because the offline renderer has no matching stage. The 70-active-stage comparison reports 0.0000139687 maximum absolute error and 0.0000026858 RMS error. The separate Cloud smoke returned peak 0.0864311 with 47,997 active samples. Full-chain browser state was 20,629,216 B plus 10,364 B tuner state inside a fixed 20 MiB WASM heap; this is not Cloud's isolated memory cost. No isolated Cloud callback benchmark, listening result, or device-route measurement has been run. Chrome 151 exposes only millisecond-fallback AudioWorklet timing in this environment, which is too coarse for an isolated processor benchmark.

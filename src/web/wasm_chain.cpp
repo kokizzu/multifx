@@ -334,6 +334,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::CloudReverb>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::MercatorDistortion>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1746,6 +1749,21 @@ public:
             ->configure(parameters);
     }
 
+    void configure_mercator_distortion(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::MercatorDistParameters parameters;
+        parameters.drive = values[0];
+        parameters.drive_2 = values[1];
+        parameters.bass_db = values[2];
+        parameters.mid_db = values[3];
+        parameters.treble_db = values[4];
+        parameters.bright_1 = values[5] != 0.0F;
+        parameters.bright_2 = values[6] != 0.0F;
+        parameters.level_db = values[7];
+        static_cast<tabletfx::MercatorDistortion*>(effects_[80].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3062,6 +3080,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_cloud_reverb(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_cloud_reverb(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_mercator_dist(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_mercator_distortion(values);
     }
 }
 

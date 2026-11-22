@@ -135,6 +135,8 @@ struct Options {
     tabletfx::CelestialReverbParameters celestial_reverb{};
     bool cloud_reverb_enabled = false;
     tabletfx::CloudReverbParameters cloud_reverb{};
+    bool mercator_distortion_enabled = false;
+    tabletfx::MercatorDistParameters mercator_distortion{};
     bool convolution_reverb_enabled = false;
     std::string convolution_ir_path;
     tabletfx::ConvolutionReverbParameters convolution_reverb{};
@@ -664,6 +666,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--cloud-reverb") {
             options.cloud_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--three-stage-distortion") {
+            options.mercator_distortion_enabled = true;
             continue;
         }
         if (key == "--convolution-reverb") {
@@ -1212,6 +1218,35 @@ Options parse_options(int argc, char** argv, int first) {
                 else throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.cloud_reverb_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--three-stage-distortion-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--three-stage-distortion-").size());
+            auto& parameters = options.mercator_distortion;
+            if (setting == "bright-1" || setting == "bright-2") {
+                const std::string_view value(argv[++i]);
+                const bool enabled = value == "on";
+                if (!enabled && value != "off") {
+                    throw std::invalid_argument(
+                        "Three-Stage Distortion Bright controls must be on or off");
+                }
+                if (setting == "bright-1") parameters.bright_1 = enabled;
+                else parameters.bright_2 = enabled;
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "drive") parameters.drive = value;
+                else if (setting == "drive-2") parameters.drive_2 = value;
+                else if (setting == "bass-db") parameters.bass_db = value;
+                else if (setting == "mid-db") parameters.mid_db = value;
+                else if (setting == "treble-db") parameters.treble_db = value;
+                else if (setting == "level-db") parameters.level_db = value;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.mercator_distortion_enabled = true;
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -3467,6 +3502,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::CloudReverb>(
             static_cast<float>(sample_rate), channels, options.cloud_reverb));
     }
+    if (options.mercator_distortion_enabled) {
+        effects.push_back(std::make_unique<tabletfx::MercatorDistortion>(
+            static_cast<float>(sample_rate), options.mercator_distortion));
+    }
     if (options.convolution_reverb_enabled) {
         if (options.convolution_ir_path.empty()) {
             throw std::invalid_argument(
@@ -4726,6 +4765,14 @@ void print_usage() {
                    " [--cloud-reverb-high-damp-hz 1000..min(20000,0.45*sample-rate)]"
                    " [--cloud-reverb-low-damp-hz 20..1000] [--cloud-reverb-modulation-rate-hz 0.05..8]"
                    " [--cloud-reverb-modulation-depth 0..1] [--cloud-reverb-spillover on|off]"
+                   " [--three-stage-distortion] [--three-stage-distortion-drive 0..1]"
+                   " [--three-stage-distortion-drive-2 0..1]"
+                   " [--three-stage-distortion-bass-db -12..12]"
+                   " [--three-stage-distortion-mid-db -12..12]"
+                   " [--three-stage-distortion-treble-db -12..12]"
+                   " [--three-stage-distortion-bright-1 on|off]"
+                   " [--three-stage-distortion-bright-2 on|off]"
+                   " [--three-stage-distortion-level-db -24..12]"
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"

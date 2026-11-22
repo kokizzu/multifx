@@ -49,6 +49,7 @@ add_library(tabletfx_core
     src/effects/megatap_delay.cpp
     src/effects/de_esser.cpp
     src/effects/pugilist.cpp
+    src/effects/mercator_distortion.cpp
     src/effects/vibe.cpp
     src/effects/multi_delay.cpp
     src/effects/plex_delay.cpp
@@ -300,6 +301,12 @@ if(BUILD_TESTING)
     add_executable(tabletfx_pugilist_tests tests/test_pugilist.cpp)
     target_link_libraries(tabletfx_pugilist_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pugilist_tests COMMAND tabletfx_pugilist_tests)
+
+    add_executable(tabletfx_mercator_distortion_tests
+        tests/test_mercator_distortion.cpp)
+    target_link_libraries(tabletfx_mercator_distortion_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_mercator_distortion_tests
+        COMMAND tabletfx_mercator_distortion_tests)
 
     add_executable(tabletfx_vibe_tests tests/test_vibe.cpp)
     target_link_libraries(tabletfx_vibe_tests PRIVATE tabletfx_core)

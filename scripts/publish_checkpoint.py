@@ -81,6 +81,7 @@ CHECKPOINT_PATHS = (
     "scripts/run_cmake.py",
     "scripts/test_audio_fixtures.py",
     "scripts/test_offline_cli.py",
+    "scripts/audio_regression.py",
     "scripts/validate_docs.py",
     "scripts/web.py",
     "src/effects/poly_pitch_shifter.cpp",
@@ -1073,6 +1074,9 @@ ENHANCER_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 DEFERRED_AGENT_DRAFT_PATHS = (
+    "include/tabletfx/effects/manual_thru_zero_flanger.hpp",
+    "src/effects/manual_thru_zero_flanger.cpp",
+    "tests/test_manual_thru_zero_flanger.cpp",
     "include/tabletfx/effects/enhancer.hpp",
     "tests/test_enhancer.cpp",
     "include/tabletfx/effects/de_esser.hpp",
@@ -1477,6 +1481,30 @@ CLOUD_REVERB_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+MERCATOR_DIST_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/mercator_distortion.hpp",
+    "src/effects/mercator_distortion.cpp",
+    "tests/test_mercator_distortion.cpp",
+    "scripts/audio_regression.py",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "README.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
     "Makefile",
     "make/publish.mk",
@@ -1617,6 +1645,8 @@ CHECKPOINTS = {
                          "feat: add project-authored Celestial Reverb"),
     "cloud-reverb": (CLOUD_REVERB_CHECKPOINT_PATHS,
                      "feat: add project-authored Cloud Reverb"),
+    "mercator-dist": (MERCATOR_DIST_CHECKPOINT_PATHS,
+                      "feat: add project-authored three-stage distortion"),
     "fractal-three-voice-synth": (
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
         "feat: add project-authored three-voice tracked synth",

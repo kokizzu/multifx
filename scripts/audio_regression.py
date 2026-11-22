@@ -96,7 +96,8 @@ def run_input(renderer: Path, source: Path, output: Path,
               convolution_ir: Path,
               output_channels: str | None = None,
               delay_character: str = "digital",
-              delay_tape_heads: bool = False) -> str:
+              delay_tape_heads: bool = False,
+              three_stage_distortion: bool = False) -> str:
     command = [
         str(renderer), "render", str(source), str(output),
         "--gain-db", "2", "--output-gain-db", "-1",
@@ -358,6 +359,8 @@ def run_input(renderer: Path, source: Path, output: Path,
             "--delay-head-spacing-ms", "110",
             "--delay-heads", "all",
         ])
+    if three_stage_distortion:
+        command.append("--three-stage-distortion")
     if output_channels is not None:
         command.extend(["--output-channels", output_channels])
     result = subprocess.run(command, check=False, capture_output=True, text=True)
@@ -365,7 +368,8 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 66:
+    expected_processors = 66 + int(three_stage_distortion)
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != expected_processors:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -441,7 +445,13 @@ def main() -> None:
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav",
                            convolution_ir, "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 65-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+        source = pickups["bridge"]
+        report = run_input(
+            renderer, source, output_root / "mercator-bridge.wav", convolution_ir,
+            three_stage_distortion=True,
+        )
+        print(f"OK Three-Stage Distortion on prerecorded EGFxSet bridge pickup: {report}")
+    print("All prerecorded clean guitar inputs rendered through the 65-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. A separate 67-stage bridge-pickup render enables the project-authored Three-Stage Distortion through the offline CLI.")
 
 
 if __name__ == "__main__":

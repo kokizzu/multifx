@@ -84,7 +84,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">82 of 82</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">83 of 83</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -168,8 +168,9 @@
           <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="77"><span class="effect-number">78</span><span class="effect-name">Celestial Reverb · project-authored</span><span class="effect-default">Dual pitch feedback · spillover option</span><span class="effect-category-tag">Reverb</span></label>
            <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="78"><span class="effect-number">79</span><span class="effect-name">Three-Voice Tracked Synth · project-authored Fractal-inspired controls</span><span class="effect-default">Three oscillators · monophonic input tracker</span><span class="effect-category-tag">Synth</span></label>
            <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="79"><span class="effect-number">80</span><span class="effect-name">Cloud Reverb · project-authored modulated reverb</span><span class="effect-default">Mix · Tone · Decay · Diffuse · High/Low Damp · Rate/Depth · Spillover</span><span class="effect-category-tag">Reverb</span></label>
-           <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="80" checked><span class="effect-number">81</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-           <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="81" checked><span class="effect-number">82</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+            <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="80"><span class="effect-number">81</span><span class="effect-name">Three-Stage Distortion · project-authored</span><span class="effect-default">Three nonlinear stages · two interstage drives · active Bass/Mid/Treble</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+            <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="81" checked><span class="effect-number">82</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+            <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="82" checked><span class="effect-number">83</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -815,6 +816,41 @@
           <span>High-gain mix</span><output id="high-gain-mix-value" for="high-gain-mix">100%</output>
           <input id="high-gain-mix" type="range" min="0" max="1" step="0.01" value="1">
         </label>
+      </div>
+      <div class="gain-controls" aria-label="Three-Stage Distortion project-authored controls">
+        <label class="mix-control" for="mercator-drive">
+          <span>Stage 1–2 Drive</span><output id="mercator-drive-value" for="mercator-drive">0.45</output>
+          <input id="mercator-drive" type="range" min="0" max="1" step="0.01" value="0.45">
+        </label>
+        <label class="mix-control" for="mercator-drive-2">
+          <span>Stage 2–3 Drive</span><output id="mercator-drive-2-value" for="mercator-drive-2">0.45</output>
+          <input id="mercator-drive-2" type="range" min="0" max="1" step="0.01" value="0.45">
+        </label>
+        <label class="mix-control" for="mercator-bass-db">
+          <span>Three-stage Bass</span><output id="mercator-bass-db-value" for="mercator-bass-db">0.0 dB</output>
+          <input id="mercator-bass-db" type="range" min="-12" max="12" step="0.1" value="0">
+        </label>
+        <label class="mix-control" for="mercator-mid-db">
+          <span>Three-stage Mid</span><output id="mercator-mid-db-value" for="mercator-mid-db">0.0 dB</output>
+          <input id="mercator-mid-db" type="range" min="-12" max="12" step="0.1" value="0">
+        </label>
+        <label class="mix-control" for="mercator-treble-db">
+          <span>Three-stage Treble</span><output id="mercator-treble-db-value" for="mercator-treble-db">0.0 dB</output>
+          <input id="mercator-treble-db" type="range" min="-12" max="12" step="0.1" value="0">
+        </label>
+        <label class="mix-control" for="mercator-bright-1">
+          <span>Bright 1</span><output id="mercator-bright-1-value" for="mercator-bright-1">Off</output>
+          <input id="mercator-bright-1" type="checkbox">
+        </label>
+        <label class="mix-control" for="mercator-bright-2">
+          <span>Bright 2</span><output id="mercator-bright-2-value" for="mercator-bright-2">Off</output>
+          <input id="mercator-bright-2" type="checkbox">
+        </label>
+        <label class="mix-control" for="mercator-level-db">
+          <span>Three-stage Level</span><output id="mercator-level-db-value" for="mercator-level-db">0.0 dB</output>
+          <input id="mercator-level-db" type="range" min="-24" max="12" step="0.1" value="0">
+        </label>
+        <p class="hint">Project-authored three-stage soft clipping and active tone shaping. The controls borrow the documented stage ordering and names in Line 6 Helix Stadium 1.4 notes; the frequency response, bounds, defaults, clipping, and smoothing are independent project choices, not Line 6 settings or DSP parity.</p>
       </div>
       <div class="gain-controls" aria-label="Round fuzz controls">
         <label class="mix-control" for="round-fuzz-amount">

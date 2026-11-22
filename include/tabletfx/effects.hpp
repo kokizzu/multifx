@@ -29,6 +29,7 @@
 #include "tabletfx/effects/plex_delay.hpp"
 #include "tabletfx/effects/celestial_reverb.hpp"
 #include "tabletfx/effects/cloud_reverb.hpp"
+#include "tabletfx/effects/mercator_distortion.hpp"
 #include "tabletfx/effects/porta_preamp.hpp"
 #include "tabletfx/effects/pitch_sequence.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
