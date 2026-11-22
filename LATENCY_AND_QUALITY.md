@@ -1,6 +1,10 @@
 # Latency, quality, and DSP-load protocol
 
-## Latest DSP verification (Auto-Swell Delay and 67-entry picker, 2026-11-22)
+## Shuffling Looper and 68-entry picker (2026-11-22)
+
+The categorized browser picker now has 68 rows; Shuffling Looper is effect slot 65, followed by Output level at 66 and Peak limiter at 67. Its fixed mono/stereo loop storage is included in a 14,475,504 B browser/WASM processor-chain state estimate. The browser/native Play comparison covers the 64 default-active processors and reports maximum absolute error 0.0000146203 and RMS error 0.00000285181; the looper is disabled in that parity chain and is exercised separately by its transport smoke test. No isolated CPU benchmark or live-route measurement has been run for Shuffling Looper. The test page uses a fixed 16 MiB WebAssembly heap and reports 10,364 B for tuner state separately.
+
+## Previous DSP verification (Auto-Swell Delay and 67-entry picker, 2026-11-22)
 
 The project-authored Auto-Swell Delay has no added fixed dry-path latency, allocates its fixed delay storage at construction, and does not allocate in `process()`. At 48 kHz stereo, the 2 s ring uses 770,080 B. The isolated synthetic processor-call benchmark measured 0.2145% p50 / 0.2160% p95 / 0.2175% p99 / 0.4763% p99.9 / 2.7717% maximum of a 2.667 ms callback. This is not a live-device route measurement.
 

@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">67 of 67</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">68 of 68</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -151,8 +151,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="62"><span class="effect-number">63</span><span class="effect-name">Resonant Delay · project-authored</span><span class="effect-default">Resonant feedback · adjustable center/Q</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="63"><span class="effect-number">64</span><span class="effect-name">Harmonic Tremolo · project-authored</span><span class="effect-default">3 Hz · 65% · 700 Hz split</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="64"><span class="effect-number">65</span><span class="effect-name">Auto-Swell Delay · project-authored</span><span class="effect-default">Threshold-triggered swell · tap sync</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="65" checked><span class="effect-number">66</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="66" checked><span class="effect-number">67</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="65"><span class="effect-number">66</span><span class="effect-name">Shuffling Looper · project-authored</span><span class="effect-default">8 slices · 8 steps · 70% playback</span><span class="effect-category-tag">Loop &amp; performance</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="66" checked><span class="effect-number">67</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="67" checked><span class="effect-number">68</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1038,6 +1039,34 @@
           <label class="mix-control" for="looper-overdub-level"><span>Overdub input</span><output id="looper-overdub-level-value" for="looper-overdub-level">100%</output><input id="looper-overdub-level" type="range" min="0" max="100" value="100"></label>
         </div>
         <output id="looper-status" class="status" role="status">Stopped · no loop</output>
+      </div>
+      <div class="effect-parameter-group" aria-label="Shuffling Looper controls">
+        <h3>Shuffling Looper · project-authored</h3>
+        <p class="hint">The <a href="https://manuals.line6.com/en/helix-stadium/live/looper-block" target="_blank" rel="noreferrer">Helix Stadium manual selector identifies firmware v1.4.1 / Rev. E; this looper page still displays a Rev D header</a>. The current v1.4 content documents Slices, SeqLength, Shuffle, Pitch, Reverse, Repeat, Smoothing, Seq Drift, Playback, Low Cut, High Cut, and Interval 1/2. Shuffle, Pitch, Reverse, Repeat, and Seq Drift are likelihood controls; the page gives 0–100% for Shuffle, Reverse, Repeat, and Seq Drift, while Pitch's numeric bounds are not clear. Intervals span one octave down to one octave up. Numeric bounds/defaults for several controls are not published. These controls, ranges, slice sequencing, and DSP are project-authored; no Line 6 code, control, or sound parity is claimed. This browser transport uses separate buttons and does not reproduce the manual’s single-switch press/double-press/press-and-hold timing. Recording replaces the prior loop, stores up to 4 seconds at 48 kHz, and is not saved to a preset or file.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="shuffling-looper-slices"><span>Slices</span><output for="shuffling-looper-slices">8 slices</output><input id="shuffling-looper-slices" type="range" min="2" max="16" step="1" value="8"></label>
+          <label class="mix-control" for="shuffling-looper-sequence-length"><span>Sequence length</span><output for="shuffling-looper-sequence-length">8 steps</output><input id="shuffling-looper-sequence-length" type="range" min="1" max="32" step="1" value="8"></label>
+          <label class="mix-control" for="shuffling-looper-shuffle"><span>Shuffle chance</span><output for="shuffling-looper-shuffle">50%</output><input id="shuffling-looper-shuffle" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="shuffling-looper-pitch-probability"><span>Pitch chance</span><output for="shuffling-looper-pitch-probability">0%</output><input id="shuffling-looper-pitch-probability" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-reverse-probability"><span>Reverse chance</span><output for="shuffling-looper-reverse-probability">0%</output><input id="shuffling-looper-reverse-probability" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-repeat-probability"><span>Repeat chance</span><output for="shuffling-looper-repeat-probability">0%</output><input id="shuffling-looper-repeat-probability" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-smoothing"><span>Smoothing</span><output for="shuffling-looper-smoothing">0%</output><input id="shuffling-looper-smoothing" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-sequence-drift"><span>Sequence drift</span><output for="shuffling-looper-sequence-drift">0%</output><input id="shuffling-looper-sequence-drift" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-playback"><span>Playback</span><output for="shuffling-looper-playback">70%</output><input id="shuffling-looper-playback" type="range" min="0" max="100" step="1" value="70"></label>
+          <label class="mix-control" for="shuffling-looper-low-cut-hz"><span>Low cut</span><output for="shuffling-looper-low-cut-hz">Off</output><input id="shuffling-looper-low-cut-hz" type="range" min="0" max="20000" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-high-cut-hz"><span>High cut</span><output for="shuffling-looper-high-cut-hz">Off</output><input id="shuffling-looper-high-cut-hz" type="range" min="0" max="20000" step="1" value="0"></label>
+          <label class="mix-control" for="shuffling-looper-interval-1"><span>Interval 1</span><output for="shuffling-looper-interval-1">−12 semitones</output><input id="shuffling-looper-interval-1" type="range" min="-12" max="12" step="1" value="-12"></label>
+          <label class="mix-control" for="shuffling-looper-interval-2"><span>Interval 2</span><output for="shuffling-looper-interval-2">+12 semitones</output><input id="shuffling-looper-interval-2" type="range" min="-12" max="12" step="1" value="12"></label>
+        </div>
+        <div class="transport" aria-label="Shuffling Looper transport">
+          <button class="button" type="button" data-shuffling-looper-command="0">Record</button>
+          <button class="button" type="button" data-shuffling-looper-command="1">Stop recording + play</button>
+          <button class="button" type="button" data-shuffling-looper-command="2">Play</button>
+          <button class="button" type="button" data-shuffling-looper-command="3">Stop</button>
+          <button class="button" type="button" data-shuffling-looper-command="4">Randomize</button>
+          <button class="button" type="button" data-shuffling-looper-command="5">Clear</button>
+        </div>
+        <output id="shuffling-looper-status" class="status" role="status">Stopped · no loop · 0 steps</output>
       </div>
       <div class="effect-parameter-group" aria-label="Grain Delay controls">
         <h3>Grain Delay · project-authored</h3>

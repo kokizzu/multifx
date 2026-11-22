@@ -19,6 +19,7 @@
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/harmonic_tremolo.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
+#include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/triple_double_chorus.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"

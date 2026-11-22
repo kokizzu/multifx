@@ -66,6 +66,7 @@ const EFFECT_NAMES = [
   "Resonant Delay · project-authored",
   "Harmonic Tremolo · project-authored",
   "Auto-Swell Delay · project-authored",
+  "Shuffling Looper · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -98,6 +99,7 @@ const DEFAULT_PARAMETERS = {
   enhancer: [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1],
   resonantDelay: [350, 0.35, 800, 2, 0.25],
   autoSwellDelay: [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0],
+  shufflingLooper: [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -186,6 +188,7 @@ const effectsList = document.querySelector("#effects-list");
 const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
 const looperStatus = document.querySelector("#looper-status");
+const shufflingLooperStatus = document.querySelector("#shuffling-looper-status");
 const looperReverse = document.querySelector("#looper-reverse");
 const looperHalfSpeed = document.querySelector("#looper-half-speed");
 const looperOverdubLevel = document.querySelector("#looper-overdub-level");
@@ -552,6 +555,26 @@ const autoSwellDelaySense = document.querySelector("#auto-swell-delay-sense-db")
 const autoSwellDelayTaper = document.querySelector("#auto-swell-delay-taper");
 const autoSwellDelayDry = document.querySelector("#auto-swell-delay-dry");
 const autoSwellDelaySpillover = document.querySelector("#auto-swell-delay-spillover");
+const shufflingLooperSlices = document.querySelector("#shuffling-looper-slices");
+const shufflingLooperSequenceLength = document.querySelector("#shuffling-looper-sequence-length");
+const shufflingLooperShuffle = document.querySelector("#shuffling-looper-shuffle");
+const shufflingLooperPitchProbability = document.querySelector("#shuffling-looper-pitch-probability");
+const shufflingLooperReverseProbability = document.querySelector("#shuffling-looper-reverse-probability");
+const shufflingLooperRepeatProbability = document.querySelector("#shuffling-looper-repeat-probability");
+const shufflingLooperSmoothing = document.querySelector("#shuffling-looper-smoothing");
+const shufflingLooperSequenceDrift = document.querySelector("#shuffling-looper-sequence-drift");
+const shufflingLooperPlayback = document.querySelector("#shuffling-looper-playback");
+const shufflingLooperLowCut = document.querySelector("#shuffling-looper-low-cut-hz");
+const shufflingLooperHighCut = document.querySelector("#shuffling-looper-high-cut-hz");
+const shufflingLooperInterval1 = document.querySelector("#shuffling-looper-interval-1");
+const shufflingLooperInterval2 = document.querySelector("#shuffling-looper-interval-2");
+const shufflingLooperControls = [
+  shufflingLooperSlices, shufflingLooperSequenceLength, shufflingLooperShuffle,
+  shufflingLooperPitchProbability, shufflingLooperReverseProbability,
+  shufflingLooperRepeatProbability, shufflingLooperSmoothing,
+  shufflingLooperSequenceDrift, shufflingLooperPlayback, shufflingLooperLowCut,
+  shufflingLooperHighCut, shufflingLooperInterval1, shufflingLooperInterval2,
+];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
 const chorusDelay = document.querySelector("#chorus-delay-ms");
@@ -1039,6 +1062,7 @@ let decodedConvolutionIR = null;
 let convolutionIRVersion = 0;
 let convolutionIRUploadedVersion = -1;
 let convolutionIRRequestId = 0;
+let shufflingLooperStatusTimeout = 0;
 const pendingConvolutionIRLoads = new Map();
 
 function setAudioStatus(text, state = "") {
@@ -1092,6 +1116,83 @@ function sendLooperCommand(command) {
     return;
   }
   workletNode.port.postMessage({ type: "looper-command", command });
+}
+
+function updateShufflingLooperOptions() {
+  const cutFrequency = (control) => {
+    let hz = Number(control.value);
+    if (hz > 0 && hz < 20) hz = 20;
+    control.value = String(hz);
+    return hz;
+  };
+  const values = [
+    Number(shufflingLooperSlices.value),
+    Number(shufflingLooperSequenceLength.value),
+    Number(shufflingLooperShuffle.value) / 100,
+    Number(shufflingLooperPitchProbability.value) / 100,
+    Number(shufflingLooperReverseProbability.value) / 100,
+    Number(shufflingLooperRepeatProbability.value) / 100,
+    Number(shufflingLooperSmoothing.value) / 100,
+    Number(shufflingLooperSequenceDrift.value) / 100,
+    Number(shufflingLooperPlayback.value) / 100,
+    cutFrequency(shufflingLooperLowCut),
+    cutFrequency(shufflingLooperHighCut),
+    Number(shufflingLooperInterval1.value),
+    Number(shufflingLooperInterval2.value),
+  ];
+  DEFAULT_PARAMETERS.shufflingLooper = values;
+  shufflingLooperSlices.parentElement.querySelector("output").value =
+    `${values[0]} slices`;
+  shufflingLooperSequenceLength.parentElement.querySelector("output").value =
+    `${values[1]} steps`;
+  for (const control of [shufflingLooperShuffle, shufflingLooperPitchProbability,
+    shufflingLooperReverseProbability, shufflingLooperRepeatProbability,
+    shufflingLooperSmoothing, shufflingLooperSequenceDrift,
+    shufflingLooperPlayback]) {
+    control.parentElement.querySelector("output").value = `${control.value}%`;
+  }
+  shufflingLooperLowCut.parentElement.querySelector("output").value =
+    values[9] === 0 ? "Off" : `${values[9]} Hz`;
+  shufflingLooperHighCut.parentElement.querySelector("output").value =
+    values[10] === 0 ? "Off" : `${values[10]} Hz`;
+  shufflingLooperInterval1.parentElement.querySelector("output").value =
+    `${values[11] > 0 ? "+" : ""}${values[11]} semitones`;
+  shufflingLooperInterval2.parentElement.querySelector("output").value =
+    `${values[12] > 0 ? "+" : ""}${values[12]} semitones`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "shuffling-looper-options", value: values });
+  }
+}
+
+function sendShufflingLooperCommand(command) {
+  if (!workletNode) {
+    shufflingLooperStatus.value = "Start processed playback before using the looper";
+    return;
+  }
+  workletNode.port.postMessage({ type: "shuffling-looper-command", command });
+}
+
+function scheduleShufflingLooperStatusPoll(state) {
+  window.clearTimeout(shufflingLooperStatusTimeout);
+  shufflingLooperStatusTimeout = 0;
+  if (state !== 1) return;
+  shufflingLooperStatusTimeout = window.setTimeout(() => {
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
+    }
+  }, 250);
+}
+
+function renderShufflingLooperStatus(message) {
+  const labels = ["Stopped", "Recording", "Playing"];
+  const state = labels[message.state] || "Unknown";
+  const frames = Number(message.frames) || 0;
+  const sampleRate = Number(message.sampleRate) || 48000;
+  const steps = Number(message.steps) || 0;
+  const length = frames > 0 ? `${(frames / sampleRate).toFixed(2)} s` : "no loop";
+  const accepted = message.accepted === false ? " · command unavailable" : "";
+  shufflingLooperStatus.value = `${state} · ${length} · ${steps} steps${accepted}`;
+  scheduleShufflingLooperStatusPoll(message.state);
 }
 
 function buildStatsBuffer() {
@@ -1285,6 +1386,8 @@ async function setupProcessor(testOptions = null) {
       lastTunerGeneration = 0;
       renderLoadRows(null);
       updateLooperOptions();
+       updateShufflingLooperOptions();
+       workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
       resolveReady(message);
     } else if (message?.type === "tuner-reading") {
       renderTunerReading(message);
@@ -1295,6 +1398,8 @@ async function setupProcessor(testOptions = null) {
       const sampleRate = Number(message.sampleRate) || 48000;
       const length = frames > 0 ? `${(frames / sampleRate).toFixed(2)} s` : "no loop";
       looperStatus.value = `${state} · ${length}${message.accepted ? "" : " · command unavailable"}`;
+     } else if (message?.type === "shuffling-looper-status") {
+       renderShufflingLooperStatus(message);
     } else if (message?.type === "convolution-ir-loaded" ||
                message?.type === "convolution-ir-error") {
       settleConvolutionIRLoad(message);
@@ -1631,9 +1736,19 @@ for (const button of document.querySelectorAll("[data-looper-command]")) {
   });
 }
 
+for (const button of document.querySelectorAll("[data-shuffling-looper-command]")) {
+  button.addEventListener("click", () => {
+    sendShufflingLooperCommand(Number(button.dataset.shufflingLooperCommand));
+  });
+}
+
 looperReverse.addEventListener("change", updateLooperOptions);
 looperHalfSpeed.addEventListener("change", updateLooperOptions);
 looperOverdubLevel.addEventListener("input", updateLooperOptions);
+for (const control of shufflingLooperControls) {
+  control.addEventListener("input", updateShufflingLooperOptions);
+  control.addEventListener("change", updateShufflingLooperOptions);
+}
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
 effectSearch.addEventListener("input", updateEffectBrowser);
@@ -3518,6 +3633,209 @@ async function waitForLooperStatus(prefix) {
   }
 }
 
+async function waitForShufflingLooperStatus(predicate, description, timeoutMs = 4000) {
+  const started = performance.now();
+  while (!predicate(shufflingLooperStatus.value)) {
+    if (performance.now() - started > timeoutMs) {
+      throw new Error(`Timed out waiting for Shuffling Looper ${description}: ${shufflingLooperStatus.value}`);
+    }
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return shufflingLooperStatus.value;
+}
+
+async function runShufflingLooperBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = shufflingLooperControls.map((control) => control.value);
+  const testEnabled = previousEffectState.map((_, index) => index === 0 || index === 65);
+  const parseStatus = (value) => {
+    const match = /^(Stopped|Recording|Playing) · (no loop|([\d.]+) s) · (\d+) steps/.exec(value);
+    if (!match) return null;
+    return {
+      state: match[1],
+      hasLoop: match[2] !== "no loop",
+      seconds: Number(match[3] || 0),
+      steps: Number(match[4]),
+    };
+  };
+  const waitForCommand = async (command, predicate, description) => {
+    shufflingLooperStatus.value = `Waiting for ${description}`;
+    const button = document.querySelector(
+      `[data-shuffling-looper-command="${command}"]`,
+    );
+    if (!button) throw new Error(`Shuffling Looper ${description} button is missing.`);
+    button.click();
+    return waitForShufflingLooperStatus((value) => {
+      const status = parseStatus(value);
+      return status !== null && !value.includes("command unavailable") && predicate(status);
+    }, description);
+  };
+  let loopCleared = false;
+
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Shuffling Looper smoke test requires the ready browser audio chain and guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+
+    [shufflingLooperSlices.value, shufflingLooperSequenceLength.value,
+      shufflingLooperShuffle.value, shufflingLooperPitchProbability.value,
+      shufflingLooperReverseProbability.value, shufflingLooperRepeatProbability.value,
+      shufflingLooperSmoothing.value, shufflingLooperSequenceDrift.value,
+      shufflingLooperPlayback.value, shufflingLooperLowCut.value,
+      shufflingLooperHighCut.value, shufflingLooperInterval1.value,
+      shufflingLooperInterval2.value] = [
+      "4", "4", "0", "0", "0", "0", "0", "0", "100", "0", "0", "-12", "12",
+    ];
+    updateShufflingLooperOptions();
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({
+        type: "enable",
+        index,
+        value: testEnabled[index],
+      });
+    });
+
+    const recordingStatus = await waitForCommand(
+      0,
+      (status) => status.state === "Recording",
+      "recording state",
+    );
+    const firstActiveFrame = decodedAudio.getChannelData(0)
+      .findIndex((sample) => Math.abs(sample) > 1e-4);
+    const recordOffset = firstActiveFrame >= 0
+      ? firstActiveFrame / decodedAudio.sampleRate : 0;
+    const recordSource = audioContext.createBufferSource();
+    recordSource.buffer = decodedAudio;
+    recordSource.loop = true;
+    recordSource.connect(workletNode);
+    activeSource = recordSource;
+    playbackOffset = 0;
+    playbackStartedAt = audioContext.currentTime;
+    workletNode.port.postMessage({ type: "active", value: true });
+    recordSource.start(0, recordOffset);
+
+    const capturedStatus = await waitForShufflingLooperStatus((value) => {
+      const status = parseStatus(value);
+      return status?.state === "Recording" && status.seconds >= 0.08;
+    }, "recorded audio frames");
+    const recorded = parseStatus(capturedStatus);
+    if (!recorded || recorded.seconds < 0.08) {
+      throw new Error(`Shuffling Looper did not record enough audio: ${capturedStatus}`);
+    }
+    stopSource(false);
+
+    const playbackStatus = await waitForCommand(
+      1,
+      (status) => status.state === "Playing" && status.hasLoop && status.steps > 0,
+      "stop-recording and playback",
+    );
+    const stoppedStatus = await waitForCommand(
+      3,
+      (status) => status.state === "Stopped" && status.hasLoop && status.steps > 0,
+      "stop with loop retained",
+    );
+    const resumedStatus = await waitForCommand(
+      2,
+      (status) => status.state === "Playing" && status.hasLoop && status.steps > 0,
+      "playback restart",
+    );
+    const randomizedStatus = await waitForCommand(
+      4,
+      (status) => status.state === "Playing" && status.hasLoop && status.steps > 0,
+      "sequence randomization",
+    );
+
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    workletNode.port.postMessage({ type: "capture-reset" });
+    const silenceBuffer = audioContext.createBuffer(
+      decodedAudio.numberOfChannels,
+      decodedAudio.length,
+      audioContext.sampleRate,
+    );
+    const silenceSource = audioContext.createBufferSource();
+    silenceSource.buffer = silenceBuffer;
+    silenceSource.loop = true;
+    silenceSource.connect(workletNode);
+    activeSource = silenceSource;
+    playbackOffset = 0;
+    playbackStartedAt = audioContext.currentTime;
+    workletNode.port.postMessage({ type: "active", value: true });
+    silenceSource.start();
+    await waitForCapture(captureView, reference.samples.length);
+
+    const loopOutput = new Float32Array(captureBuffer);
+    let outputPeak = 0;
+    let activeOutputSamples = 0;
+    for (const sample of loopOutput) {
+      const magnitude = Math.abs(sample);
+      outputPeak = Math.max(outputPeak, magnitude);
+      if (magnitude > 1e-6) activeOutputSamples += 1;
+    }
+    if (outputPeak < 1e-5 || activeOutputSamples < 32) {
+      throw new Error(`Shuffling Looper produced no measurable output from recorded audio: peak ${outputPeak}, active samples ${activeOutputSamples}.`);
+    }
+    stopSource(false);
+
+    const stoppedAfterPlayback = await waitForCommand(
+      3,
+      (status) => status.state === "Stopped" && status.hasLoop && status.steps > 0,
+      "stop after playback capture",
+    );
+    const clearedStatus = await waitForCommand(
+      5,
+      (status) => status.state === "Stopped" && !status.hasLoop && status.steps === 0,
+      "clear",
+    );
+    loopCleared = true;
+
+    return {
+      recording: recordingStatus,
+      recorded: capturedStatus,
+      stopRecordingAndPlay: playbackStatus,
+      stopped: stoppedStatus,
+      resumed: resumedStatus,
+      randomized: randomizedStatus,
+      stoppedAfterCapture: stoppedAfterPlayback,
+      cleared: clearedStatus,
+      silentInputPeak: 0,
+      loopOutputPeak: outputPeak,
+      activeOutputSamples,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      if (!loopCleared) {
+        workletNode.port.postMessage({ type: "shuffling-looper-command", command: 5 });
+      }
+      shufflingLooperControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateShufflingLooperOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable",
+          index,
+          value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -3530,12 +3848,14 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 67 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 67 || effectRows.length !== 67 ||
+      const expectedEffectIds = Array.from({ length: 68 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 68 || effectRows.length !== 68 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
-        EFFECT_NAMES[65] !== "Output level" || EFFECT_NAMES[66] !== "Peak limiter" ||
-        initialEffectState[64] || !initialEffectState[65] || !initialEffectState[66] ||
+        EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
+        EFFECT_NAMES[66] !== "Output level" || EFFECT_NAMES[67] !== "Peak limiter" ||
+        initialEffectState[64] || initialEffectState[65] ||
+        !initialEffectState[66] || !initialEffectState[67] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -3548,10 +3868,11 @@ async function runBrowserSelfTest() {
            initialEffectState[56] || initialEffectState[57] ||
             initialEffectState[58] || initialEffectState[59] ||
             initialEffectState[60] || initialEffectState[61] ||
-             initialEffectState[62] || initialEffectState[63] || initialEffectState[64] ||
+              initialEffectState[62] || initialEffectState[63] || initialEffectState[64] ||
+              initialEffectState[65] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 67 ordered, categorized effects (IDs 0–66), with optional effects disabled by default.");
+         throw new Error("The effect picker must list 68 ordered, categorized effects (IDs 0–67), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -3745,6 +4066,81 @@ async function runBrowserSelfTest() {
          "350,0.25,0.25,0,4,120,300,0.15,0.7,-36,1,0,0") {
        throw new Error("Auto-Swell Delay self-test must restore its initial project-authored controls.");
      }
+      const shufflingLooperDefaults = [...DEFAULT_PARAMETERS.shufflingLooper];
+      const shufflingLooperRanges = [
+        [shufflingLooperSlices, "2", "16"],
+        [shufflingLooperSequenceLength, "1", "32"],
+        [shufflingLooperShuffle, "0", "100"],
+        [shufflingLooperPitchProbability, "0", "100"],
+        [shufflingLooperReverseProbability, "0", "100"],
+        [shufflingLooperRepeatProbability, "0", "100"],
+        [shufflingLooperSmoothing, "0", "100"],
+        [shufflingLooperSequenceDrift, "0", "100"],
+        [shufflingLooperPlayback, "0", "100"],
+        [shufflingLooperLowCut, "0", "20000"],
+        [shufflingLooperHighCut, "0", "20000"],
+        [shufflingLooperInterval1, "-12", "12"],
+        [shufflingLooperInterval2, "-12", "12"],
+      ];
+      const shufflingLooperHint = document.querySelector(
+        '.effect-parameter-group[aria-label="Shuffling Looper controls"] .hint',
+      ).textContent;
+      const shufflingLooperButtons = [...document.querySelectorAll(
+        "[data-shuffling-looper-command]",
+      )];
+      if (shufflingLooperDefaults.join(",") !== "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12" ||
+          shufflingLooperRanges.some(([control, minimum, maximum]) =>
+            control.min !== minimum || control.max !== maximum) ||
+          !shufflingLooperHint.includes("manual selector identifies firmware v1.4.1 / Rev. E") ||
+          !shufflingLooperHint.includes("looper page still displays a Rev D header") ||
+          !shufflingLooperHint.includes("Numeric bounds/defaults") ||
+          !shufflingLooperHint.includes("does not reproduce the manual’s single-switch") ||
+          !shufflingLooperHint.includes("no Line 6 code, control, or sound parity") ||
+          shufflingLooperButtons.map((button) => button.dataset.shufflingLooperCommand).join(",") !==
+            "0,1,2,3,4,5") {
+        throw new Error("Shuffling Looper project ranges, documented-source caveat, and transport commands must be explicit.");
+      }
+      const shufflingLooperControlSnapshot = shufflingLooperControls.map((control) => control.value);
+      const previousShufflingWorklet = workletNode;
+      const shufflingLooperMessages = [];
+      try {
+        workletNode = { port: { postMessage: (message) => shufflingLooperMessages.push(message) } };
+        [shufflingLooperSlices.value, shufflingLooperSequenceLength.value,
+          shufflingLooperShuffle.value, shufflingLooperPitchProbability.value,
+          shufflingLooperReverseProbability.value, shufflingLooperRepeatProbability.value,
+          shufflingLooperSmoothing.value, shufflingLooperSequenceDrift.value,
+          shufflingLooperPlayback.value, shufflingLooperLowCut.value,
+          shufflingLooperHighCut.value, shufflingLooperInterval1.value,
+          shufflingLooperInterval2.value] = [
+          "12", "17", "40", "20", "30", "40", "50", "60", "75", "5", "12000", "-7", "5",
+        ];
+        shufflingLooperInterval2.dispatchEvent(new Event("input", { bubbles: true }));
+        const optionsMessage = shufflingLooperMessages.at(-1);
+        if (optionsMessage?.type !== "shuffling-looper-options" ||
+            optionsMessage.value.join(",") !== "12,17,0.4,0.2,0.3,0.4,0.5,0.6,0.75,20,12000,-7,5" ||
+            shufflingLooperLowCut.value !== "20" ||
+            shufflingLooperLowCut.parentElement.querySelector("output").value !== "20 Hz" ||
+            shufflingLooperInterval2.parentElement.querySelector("output").value !== "+5 semitones") {
+          throw new Error("Shuffling Looper controls must send all 13 bounded options in WASM API order.");
+        }
+        for (const button of shufflingLooperButtons) button.click();
+        const commandIds = shufflingLooperMessages
+          .filter((message) => message.type === "shuffling-looper-command")
+          .map((message) => message.command).join(",");
+        if (commandIds !== "0,1,2,3,4,5") {
+          throw new Error("Shuffling Looper transport buttons must send the documented command IDs.");
+        }
+      } finally {
+        workletNode = previousShufflingWorklet;
+        shufflingLooperControls.forEach((control, index) => {
+          control.value = shufflingLooperControlSnapshot[index];
+        });
+        updateShufflingLooperOptions();
+      }
+      if (DEFAULT_PARAMETERS.shufflingLooper.join(",") !==
+          "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12") {
+        throw new Error("Shuffling Looper self-test must restore its project-authored defaults.");
+      }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -3786,7 +4182,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63" ||
-          effectCount.value !== "11 of 67" ||
+          effectCount.value !== "11 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3794,8 +4190,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,66" ||
-        effectCount.value !== "9 of 67" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,67" ||
+        effectCount.value !== "9 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3804,7 +4200,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 67" ||
+        effectCount.value !== "7 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3813,7 +4209,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 67" ||
+        effectCount.value !== "7 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3821,7 +4217,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 67" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -3829,7 +4225,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 67" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3837,7 +4233,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 67" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3845,7 +4241,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 67" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -3853,15 +4249,15 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60" || effectCount.value !== "1 of 67" ||
+    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Loop & performance category must list the phrase looper and preserve the current chain state.");
+      throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
     effectCategoryFilter.value = "stereo";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 67" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -3889,7 +4285,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64" || effectCount.value !== "10 of 67" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64" || effectCount.value !== "10 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -3897,7 +4293,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 67" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 68" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -3907,12 +4303,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 67") {
+       if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 68") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      if (effectCount.value !== "67 of 67" || effectRows.some((row) => row.hidden)) {
+      if (effectCount.value !== "68 of 68" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4100,9 +4496,9 @@ async function runBrowserSelfTest() {
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 67 || activeProcessorIndices.length !== 64 ||
-        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 64) {
-      throw new Error("The all-effect chain must contain 64 active processors between input trim and output utilities.");
+    if (parityEnabled.length !== 68 || activeProcessorIndices.length !== 65 ||
+        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 65) {
+      throw new Error("The all-effect chain must contain 65 active processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -4644,6 +5040,10 @@ async function runBrowserSelfTest() {
         Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
       throw new Error("Output meter does not match the final processed audio block.");
     }
+    testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
+    const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking the free-running browser note generator…";
     stopSource(false);
     for (let index = 0; index < EFFECT_NAMES.length; index += 1) {
@@ -4756,6 +5156,7 @@ async function runBrowserSelfTest() {
       localFileDecode: localFileDecoded,
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       playOutputCaptured: nonZeroSamples > 0,
+      shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,
