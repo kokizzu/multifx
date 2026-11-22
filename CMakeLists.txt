@@ -51,6 +51,7 @@ add_library(tabletfx_core
     src/effects/vibe.cpp
     src/effects/multi_delay.cpp
     src/effects/porta_preamp.cpp
+    src/effects/pitch_sequence.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -301,6 +302,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_porta_preamp_tests tests/test_porta_preamp.cpp)
     target_link_libraries(tabletfx_porta_preamp_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_porta_preamp_tests COMMAND tabletfx_porta_preamp_tests)
+
+    add_executable(tabletfx_pitch_sequence_tests tests/test_pitch_sequence.cpp)
+    target_link_libraries(tabletfx_pitch_sequence_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_pitch_sequence_tests COMMAND tabletfx_pitch_sequence_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

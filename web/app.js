@@ -75,6 +75,7 @@ const EFFECT_NAMES = [
   "Vibe · project-authored",
   "Multi-Delay · project-authored",
   "Porta Preamp · project-authored",
+  "Pitch Sequence · project-authored poly transposition",
   "Output level",
   "Peak limiter",
 ];
@@ -127,6 +128,11 @@ const DEFAULT_PARAMETERS = {
     inputGainDb: 0, mix: 0.25, levelDb: 0,
   },
   portaPreamp: [6, 3, 0, 0, 0],
+  pitchSequence: [
+    0, 7, 12, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    4, 0, 0, 4, 250, 120, 15, 7, 40, 80, 1, 1,
+  ],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -713,6 +719,29 @@ const portaPreampTreble = document.querySelector("#porta-preamp-treble-db");
 const portaPreampLevel = document.querySelector("#porta-preamp-level-db");
 const portaPreampControls = [portaPreampGain1, portaPreampGain2,
   portaPreampBass, portaPreampTreble, portaPreampLevel];
+const pitchSequenceSteps = Array.from({ length: 16 }, (_, index) => ({
+  semitones: document.querySelector(`#pitch-sequence-step-${index + 1}-semitones`),
+  mode: document.querySelector(`#pitch-sequence-step-${index + 1}-mode`),
+}));
+const pitchSequenceStepsCount = document.querySelector("#pitch-sequence-steps");
+const pitchSequenceRun = document.querySelector("#pitch-sequence-run");
+const pitchSequenceTimeMode = document.querySelector("#pitch-sequence-time-mode");
+const pitchSequenceDivision = document.querySelector("#pitch-sequence-division");
+const pitchSequenceFreeMs = document.querySelector("#pitch-sequence-free-ms");
+const pitchSequenceTempo = document.querySelector("#pitch-sequence-tempo");
+const pitchSequenceGlide = document.querySelector("#pitch-sequence-glide-ms");
+const pitchSequenceGlitchDepth = document.querySelector("#pitch-sequence-glitch-depth");
+const pitchSequenceGlitchInterval = document.querySelector("#pitch-sequence-glitch-interval-ms");
+const pitchSequenceFreezeWindow = document.querySelector("#pitch-sequence-freeze-window-ms");
+const pitchSequenceMix = document.querySelector("#pitch-sequence-mix");
+const pitchSequenceLevel = document.querySelector("#pitch-sequence-level");
+const pitchSequenceControls = [
+  ...pitchSequenceSteps.flatMap((step) => [step.semitones, step.mode]),
+  pitchSequenceStepsCount, pitchSequenceRun, pitchSequenceTimeMode,
+  pitchSequenceDivision, pitchSequenceFreeMs, pitchSequenceTempo,
+  pitchSequenceGlide, pitchSequenceGlitchDepth, pitchSequenceGlitchInterval,
+  pitchSequenceFreezeWindow, pitchSequenceMix, pitchSequenceLevel,
+];
 const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-line]")]
   .map((row) => Object.fromEntries(
     [...row.querySelectorAll("[data-control]")]
@@ -1531,6 +1560,54 @@ function updatePortaPreampOptions() {
   }
 }
 
+function updatePitchSequenceOptions() {
+  const values = [
+    ...pitchSequenceSteps.map((step) => Number(step.semitones.value)),
+    ...pitchSequenceSteps.map((step) => Number(step.mode.value)),
+    Number(pitchSequenceStepsCount.value), pitchSequenceRun.checked ? 1 : 0,
+    Number(pitchSequenceTimeMode.value), Number(pitchSequenceDivision.value),
+    Number(pitchSequenceFreeMs.value), Number(pitchSequenceTempo.value),
+    Number(pitchSequenceGlide.value), Number(pitchSequenceGlitchDepth.value),
+    Number(pitchSequenceGlitchInterval.value),
+    Number(pitchSequenceFreezeWindow.value), Number(pitchSequenceMix.value) / 100,
+    Number(pitchSequenceLevel.value) / 100,
+  ];
+  DEFAULT_PARAMETERS.pitchSequence = values;
+  for (const [index, step] of pitchSequenceSteps.entries()) {
+    const semitones = values[index];
+    const semitonesOutput = step.semitones.parentElement.querySelector("output");
+    if (semitonesOutput) {
+      semitonesOutput.value = `${semitones > 0 ? "+" : ""}${semitones} semitones`;
+    }
+    const modeOutput = step.mode.parentElement.querySelector("output");
+    if (modeOutput) {
+      modeOutput.value = ["Pitch", "Glitch", "Freeze"][values[16 + index]] || "Pitch";
+    }
+  }
+  const show = (control, value) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = value;
+  };
+  show(pitchSequenceStepsCount, String(values[32]));
+  show(pitchSequenceRun, pitchSequenceRun.checked ? "On" : "Off");
+  show(pitchSequenceTimeMode, values[34] === 1 ? "Tempo" : "Free");
+  show(pitchSequenceDivision,
+    ["Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
+      "Quarter triplet", "Dotted eighth", "Eighth", "Eighth triplet",
+      "Dotted sixteenth", "Sixteenth", "Sixteenth triplet"][values[35]] || "Quarter");
+  show(pitchSequenceFreeMs, `${values[36]} ms`);
+  show(pitchSequenceTempo, `${values[37]} BPM`);
+  show(pitchSequenceGlide, `${values[38]} ms`);
+  show(pitchSequenceGlitchDepth, `±${values[39]} semitones`);
+  show(pitchSequenceGlitchInterval, `${values[40]} ms`);
+  show(pitchSequenceFreezeWindow, `${values[41]} ms`);
+  show(pitchSequenceMix, `${Math.round(values[42] * 100)}%`);
+  show(pitchSequenceLevel, `${Math.round(values[43] * 100)}%`);
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "pitch-sequence", value: values });
+  }
+}
+
 function updateMultiDelayOptions() {
   const sampleRate = audioContext?.sampleRate || 48000;
   const maximumFrames = Math.floor((512 * 1024) /
@@ -2215,6 +2292,14 @@ for (const control of portaPreampControls) {
   control.addEventListener("change", updatePortaPreampOptions);
 }
 updatePortaPreampOptions();
+for (const control of pitchSequenceControls) {
+  control.addEventListener(control.type === "range" ? "input" : "change",
+    updatePitchSequenceOptions);
+  if (control.type === "range") {
+    control.addEventListener("change", updatePitchSequenceOptions);
+  }
+}
+updatePitchSequenceOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -4313,7 +4398,7 @@ async function runMegatapDelayBrowserSmokeTest(reference, captureView, captureBu
   const previousControls = megatapDelayControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 68 || index === 74 || index === 75);
+    index === 68 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4395,7 +4480,7 @@ async function runDeEsserBrowserSmokeTest(reference, captureView, captureBuffer)
   const previousEffectState = enabledEffects();
   const previousControls = deEsserControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 69 || index === 74 || index === 75);
+    index === 69 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4464,7 +4549,7 @@ async function runDualEngineDistortionBrowserSmokeTest(
   const previousControls = dualDistortionControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 70 || index === 74 || index === 75);
+    index === 70 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4537,7 +4622,7 @@ async function runVibeBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = vibeControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 71 || index === 74 || index === 75);
+    index === 71 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4601,7 +4686,7 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
   const previousEffectState = enabledEffects();
   const previousControls = multiDelayControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 72 || index === 74 || index === 75);
+    index === 72 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4679,7 +4764,7 @@ async function runPortaPreampBrowserSmokeTest(reference, captureView, captureBuf
   const previousEffectState = enabledEffects();
   const previousControls = portaPreampControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 73 || index === 74 || index === 75);
+    index === 73 || index === 75 || index === 76);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4738,6 +4823,88 @@ async function runPortaPreampBrowserSmokeTest(reference, captureView, captureBuf
   }
 }
 
+async function runPitchSequenceBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = pitchSequenceControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 74 || index === 75 || index === 76);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Pitch Sequence smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    pitchSequenceStepsCount.value = "3";
+    pitchSequenceRun.checked = true;
+    pitchSequenceTimeMode.value = "0";
+    pitchSequenceFreeMs.value = "180";
+    pitchSequenceGlide.value = "8";
+    pitchSequenceGlitchDepth.value = "5";
+    pitchSequenceGlitchInterval.value = "30";
+    pitchSequenceFreezeWindow.value = "70";
+    pitchSequenceMix.value = "100";
+    pitchSequenceLevel.value = "100";
+    pitchSequenceSteps[0].semitones.value = "0";
+    pitchSequenceSteps[0].mode.value = "0";
+    pitchSequenceSteps[1].semitones.value = "5";
+    pitchSequenceSteps[1].mode.value = "1";
+    pitchSequenceSteps[2].semitones.value = "7";
+    pitchSequenceSteps[2].mode.value = "2";
+    updatePitchSequenceOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Pitch Sequence playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    for (const sample of actual) {
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+    }
+    if (peak < 1e-5 || activeSamples < 32) {
+      throw new Error(`Pitch Sequence produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+    }
+    return { peak, activeSamples, enabledEffectIndex: 74, stepCount: 3,
+      modes: ["pitch", "glitch", "freeze"] };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      pitchSequenceControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updatePitchSequenceOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -4750,8 +4917,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 76 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 76 || effectRows.length !== 76 ||
+        const expectedEffectIds = Array.from({ length: 77 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 77 || effectRows.length !== 77 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -4762,13 +4929,15 @@ async function runBrowserSelfTest() {
          EFFECT_NAMES[70] !== "Dual-Engine Distortion · project-authored" ||
          EFFECT_NAMES[71] !== "Vibe · project-authored" ||
           EFFECT_NAMES[72] !== "Multi-Delay · project-authored" ||
-           EFFECT_NAMES[73] !== "Porta Preamp · project-authored" ||
-           EFFECT_NAMES[74] !== "Output level" || EFFECT_NAMES[75] !== "Peak limiter" ||
+            EFFECT_NAMES[73] !== "Porta Preamp · project-authored" ||
+            EFFECT_NAMES[74] !== "Pitch Sequence · project-authored poly transposition" ||
+            EFFECT_NAMES[75] !== "Output level" || EFFECT_NAMES[76] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
           initialEffectState[71] || initialEffectState[72] ||
-           initialEffectState[73] || !initialEffectState[74] || !initialEffectState[75] ||
+            initialEffectState[73] || initialEffectState[74] ||
+            !initialEffectState[75] || !initialEffectState[76] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -4785,7 +4954,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-              throw new Error("The effect picker must list 76 ordered, categorized effects (IDs 0–75), with optional effects disabled by default.");
+              throw new Error("The effect picker must list 77 ordered, categorized effects (IDs 0–76), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -5362,6 +5531,53 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.portaPreamp.join(",") !== portaPreampDefaults.join(",")) {
       throw new Error("Porta Preamp self-test must restore project-authored defaults.");
     }
+    const pitchSequenceDefaults = [...DEFAULT_PARAMETERS.pitchSequence];
+    const pitchSequenceControlSnapshot = pitchSequenceControls.map((control) =>
+      control.type === "checkbox" ? control.checked : control.value);
+    const previousPitchSequenceWorklet = workletNode;
+    const pitchSequenceMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => pitchSequenceMessages.push(message) } };
+      pitchSequenceSteps[0].semitones.value = "-5";
+      pitchSequenceSteps[0].mode.value = "1";
+      pitchSequenceStepsCount.value = "3";
+      pitchSequenceRun.checked = true;
+      pitchSequenceTimeMode.value = "1";
+      pitchSequenceDivision.value = "7";
+      pitchSequenceFreeMs.value = "180";
+      pitchSequenceTempo.value = "96";
+      pitchSequenceGlide.value = "40";
+      pitchSequenceGlitchDepth.value = "4";
+      pitchSequenceGlitchInterval.value = "25";
+      pitchSequenceFreezeWindow.value = "50";
+      pitchSequenceMix.value = "60";
+      pitchSequenceLevel.value = "80";
+      pitchSequenceLevel.dispatchEvent(new Event("input", { bubbles: true }));
+      const message = pitchSequenceMessages.at(-1);
+      if (message?.type !== "pitch-sequence" || message.value.length !== 44 ||
+          message.value[0] !== -5 || message.value[16] !== 1 ||
+          message.value[32] !== 3 || message.value[33] !== 1 ||
+          message.value[34] !== 1 || message.value[35] !== 7 ||
+          message.value[36] !== 180 || message.value[37] !== 96 ||
+          message.value[38] !== 40 || message.value[39] !== 4 ||
+          message.value[40] !== 25 || message.value[41] !== 50 ||
+          message.value[42] !== 0.6 || message.value[43] !== 0.8 ||
+          pitchSequenceSteps[0].semitones.parentElement.querySelector("output").value !== "-5 semitones" ||
+          pitchSequenceSteps[0].mode.parentElement.querySelector("output").value !== "Glitch" ||
+          pitchSequenceDivision.parentElement.querySelector("output").value !== "Eighth") {
+        throw new Error("Pitch Sequence controls must send all 16 shifts/modes and global settings in WASM parameter order and display their values.");
+      }
+    } finally {
+      workletNode = previousPitchSequenceWorklet;
+      pitchSequenceControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = pitchSequenceControlSnapshot[index];
+        else control.value = pitchSequenceControlSnapshot[index];
+      });
+      updatePitchSequenceOptions();
+    }
+    if (DEFAULT_PARAMETERS.pitchSequence.join(",") !== pitchSequenceDefaults.join(",")) {
+      throw new Error("Pitch Sequence self-test must restore project-authored defaults.");
+    }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -5402,7 +5618,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 76" ||
+      if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Vocal FX filter must list the project-authored De-Esser and preserve chain state.");
     }
@@ -5411,7 +5627,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71" ||
-           effectCount.value !== "13 of 76" ||
+            effectCount.value !== "13 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -5419,8 +5635,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,75" ||
-         effectCount.value !== "9 of 76" ||
+      if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,76" ||
+          effectCount.value !== "9 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -5429,7 +5645,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (driveIds.join(",") !== "9,10,11,12,13,14,46,70" ||
-          effectCount.value !== "8 of 76" ||
+           effectCount.value !== "8 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -5437,7 +5653,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 76" ||
+      if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 77" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -5446,7 +5662,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-         effectCount.value !== "7 of 76" ||
+          effectCount.value !== "7 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -5454,7 +5670,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 76" ||
+      if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -5462,7 +5678,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 76" ||
+      if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -5470,7 +5686,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 76" ||
+      if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -5478,7 +5694,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 76" ||
+      if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -5486,7 +5702,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 76" ||
+      if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -5494,7 +5710,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 76" ||
+      if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -5522,7 +5738,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72" || effectCount.value !== "13 of 76" ||
+        if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72" || effectCount.value !== "13 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -5530,7 +5746,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 76" ||
+        if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 77" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -5540,12 +5756,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 76") {
+          if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 77") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-         if (effectCount.value !== "76 of 76" || effectRows.some((row) => row.hidden)) {
+          if (effectCount.value !== "77 of 77" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -5729,15 +5945,16 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
-     // Project-authored Vibe, Multi-Delay, and Porta Preamp have separate browser playback smokes.
+     // Project-authored Vibe, Multi-Delay, Porta Preamp, and Pitch Sequence have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
      parityEnabled[73] = false;
+     parityEnabled[74] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-     if (parityEnabled.length !== 76 || activeProcessorIndices.length !== 70 ||
+      if (parityEnabled.length !== 77 || activeProcessorIndices.length !== 70 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 70) {
        throw new Error("The all-effect chain must contain 70 optional processors between input trim and output utilities.");
     }
@@ -6312,6 +6529,10 @@ async function runBrowserSelfTest() {
     const portaPreampSmoke = await runPortaPreampBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Pitch Sequence playback on local guitar audio…";
+    const pitchSequenceSmoke = await runPitchSequenceBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -6434,6 +6655,7 @@ async function runBrowserSelfTest() {
       vibe: vibeSmoke,
       multiDelay: multiDelaySmoke,
       portaPreamp: portaPreampSmoke,
+      pitchSequence: pitchSequenceSmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,

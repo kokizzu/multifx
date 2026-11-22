@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Pitch Sequence and 77-entry picker (2026-11-22)
+
+Project-authored Pitch Sequence uses the shared STFT polyphonic pitch shifter, with a programmed semitone transposition per step and no note tracker or scale quantizer. Its pitch-shifter algorithm reports 5.33 ms nominal latency at 48 kHz; host buffering and end-to-end response have not been measured. The effect preallocates a 120 ms input-history ring for sample-loop Freeze and an aligned dry delay. Glitch offsets are deterministic pseudo-random pitch changes; Freeze is not spectral freezing. These are project-authored controls and DSP, not Fender model parity.
+
+`make web-test` passed 81/81 CTest cases and 11 fixture-safety tests. The 77-entry categorized picker and 70-stage browser/native comparison passed; the local-guitar Pitch/Glitch/Freeze smoke captured peak 0.6217259 and 47,801 active samples at slot 74. The comparison keeps Pitch Sequence disabled because the native offline chain does not implement it. The full mono browser chain uses 16,744,464 B of processor state plus 10,364 B tuner state in a fixed 20 MiB heap. No isolated Pitch Sequence CPU benchmark, stereo-chain heap measurement, human listening, or device-route test has been run.
+
 ## Porta Preamp and 76-entry picker (2026-11-22)
 
 The project-authored Porta Preamp uses two gain stages with soft clipping, fixed Bass/Treble shelves, and Level. Defaults are 6/3/0/0/0 dB. The gain stages range −12…+24 dB; Bass/Treble −12…+12 dB; Level −24…+12 dB. Control changes smooth over 10 ms. The implementation has fixed state, no delay line or fixed latency, and no per-process allocation. No isolated CPU measurement or human listening result is available.

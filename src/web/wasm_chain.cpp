@@ -316,6 +316,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::PortaPreamp>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::PitchSequence>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -931,6 +934,46 @@ public:
         parameters.treble_db = treble_db;
         parameters.level_db = level_db;
         preamp->set_parameters(parameters);
+    }
+
+    void configure_pitch_sequence(const float* values,
+                                  std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 44U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(std::clamp(
+                std::lround(value), 0L, static_cast<long>(maximum)));
+        };
+        tabletfx::effects::PitchSequenceParameters parameters;
+        for (std::size_t step = 0; step < parameters.semitones.size(); ++step) {
+            const float requested = values[step];
+            parameters.semitones[step] = std::isfinite(requested)
+                ? static_cast<int>(std::lround(std::clamp(requested, -12.0F, 12.0F)))
+                : 0;
+            parameters.mode[step] = static_cast<
+                tabletfx::effects::PitchSequenceStepMode>(
+                    selector(values[16U + step], 2U));
+        }
+        parameters.steps = static_cast<std::uint8_t>(selector(values[32], 16U));
+        parameters.run = std::isfinite(values[33]) && values[33] >= 0.5F;
+        parameters.time_mode = selector(values[34], 1U) == 1U
+            ? tabletfx::DelayTimeMode::tempo_sync
+            : tabletfx::DelayTimeMode::milliseconds;
+        parameters.division = static_cast<tabletfx::DelayDivision>(
+            selector(values[35], static_cast<std::uint32_t>(
+                tabletfx::DelayDivision::sixteenth_triplet)));
+        parameters.free_step_ms = values[36];
+        parameters.tempo_bpm = values[37];
+        parameters.glide_ms = values[38];
+        parameters.glitch_depth_semitones = static_cast<std::uint8_t>(
+            selector(values[39], 12U));
+        parameters.glitch_interval_ms = values[40];
+        parameters.freeze_window_ms = values[41];
+        parameters.mix = values[42];
+        parameters.level = values[43];
+        static_cast<tabletfx::effects::PitchSequence*>(effects_[74].effect.get())
+            ->configure(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -3016,6 +3059,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_porta_preamp(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_porta_preamp(
             gain_1_db, gain_2_db, bass_db, treble_db, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch_sequence(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch_sequence(values, value_count);
     }
 }
 

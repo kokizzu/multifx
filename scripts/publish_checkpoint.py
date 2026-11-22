@@ -1075,9 +1075,6 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/pugilist.hpp",
     "src/effects/pugilist.cpp",
     "tests/test_pugilist.cpp",
-    "include/tabletfx/effects/pitch_sequence.hpp",
-    "src/effects/pitch_sequence.cpp",
-    "tests/test_pitch_sequence.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1351,6 +1348,28 @@ PORTA_PREAMP_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+PITCH_SEQUENCE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "README.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/pitch_sequence.hpp",
+    "src/effects/pitch_sequence.cpp",
+    "tests/test_pitch_sequence.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1454,6 +1473,8 @@ CHECKPOINTS = {
                     "feat: add categorized project-authored Multi-Delay"),
     "porta-preamp": (PORTA_PREAMP_CHECKPOINT_PATHS,
                      "feat: add categorized project-authored Porta Preamp"),
+    "pitch-sequence": (PITCH_SEQUENCE_CHECKPOINT_PATHS,
+                       "feat: add categorized project-authored Pitch Sequence"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }
