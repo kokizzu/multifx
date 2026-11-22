@@ -1020,7 +1020,7 @@ public:
         float master_time, float master_feedback) noexcept {
         auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
         auto parameters = delay->parameters();
-        parameters.topology = topology <= 3U
+        parameters.topology = topology <= 4U
             ? static_cast<tabletfx::MultiDelayTopology>(topology)
             : static_cast<tabletfx::MultiDelayTopology>(255U);
         parameters.series_feedback = series_feedback;

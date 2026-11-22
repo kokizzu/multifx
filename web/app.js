@@ -1883,7 +1883,7 @@ function updatePitchSequenceOptions() {
 function updateMultiDelayOptions() {
   const sampleRate = audioContext?.sampleRate || 48000;
   const topology = Number(multiDelayTopology.value);
-  const maximumMasterFeedbackPercent = topology === 3 ? 200 : 90;
+  const maximumMasterFeedbackPercent = topology === 3 || topology === 4 ? 200 : 90;
   multiDelayDiffusorMasterFeedback.max = String(maximumMasterFeedbackPercent);
   if (Number(multiDelayDiffusorMasterFeedback.value) > maximumMasterFeedbackPercent) {
     multiDelayDiffusorMasterFeedback.value = String(maximumMasterFeedbackPercent);
@@ -1932,6 +1932,7 @@ function updateMultiDelayOptions() {
   };
   const diffusor = value.topology === 2;
   const quadTap = value.topology === 3;
+  const quadTapBand = value.topology === 4;
   multiDelayLineControls.forEach((line, index) => {
     const settings = lines[index];
     const parallel = value.topology === 0;
@@ -1956,15 +1957,18 @@ function updateMultiDelayOptions() {
     show(line.pan, `${Math.round(settings.pan * 100)}%`);
   });
   multiDelaySeriesPanel.classList.toggle("is-hidden", value.topology !== 1);
-  multiDelayDiffusorPanel.classList.toggle("is-hidden", !diffusor && !quadTap);
+  multiDelayDiffusorPanel.classList.toggle("is-hidden", !diffusor && !quadTap && !quadTapBand);
   multiDelayDiffusorMasterFeedback.min = "0";
   multiDelayTopologyMasterHint.textContent = diffusor
     ? "One project Master Feedback value controls feedback across all four all-pass stages; each stage has its own Time/Tempo. Per-stage Feedback, tap Level/Pan, and cross-feedback are hidden. Documented diffuser stereo spread, filters, LFO, and input envelope follower remain unimplemented. Project bounds are 10–200% Time and 0–90% Feedback."
-    : "For Quad-Tap, Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Each tap retains its own Time/Tempo, Feedback, Level, and Pan; cross-feedback is disabled. The project uses 10–200% Time and 0–200% Feedback Scale. These are project bounds, not Fractal numeric settings.";
+    : quadTapBand
+      ? "Quad Tap Band-like mode filters the audible tap output after its feedback loop. Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Per-tap Time/Tempo, Feedback, Level, and Pan remain available; cross-feedback is disabled. Project bounds are 10–200% Time and 0–200% Feedback Scale."
+      : "For Quad-Tap, Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Each tap retains its own Time/Tempo, Feedback, Level, and Pan; cross-feedback is disabled. The project uses 10–200% Time and 0–200% Feedback Scale. These are project bounds, not Fractal numeric settings.";
   const topologyName = value.topology === 1
     ? "Quad Series"
     : value.topology === 2 ? "Quad Diffusor"
-      : value.topology === 3 ? "Quad-Tap" : "Quad Parallel";
+      : value.topology === 3 ? "Quad-Tap"
+        : value.topology === 4 ? "Quad Tap Band" : "Quad Parallel";
   show(multiDelayTopology, topologyName);
   show(multiDelaySeriesFeedback,
     `${Math.round(value.seriesFeedback * 100)}%`);
@@ -5057,6 +5061,7 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     const captures = [];
     for (const [topology, name] of [
       [1, "quad-series"], [2, "quad-diffusor"], [3, "quad-tap"],
+      [4, "quad-tap-band"],
     ]) {
       multiDelayTopology.value = String(topology);
       multiDelayDiffusorMasterTime.value = topology === 2 ? "130" : "100";
@@ -6069,6 +6074,18 @@ async function runBrowserSelfTest() {
       if (multiDelayDiffusorMasterFeedback.value !== "90" ||
           multiDelayMessages.at(-1)?.value?.masterFeedback !== 0.9) {
         throw new Error("Switching from Quad-Tap to Diffusor must clamp Master Feedback to its topology-specific project range.");
+      }
+      multiDelayTopology.value = "4";
+      updateMultiDelayOptions();
+      if (multiDelayMessages.at(-1)?.value?.topology !== 4 ||
+          multiDelayDiffusorPanel.classList.contains("is-hidden") ||
+          multiDelayDiffusorMasterFeedback.max !== "200" ||
+          firstLine.feedback.disabled || firstLine.feedback.parentElement.classList.contains("is-hidden") ||
+          !firstLine.crossFeedback.disabled || !firstLine.crossFeedback.parentElement.classList.contains("is-hidden") ||
+          firstLine.level.disabled || firstLine.pan.disabled ||
+          !multiDelayTopologyMasterHint.textContent.includes("after its feedback loop") ||
+          multiDelayTopology.parentElement.querySelector("output").value !== "Quad Tap Band") {
+        throw new Error("Quad Tap Band controls must expose independent feedback lines and describe its external filter position.");
       }
     } finally {
       workletNode = previousMultiDelayWorklet;

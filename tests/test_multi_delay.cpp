@@ -114,6 +114,28 @@ void test_quad_tap_keeps_four_feedback_lines_independent() {
             "Quad-Tap Master Time must scale all four independent delays");
 }
 
+void test_quad_tap_band_places_filters_outside_feedback_loop() {
+    const auto render = [](tabletfx::MultiDelayTopology topology) {
+        auto parameters = impulse_parameters();
+        parameters.topology = topology;
+        parameters.time_ms = {1.0F, 100.0F, 100.0F, 100.0F};
+        parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+        parameters.feedback[0] = 0.5F;
+        parameters.master_feedback = 1.0F;
+        parameters.high_cut_hz = 1000.0F;
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 32> mono{};
+        mono[0] = 1.0F;
+        delay.process(mono, 1U);
+        return mono;
+    };
+    const auto filtered_feedback = render(tabletfx::MultiDelayTopology::quad_tap);
+    const auto external_filter = render(tabletfx::MultiDelayTopology::quad_tap_band);
+    require(external_filter[8] > 0.1F &&
+                external_filter[16] > filtered_feedback[16] * 1.4F,
+            "Quad Tap Band must filter audible taps outside the feedback loop");
+}
+
 void test_self_feedback_and_negative_phase() {
     auto parameters = impulse_parameters();
     parameters.time_ms = {1.0F, 10.0F, 10.0F, 10.0F};
@@ -288,6 +310,7 @@ int main() {
         test_four_independent_times_and_pans();
         test_cyclic_cross_feedback_routes_between_lines();
         test_quad_tap_keeps_four_feedback_lines_independent();
+        test_quad_tap_band_places_filters_outside_feedback_loop();
         test_self_feedback_and_negative_phase();
         test_tempo_sync_and_project_bounds();
         test_quad_series_compounds_delays_and_routes_selected_feedback();

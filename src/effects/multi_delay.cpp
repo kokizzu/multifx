@@ -128,6 +128,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     case MultiDelayTopology::quad_series:
     case MultiDelayTopology::quad_diffusor:
     case MultiDelayTopology::quad_tap:
+    case MultiDelayTopology::quad_tap_band:
         break;
     default:
         parameters.topology = parameters_.topology;
@@ -145,7 +146,10 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     parameters.master_time = bounded(parameters.master_time,
         parameters_.master_time, 0.1F, 2.0F);
     const float maximum_master_feedback =
-        parameters.topology == MultiDelayTopology::quad_tap ? 2.0F : 0.9F;
+        parameters.topology == MultiDelayTopology::quad_tap ||
+                parameters.topology == MultiDelayTopology::quad_tap_band
+            ? 2.0F
+            : 0.9F;
     parameters.master_feedback = bounded(parameters.master_feedback,
         parameters_.master_feedback, 0.0F, maximum_master_feedback);
 
@@ -224,7 +228,8 @@ void MultiDelay::update_line_times() noexcept {
                       beats_for_division(parameters_.division[line]);
         }
         if (parameters_.topology == MultiDelayTopology::quad_diffusor ||
-            parameters_.topology == MultiDelayTopology::quad_tap) {
+            parameters_.topology == MultiDelayTopology::quad_tap ||
+            parameters_.topology == MultiDelayTopology::quad_tap_band) {
             time_ms *= parameters_.master_time;
         }
         time_ms = std::clamp(time_ms, kMinimumDelayMs, maximum_time);
@@ -312,10 +317,15 @@ void MultiDelay::process(std::span<float> interleaved,
             }
         } else {
             std::array<float, multi_delay_line_count> tap_outputs{};
+            std::array<float, multi_delay_line_count> feedback_taps{};
             for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
                 const float delayed =
                     storage_[read_frame(delay_frames_[line], line)];
                 tap_outputs[line] = filter_line(delayed, line);
+                feedback_taps[line] =
+                    parameters_.topology == MultiDelayTopology::quad_tap_band
+                        ? delayed
+                        : tap_outputs[line];
                 const float levelled = tap_outputs[line] * line_gains_[line];
                 if (channels == 1U) {
                     wet_mono += levelled;
@@ -349,11 +359,12 @@ void MultiDelay::process(std::span<float> interleaved,
                     const float cross_feedback =
                         parameters_.topology == MultiDelayTopology::quad_parallel
                             ? parameters_.cross_feedback[previous] *
-                                  tap_outputs[previous]
+                                  feedback_taps[previous]
                             : 0.0F;
                     const float self_feedback =
-                        parameters_.feedback[line] * tap_outputs[line] *
-                        (parameters_.topology == MultiDelayTopology::quad_tap
+                        parameters_.feedback[line] * feedback_taps[line] *
+                        (parameters_.topology == MultiDelayTopology::quad_tap ||
+                         parameters_.topology == MultiDelayTopology::quad_tap_band
                             ? parameters_.master_feedback
                             : 1.0F);
                     const float feedback_input =
