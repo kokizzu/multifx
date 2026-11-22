@@ -16,6 +16,7 @@
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
+#include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
@@ -91,7 +92,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(66);
+          effects_.reserve(67);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -286,6 +287,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::effects::ShufflingLooper>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::TenTapDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -698,6 +702,43 @@ public:
         return static_cast<std::uint32_t>(
             static_cast<const tabletfx::effects::ShufflingLooper*>(
                 effects_[65].effect.get())->sequence_steps());
+    }
+
+    void configure_ten_tap_delay(
+        std::uint32_t tap_count, float delay_time_ms, float tempo_bpm,
+        std::uint32_t division, float decay_percent, float shuffle_percent,
+        float spread_percent, float ratio_percent, std::uint32_t pan_shape,
+        float pan_alpha_percent, float low_cut_hz, float high_cut_hz,
+        float mix, float level_db, std::uint32_t mono) noexcept {
+        auto* delay = static_cast<tabletfx::TenTapDelay*>(effects_[66].effect.get());
+        auto parameters = delay->parameters();
+        parameters.tap_count = static_cast<std::uint8_t>(
+            std::clamp(tap_count, 1U, 10U));
+        parameters.delay_time_ms = delay_time_ms;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.division = static_cast<tabletfx::TenTapDivision>(
+            std::min(division, 15U));
+        parameters.decay_percent = decay_percent;
+        parameters.shuffle_percent = shuffle_percent;
+        parameters.spread_percent = spread_percent;
+        parameters.ratio_percent = ratio_percent;
+        parameters.pan_shape = static_cast<tabletfx::TenTapPanShape>(
+            std::min(pan_shape, 3U));
+        parameters.pan_alpha_percent = pan_alpha_percent;
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        parameters.mono = mono != 0U;
+        delay->set_parameters(parameters);
+    }
+
+    void configure_ten_tap_delay_level(std::uint32_t tap, float level_db) noexcept {
+        if (tap >= tabletfx::ten_tap_delay_max_taps) return;
+        auto* delay = static_cast<tabletfx::TenTapDelay*>(effects_[66].effect.get());
+        auto parameters = delay->parameters();
+        parameters.tap_level_db[tap] = level_db;
+        delay->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2670,6 +2711,27 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_steps(
     void* opaque) noexcept {
     return opaque == nullptr ? 0U
                              : as_chain(opaque)->shuffling_looper_steps();
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_ten_tap_delay_options(
+    void* opaque, std::uint32_t tap_count, float delay_time_ms, float tempo_bpm,
+    std::uint32_t division, float decay_percent, float shuffle_percent,
+    float spread_percent, float ratio_percent, std::uint32_t pan_shape,
+    float pan_alpha_percent, float low_cut_hz, float high_cut_hz, float mix,
+    float level_db, std::uint32_t mono) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_ten_tap_delay(
+            tap_count, delay_time_ms, tempo_bpm, division, decay_percent,
+            shuffle_percent, spread_percent, ratio_percent, pan_shape,
+            pan_alpha_percent, low_cut_hz, high_cut_hz, mix, level_db, mono);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_ten_tap_delay_level(
+    void* opaque, std::uint32_t tap, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_ten_tap_delay_level(tap, level_db);
+    }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,

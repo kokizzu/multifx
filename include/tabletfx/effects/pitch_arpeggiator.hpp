@@ -11,7 +11,7 @@
 
 namespace tabletfx::effects {
 
-// The November 2026 Fractal Audio Blocks Guide (Pitch block, pp. 76–82;
+// The June 2023 Fractal Audio Blocks Guide (Pitch block, pp. 76–82;
 // Arpeggiator p. 81 and scale table p. 82)
 // describes an intelligent, scale-aware 16-step Arpeggiator with Key, Scale,
 // Run, Trigger Thresh, Steps, Repeats, tempo-synchronized step duration,

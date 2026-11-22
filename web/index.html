@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">68 of 68</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">69 of 69</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -152,8 +152,9 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="63"><span class="effect-number">64</span><span class="effect-name">Harmonic Tremolo · project-authored</span><span class="effect-default">3 Hz · 65% · 700 Hz split</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="64"><span class="effect-number">65</span><span class="effect-name">Auto-Swell Delay · project-authored</span><span class="effect-default">Threshold-triggered swell · tap sync</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="65"><span class="effect-number">66</span><span class="effect-name">Shuffling Looper · project-authored</span><span class="effect-default">8 slices · 8 steps · 70% playback</span><span class="effect-category-tag">Loop &amp; performance</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="66" checked><span class="effect-number">67</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="67" checked><span class="effect-number">68</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="66"><span class="effect-number">67</span><span class="effect-name">Ten-Tap Delay · project-authored</span><span class="effect-default">1–10 taps · tempo · spread</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="67" checked><span class="effect-number">68</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="68" checked><span class="effect-number">69</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -884,7 +885,7 @@
       <div class="effect-parameter-group" aria-label="Four-band resonator controls">
         <h3>Four-band resonator · project-authored DSP</h3>
         <div id="four-band-resonator-controls" class="gain-controls"></div>
-        <p class="hint">Fractal’s November 2026 Blocks Guide describes a four-path feedback resonator with Manual and Chord modes, per-band Frequency, Feedback, Filter Location, Filter Q, Level and Pan, plus Master Freq, Level, Pan, Feedback and Q. The guide gives 100–10,000 Hz for Manual frequencies and 50–5,000 Hz for Chord-mode Frequency; other ranges and this implementation’s DSP are project-authored. Mono sums stereo input to all bands; Stereo routes left to bands 1–2 and right to bands 3–4. No Fractal sound parity is claimed.</p>
+        <p class="hint">Fractal’s June 2023 Blocks Guide describes a four-path feedback resonator with Manual and Chord modes, per-band Frequency, Feedback, Filter Location, Filter Q, Level and Pan, plus Master Freq, Level, Pan, Feedback and Q. The guide gives 100–10,000 Hz for Manual frequencies and 50–5,000 Hz for Chord-mode Frequency; other ranges and this implementation’s DSP are project-authored. Mono sums stereo input to all bands; Stereo routes left to bands 1–2 and right to bands 3–4. No Fractal sound parity is claimed.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Diatonic Harmonizer controls">
         <h3>Diatonic Harmonizer · project-authored monophonic tracker</h3>
@@ -903,7 +904,7 @@
       </div>
       <div class="effect-parameter-group" aria-label="Pitch Arpeggiator controls">
         <h3>Pitch Arpeggiator · project-authored mono tracker</h3>
-        <p class="hint">Fractal’s November 2026 Blocks Guide lists a one-voice, 16-step Arpeggiator with ±24 scale-degree shifts, Run, Trigger Thresh, Steps, Repeats, Tempo, amplitude/pan Shape and Alpha, and no per-voice delay. This project currently exposes shifts only to ±7 degrees because its shared monophonic tracker clamps there; ±24 remains an implementation gap. Other sequence controls use a monophonic detector, project-authored Mix/Level, and 10–2,000 ms free step time. Its trigger range is −90 dBFS (manual Run) to 0 dBFS with a fixed 5 ms attack / 80 ms release; Fractal does not publish a numeric threshold range in that guide. First-note pitch control response is about 26.7 ms at 48 kHz before browser buffering. DSP and control curves are project-authored; no Fractal sound or tracking parity is claimed.</p>
+        <p class="hint">Fractal’s June 2023 Blocks Guide lists a one-voice, 16-step Arpeggiator with ±24 scale-degree shifts, Run, Trigger Thresh, Steps, Repeats, Tempo, amplitude/pan Shape and Alpha, and no per-voice delay. This project currently exposes shifts only to ±7 degrees because its shared monophonic tracker clamps there; ±24 remains an implementation gap. Other sequence controls use a monophonic detector, project-authored Mix/Level, and 10–2,000 ms free step time. Its trigger range is −90 dBFS (manual Run) to 0 dBFS with a fixed 5 ms attack / 80 ms release; Fractal does not publish a numeric threshold range in that guide. First-note pitch control response is about 26.7 ms at 48 kHz before browser buffering. DSP and control curves are project-authored; no Fractal sound or tracking parity is claimed.</p>
         <div class="gain-controls">
           <label class="mix-control" for="pitch-arpeggiator-run"><span>Run sequence</span><output id="pitch-arpeggiator-run-value" for="pitch-arpeggiator-run">On</output><input id="pitch-arpeggiator-run" type="checkbox" value="1" checked></label>
           <label class="mix-control" for="pitch-arpeggiator-mix"><span>Mix</span><output id="pitch-arpeggiator-mix-value" for="pitch-arpeggiator-mix">100%</output><input id="pitch-arpeggiator-mix" type="range" min="0" max="1" step="0.01" value="1"></label>
@@ -1067,6 +1068,42 @@
           <button class="button" type="button" data-shuffling-looper-command="5">Clear</button>
         </div>
         <output id="shuffling-looper-status" class="status" role="status">Stopped · no loop · 0 steps</output>
+      </div>
+      <div class="effect-parameter-group" aria-label="Ten-Tap Delay controls">
+        <h3>Ten-Tap Delay · project-authored</h3>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide (June 2023)</a> documents Ten-Tap controls for the FM9 family: 1–10 taps, Delay Time/Tempo, Decay, Shuffle, stereo Spread and Ratio, Pan Shape/Alpha, Low/High Cut, and individual tap levels from −80 to +20 dB. The guide describes Rhythm Tap as a separate type with Feedback, Quantize, Learn, and custom tap intervals; those Rhythm Tap controls are not implemented here. Numeric limits/defaults not published by Fractal, the tempo subdivisions, and this project's delay curves, filter slopes, bounds, and DSP are project-authored. Applicability to FM9 Mk II Turbo is a family inference; installed device firmware is unknown. This is not Fractal sound/control parity.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="ten-tap-delay-tap-count"><span>Tap count</span><output for="ten-tap-delay-tap-count">4 taps</output><input id="ten-tap-delay-tap-count" type="range" min="1" max="10" step="1" value="4"></label>
+          <label class="mix-control" for="ten-tap-delay-time-ms"><span>Delay interval</span><output for="ten-tap-delay-time-ms">220 ms</output><input id="ten-tap-delay-time-ms" type="range" min="1" max="2000" step="1" value="220"></label>
+          <label class="mix-control" for="ten-tap-delay-tempo-bpm"><span>Tempo</span><output for="ten-tap-delay-tempo-bpm">120 BPM</output><input id="ten-tap-delay-tempo-bpm" type="range" min="20" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="ten-tap-delay-division"><span>Tempo division</span><select id="ten-tap-delay-division"><option value="0" selected>Free milliseconds</option><option value="1">Whole</option><option value="2">Half</option><option value="3">Dotted half</option><option value="4">Half triplet</option><option value="5">Quarter</option><option value="6">Dotted quarter</option><option value="7">Quarter triplet</option><option value="8">Eighth</option><option value="9">Dotted eighth</option><option value="10">Eighth triplet</option><option value="11">Sixteenth</option><option value="12">Dotted sixteenth</option><option value="13">Sixteenth triplet</option><option value="14">Thirty-second</option><option value="15">Thirty-second triplet</option></select></label>
+          <label class="mix-control" for="ten-tap-delay-decay"><span>Decay</span><output for="ten-tap-delay-decay">30%</output><input id="ten-tap-delay-decay" type="range" min="0" max="100" step="1" value="30"></label>
+          <label class="mix-control" for="ten-tap-delay-shuffle"><span>Shuffle</span><output for="ten-tap-delay-shuffle">0%</output><input id="ten-tap-delay-shuffle" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="ten-tap-delay-spread"><span>Stereo spread</span><output for="ten-tap-delay-spread">50%</output><input id="ten-tap-delay-spread" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="ten-tap-delay-ratio"><span>Left time ratio</span><output for="ten-tap-delay-ratio">100% left/right</output><input id="ten-tap-delay-ratio" type="range" min="50" max="200" step="1" value="100"></label>
+          <label class="mix-control" for="ten-tap-delay-pan-shape"><span>Pan shape</span><select id="ten-tap-delay-pan-shape"><option value="0">Constant</option><option value="1" selected>Increasing</option><option value="2">Decreasing</option><option value="3">Sine</option></select></label>
+          <label class="mix-control" for="ten-tap-delay-pan-alpha"><span>Pan alpha</span><output for="ten-tap-delay-pan-alpha">100%</output><input id="ten-tap-delay-pan-alpha" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="ten-tap-delay-low-cut-hz"><span>Low cut</span><output for="ten-tap-delay-low-cut-hz">Off</output><input id="ten-tap-delay-low-cut-hz" type="range" min="0" max="5000" step="10" value="0"></label>
+          <label class="mix-control" for="ten-tap-delay-high-cut-hz"><span>High cut</span><output for="ten-tap-delay-high-cut-hz">20000 Hz</output><input id="ten-tap-delay-high-cut-hz" type="range" min="1000" max="20000" step="10" value="20000"></label>
+          <label class="mix-control" for="ten-tap-delay-mix"><span>Mix</span><output for="ten-tap-delay-mix">25%</output><input id="ten-tap-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="ten-tap-delay-level-db"><span>Wet level</span><output for="ten-tap-delay-level-db">0 dB</output><input id="ten-tap-delay-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="slicer-sync" for="ten-tap-delay-mono"><input id="ten-tap-delay-mono" type="checkbox"><span>Mono echo input</span></label>
+        </div>
+        <details class="tap-levels">
+          <summary>Individual tap levels · −80 to +20 dB</summary>
+          <div class="gain-controls">
+            <label class="mix-control" for="ten-tap-delay-tap-1-level-db"><span>Tap 1 level</span><output for="ten-tap-delay-tap-1-level-db">0 dB</output><input id="ten-tap-delay-tap-1-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-2-level-db"><span>Tap 2 level</span><output for="ten-tap-delay-tap-2-level-db">0 dB</output><input id="ten-tap-delay-tap-2-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-3-level-db"><span>Tap 3 level</span><output for="ten-tap-delay-tap-3-level-db">0 dB</output><input id="ten-tap-delay-tap-3-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-4-level-db"><span>Tap 4 level</span><output for="ten-tap-delay-tap-4-level-db">0 dB</output><input id="ten-tap-delay-tap-4-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-5-level-db"><span>Tap 5 level</span><output for="ten-tap-delay-tap-5-level-db">0 dB</output><input id="ten-tap-delay-tap-5-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-6-level-db"><span>Tap 6 level</span><output for="ten-tap-delay-tap-6-level-db">0 dB</output><input id="ten-tap-delay-tap-6-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-7-level-db"><span>Tap 7 level</span><output for="ten-tap-delay-tap-7-level-db">0 dB</output><input id="ten-tap-delay-tap-7-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-8-level-db"><span>Tap 8 level</span><output for="ten-tap-delay-tap-8-level-db">0 dB</output><input id="ten-tap-delay-tap-8-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-9-level-db"><span>Tap 9 level</span><output for="ten-tap-delay-tap-9-level-db">0 dB</output><input id="ten-tap-delay-tap-9-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+            <label class="mix-control" for="ten-tap-delay-tap-10-level-db"><span>Tap 10 level</span><output for="ten-tap-delay-tap-10-level-db">0 dB</output><input id="ten-tap-delay-tap-10-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+          </div>
+        </details>
       </div>
       <div class="effect-parameter-group" aria-label="Grain Delay controls">
         <h3>Grain Delay · project-authored</h3>

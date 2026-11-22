@@ -67,6 +67,7 @@ const EFFECT_NAMES = [
   "Harmonic Tremolo · project-authored",
   "Auto-Swell Delay · project-authored",
   "Shuffling Looper · project-authored",
+  "Ten-Tap Delay · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -100,6 +101,8 @@ const DEFAULT_PARAMETERS = {
   resonantDelay: [350, 0.35, 800, 2, 0.25],
   autoSwellDelay: [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0],
   shufflingLooper: [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12],
+  tenTapDelay: [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -574,6 +577,30 @@ const shufflingLooperControls = [
   shufflingLooperRepeatProbability, shufflingLooperSmoothing,
   shufflingLooperSequenceDrift, shufflingLooperPlayback, shufflingLooperLowCut,
   shufflingLooperHighCut, shufflingLooperInterval1, shufflingLooperInterval2,
+];
+const tenTapDelayTapCount = document.querySelector("#ten-tap-delay-tap-count");
+const tenTapDelayTime = document.querySelector("#ten-tap-delay-time-ms");
+const tenTapDelayTempo = document.querySelector("#ten-tap-delay-tempo-bpm");
+const tenTapDelayDivision = document.querySelector("#ten-tap-delay-division");
+const tenTapDelayDecay = document.querySelector("#ten-tap-delay-decay");
+const tenTapDelayShuffle = document.querySelector("#ten-tap-delay-shuffle");
+const tenTapDelaySpread = document.querySelector("#ten-tap-delay-spread");
+const tenTapDelayRatio = document.querySelector("#ten-tap-delay-ratio");
+const tenTapDelayPanShape = document.querySelector("#ten-tap-delay-pan-shape");
+const tenTapDelayPanAlpha = document.querySelector("#ten-tap-delay-pan-alpha");
+const tenTapDelayLowCut = document.querySelector("#ten-tap-delay-low-cut-hz");
+const tenTapDelayHighCut = document.querySelector("#ten-tap-delay-high-cut-hz");
+const tenTapDelayMix = document.querySelector("#ten-tap-delay-mix");
+const tenTapDelayLevel = document.querySelector("#ten-tap-delay-level-db");
+const tenTapDelayMono = document.querySelector("#ten-tap-delay-mono");
+const tenTapDelayTapLevels = Array.from({ length: 10 }, (_, index) =>
+  document.querySelector(`#ten-tap-delay-tap-${index + 1}-level-db`));
+const tenTapDelayControls = [
+  tenTapDelayTapCount, tenTapDelayTime, tenTapDelayTempo, tenTapDelayDivision,
+  tenTapDelayDecay, tenTapDelayShuffle, tenTapDelaySpread, tenTapDelayRatio,
+  tenTapDelayPanShape, tenTapDelayPanAlpha, tenTapDelayLowCut,
+  tenTapDelayHighCut, tenTapDelayMix, tenTapDelayLevel, tenTapDelayMono,
+  ...tenTapDelayTapLevels,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1164,6 +1191,49 @@ function updateShufflingLooperOptions() {
   }
 }
 
+function updateTenTapDelayOptions() {
+  const values = [
+    Number(tenTapDelayTapCount.value),
+    Number(tenTapDelayTime.value),
+    Number(tenTapDelayTempo.value),
+    Number(tenTapDelayDivision.value),
+    Number(tenTapDelayDecay.value),
+    Number(tenTapDelayShuffle.value),
+    Number(tenTapDelaySpread.value),
+    Number(tenTapDelayRatio.value),
+    Number(tenTapDelayPanShape.value),
+    Number(tenTapDelayPanAlpha.value),
+    Number(tenTapDelayLowCut.value),
+    Number(tenTapDelayHighCut.value),
+    Number(tenTapDelayMix.value) / 100,
+    Number(tenTapDelayLevel.value),
+    tenTapDelayMono.checked ? 1 : 0,
+    ...tenTapDelayTapLevels.map((control) => Number(control.value)),
+  ];
+  DEFAULT_PARAMETERS.tenTapDelay = values;
+  const output = (control, value) => {
+    control.parentElement.querySelector("output").value = value;
+  };
+  output(tenTapDelayTapCount, `${values[0]} taps`);
+  output(tenTapDelayTime, `${values[1]} ms`);
+  output(tenTapDelayTempo, `${values[2]} BPM`);
+  output(tenTapDelayDecay, `${values[4]}%`);
+  output(tenTapDelayShuffle, `${values[5]}%`);
+  output(tenTapDelaySpread, `${values[6]}%`);
+  output(tenTapDelayRatio, `${values[7]}% left/right`);
+  output(tenTapDelayPanAlpha, `${values[9]}%`);
+  output(tenTapDelayLowCut, values[10] === 0 ? "Off" : `${values[10]} Hz`);
+  output(tenTapDelayHighCut, `${values[11]} Hz`);
+  output(tenTapDelayMix, `${Math.round(values[12] * 100)}%`);
+  output(tenTapDelayLevel, `${values[13] > 0 ? "+" : ""}${values[13]} dB`);
+  tenTapDelayTapLevels.forEach((control, index) => {
+    output(control, `${values[index + 15] > 0 ? "+" : ""}${values[index + 15]} dB`);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "ten-tap-delay-options", value: values });
+  }
+}
+
 function sendShufflingLooperCommand(command) {
   if (!workletNode) {
     shufflingLooperStatus.value = "Start processed playback before using the looper";
@@ -1748,6 +1818,10 @@ looperOverdubLevel.addEventListener("input", updateLooperOptions);
 for (const control of shufflingLooperControls) {
   control.addEventListener("input", updateShufflingLooperOptions);
   control.addEventListener("change", updateShufflingLooperOptions);
+}
+for (const control of tenTapDelayControls) {
+  control.addEventListener("input", updateTenTapDelayOptions);
+  control.addEventListener("change", updateTenTapDelayOptions);
 }
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
@@ -3848,14 +3922,15 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 68 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 68 || effectRows.length !== 68 ||
+      const expectedEffectIds = Array.from({ length: 69 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 69 || effectRows.length !== 69 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
-        EFFECT_NAMES[66] !== "Output level" || EFFECT_NAMES[67] !== "Peak limiter" ||
-        initialEffectState[64] || initialEffectState[65] ||
-        !initialEffectState[66] || !initialEffectState[67] ||
+        EFFECT_NAMES[66] !== "Ten-Tap Delay · project-authored" ||
+        EFFECT_NAMES[67] !== "Output level" || EFFECT_NAMES[68] !== "Peak limiter" ||
+        initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
+        !initialEffectState[67] || !initialEffectState[68] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -3872,7 +3947,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-         throw new Error("The effect picker must list 68 ordered, categorized effects (IDs 0–67), with optional effects disabled by default.");
+         throw new Error("The effect picker must list 69 ordered, categorized effects (IDs 0–68), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -4141,6 +4216,66 @@ async function runBrowserSelfTest() {
           "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12") {
         throw new Error("Shuffling Looper self-test must restore its project-authored defaults.");
       }
+    const tenTapDefaults = [...DEFAULT_PARAMETERS.tenTapDelay];
+    const tenTapHint = document.querySelector(
+      '.effect-parameter-group[aria-label="Ten-Tap Delay controls"] .hint',
+    ).textContent;
+    const tenTapRanges = [
+      [tenTapDelayTapCount, "1", "10"], [tenTapDelayTime, "1", "2000"],
+      [tenTapDelayTempo, "20", "300"], [tenTapDelayDecay, "0", "100"],
+      [tenTapDelayShuffle, "0", "100"], [tenTapDelaySpread, "0", "100"],
+      [tenTapDelayRatio, "50", "200"], [tenTapDelayPanAlpha, "0", "100"],
+      [tenTapDelayLowCut, "0", "5000"], [tenTapDelayHighCut, "1000", "20000"],
+      [tenTapDelayMix, "0", "100"], [tenTapDelayLevel, "-24", "12"],
+      ...tenTapDelayTapLevels.map((control) => [control, "-80", "20"]),
+    ];
+    if (tenTapDefaults.join(",") !==
+          "4,220,120,0,30,0,50,100,1,100,0,20000,0.25,0,0,0,0,0,0,0,0,0,0,0,0" ||
+        tenTapRanges.some(([control, minimum, maximum]) =>
+          control.min !== minimum || control.max !== maximum) ||
+        !tenTapHint.includes("June 2023") ||
+        !tenTapHint.includes("Rhythm Tap") ||
+        !tenTapHint.includes("not Fractal sound/control parity")) {
+      throw new Error("Ten-Tap Delay controls must expose the documented type controls and explicit project limits.");
+    }
+    const tenTapControlSnapshot = tenTapDelayControls.map((control) =>
+      control.type === "checkbox" ? control.checked : control.value);
+    const previousTenTapWorklet = workletNode;
+    const tenTapMessages = [];
+    const tenTapTestLevels = ["1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9", "-10"];
+    try {
+      workletNode = { port: { postMessage: (message) => tenTapMessages.push(message) } };
+      [tenTapDelayTapCount.value, tenTapDelayTime.value, tenTapDelayTempo.value,
+        tenTapDelayDivision.value, tenTapDelayDecay.value, tenTapDelayShuffle.value,
+        tenTapDelaySpread.value, tenTapDelayRatio.value, tenTapDelayPanShape.value,
+        tenTapDelayPanAlpha.value, tenTapDelayLowCut.value, tenTapDelayHighCut.value,
+        tenTapDelayMix.value, tenTapDelayLevel.value, tenTapDelayMono.checked] = [
+        "7", "250", "100", "11", "40", "30", "80", "120", "2", "75",
+        "100", "8000", "40", "-3", true,
+      ];
+      tenTapDelayTapLevels.forEach((control, index) => {
+        control.value = tenTapTestLevels[index];
+      });
+      tenTapDelayTapLevels[9].dispatchEvent(new Event("input", { bubbles: true }));
+      const tenTapMessage = tenTapMessages.at(-1);
+      if (tenTapMessage?.type !== "ten-tap-delay-options" ||
+          tenTapMessage.value.join(",") !==
+            "7,250,100,11,40,30,80,120,2,75,100,8000,0.4,-3,1,1,-2,-3,-4,-5,-6,-7,-8,-9,-10" ||
+          tenTapDelayRatio.parentElement.querySelector("output").value !== "120% left/right" ||
+          tenTapDelayTapLevels[9].parentElement.querySelector("output").value !== "-10 dB") {
+        throw new Error("Ten-Tap Delay controls must send all global and per-tap settings in WASM order.");
+      }
+    } finally {
+      workletNode = previousTenTapWorklet;
+      tenTapDelayControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = tenTapControlSnapshot[index];
+        else control.value = tenTapControlSnapshot[index];
+      });
+      updateTenTapDelayOptions();
+    }
+    if (DEFAULT_PARAMETERS.tenTapDelay.join(",") !== tenTapDefaults.join(",")) {
+      throw new Error("Ten-Tap Delay self-test must restore its project-authored defaults.");
+    }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -4182,7 +4317,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63" ||
-          effectCount.value !== "11 of 68" ||
+          effectCount.value !== "11 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -4190,8 +4325,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,67" ||
-        effectCount.value !== "9 of 68" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,68" ||
+        effectCount.value !== "9 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -4200,7 +4335,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 68" ||
+        effectCount.value !== "7 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -4209,7 +4344,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 68" ||
+        effectCount.value !== "7 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -4217,7 +4352,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 68" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -4225,7 +4360,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 68" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -4233,7 +4368,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 68" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -4241,7 +4376,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 68" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -4249,7 +4384,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 68" ||
+    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -4257,7 +4392,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 68" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -4285,7 +4420,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64" || effectCount.value !== "10 of 68" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66" || effectCount.value !== "11 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -4293,7 +4428,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 68" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 69" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -4303,12 +4438,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 68") {
+       if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 69") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      if (effectCount.value !== "68 of 68" || effectRows.some((row) => row.hidden)) {
+       if (effectCount.value !== "69 of 69" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4496,9 +4631,9 @@ async function runBrowserSelfTest() {
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 68 || activeProcessorIndices.length !== 65 ||
-        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 65) {
-      throw new Error("The all-effect chain must contain 65 active processors between input trim and output utilities.");
+    if (parityEnabled.length !== 69 || activeProcessorIndices.length !== 66 ||
+        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 66) {
+      throw new Error("The all-effect chain must contain 66 active processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.

@@ -33,7 +33,7 @@ struct ReverseDelayParameters {
  * one selected Time interval; the dry path remains immediate.
  *
  * Manufacturer evidence checked 2026-11-21:
- * - The November 2026 Fractal Audio Blocks Guide lists Reverse Delay and names
+ * - The June 2023 Fractal Audio Blocks Guide lists Reverse Delay and names
  *   Time, Run, Trigger Restart, Crossfade Time, Mix, and a delay-only EQ page.
  *   It describes rolling reversed snippets; the public guide gives no numeric
  *   bounds for Reverse-specific Time/Crossfade controls. FM9 firmware v12.0 is

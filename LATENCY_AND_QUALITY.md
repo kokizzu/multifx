@@ -1,6 +1,10 @@
 # Latency, quality, and DSP-load protocol
 
-## Shuffling Looper and 68-entry picker (2026-11-22)
+## Ten-Tap Delay and 69-entry picker (2026-11-22)
+
+`make test` passed documentation validation, 11 audio-fixture safety tests, and 73/73 CTest cases. `make web-test` passed HeadlessChrome 151 browser/WASM Play/native comparison at 48 kHz/128 frames with 66 active processors (maximum absolute error 0.0000147457; RMS error 0.00000286683). Ten-Tap is included in the categorized Delay chain. The browser processor state is 14,859,844 B plus 10,364 B tuner state inside the fixed 16 MiB heap; browser Play output was captured. No isolated Ten-Tap CPU measurement or human listening/hardware check was run. The synthetic chain output remains quiet, so numerical parity is not evidence of useful loudness or musical quality.
+
+## Previous checkpoint: Shuffling Looper and 68-entry picker (2026-11-22)
 
 The categorized browser picker now has 68 rows; Shuffling Looper is effect slot 65, followed by Output level at 66 and Peak limiter at 67. Its fixed mono/stereo loop storage is included in a 14,475,504 B browser/WASM processor-chain state estimate. The browser/native Play comparison covers the 64 default-active processors and reports maximum absolute error 0.0000146203 and RMS error 0.00000285181; the looper is disabled in that parity chain and is exercised separately by its transport smoke test. No isolated CPU benchmark or live-route measurement has been run for Shuffling Looper. The test page uses a fixed 16 MiB WebAssembly heap and reports 10,364 B for tuner state separately.
 
