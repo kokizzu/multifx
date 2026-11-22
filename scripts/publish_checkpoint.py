@@ -1002,6 +1002,29 @@ FIVE_BAND_EQ_CHECKPOINT_PATHS = (
     "RESEARCH.md",
     "scripts/publish_checkpoint.py",
 )
+PHRASE_LOOPER_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/looper.hpp",
+    "tests/test_looper.cpp",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "scripts/publish_checkpoint.py",
+)
+DEFERRED_AGENT_DRAFT_PATHS = (
+    "include/tabletfx/effects/note_generator.hpp",
+    "tests/test_note_generator.cpp",
+    "include/tabletfx/effects/enhancer.hpp",
+    "tests/test_enhancer.cpp",
+)
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1073,6 +1096,8 @@ CHECKPOINTS = {
                          "docs: expand flagship effects catalog"),
     "five-band-eq": (FIVE_BAND_EQ_CHECKPOINT_PATHS,
                      "feat: add project-authored five-band EQ"),
+    "phrase-looper": (PHRASE_LOOPER_CHECKPOINT_PATHS,
+                      "feat: add categorized phrase looper"),
 }
 
 
@@ -1132,6 +1157,7 @@ def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
             + ", ".join(unexpected_staged)
         )
     known_checkpoint_paths = set(CHECKPOINT_PATHS)
+    known_checkpoint_paths.update(DEFERRED_AGENT_DRAFT_PATHS)
     for allowed_paths, _message in CHECKPOINTS.values():
         known_checkpoint_paths.update(allowed_paths)
     unexpected = sorted(set(paths) - known_checkpoint_paths)

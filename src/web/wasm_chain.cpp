@@ -88,7 +88,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(59);
+          effects_.reserve(60);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -266,6 +266,7 @@ public:
         effects_.push_back({std::make_unique<tabletfx::FiveBandParametricEQ>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::Looper>(channels), false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -561,6 +562,45 @@ public:
         }};
         static_cast<tabletfx::FiveBandParametricEQ*>(effects_[58].effect.get())
             ->configure(bands);
+    }
+
+    [[nodiscard]] bool looper_command(std::uint32_t command) noexcept {
+        auto* looper = static_cast<tabletfx::Looper*>(effects_[59].effect.get());
+        switch (command) {
+        case 0U: return looper->record();
+        case 1U: return looper->play();
+        case 2U: return looper->overdub();
+        case 3U:
+            looper->stop();
+            return true;
+        case 4U: return looper->undo();
+        case 5U: return looper->redo();
+        case 6U: return looper->clear();
+        default: return false;
+        }
+    }
+
+    void configure_looper(bool reverse, bool half_speed,
+                          float overdub_level) noexcept {
+        auto* looper = static_cast<tabletfx::Looper*>(effects_[59].effect.get());
+        looper->set_reverse(reverse);
+        looper->set_half_speed(half_speed);
+        looper->set_overdub_level(overdub_level);
+    }
+
+    [[nodiscard]] std::uint32_t looper_state() const noexcept {
+        const auto* looper = static_cast<const tabletfx::Looper*>(
+            effects_[59].effect.get());
+        return static_cast<std::uint32_t>(looper->state());
+    }
+
+    [[nodiscard]] std::uint32_t looper_frames() const noexcept {
+        const auto* looper = static_cast<const tabletfx::Looper*>(
+            effects_[59].effect.get());
+        const std::size_t frames = looper->loop_frames();
+        return frames > std::numeric_limits<std::uint32_t>::max()
+                   ? std::numeric_limits<std::uint32_t>::max()
+                   : static_cast<std::uint32_t>(frames);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2295,6 +2335,28 @@ TABLETFX_WASM_EXPORT void tf_chain_set_five_band_eq(
         as_chain(opaque)->configure_five_band_eq(
             f1, g1, q1, f2, g2, q2, f3, g3, q3, f4, g4, q4, f5, g5, q5);
     }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_command(
+    void* opaque, std::uint32_t command) noexcept {
+    return opaque != nullptr && as_chain(opaque)->looper_command(command) ? 1U : 0U;
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_looper_options(
+    void* opaque, std::uint32_t reverse, std::uint32_t half_speed,
+    float overdub_level) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_looper(reverse != 0U, half_speed != 0U,
+                                           overdub_level);
+    }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_state(void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->looper_state();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_frames(void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->looper_frames();
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,

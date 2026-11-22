@@ -33,7 +33,8 @@ PYTHON ?= python3
 	publish-shimmer-reverb-plan publish-shimmer-reverb \
 	publish-convolution-reverb-plan publish-convolution-reverb \
 	publish-flagship-catalog-plan publish-flagship-catalog \
-	publish-five-band-eq-plan publish-five-band-eq
+	publish-five-band-eq-plan publish-five-band-eq \
+	publish-phrase-looper-plan publish-phrase-looper
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -311,3 +312,9 @@ publish-five-band-eq-plan:
 
 publish-five-band-eq:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint five-band-eq
+
+publish-phrase-looper-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint phrase-looper
+
+publish-phrase-looper:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint phrase-looper

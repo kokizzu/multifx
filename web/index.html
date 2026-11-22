@@ -73,6 +73,7 @@
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
             <option value="synth">Synth</option>
+            <option value="loop">Loop &amp; performance</option>
             <option value="resonator">Resonator</option>
             <option value="reverb">Reverb</option>
           </select>
@@ -80,7 +81,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">59 of 59</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">62 of 62</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -143,8 +144,9 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="56"><span class="effect-number">57</span><span class="effect-name">Shimmer Reverb</span><span class="effect-default">Pitch-fed plate tail · project-authored</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="57"><span class="effect-number">58</span><span class="effect-name">Convolution Reverb</span><span class="effect-default">Local mono/stereo WAV IR · project-authored</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="58"><span class="effect-number">59</span><span class="effect-name">Five-band parametric EQ · project-authored</span><span class="effect-default">5 peaking bands · frequency / gain / Q</span><span class="effect-category-tag">Equalizer</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="59" checked><span class="effect-number">60</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="60" checked><span class="effect-number">61</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="59"><span class="effect-number">60</span><span class="effect-name">Phrase Looper · project-authored</span><span class="effect-default">Mono/stereo · one layer · 4 s at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="60" checked><span class="effect-number">61</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="61" checked><span class="effect-number">62</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -929,6 +931,25 @@
           <label class="mix-control" for="mono-guitar-synth-release-ms"><span>Release</span><output id="mono-guitar-synth-release-value" for="mono-guitar-synth-release-ms">180 ms</output><input id="mono-guitar-synth-release-ms" type="range" min="0" max="5000" step="1" value="180"></label>
           <label class="mix-control" for="mono-guitar-synth-portamento-ms"><span>Portamento</span><output id="mono-guitar-synth-portamento-value" for="mono-guitar-synth-portamento-ms">8 ms</output><input id="mono-guitar-synth-portamento-ms" type="range" min="0" max="250" step="1" value="8"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Phrase Looper controls">
+        <h3>Phrase Looper · project-authored one-layer utility</h3>
+        <p class="hint">Enable Phrase Looper in the Loop &amp; performance category, start processed playback, then record from the incoming chain. Capacity is 192,000 frames (4 s at 48 kHz); the fixed stereo buffers use about 2.93 MiB. Record, overdub, and clear snapshot work is handled between audio blocks. The single loop is not saved to a preset or file. One forward overdub pass is supported; reverse and half-speed affect playback only.</p>
+        <div class="transport" aria-label="Phrase Looper transport">
+          <button class="button" type="button" data-looper-command="0">Record</button>
+          <button class="button" type="button" data-looper-command="1">Play</button>
+          <button class="button" type="button" data-looper-command="2">Overdub</button>
+          <button class="button" type="button" data-looper-command="3">Stop</button>
+          <button class="button" type="button" data-looper-command="4">Undo</button>
+          <button class="button" type="button" data-looper-command="5">Redo</button>
+          <button class="button" type="button" data-looper-command="6">Clear</button>
+        </div>
+        <div class="gain-controls">
+          <label><input id="looper-reverse" type="checkbox"> Reverse playback</label>
+          <label><input id="looper-half-speed" type="checkbox"> Half-speed playback</label>
+          <label class="mix-control" for="looper-overdub-level"><span>Overdub input</span><output id="looper-overdub-level-value" for="looper-overdub-level">100%</output><input id="looper-overdub-level" type="range" min="0" max="100" value="100"></label>
+        </div>
+        <output id="looper-status" class="status" role="status">Stopped · no loop</output>
       </div>
       <div class="effect-parameter-group" aria-label="Grain Delay controls">
         <h3>Grain Delay · project-authored</h3>

@@ -60,6 +60,7 @@ const EFFECT_NAMES = [
   "Shimmer Reverb · project-authored pitch-fed reverb",
   "Convolution Reverb · project-authored user IR",
   "Five-band parametric EQ · project-authored",
+  "Phrase Looper · project-authored one-layer utility",
   "Output level",
   "Peak limiter",
 ];
@@ -174,6 +175,11 @@ const effectSearch = document.querySelector("#effect-search");
 const effectsList = document.querySelector("#effects-list");
 const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
+const looperStatus = document.querySelector("#looper-status");
+const looperReverse = document.querySelector("#looper-reverse");
+const looperHalfSpeed = document.querySelector("#looper-half-speed");
+const looperOverdubLevel = document.querySelector("#looper-overdub-level");
+const looperOverdubLevelValue = document.querySelector("#looper-overdub-level-value");
 const fourBandResonatorControls = document.querySelector("#four-band-resonator-controls");
 const diatonicHarmonizerControls = [
   document.querySelector("#diatonic-harmonizer-mix"),
@@ -1003,6 +1009,26 @@ function updateEffectBrowser() {
   effectsEmpty.hidden = visibleCount !== 0;
 }
 
+function updateLooperOptions() {
+  looperOverdubLevelValue.value = `${looperOverdubLevel.value}%`;
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "looper-options",
+      reverse: looperReverse.checked,
+      halfSpeed: looperHalfSpeed.checked,
+      overdubLevel: Number(looperOverdubLevel.value) / 100,
+    });
+  }
+}
+
+function sendLooperCommand(command) {
+  if (!workletNode) {
+    looperStatus.value = "Load audio and start processed playback first";
+    return;
+  }
+  workletNode.port.postMessage({ type: "looper-command", command });
+}
+
 function buildStatsBuffer() {
   if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
     isolationNote.hidden = false;
@@ -1193,9 +1219,17 @@ async function setupProcessor(testOptions = null) {
       setAudioStatus("Chain ready", "ready");
       lastTunerGeneration = 0;
       renderLoadRows(null);
+      updateLooperOptions();
       resolveReady(message);
     } else if (message?.type === "tuner-reading") {
       renderTunerReading(message);
+    } else if (message?.type === "looper-status") {
+      const labels = ["Stopped", "Recording", "Playing", "Overdubbing"];
+      const state = labels[message.state] || "Unknown";
+      const frames = Number(message.frames) || 0;
+      const sampleRate = Number(message.sampleRate) || 48000;
+      const length = frames > 0 ? `${(frames / sampleRate).toFixed(2)} s` : "no loop";
+      looperStatus.value = `${state} · ${length}${message.accepted ? "" : " · command unavailable"}`;
     } else if (message?.type === "convolution-ir-loaded" ||
                message?.type === "convolution-ir-error") {
       settleConvolutionIRLoad(message);
@@ -1525,6 +1559,16 @@ rewindButton.addEventListener("click", () => {
   progressFill.style.width = "0%";
   if (decodedAudio) setAudioStatus("Rewound", "ready");
 });
+
+for (const button of document.querySelectorAll("[data-looper-command]")) {
+  button.addEventListener("click", () => {
+    sendLooperCommand(Number(button.dataset.looperCommand));
+  });
+}
+
+looperReverse.addEventListener("change", updateLooperOptions);
+looperHalfSpeed.addEventListener("change", updateLooperOptions);
+looperOverdubLevel.addEventListener("input", updateLooperOptions);
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
 effectSearch.addEventListener("input", updateEffectBrowser);
@@ -3223,6 +3267,16 @@ async function waitForCapture(control, expectedSamples) {
   }
 }
 
+async function waitForLooperStatus(prefix) {
+  const started = performance.now();
+  while (!looperStatus.value.startsWith(prefix)) {
+    if (performance.now() - started > 3000) {
+      throw new Error(`Timed out waiting for Phrase Looper status: ${looperStatus.value}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -3235,8 +3289,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 61 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 61 || effectRows.length !== 61 ||
+      const expectedEffectIds = Array.from({ length: 62 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 62 || effectRows.length !== 62 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -3248,10 +3302,10 @@ async function runBrowserSelfTest() {
          initialEffectState[50] || initialEffectState[51] || initialEffectState[52] ||
          initialEffectState[53] || initialEffectState[54] || initialEffectState[55] ||
            initialEffectState[56] || initialEffectState[57] ||
-           initialEffectState[58] ||
+           initialEffectState[58] || initialEffectState[59] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 61 ordered, categorized effects (IDs 0–60), with optional effects disabled by default.");
+        throw new Error("The effect picker must list 62 ordered, categorized effects (IDs 0–61), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -3382,7 +3436,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-          effectCount.value !== "10 of 61" ||
+          effectCount.value !== "10 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3390,8 +3444,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,60" ||
-        effectCount.value !== "9 of 61" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,61" ||
+        effectCount.value !== "9 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3400,7 +3454,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 61" ||
+        effectCount.value !== "7 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3409,7 +3463,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 61" ||
+        effectCount.value !== "7 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3417,7 +3471,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,58" || effectCount.value !== "5 of 61" ||
+    if (eqIds.join(",") !== "20,25,26,27,58" || effectCount.value !== "5 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -3425,7 +3479,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 61" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3433,7 +3487,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 61" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3441,15 +3495,23 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 61" ||
+    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the project-authored monophonic guitar synth without changing chain state.");
+    }
+    effectCategoryFilter.value = "loop";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const loopIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (loopIds.join(",") !== "59" || effectCount.value !== "1 of 62" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Loop & performance category must list the phrase looper and preserve the current chain state.");
     }
     effectCategoryFilter.value = "delay";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 61" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -3457,7 +3519,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,56,57" || effectCount.value !== "6 of 61" ||
+      if (reverbIds.join(",") !== "28,29,30,31,56,57" || effectCount.value !== "6 of 62" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -3467,12 +3529,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 61") {
+      if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 62") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      if (effectCount.value !== "61 of 61" || effectRows.some((row) => row.hidden)) {
+      if (effectCount.value !== "62 of 62" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4049,7 +4111,15 @@ async function runBrowserSelfTest() {
         5000,
       )),
     ]);
+    looperStatus.value = "Waiting for recording command";
+    document.querySelector('[data-looper-command="0"]').click();
+    await waitForLooperStatus("Recording · no loop");
     await waitForCapture(captureView, reference.samples.length);
+    document.querySelector('[data-looper-command="3"]').click();
+    await waitForLooperStatus("Stopped · ");
+    if (looperStatus.value.includes("no loop")) {
+      throw new Error("Browser Looper recording did not retain processed input audio.");
+    }
     reverseDelayRestart.click();
     reverseDelayRun.checked = false;
     reverseDelayRun.dispatchEvent(new Event("change", { bubbles: true }));
