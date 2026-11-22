@@ -95,7 +95,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(71);
+        effects_.reserve(72);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -307,6 +307,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::DualEngineDistortion>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::Vibe>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -384,6 +387,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 70U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 71U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -859,6 +865,14 @@ public:
         parameters.bass_boost = bass_boost != 0U;
         parameters.level_db = level_db;
         distortion->set_parameters(parameters);
+    }
+
+    void configure_vibe(float rate_hz, float depth, float trem,
+                        std::uint32_t stages, float spread,
+                        float level) noexcept {
+        auto* vibe = static_cast<tabletfx::Vibe*>(effects_[71].effect.get());
+        vibe->set_parameters({rate_hz, depth, trem,
+                              static_cast<std::uint8_t>(stages), spread, level});
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2906,6 +2920,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_dual_engine_distortion(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_dual_engine_distortion(
             gain_a, tone_a, gain_b, tone_b, blend, mode, bass_boost, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_vibe(
+    void* opaque, float rate_hz, float depth, float trem,
+    std::uint32_t stages, float spread, float level) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_vibe(rate_hz, depth, trem,
+                                         stages, spread, level);
     }
 }
 

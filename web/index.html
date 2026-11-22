@@ -83,7 +83,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">73 of 73</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">74 of 74</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -158,8 +158,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="68"><span class="effect-number">69</span><span class="effect-name">Megatap Delay · project-authored</span><span class="effect-default">1–64 taps · diffusion · tap shaping</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="vocal"><input type="checkbox" data-effect="69"><span class="effect-number">70</span><span class="effect-name">De-Esser · project-authored</span><span class="effect-default">6.5 kHz · 12 dB maximum reduction</span><span class="effect-category-tag">Vocal FX</span></label>
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="70"><span class="effect-number">71</span><span class="effect-name">Dual-Engine Distortion · project-authored</span><span class="effect-default">A/B blend or series · bass boost</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="71" checked><span class="effect-number">72</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="72" checked><span class="effect-number">73</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="71"><span class="effect-number">72</span><span class="effect-name">Vibe · project-authored</span><span class="effect-default">1.5 Hz · 2 stages · 70% depth</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="72" checked><span class="effect-number">73</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="73" checked><span class="effect-number">74</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1177,6 +1178,18 @@
           <label class="mix-control" for="dual-distortion-mode"><span>Mode</span><output for="dual-distortion-mode">Blend</output><select id="dual-distortion-mode"><option value="0">Blend</option><option value="1">Series</option></select></label>
           <label class="mix-control" for="dual-distortion-bass-boost"><span>Bass Boost</span><output for="dual-distortion-bass-boost">Off</output><input id="dual-distortion-bass-boost" type="checkbox"></label>
           <label class="mix-control" for="dual-distortion-level-db"><span>Level</span><output for="dual-distortion-level-db">0 dB</output><input id="dual-distortion-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Vibe controls">
+        <h3>Vibe · project-authored</h3>
+        <p class="hint"><a href="https://kb.line6.com/helix-stadium-1-4-release-notes" target="_blank" rel="noreferrer">Line 6 Helix Stadium 1.4 release notes</a> document Essex Vibe controls Rate, Depth, Trem, one/two Stages, stereo Spread, and Level. The notes do not publish numeric ranges, defaults, or the DSP topology. These controls and the two-stage all-pass/amplitude-modulation processor are project-authored; this does not claim Line 6 algorithm or sound parity. Spread affects stereo only; mono playback cannot create stereo width.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="vibe-rate-hz"><span>Rate</span><output for="vibe-rate-hz">1.5 Hz</output><input id="vibe-rate-hz" type="range" min="0.1" max="10" step="0.1" value="1.5"></label>
+          <label class="mix-control" for="vibe-depth"><span>Depth</span><output for="vibe-depth">70%</output><input id="vibe-depth" type="range" min="0" max="100" step="1" value="70"></label>
+          <label class="mix-control" for="vibe-trem"><span>Trem</span><output for="vibe-trem">20%</output><input id="vibe-trem" type="range" min="0" max="100" step="1" value="20"></label>
+          <label class="mix-control" for="vibe-stages"><span>Stages</span><output for="vibe-stages">2</output><select id="vibe-stages"><option value="1">1</option><option value="2" selected>2</option></select></label>
+          <label class="mix-control" for="vibe-spread"><span>Spread</span><output for="vibe-spread">50%</output><input id="vibe-spread" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="vibe-level"><span>Level</span><output for="vibe-level">1.00</output><input id="vibe-level" type="range" min="0" max="2" step="0.01" value="1"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Auto-Pan controls">

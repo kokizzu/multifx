@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Vibe and 74-entry picker (2026-11-22)
+
+The project-authored Vibe processor follows the control concepts documented for Line 6 Helix Stadium Essex Vibe. It uses one or two swept first-order all-pass stages, a dry/wet depth blend, amplitude modulation, stereo spread, and a linear output level. Rate is 1.5 Hz default (project range 0.1–10 Hz), Depth 70%, Trem 20%, Stages 2, Spread 50%, Level 1.0 (0–2). Defaults, ranges, topology, and DSP are project choices. Processing uses fixed state and no delay line; no isolated callback CPU measurement or human listening result has been run.
+
+`make test` passed 78/78 CTest cases and `make web-test` passed the 74-entry Modulation picker plus HeadlessChrome 151 local-guitar Play smoke through slot 71 (peak 0.4336884; 47,998 active samples). The offline comparison disables Vibe because it has no matching CLI reference. Line 6's v1.4 notes document control names but no numeric bounds/defaults/topology; no Line 6 DSP or sound parity is claimed.
+
 ## Dual-Engine Distortion and 73-entry picker (2026-11-22)
 
 The project-authored Dual-Engine Distortion uses two independent soft-clipping/tone paths with parallel Blend or Series routing, optional low-shelf Bass Boost, and output Level. A/B Gain/Tone and Blend are normalized project values; Level is −24…+12 dB. Controls ramp over 10 ms. It uses fixed per-channel scalar state, adds no delay, and allocates nothing in `process()`. No isolated CPU/aliasing measurement or human listening result has been run.
