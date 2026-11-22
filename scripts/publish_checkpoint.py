@@ -1069,6 +1069,12 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/shuffling_looper.hpp",
     "src/effects/shuffling_looper.cpp",
     "tests/test_shuffling_looper.cpp",
+    "include/tabletfx/effects/ten_tap_delay.hpp",
+    "src/effects/ten_tap_delay.cpp",
+    "tests/test_ten_tap_delay.cpp",
+    "include/tabletfx/effects/de_esser.hpp",
+    "src/effects/de_esser.cpp",
+    "tests/test_de_esser.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
