@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">64 of 64</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">65 of 65</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -148,8 +148,9 @@
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="59"><span class="effect-number">60</span><span class="effect-name">Five-band parametric EQ · project-authored</span><span class="effect-default">5 peaking bands · frequency / gain / Q</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="60"><span class="effect-number">61</span><span class="effect-name">Phrase Looper · project-authored</span><span class="effect-default">Mono/stereo · one layer · 4 s at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
         <label class="effect-row" data-category="stereo"><input type="checkbox" data-effect="61"><span class="effect-number">62</span><span class="effect-name">Stereo Enhancer · project-authored</span><span class="effect-default">Modern width · Classic delay/pan · Stereoizer</span><span class="effect-category-tag">Stereo &amp; image</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="62" checked><span class="effect-number">63</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="63" checked><span class="effect-number">64</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="62"><span class="effect-number">63</span><span class="effect-name">Resonant Delay · project-authored</span><span class="effect-default">Resonant feedback · adjustable center/Q</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="63" checked><span class="effect-number">64</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="64" checked><span class="effect-number">65</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -970,6 +971,17 @@
           <label class="mix-control" for="enhancer-pan-right"><span>Classic right pan</span><output id="enhancer-pan-right-value" for="enhancer-pan-right">100%</output><input id="enhancer-pan-right" type="range" min="0" max="1" step="0.01" value="1"></label>
           <label class="mix-control" for="enhancer-balance"><span>Classic balance</span><output id="enhancer-balance-value" for="enhancer-balance">0.00</output><input id="enhancer-balance" type="range" min="-1" max="1" step="0.01" value="0"></label>
           <label class="mix-control" for="enhancer-mix"><span>Mix</span><output id="enhancer-mix-value" for="enhancer-mix">100%</output><input id="enhancer-mix" type="range" min="0" max="1" step="0.01" value="1"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Resonant Delay controls">
+        <h3>Resonant Delay · project-authored</h3>
+        <p class="hint">A resonant band-pass shapes the delayed signal before it feeds the next repeat. The immediate dry path is unchanged. Controls and ranges are project choices; no HeadRush algorithm or parameter parity is claimed.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="resonant-delay-time-ms"><span>Time</span><output id="resonant-delay-time-ms-value" for="resonant-delay-time-ms">350 ms</output><input id="resonant-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="resonant-delay-feedback"><span>Feedback</span><output id="resonant-delay-feedback-value" for="resonant-delay-feedback">35%</output><input id="resonant-delay-feedback" type="range" min="0" max="0.95" step="0.01" value="0.35"></label>
+          <label class="mix-control" for="resonant-delay-center-hz"><span>Resonant center</span><output id="resonant-delay-center-hz-value" for="resonant-delay-center-hz">800 Hz</output><input id="resonant-delay-center-hz" type="range" min="50" max="8000" step="1" value="800"></label>
+          <label class="mix-control" for="resonant-delay-q"><span>Resonance Q</span><output id="resonant-delay-q-value" for="resonant-delay-q">2.0 Q</output><input id="resonant-delay-q" type="range" min="0.5" max="12" step="0.1" value="2"></label>
+          <label class="mix-control" for="resonant-delay-mix"><span>Mix</span><output id="resonant-delay-mix-value" for="resonant-delay-mix">25%</output><input id="resonant-delay-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Phrase Looper controls">

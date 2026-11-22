@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Latest DSP verification (Resonant Delay and 65-entry picker, 2026-11-22)
+
+The project-authored Resonant Delay filters delayed audio through a per-channel band-pass biquad before output and feedback; dry input stays immediate. Controls are Time 350 ms (1–2,000 ms), Feedback 0.35 (0–0.95), Center 800 Hz (50…min(8,000 Hz, 0.45×sample rate)), Resonance Q 2 (0.5–12), and Mix 0.25 (0–1). Bounds/defaults and topology are project-authored, not HeadRush Prime RESO DELAY controls. A 2 s stereo ring uses 768,008 B at 48 kHz; construction allocates and process() does not. No isolated CPU benchmark was run. make web-test passed 69 CTest cases and the 65-entry picker/browser capture with a 62-active-processor native/WASM maximum absolute error of 0.0000121512 and RMS error 0.00000203987. make audio-regression passed five pickup positions plus stereo/mono DI through all 62 processors. Output is very quiet, so parity and finite audio do not establish useful musical level or sound quality. Manual listening, hardware-route performance, and device latency remain open.
+
 
 ## Latest DSP verification (Stereo Enhancer and 64-entry picker, 2026-11-22)
 

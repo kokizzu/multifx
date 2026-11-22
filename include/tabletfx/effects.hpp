@@ -9,6 +9,7 @@
 #include "tabletfx/effects/mono_guitar_synth.hpp"
 #include "tabletfx/effects/note_generator.hpp"
 #include "tabletfx/effects/enhancer.hpp"
+#include "tabletfx/effects/resonant_delay.hpp"
 #include "tabletfx/effects/pitch_feedback_delay.hpp"
 #include "tabletfx/effects/feedback_generator.hpp"
 #include "tabletfx/effects/shimmer_reverb.hpp"

@@ -245,6 +245,8 @@ struct Options {
     tabletfx::ModulatedDelayParameters modulated_delay{};
     bool filtered_delay_enabled = false;
     tabletfx::FilteredDelayParameters filtered_delay{};
+    bool resonant_delay_enabled = false;
+    tabletfx::ResonantDelayParameters resonant_delay{};
     bool sweep_delay_enabled = false;
     tabletfx::SweepDelayParameters sweep_delay{};
 };
@@ -1076,6 +1078,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--filtered-delay") {
             options.filtered_delay_enabled = true;
+            continue;
+        }
+        if (key == "--resonant-delay") {
+            options.resonant_delay_enabled = true;
             continue;
         }
         if (key == "--sweep-delay") {
@@ -2523,6 +2529,26 @@ Options parse_options(int argc, char** argv, int first) {
             options.filtered_delay.high_cut_hz = value;
             options.filtered_delay_enabled = true;
         }
+        else if (key == "--resonant-delay-time-ms") {
+            options.resonant_delay.time_ms = value;
+            options.resonant_delay_enabled = true;
+        }
+        else if (key == "--resonant-delay-feedback") {
+            options.resonant_delay.feedback = value;
+            options.resonant_delay_enabled = true;
+        }
+        else if (key == "--resonant-delay-center-hz") {
+            options.resonant_delay.center_hz = value;
+            options.resonant_delay_enabled = true;
+        }
+        else if (key == "--resonant-delay-q") {
+            options.resonant_delay.resonance_q = value;
+            options.resonant_delay_enabled = true;
+        }
+        else if (key == "--resonant-delay-mix") {
+            options.resonant_delay.mix = value;
+            options.resonant_delay_enabled = true;
+        }
         else if (key == "--sweep-delay-time-ms") {
             options.sweep_delay.time_ms = value;
             options.sweep_delay_enabled = true;
@@ -2884,6 +2910,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::FilteredDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F,
             options.filtered_delay));
+    }
+    if (options.resonant_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::ResonantDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.resonant_delay));
     }
     if (options.sweep_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::SweepDelay>(
@@ -4285,6 +4316,10 @@ void print_usage() {
                      " [--filtered-delay-feedback 0..0.95] [--filtered-delay-mix 0..1]"
                      " [--filtered-delay-low-cut-hz 20..1000]"
                      " [--filtered-delay-high-cut-hz 2000..20000]\n"
+                  << "                 [--resonant-delay] [--resonant-delay-time-ms 1..2000]"
+                     " [--resonant-delay-feedback 0..0.95] [--resonant-delay-mix 0..1]"
+                     " [--resonant-delay-center-hz 50..8000]"
+                     " [--resonant-delay-q 0.5..12]\n"
                   << "                 [--sweep-delay] [--sweep-delay-time-ms 1..2000]"
                      " [--sweep-delay-feedback 0..0.95] [--sweep-delay-mix 0..1]"
                      " [--sweep-delay-start-hz 20..18000] [--sweep-delay-stop-hz 20..18000]"

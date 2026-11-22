@@ -559,7 +559,7 @@ Reference coverage: conventional, pitch, reverse, grain, resonant, hold, and rhy
 - [ ] **DLY-12 · P1** Filtered delay.
 - [ ] **DLY-13 · P1** Pitch-shifted feedback delay.
 - [ ] **DLY-14 · P1** Swell delay.
-- [ ] **DLY-15 · P2** Resonant delay.
+- [x] **DLY-15 · P2** Resonant delay. Implemented as an independently designed resonant-feedback delay; no HeadRush RESO DELAY algorithm or control parity is claimed.
 - [ ] **DLY-16 · P2** Granular/glitch delay.
 - [ ] **DLY-17 · P1** Hold/freeze delay with defined retrigger behavior.
 - [ ] **DLY-18 · P1** Lo-fi delay.

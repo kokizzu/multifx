@@ -88,7 +88,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(64);
+          effects_.reserve(65);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -273,6 +273,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::Enhancer>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::ResonantDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -334,6 +337,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 61U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 62U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -1017,6 +1023,19 @@ public:
         parameters.mix = values[10];
         static_cast<tabletfx::Enhancer*>(effects_[61].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_resonant_delay(const float* values,
+                                  std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 5U) return;
+        tabletfx::ResonantDelayParameters parameters;
+        parameters.time_ms = values[0];
+        parameters.feedback = values[1];
+        parameters.center_hz = values[2];
+        parameters.resonance_q = values[3];
+        parameters.mix = values[4];
+        static_cast<tabletfx::ResonantDelay*>(effects_[62].effect.get())
+            ->configure(parameters);
     }
 
     void configure_grain_delay(float time_ms, float feedback, float mix,
@@ -2276,6 +2295,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_enhancer(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_enhancer(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_resonant_delay(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_resonant_delay(values, value_count);
     }
 }
 
