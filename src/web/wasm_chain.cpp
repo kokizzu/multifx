@@ -386,9 +386,6 @@ public:
         if (index == 57U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
-        if (index == 58U && effects_[index].enabled && !enabled) {
-            effects_[index].effect->reset();
-        }
         if (index == 61U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
@@ -433,11 +430,15 @@ public:
     }
 
     void process_effect(std::uint32_t index) noexcept {
-        if (frames_ == 0 || index >= effects_.size() ||
-            (!effects_[index].enabled && index != 38U && index != 64U)) {
+        if (frames_ == 0 || index >= effects_.size()) {
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        if (!effects_[index].enabled && index != 38U && index != 64U) {
+            effects_[index].effect->process_bypassed(
+                std::span<float>(work_.data(), samples), channels_);
+            return;
+        }
         effects_[index].effect->process(std::span<float>(work_.data(), samples), channels_);
     }
 
@@ -1632,10 +1633,15 @@ public:
             ->configure(parameters);
     }
 
-    void configure_convolution_reverb(float mix, float level_db) noexcept {
+    void configure_convolution_reverb(float mix, float level_db,
+                                      float high_pass_hz, float low_pass_hz,
+                                      std::uint32_t tails) noexcept {
         tabletfx::ConvolutionReverbParameters parameters;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.high_pass_hz = high_pass_hz;
+        parameters.low_pass_hz = low_pass_hz;
+        parameters.tails = tails != 0;
         static_cast<tabletfx::ConvolutionReverb*>(effects_[58].effect.get())
             ->configure(parameters);
     }
@@ -2903,9 +2909,11 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shimmer_reverb(
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_convolution_reverb(
-    void* opaque, float mix, float level_db) noexcept {
+    void* opaque, float mix, float level_db, float high_pass_hz,
+    float low_pass_hz, std::uint32_t tails) noexcept {
     if (opaque != nullptr) {
-        as_chain(opaque)->configure_convolution_reverb(mix, level_db);
+        as_chain(opaque)->configure_convolution_reverb(
+            mix, level_db, high_pass_hz, low_pass_hz, tails);
     }
 }
 

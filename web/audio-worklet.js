@@ -339,7 +339,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [350, 0.35, 0.25, 7]);
       this.configureFeedbackGenerator(parameters.feedbackGenerator ||
         [1, 0.35, 15, 600, 0, 1, -48]);
-      const convolutionReverb = parameters.convolutionReverb || [0.25, 0];
+      const convolutionReverb = parameters.convolutionReverb || [0.25, 0, 0, 0, 0];
       module._tf_chain_set_convolution_reverb(this.chain, ...convolutionReverb);
       const flanger = parameters.flanger || [0.25, 2, 1, 0.35, 0, 0.35];
       module._tf_chain_set_flanger(this.chain, ...flanger);

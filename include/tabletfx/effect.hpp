@@ -12,6 +12,9 @@ public:
     virtual ~Effect() = default;
     [[nodiscard]] virtual std::string_view id() const noexcept = 0;
     virtual void process(std::span<float> interleaved, std::uint16_t channels) noexcept = 0;
+    // Effects with spillover can emit their stored tail while passing a bypassed
+    // signal through. Other effects remain transparent while bypassed.
+    virtual void process_bypassed(std::span<float>, std::uint16_t) noexcept {}
     virtual void reset() noexcept {}
     // Object plus memory owned directly by the processor; excludes caller buffers,
     // allocator metadata, and backend/runtime overhead.

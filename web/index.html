@@ -577,16 +577,19 @@
       </div>
       <div class="effect-parameter-group" aria-label="Convolution reverb controls">
         <h3>Convolution Reverb · project-authored user IR</h3>
-        <p class="hint">Loads a local mono or stereo WAV impulse response; the file stays in this browser. Limit: 24,000 target-rate frames (0.5 s at 48 kHz). Processing adds a fixed 128-frame latency and aligns the dry path to it. Mono IRs are duplicated to stereo; stereo IRs process left and right independently, without cross-channel convolution. This is a general project implementation, not a Tone Master Pro, HeadRush, or XR1 algorithm emulation. Block bypass clears the pending tail.</p>
-        <label class="file-picker" for="convolution-ir-file">
+        <p class="hint">Loads a local mono or stereo WAV impulse response; the file stays in this browser. Limit: 24,000 target-rate frames (0.5 s at 48 kHz), shorter than the 10-second maximum documented for HeadRush Prime C-Verb. Processing adds a fixed 128-frame latency and aligns the dry path to it. Mono IRs are duplicated to stereo; stereo IRs process left and right independently, without cross-channel convolution. High-pass, low-pass, wet level, and per-block Tails controls are project-authored features informed by the documented C-Verb controls; this does not emulate HeadRush DSP. With Tails on, bypass passes the dry chain and adds the stored convolution tail. Cross-rig spillover and rig switching are not implemented.</p>
+          <label class="file-picker" for="convolution-ir-file">
           <span class="file-icon" aria-hidden="true">IR</span>
-          <span><strong>Open a reverb IR WAV</strong><small>Mono/stereo · up to 24,000 frames · local only</small></span>
+            <span><strong>Open a reverb IR WAV</strong><small>Mono/stereo · up to 24,000 frames · local only</small></span>
           <input id="convolution-ir-file" type="file" accept=".wav,audio/wav">
         </label>
         <p id="convolution-ir-status" class="hint" role="status">No IR loaded; the enabled block passes audio through.</p>
         <div class="gain-controls">
           <label class="mix-control" for="convolution-reverb-mix"><span>Mix</span><output id="convolution-reverb-mix-value" for="convolution-reverb-mix">25%</output><input id="convolution-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
           <label class="mix-control" for="convolution-reverb-level"><span>Wet level</span><output id="convolution-reverb-level-value" for="convolution-reverb-level">0.0 dB</output><input id="convolution-reverb-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="convolution-reverb-high-pass"><span>Wet high-pass</span><output id="convolution-reverb-high-pass-value" for="convolution-reverb-high-pass">Off</output><input id="convolution-reverb-high-pass" type="range" min="0" max="10000" step="1" value="0"></label>
+          <label class="mix-control" for="convolution-reverb-low-pass"><span>Wet low-pass</span><output id="convolution-reverb-low-pass-value" for="convolution-reverb-low-pass">Off</output><input id="convolution-reverb-low-pass" type="range" min="0" max="20000" step="10" value="0"></label>
+          <label class="mix-control" for="convolution-reverb-tails"><span>Keep tail when bypassed</span><output for="convolution-reverb-tails">Off</output><input id="convolution-reverb-tails" type="checkbox"></label>
         </div>
       </div>
       <div class="gain-controls">

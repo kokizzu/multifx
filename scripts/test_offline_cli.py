@@ -105,6 +105,8 @@ def check_convolution_reverb(executable: Path) -> None:
                 str(executable), "render", str(source), str(output),
                 "--convolution-ir", str(impulse),
                 "--convolution-reverb-mix", "1",
+                "--convolution-reverb-high-pass-hz", "0",
+                "--convolution-reverb-low-pass-hz", "0",
             ],
             capture_output=True,
             text=True,

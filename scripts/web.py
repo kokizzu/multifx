@@ -881,6 +881,8 @@ def browser_test() -> None:
               "--convolution-ir", str(convolution_ir_path),
               "--convolution-reverb-mix", "0.35",
               "--convolution-reverb-level-db", "-3",
+               "--convolution-reverb-high-pass-hz", "96.25",
+               "--convolution-reverb-low-pass-hz", "8650",
               "--five-band-eq-band1-frequency-hz", "100",
               "--five-band-eq-band1-gain-db", "1.5",
               "--five-band-eq-band1-q", "0.7",

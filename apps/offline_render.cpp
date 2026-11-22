@@ -649,6 +649,8 @@ Options parse_options(int argc, char** argv, int first) {
                 std::string_view("--convolution-reverb-").size());
             if (setting == "mix") options.convolution_reverb.mix = value;
             else if (setting == "level-db") options.convolution_reverb.level_db = value;
+            else if (setting == "high-pass-hz") options.convolution_reverb.high_pass_hz = value;
+            else if (setting == "low-pass-hz") options.convolution_reverb.low_pass_hz = value;
             else throw std::invalid_argument("Unknown option: " + std::string(key));
             options.convolution_reverb_enabled = true;
             continue;
@@ -4348,6 +4350,7 @@ void print_usage() {
                  " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
                  " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
                   " [--convolution-ir IR.wav] [--convolution-reverb-mix 0..1] [--convolution-reverb-level-db dB]"
+                  " [--convolution-reverb-high-pass-hz 0..10000] [--convolution-reverb-low-pass-hz 0..20000]"
                  " [--wah-position 0..1] [--wah-min-hz Hz] [--wah-max-hz Hz] [--wah-q Q] [--wah-level-db dB]"
                   " [--touch-wah-sensitivity 0..1] [--touch-wah-direction up|down]"
                   " [--touch-wah-min-hz Hz] [--touch-wah-max-hz Hz] [--touch-wah-q Q]"

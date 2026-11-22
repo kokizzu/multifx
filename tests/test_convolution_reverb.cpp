@@ -122,6 +122,85 @@ void dry_mix_is_aligned_with_convolved_wet_path() {
           "dry and wet impulse should sum without a relative timing offset");
 }
 
+void wet_filter_controls_shape_the_convolved_signal() {
+    tabletfx::ConvolutionReverbParameters high_pass_parameters;
+    high_pass_parameters.mix = 1.0F;
+    high_pass_parameters.high_pass_hz = 1000.0F;
+    high_pass_parameters.low_pass_hz = 0.0F;
+    tabletfx::ConvolutionReverb high_pass(48000.0F, 1, high_pass_parameters);
+    const std::array<float, 1> impulse{1.0F};
+    check(high_pass.load_impulse_response(impulse, 1, 48000),
+          "IR should load for high-pass test");
+    std::array<float, 4096> low_tone{};
+    for (std::size_t frame = 0; frame < low_tone.size(); ++frame) {
+        low_tone[frame] = std::sin(2.0F * 3.14159265358979323846F *
+                                  100.0F * static_cast<float>(frame) / 48000.0F);
+    }
+    high_pass.process(low_tone, 1);
+    float high_pass_rms = 0.0F;
+    for (std::size_t frame = 512; frame < low_tone.size(); ++frame) {
+        high_pass_rms += low_tone[frame] * low_tone[frame];
+    }
+    high_pass_rms = std::sqrt(high_pass_rms /
+                              static_cast<float>(low_tone.size() - 512));
+    check(high_pass_rms < 0.15F,
+          "wet high-pass should attenuate frequencies below its cutoff");
+
+    tabletfx::ConvolutionReverbParameters low_pass_parameters;
+    low_pass_parameters.mix = 1.0F;
+    low_pass_parameters.high_pass_hz = 0.0F;
+    low_pass_parameters.low_pass_hz = 1000.0F;
+    tabletfx::ConvolutionReverb low_pass(48000.0F, 1, low_pass_parameters);
+    check(low_pass.load_impulse_response(impulse, 1, 48000),
+          "IR should load for low-pass test");
+    std::array<float, 4096> high_tone{};
+    for (std::size_t frame = 0; frame < high_tone.size(); ++frame) {
+        high_tone[frame] = std::sin(2.0F * 3.14159265358979323846F *
+                                   5000.0F * static_cast<float>(frame) / 48000.0F);
+    }
+    low_pass.process(high_tone, 1);
+    float low_pass_rms = 0.0F;
+    for (std::size_t frame = 512; frame < high_tone.size(); ++frame) {
+        low_pass_rms += high_tone[frame] * high_tone[frame];
+    }
+    low_pass_rms = std::sqrt(low_pass_rms /
+                             static_cast<float>(high_tone.size() - 512));
+    check(low_pass_rms < 0.2F,
+          "wet low-pass should attenuate frequencies above its cutoff");
+}
+
+void bypass_can_preserve_or_clear_the_convolution_tail() {
+    const std::array<float, 4> ir{1.0F, 0.5F, 0.25F, 0.125F};
+
+    tabletfx::ConvolutionReverbParameters tails_parameters;
+    tails_parameters.mix = 1.0F;
+    tails_parameters.tails = true;
+    tabletfx::ConvolutionReverb with_tails(48000.0F, 1, tails_parameters);
+    check(with_tails.load_impulse_response(ir, 1, 48000),
+          "IR should load for tails-on test");
+    std::array<float, 128> onset{};
+    onset[0] = 1.0F;
+    with_tails.process(onset, 1);
+    std::array<float, 128> bypassed{};
+    with_tails.process_bypassed(bypassed, 1);
+    check(near(bypassed[0], ir[0]) && near(bypassed[1], ir[1]),
+          "tails-on bypass should pass dry input and continue the convolved tail");
+
+    tails_parameters.tails = false;
+    tabletfx::ConvolutionReverb without_tails(48000.0F, 1, tails_parameters);
+    check(without_tails.load_impulse_response(ir, 1, 48000),
+          "IR should load for tails-off test");
+    std::array<float, 128> second_onset{};
+    second_onset[0] = 1.0F;
+    without_tails.process(second_onset, 1);
+    std::array<float, 128> cleared{};
+    without_tails.process_bypassed(cleared, 1);
+    check(std::all_of(cleared.begin(), cleared.end(), [](float value) {
+              return std::abs(value) < 2.0e-5F;
+          }),
+          "tails-off bypass should clear the pending convolution tail");
+}
+
 void reset_clears_pending_tail_and_keeps_loaded_ir() {
     auto effect = make_wet_mono();
     const std::array<float, 4> ir{1.0F, 0.5F, -0.25F, 0.125F};
@@ -248,6 +327,8 @@ int main() {
     impulse_response_crosses_partition_boundary();
     stereo_ir_uses_independent_channels_and_mono_ir_duplicates();
     dry_mix_is_aligned_with_convolved_wet_path();
+    wet_filter_controls_shape_the_convolved_signal();
+    bypass_can_preserve_or_clear_the_convolution_tail();
     reset_clears_pending_tail_and_keeps_loaded_ir();
     resampling_bounds_and_failed_load_preserve_loaded_ir();
     irregular_process_chunks_match_single_call();

@@ -364,7 +364,10 @@ const shimmerReverbControls = [
 const convolutionReverbControls = [
   document.querySelector("#convolution-reverb-mix"),
   document.querySelector("#convolution-reverb-level"),
+  document.querySelector("#convolution-reverb-high-pass"),
+  document.querySelector("#convolution-reverb-low-pass"),
 ];
+const convolutionReverbTails = document.querySelector("#convolution-reverb-tails");
 
 function appendResonatorControl(parent, labelText, index, options) {
   const label = document.createElement("label");
@@ -3443,12 +3446,21 @@ function updateConvolutionReverb() {
   const values = [
     Number(convolutionReverbControls[0].value) / 100,
     Number(convolutionReverbControls[1].value),
+    Number(convolutionReverbControls[2].value),
+    Number(convolutionReverbControls[3].value),
+    Number(convolutionReverbTails.checked),
   ];
   DEFAULT_PARAMETERS.convolutionReverb = values;
   convolutionReverbControls[0].parentElement.querySelector("output").value =
     `${Math.round(values[0] * 100)}%`;
   convolutionReverbControls[1].parentElement.querySelector("output").value =
     `${values[1].toFixed(1)} dB`;
+  convolutionReverbControls[2].parentElement.querySelector("output").value =
+    values[2] === 0 ? "Off" : `${Math.round(values[2])} Hz`;
+  convolutionReverbControls[3].parentElement.querySelector("output").value =
+    values[3] === 0 ? "Off" : `${Math.round(values[3])} Hz`;
+  convolutionReverbTails.parentElement.querySelector("output").value =
+    convolutionReverbTails.checked ? "On" : "Off";
   if (workletNode) {
     workletNode.port.postMessage({ type: "convolution-reverb", value: values });
   }
@@ -3458,6 +3470,8 @@ for (const control of convolutionReverbControls) {
   control.addEventListener("input", updateConvolutionReverb);
   control.addEventListener("change", updateConvolutionReverb);
 }
+convolutionReverbTails.addEventListener("input", updateConvolutionReverb);
+convolutionReverbTails.addEventListener("change", updateConvolutionReverb);
 updateConvolutionReverb();
 
 function updateFlanger() {
@@ -5514,6 +5528,55 @@ async function runBrowserSelfTest() {
           !row.querySelector(".effect-category-tag"))) {
               throw new Error("The effect picker must list 79 ordered, categorized effects (IDs 0–78), with optional effects disabled by default.");
      }
+     const convolutionDefaults = [...DEFAULT_PARAMETERS.convolutionReverb];
+     const convolutionRanges = [
+       [convolutionReverbControls[0], "0", "100"],
+       [convolutionReverbControls[1], "-24", "12"],
+       [convolutionReverbControls[2], "0", "10000"],
+       [convolutionReverbControls[3], "0", "20000"],
+     ];
+     const convolutionHint = document.querySelector(
+       '.effect-parameter-group[aria-label="Convolution reverb controls"] .hint',
+     ).textContent;
+     if (convolutionDefaults.join(",") !== "0.25,0,0,0,0" ||
+         convolutionRanges.some(([control, minimum, maximum]) =>
+           control.min !== minimum || control.max !== maximum) ||
+         !convolutionHint.includes("HeadRush Prime C-Verb") ||
+         !convolutionHint.includes("10-second maximum") ||
+         !convolutionHint.includes("Cross-rig spillover") ||
+         convolutionReverbTails.checked) {
+       throw new Error("Convolution Reverb must expose its project filter and wet controls, per-block tails toggle, and Prime capability limits.");
+     }
+     const convolutionControlSnapshot = convolutionReverbControls.map((control) => control.value);
+     const convolutionTailsSnapshot = convolutionReverbTails.checked;
+     const previousConvolutionWorklet = workletNode;
+     const convolutionMessages = [];
+     try {
+       workletNode = { port: { postMessage: (message) => convolutionMessages.push(message) } };
+       [convolutionReverbControls[0].value, convolutionReverbControls[1].value,
+         convolutionReverbControls[2].value, convolutionReverbControls[3].value] =
+         ["45", "-2", "96", "8650"];
+       convolutionReverbTails.checked = true;
+       convolutionReverbControls[2].dispatchEvent(new Event("input", { bubbles: true }));
+       const convolutionMessage = convolutionMessages.at(-1);
+       if (convolutionMessage?.type !== "convolution-reverb" ||
+           convolutionMessage.value.join(",") !== "0.45,-2,96,8650,1" ||
+           convolutionReverbControls[2].parentElement.querySelector("output").value !== "96 Hz" ||
+           convolutionReverbControls[3].parentElement.querySelector("output").value !== "8650 Hz" ||
+           convolutionReverbTails.parentElement.querySelector("output").value !== "On") {
+         throw new Error("Convolution Reverb controls must send filters, wet gain, mix, and tails in WASM API order.");
+       }
+     } finally {
+       workletNode = previousConvolutionWorklet;
+       convolutionReverbControls.forEach((control, index) => {
+         control.value = convolutionControlSnapshot[index];
+       });
+       convolutionReverbTails.checked = convolutionTailsSnapshot;
+       updateConvolutionReverb();
+     }
+     if (DEFAULT_PARAMETERS.convolutionReverb.join(",") !== "0.25,0,0,0,0") {
+       throw new Error("Convolution Reverb self-test must restore its project-authored defaults.");
+     }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
      fiveBandEqControls[2].q.value = "2.25";
@@ -6671,7 +6734,7 @@ async function runBrowserSelfTest() {
          pitchFeedbackDelay: [350, 0.35, 0.25, 7],
          feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
          shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
-         convolutionReverb: [0.35, -3],
+         convolutionReverb: [0.35, -3, 96.25, 8650, 1],
          fiveBandEq: [100, 1.5, 0.7, 1, 12, 350, -0.5, 1, 0, 12,
            1000, 1, 0.7, 0, 12, 3500, -0.5, 0.8, 0, 12,
            8000, 0.5, 0.7, 4, 24],

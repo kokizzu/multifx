@@ -15,6 +15,10 @@ struct ConvolutionReverbParameters {
     // Project-authored wet controls; these are not copied from a device.
     float mix = 0.25F;
     float level_db = 0.0F;
+    // Zero disables the corresponding wet-path filter.
+    float high_pass_hz = 0.0F;
+    float low_pass_hz = 0.0F;
+    bool tails = false;
 };
 
 // User-IR convolution reverb using uniform 128-frame overlap-add partitions.
@@ -61,6 +65,8 @@ public:
     void clear_impulse_response() noexcept;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -79,6 +85,8 @@ private:
                    bool inverse) const noexcept;
     void process_partition() noexcept;
     void advance_controls() noexcept;
+    [[nodiscard]] float filter_wet_sample(float sample,
+                                          std::uint16_t channel) noexcept;
 
     float sample_rate_ = 48000.0F;
     std::uint16_t channels_ = 2;
@@ -102,8 +110,17 @@ private:
     float level_ = 1.0F;
     float target_level_ = 1.0F;
     float level_step_ = 0.0F;
+    float high_pass_hz_ = 0.0F;
+    float high_pass_step_ = 0.0F;
+    float low_pass_hz_ = 0.0F;
+    float low_pass_step_ = 0.0F;
+    std::array<float, 2> high_pass_previous_input_{};
+    std::array<float, 2> high_pass_previous_output_{};
+    std::array<float, 2> low_pass_previous_output_{};
     std::size_t ramp_total_ = 1;
     std::size_t ramp_remaining_ = 0;
+    std::size_t tail_partitions_remaining_ = 0;
+    bool bypassed_ = false;
 };
 
 } // namespace tabletfx

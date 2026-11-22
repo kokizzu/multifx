@@ -74,15 +74,25 @@ void ConvolutionReverb::configure(ConvolutionReverbParameters parameters) noexce
     parameters.mix = bounded(parameters.mix, defaults.mix, 0.0F, 1.0F);
     parameters.level_db = bounded(parameters.level_db, defaults.level_db,
                                   -24.0F, 12.0F);
+    parameters.high_pass_hz = bounded(parameters.high_pass_hz,
+                                      defaults.high_pass_hz, 0.0F, 10000.0F);
+    parameters.low_pass_hz = bounded(parameters.low_pass_hz,
+                                     defaults.low_pass_hz, 0.0F, 20000.0F);
 
     const float previous_mix = mix_;
     const float previous_level = level_;
+    const float previous_high_pass = high_pass_hz_;
+    const float previous_low_pass = low_pass_hz_;
     parameters_ = parameters;
     const float ramp = static_cast<float>(ramp_total_);
     const float target_mix = parameters_.mix;
     target_level_ = std::pow(10.0F, parameters_.level_db / 20.0F);
+    const float target_high_pass = parameters_.high_pass_hz;
+    const float target_low_pass = parameters_.low_pass_hz;
     mix_step_ = (target_mix - previous_mix) / ramp;
     level_step_ = (target_level_ - previous_level) / ramp;
+    high_pass_step_ = (target_high_pass - previous_high_pass) / ramp;
+    low_pass_step_ = (target_low_pass - previous_low_pass) / ramp;
     ramp_remaining_ = ramp_total_;
 }
 
@@ -154,6 +164,8 @@ void ConvolutionReverb::clear_impulse_response() noexcept {
 void ConvolutionReverb::process(std::span<float> interleaved,
                                 std::uint16_t channels) noexcept {
     if (channels != channels_ || channels == 0 || partition_count_ == 0) return;
+    bypassed_ = false;
+    tail_partitions_remaining_ = 0;
     const std::size_t frames = interleaved.size() / channels_;
     for (std::size_t frame = 0; frame < frames; ++frame) {
         advance_controls();
@@ -164,7 +176,7 @@ void ConvolutionReverb::process(std::span<float> interleaved,
             const float delayed_dry = dry_delay_[index];
             dry_delay_[index] = input;
             input_block_[index] = input;
-            const float wet = output_block_[index];
+            const float wet = filter_wet_sample(output_block_[index], channel);
             const float output = delayed_dry * (1.0F - mix_) +
                                  wet * mix_ * level_;
             interleaved[frame * channels_ + channel] =
@@ -174,6 +186,39 @@ void ConvolutionReverb::process(std::span<float> interleaved,
         if (frame_cursor_ == kPartitionFrames) {
             process_partition();
             frame_cursor_ = 0;
+        }
+    }
+}
+
+void ConvolutionReverb::process_bypassed(std::span<float> interleaved,
+                                         std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0) return;
+    if (!parameters_.tails) {
+        if (!bypassed_ || tail_partitions_remaining_ != 0) reset();
+        bypassed_ = true;
+        return;
+    }
+    if (!bypassed_) {
+        bypassed_ = true;
+        tail_partitions_remaining_ = partition_count_;
+    }
+    if (partition_count_ == 0 || tail_partitions_remaining_ == 0) return;
+
+    const std::size_t frames = interleaved.size() / channels_;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        advance_controls();
+        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+            const std::size_t index = frame_cursor_ * channels_ + channel;
+            input_block_[index] = 0.0F;
+            const float wet = filter_wet_sample(output_block_[index], channel);
+            interleaved[frame * channels_ + channel] = finite_internal_sample(
+                interleaved[frame * channels_ + channel] + wet * mix_ * level_);
+        }
+        ++frame_cursor_;
+        if (frame_cursor_ == kPartitionFrames) {
+            process_partition();
+            frame_cursor_ = 0;
+            if (tail_partitions_remaining_ > 0) --tail_partitions_remaining_;
         }
     }
 }
@@ -190,13 +235,22 @@ void ConvolutionReverb::reset() noexcept {
     output_block_.fill(0.0F);
     overlap_.fill(0.0F);
     dry_delay_.fill(0.0F);
+    high_pass_previous_input_.fill(0.0F);
+    high_pass_previous_output_.fill(0.0F);
+    low_pass_previous_output_.fill(0.0F);
     history_write_partition_ = 0;
     frame_cursor_ = 0;
     mix_ = parameters_.mix;
     level_ = target_level_;
+    high_pass_hz_ = parameters_.high_pass_hz;
+    low_pass_hz_ = parameters_.low_pass_hz;
     mix_step_ = 0.0F;
     level_step_ = 0.0F;
+    high_pass_step_ = 0.0F;
+    low_pass_step_ = 0.0F;
     ramp_remaining_ = 0;
+    tail_partitions_remaining_ = 0;
+    bypassed_ = false;
 }
 
 float ConvolutionReverb::bounded(float value, float fallback,
@@ -316,12 +370,48 @@ void ConvolutionReverb::advance_controls() noexcept {
     if (ramp_remaining_ == 0) {
         mix_ = parameters_.mix;
         level_ = target_level_;
+        high_pass_hz_ = parameters_.high_pass_hz;
+        low_pass_hz_ = parameters_.low_pass_hz;
         mix_step_ = 0.0F;
         level_step_ = 0.0F;
+        high_pass_step_ = 0.0F;
+        low_pass_step_ = 0.0F;
         return;
     }
     mix_ += mix_step_;
     level_ += level_step_;
+    high_pass_hz_ += high_pass_step_;
+    low_pass_hz_ += low_pass_step_;
+}
+
+float ConvolutionReverb::filter_wet_sample(float sample,
+                                          std::uint16_t channel) noexcept {
+    constexpr float kTwoPi = 6.28318530717958647692F;
+    float filtered = finite_internal_sample(sample);
+    if (high_pass_hz_ > 0.0F) {
+        const float cutoff = std::min(high_pass_hz_, sample_rate_ * 0.45F);
+        const float coefficient = std::exp(-kTwoPi * cutoff / sample_rate_);
+        const float output = coefficient *
+            (high_pass_previous_output_[channel] + filtered -
+             high_pass_previous_input_[channel]);
+        high_pass_previous_input_[channel] = filtered;
+        high_pass_previous_output_[channel] = finite_internal_sample(output);
+        filtered = high_pass_previous_output_[channel];
+    } else {
+        high_pass_previous_input_[channel] = 0.0F;
+        high_pass_previous_output_[channel] = 0.0F;
+    }
+    if (low_pass_hz_ > 0.0F) {
+        const float cutoff = std::min(low_pass_hz_, sample_rate_ * 0.45F);
+        const float coefficient = std::exp(-kTwoPi * cutoff / sample_rate_);
+        const float output = (1.0F - coefficient) * filtered +
+                             coefficient * low_pass_previous_output_[channel];
+        low_pass_previous_output_[channel] = finite_internal_sample(output);
+        filtered = low_pass_previous_output_[channel];
+    } else {
+        low_pass_previous_output_[channel] = 0.0F;
+    }
+    return filtered;
 }
 
 } // namespace tabletfx
