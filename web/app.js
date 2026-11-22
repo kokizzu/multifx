@@ -78,6 +78,7 @@ const EFFECT_NAMES = [
   "Pitch Sequence · project-authored poly transposition",
   "Rhythm Tap Delay · project-authored learned rhythm",
   "Plex Matrix Delay · project-authored feedback matrix",
+  "Celestial Reverb · project-authored dual-pitch feedback",
   "Output level",
   "Peak limiter",
 ];
@@ -170,6 +171,7 @@ const DEFAULT_PARAMETERS = {
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
   shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
+  celestialReverb: [0.25, 3, 12, 7, 2, 9000, 0.5, 0],
   convolutionReverb: [0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
@@ -367,6 +369,16 @@ const shimmerReverbControls = [
   document.querySelector("#shimmer-reverb-intensity"),
   document.querySelector("#shimmer-reverb-mix"),
   document.querySelector("#shimmer-reverb-level"),
+];
+const celestialReverbControls = [
+  document.querySelector("#celestial-reverb-mix"),
+  document.querySelector("#celestial-reverb-decay"),
+  document.querySelector("#celestial-reverb-pitch-1"),
+  document.querySelector("#celestial-reverb-pitch-2"),
+  document.querySelector("#celestial-reverb-pitch-decay"),
+  document.querySelector("#celestial-reverb-high-cut"),
+  document.querySelector("#celestial-reverb-blend"),
+  document.querySelector("#celestial-reverb-spillover"),
 ];
 const convolutionReverbControls = [
   document.querySelector("#convolution-reverb-mix"),
@@ -3492,6 +3504,42 @@ for (const control of shimmerReverbControls) {
 }
 updateShimmerReverb();
 
+function updateCelestialReverb() {
+  const values = [
+    Number(celestialReverbControls[0].value) / 100,
+    Number(celestialReverbControls[1].value),
+    Number(celestialReverbControls[2].value),
+    Number(celestialReverbControls[3].value),
+    Number(celestialReverbControls[4].value),
+    Number(celestialReverbControls[5].value),
+    Number(celestialReverbControls[6].value) / 100,
+    Number(celestialReverbControls[7].checked),
+  ];
+  DEFAULT_PARAMETERS.celestialReverb = values;
+  const formats = [
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(2)} s`,
+    (value) => `${value > 0 ? "+" : ""}${Number.isInteger(value) ? value : value.toFixed(1)} semitones`,
+    (value) => `${value > 0 ? "+" : ""}${Number.isInteger(value) ? value : value.toFixed(1)} semitones`,
+    (value) => `${value.toFixed(2)} s`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => value === 1 ? "On" : "Off",
+  ];
+  celestialReverbControls.forEach((control, index) => {
+    control.parentElement.querySelector("output").value = formats[index](values[index]);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "celestial-reverb", value: values });
+  }
+}
+
+for (const control of celestialReverbControls) {
+  control.addEventListener("input", updateCelestialReverb);
+  control.addEventListener("change", updateCelestialReverb);
+}
+updateCelestialReverb();
+
 function updateConvolutionReverb() {
   const values = [
     Number(convolutionReverbControls[0].value) / 100,
@@ -5537,6 +5585,86 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
   }
 }
 
+async function runCelestialReverbBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = celestialReverbControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 77 || index === 78 || index === 79);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Celestial Reverb smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [85, 4.5, 12, 7, 2.5, 9500, 75].forEach((value, index) => {
+      celestialReverbControls[index].value = String(value);
+    });
+    celestialReverbControls[7].checked = true;
+    updateCelestialReverb();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Celestial Reverb playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    for (const sample of actual) {
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+    }
+    if (peak < 1e-5 || activeSamples < 32) {
+      throw new Error(`Celestial Reverb produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+    }
+    return {
+      peak,
+      activeSamples,
+      enabledEffectIndex: 77,
+      mixPercent: 85,
+      decaySeconds: 4.5,
+      pitchSemitones: [12, 7],
+      pitchDecaySeconds: 2.5,
+      highCutHz: 9500,
+      blendPercent: 75,
+      spillover: true,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      celestialReverbControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateCelestialReverb();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -5549,8 +5677,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 79 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 79 || effectRows.length !== 79 ||
+        const expectedEffectIds = Array.from({ length: 80 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 80 || effectRows.length !== 80 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -5565,14 +5693,15 @@ async function runBrowserSelfTest() {
             EFFECT_NAMES[74] !== "Pitch Sequence · project-authored poly transposition" ||
             EFFECT_NAMES[75] !== "Rhythm Tap Delay · project-authored learned rhythm" ||
             EFFECT_NAMES[76] !== "Plex Matrix Delay · project-authored feedback matrix" ||
-            EFFECT_NAMES[77] !== "Output level" || EFFECT_NAMES[78] !== "Peak limiter" ||
+             EFFECT_NAMES[77] !== "Celestial Reverb · project-authored dual-pitch feedback" ||
+             EFFECT_NAMES[78] !== "Output level" || EFFECT_NAMES[79] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
           initialEffectState[71] || initialEffectState[72] ||
             initialEffectState[73] || initialEffectState[74] ||
             initialEffectState[75] || initialEffectState[76] ||
-            !initialEffectState[77] || !initialEffectState[78] ||
+             initialEffectState[77] || !initialEffectState[78] || !initialEffectState[79] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -5589,7 +5718,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-              throw new Error("The effect picker must list 79 ordered, categorized effects (IDs 0–78), with optional effects disabled by default.");
+       throw new Error("The effect picker must list 80 ordered, categorized effects (IDs 0–79), with optional effects disabled by default.");
      }
      const convolutionDefaults = [...DEFAULT_PARAMETERS.convolutionReverb];
      const convolutionRanges = [
@@ -6383,7 +6512,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 79" ||
+       if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Vocal FX filter must list the project-authored De-Esser and preserve chain state.");
     }
@@ -6392,7 +6521,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71" ||
-            effectCount.value !== "13 of 79" ||
+            effectCount.value !== "13 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -6400,8 +6529,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,78" ||
-            effectCount.value !== "9 of 79" ||
+     if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,79" ||
+            effectCount.value !== "9 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -6410,7 +6539,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (driveIds.join(",") !== "9,10,11,12,13,14,46,70" ||
-            effectCount.value !== "8 of 79" ||
+            effectCount.value !== "8 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -6418,7 +6547,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 79" ||
+       if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 80" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -6427,7 +6556,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-            effectCount.value !== "7 of 79" ||
+            effectCount.value !== "7 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -6435,7 +6564,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 79" ||
+      if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -6443,7 +6572,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 79" ||
+      if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -6451,7 +6580,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 79" ||
+      if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -6459,7 +6588,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 79" ||
+      if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -6467,7 +6596,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 79" ||
+      if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -6475,7 +6604,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 79" ||
+       if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -6503,7 +6632,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76" || effectCount.value !== "15 of 79" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76" || effectCount.value !== "15 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -6511,22 +6640,38 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 79" ||
+     if (reverbIds.join(",") !== "28,29,30,31,57,58,77" || effectCount.value !== "7 of 80" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
+       throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, and Celestial Reverb without changing enabled state.");
     }
+     const celestialDefaults = [...DEFAULT_PARAMETERS.celestialReverb];
+     celestialReverbControls[0].value = "61";
+     celestialReverbControls[0].dispatchEvent(new Event("input", { bubbles: true }));
+     if (DEFAULT_PARAMETERS.celestialReverb[0] !== 0.61 ||
+         celestialReverbControls[0].parentElement.querySelector("output").value !== "61%") {
+       throw new Error("Celestial Reverb Mix control did not update its displayed and chain parameters.");
+     }
+     celestialDefaults.forEach((value, index) => {
+       if (celestialReverbControls[index].type === "checkbox") {
+         celestialReverbControls[index].checked = Boolean(value);
+       } else {
+         celestialReverbControls[index].value = String(index === 0 || index === 6
+           ? value * 100 : value);
+       }
+     });
+     updateCelestialReverb();
     effectCategoryFilter.value = "all";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     effectSearch.value = "guitar graphic";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-           if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 79") {
+           if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 80") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-           if (effectCount.value !== "79 of 79" || effectRows.some((row) => row.hidden)) {
+     if (effectCount.value !== "80 of 80" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -6710,18 +6855,19 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
-      // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, and Plex Delay have separate browser playback smokes.
+       // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, and Celestial Reverb have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
      parityEnabled[73] = false;
      parityEnabled[74] = false;
      parityEnabled[75] = false;
       parityEnabled[76] = false;
+     parityEnabled[77] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-      if (parityEnabled.length !== 79 || activeProcessorIndices.length !== 70 ||
+     if (parityEnabled.length !== 80 || activeProcessorIndices.length !== 70 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 70) {
        throw new Error("The all-effect chain must contain 70 optional processors between input trim and output utilities.");
     }
@@ -7309,6 +7455,10 @@ async function runBrowserSelfTest() {
     const plexDelaySmoke = await runPlexDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Celestial Reverb playback on local guitar audio…";
+    const celestialReverbSmoke = await runCelestialReverbBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -7434,6 +7584,7 @@ async function runBrowserSelfTest() {
       pitchSequence: pitchSequenceSmoke,
       rhythmTapDelay: rhythmTapDelaySmoke,
       plexDelay: plexDelaySmoke,
+      celestialReverb: celestialReverbSmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,

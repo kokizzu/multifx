@@ -1111,6 +1111,40 @@ def check_plex_delay(executable: Path) -> None:
             raise AssertionError("Plex Delay controls did not change rendered guitar audio")
 
 
+def check_celestial_reverb(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-celestial-reverb-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "celestial-reverb.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--celestial-reverb", "--celestial-reverb-mix", "0.7",
+             "--celestial-reverb-decay-seconds", "2.5",
+             "--celestial-reverb-pitch-1-semitones", "12",
+             "--celestial-reverb-pitch-2-semitones", "7",
+             "--celestial-reverb-pitch-decay-seconds", "2.0",
+             "--celestial-reverb-high-cut-hz", "3000",
+             "--celestial-reverb-blend", "0.8",
+             "--celestial-reverb-spillover", "on"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Celestial Reverb controls did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Celestial Reverb returned non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.02:
+            raise AssertionError("Celestial Reverb controls did not change rendered guitar audio")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -2339,6 +2373,7 @@ def main() -> None:
     check_feedback_generator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
     check_plex_delay(args.executable.resolve())
+    check_celestial_reverb(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())
@@ -2354,7 +2389,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

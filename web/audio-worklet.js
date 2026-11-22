@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -326,6 +326,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       ]);
       configurePlexDelay(module, this.chain, parameters.plexDelay);
+      this.configureCelestialReverb(parameters.celestialReverb ||
+        [0.25, 3, 12, 7, 2, 9000, 0.5, 0]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -483,6 +485,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     if (!pointer) return;
     this.module.HEAPF32.set(values, pointer >>> 2);
     this.module._tf_chain_set_shimmer_reverb(this.chain, pointer);
+    this.module._free(pointer);
+  }
+
+  configureCelestialReverb(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 8) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_celestial_reverb(this.chain, pointer);
     this.module._free(pointer);
   }
 
@@ -821,6 +834,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFeedbackGenerator(message.value);
     } else if (message.type === "shimmer-reverb" && this.ready) {
       this.configureShimmerReverb(message.value);
+    } else if (message.type === "celestial-reverb" && this.ready) {
+      this.configureCelestialReverb(message.value);
     } else if (message.type === "convolution-reverb" && this.ready) {
       this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
     } else if (message.type === "convolution-ir" && this.ready) {

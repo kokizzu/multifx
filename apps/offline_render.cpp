@@ -129,6 +129,8 @@ struct Options {
     tabletfx::effects::FeedbackGeneratorParameters feedback_generator{};
     bool shimmer_reverb_enabled = false;
     tabletfx::ShimmerReverbParameters shimmer_reverb{};
+    bool celestial_reverb_enabled = false;
+    tabletfx::CelestialReverbParameters celestial_reverb{};
     bool convolution_reverb_enabled = false;
     std::string convolution_ir_path;
     tabletfx::ConvolutionReverbParameters convolution_reverb{};
@@ -628,6 +630,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.shimmer_reverb_enabled = true;
             continue;
         }
+        if (key == "--celestial-reverb") {
+            options.celestial_reverb_enabled = true;
+            continue;
+        }
         if (key == "--convolution-reverb") {
             options.convolution_reverb_enabled = true;
             continue;
@@ -1059,6 +1065,37 @@ Options parse_options(int argc, char** argv, int first) {
             else if (setting == "level-db") parameters.level_db = value;
             else throw std::invalid_argument("Unknown option: " + std::string(key));
             options.shimmer_reverb_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--celestial-reverb-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--celestial-reverb-").size());
+            auto& parameters = options.celestial_reverb;
+            if (setting == "spillover") {
+                const std::string_view value(argv[++i]);
+                if (value == "on") parameters.spillover = true;
+                else if (value == "off") parameters.spillover = false;
+                else throw std::invalid_argument(
+                    "Celestial Reverb spillover must be on or off");
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "mix") parameters.mix = value;
+                else if (setting == "decay-seconds") parameters.decay_seconds = value;
+                else if (setting == "pitch-1-semitones") {
+                    parameters.pitch_1_semitones = value;
+                } else if (setting == "pitch-2-semitones") {
+                    parameters.pitch_2_semitones = value;
+                } else if (setting == "pitch-decay-seconds") {
+                    parameters.pitch_decay_seconds = value;
+                } else if (setting == "high-cut-hz") {
+                    parameters.high_cut_hz = value;
+                } else if (setting == "blend") parameters.blend = value;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.celestial_reverb_enabled = true;
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -3278,6 +3315,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::ShimmerReverb>(
             static_cast<float>(sample_rate), channels, options.shimmer_reverb));
     }
+    if (options.celestial_reverb_enabled) {
+        effects.push_back(std::make_unique<tabletfx::CelestialReverb>(
+            static_cast<float>(sample_rate), channels, options.celestial_reverb));
+    }
     if (options.convolution_reverb_enabled) {
         if (options.convolution_ir_path.empty()) {
             throw std::invalid_argument(
@@ -4482,6 +4523,13 @@ void print_usage() {
                    " [--shimmer-reverb-feedback 0..0.65] [--shimmer-reverb-high-pass-hz 20..1500]"
                    " [--shimmer-reverb-pitch-semitones 1..12] [--shimmer-reverb-intensity 0..1]"
                    " [--shimmer-reverb-mix 0..1] [--shimmer-reverb-level-db -24..12]"
+                   " [--celestial-reverb] [--celestial-reverb-mix 0..1]"
+                   " [--celestial-reverb-decay-seconds 0.2..12]"
+                   " [--celestial-reverb-pitch-1-semitones -12..12]"
+                   " [--celestial-reverb-pitch-2-semitones -12..12]"
+                   " [--celestial-reverb-pitch-decay-seconds 0.2..12]"
+                   " [--celestial-reverb-high-cut-hz 200..min(20000,0.45*sample-rate)]"
+                   " [--celestial-reverb-blend 0..1] [--celestial-reverb-spillover on|off]"
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"

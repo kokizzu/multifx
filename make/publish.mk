@@ -8,7 +8,8 @@ PUBLISH_CHECKPOINTS := \
 	shimmer-reverb convolution-reverb mono-guitar-synth flagship-catalog \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
-  dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay
+  dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay \
+	celestial-reverb
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))

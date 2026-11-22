@@ -84,7 +84,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-         <output id="effect-count" class="effect-count" aria-live="polite">79 of 79</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">80 of 80</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -165,8 +165,9 @@
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="74"><span class="effect-number">75</span><span class="effect-name">Pitch Sequence · project-authored poly transposition</span><span class="effect-default">Pitch · Glitch · Freeze steps</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="75"><span class="effect-number">76</span><span class="effect-name">Rhythm Tap Delay · project-authored learned rhythm</span><span class="effect-default">Learned intervals · quantize · pattern feedback</span><span class="effect-category-tag">Delay</span></label>
          <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="76"><span class="effect-number">77</span><span class="effect-name">Plex Matrix Delay · project-authored</span><span class="effect-default">Up to 8 lines · matrix feedback · Stack/Hold</span><span class="effect-category-tag">Delay</span></label>
-         <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="77" checked><span class="effect-number">78</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="78" checked><span class="effect-number">79</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+          <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="77"><span class="effect-number">78</span><span class="effect-name">Celestial Reverb · project-authored</span><span class="effect-default">Dual pitch feedback · spillover option</span><span class="effect-category-tag">Reverb</span></label>
+          <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="78" checked><span class="effect-number">79</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+          <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="79" checked><span class="effect-number">80</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -573,6 +574,20 @@
           <label class="mix-control" for="shimmer-reverb-intensity"><span>Shimmer intensity</span><output id="shimmer-reverb-intensity-value" for="shimmer-reverb-intensity">100%</output><input id="shimmer-reverb-intensity" type="range" min="0" max="100" step="1" value="100"></label>
           <label class="mix-control" for="shimmer-reverb-mix"><span>Mix</span><output id="shimmer-reverb-mix-value" for="shimmer-reverb-mix">25%</output><input id="shimmer-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
           <label class="mix-control" for="shimmer-reverb-level"><span>Wet level</span><output id="shimmer-reverb-level-value" for="shimmer-reverb-level">0.0 dB</output><input id="shimmer-reverb-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Celestial reverb controls">
+        <h3>Celestial Reverb · project-authored dual-pitch feedback</h3>
+        <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100</a> lists Mix, Decay, Pitch 1, Pitch 2, Pitch Decay, High Cut, Blend, and Spillover. The checked firmware page lists v1.8.85; it does not establish your unit's installed firmware. The manual publishes no numeric ranges or DSP topology. TabletFX supplies its own ranges, defaults, plate network, and pitch-feedback behavior; this does not emulate Fender DSP or claim sound parity. Spillover keeps this block's tail on bypass, not across presets or rigs.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="celestial-reverb-mix"><span>Mix</span><output id="celestial-reverb-mix-value" for="celestial-reverb-mix">25%</output><input id="celestial-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="celestial-reverb-decay"><span>Decay</span><output id="celestial-reverb-decay-value" for="celestial-reverb-decay">3.00 s</output><input id="celestial-reverb-decay" type="range" min="0.2" max="12" step="0.05" value="3"></label>
+          <label class="mix-control" for="celestial-reverb-pitch-1"><span>Pitch 1</span><output id="celestial-reverb-pitch-1-value" for="celestial-reverb-pitch-1">+12 semitones</output><input id="celestial-reverb-pitch-1" type="range" min="-12" max="12" step="0.5" value="12"></label>
+          <label class="mix-control" for="celestial-reverb-pitch-2"><span>Pitch 2</span><output id="celestial-reverb-pitch-2-value" for="celestial-reverb-pitch-2">+7 semitones</output><input id="celestial-reverb-pitch-2" type="range" min="-12" max="12" step="0.5" value="7"></label>
+          <label class="mix-control" for="celestial-reverb-pitch-decay"><span>Pitch Decay</span><output id="celestial-reverb-pitch-decay-value" for="celestial-reverb-pitch-decay">2.00 s</output><input id="celestial-reverb-pitch-decay" type="range" min="0.2" max="12" step="0.05" value="2"></label>
+          <label class="mix-control" for="celestial-reverb-high-cut"><span>High Cut</span><output id="celestial-reverb-high-cut-value" for="celestial-reverb-high-cut">9000 Hz</output><input id="celestial-reverb-high-cut" type="range" min="200" max="20000" step="100" value="9000"></label>
+          <label class="mix-control" for="celestial-reverb-blend"><span>Blend</span><output id="celestial-reverb-blend-value" for="celestial-reverb-blend">50%</output><input id="celestial-reverb-blend" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="celestial-reverb-spillover"><span>Spillover</span><output id="celestial-reverb-spillover-value" for="celestial-reverb-spillover">Off</output><input id="celestial-reverb-spillover" type="checkbox"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Convolution reverb controls">

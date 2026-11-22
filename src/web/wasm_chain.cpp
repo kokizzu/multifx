@@ -325,6 +325,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::PlexDelay>(
                                 static_cast<float>(sample_rate), 2000.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::CelestialReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1666,6 +1669,21 @@ public:
             ->configure(parameters);
     }
 
+    void configure_celestial_reverb(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::CelestialReverbParameters parameters;
+        parameters.mix = values[0];
+        parameters.decay_seconds = values[1];
+        parameters.pitch_1_semitones = values[2];
+        parameters.pitch_2_semitones = values[3];
+        parameters.pitch_decay_seconds = values[4];
+        parameters.high_cut_hz = values[5];
+        parameters.blend = values[6];
+        parameters.spillover = values[7] != 0.0F;
+        static_cast<tabletfx::CelestialReverb*>(effects_[77].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -2938,6 +2956,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shimmer_reverb(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_shimmer_reverb(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_celestial_reverb(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_celestial_reverb(values);
     }
 }
 

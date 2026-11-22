@@ -191,6 +191,14 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--shimmer-reverb-intensity", "0.65",
         "--shimmer-reverb-mix", "0.3",
         "--shimmer-reverb-level-db", "-3",
+        "--celestial-reverb", "--celestial-reverb-mix", "0.18",
+        "--celestial-reverb-decay-seconds", "2.5",
+        "--celestial-reverb-pitch-1-semitones", "12",
+        "--celestial-reverb-pitch-2-semitones", "7",
+        "--celestial-reverb-pitch-decay-seconds", "1.8",
+        "--celestial-reverb-high-cut-hz", "9000",
+        "--celestial-reverb-blend", "0.5",
+        "--celestial-reverb-spillover", "on",
         "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "2",
         "--flanger-depth-ms", "1", "--flanger-feedback", "0.35",
         "--flanger-feedback-polarity", "positive", "--flanger-mix", "0.2",
@@ -357,7 +365,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 65:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 66:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
