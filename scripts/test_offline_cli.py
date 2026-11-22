@@ -1274,6 +1274,87 @@ def check_flanger(executable: Path) -> None:
             )
 
 
+def check_manual_thru_zero_flanger(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [32767] + [0] * 95
+    shared_options = [
+        "--manual-thru-zero-flanger-minimum-time-ms", "2",
+        "--manual-thru-zero-flanger-maximum-time-ms", "6",
+        "--manual-thru-zero-flanger-dry-delay-position", "0.5",
+        "--manual-thru-zero-flanger-feedback-percent", "0",
+        "--manual-thru-zero-flanger-mix", "0.5",
+        "--manual-thru-zero-flanger-smoothing-ms", "0",
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-manual-tzf-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "impulse.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(label: str, options: list[str]) -> tuple[float, ...]:
+            output = root / f"{label}.wav"
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output), *options],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(
+                    f"Manual through-zero flanger options did not add one processor: {result.stdout}"
+                )
+            data = output.read_bytes()
+            return struct.unpack("<96f", data[44:44 + 96 * 4])
+
+        wet_leads = render("wet-leads", [
+            "--manual-thru-zero-flanger", *shared_options,
+            "--manual-thru-zero-flanger-manual", "0",
+            "--manual-thru-zero-flanger-phase-reverse", "both",
+        ])
+        expected = 32767 / 32768.0
+        if abs(wet_leads[16] + expected * 0.5) > 1.0e-6 or \
+                abs(wet_leads[32] - expected * 0.5) > 1.0e-6:
+            raise AssertionError(
+                "Manual through-zero CLI should expose wet-before-dry taps at frames 16/32; "
+                f"got {wet_leads[16]}/{wet_leads[32]}"
+            )
+
+        wet_trails = render("wet-trails", [
+            *shared_options,
+            "--manual-thru-zero-flanger-manual", "10",
+            "--manual-thru-zero-flanger-phase-reverse", "both",
+        ])
+        if abs(wet_trails[32] - expected * 0.5) > 1.0e-6 or \
+                abs(wet_trails[48] + expected * 0.5) > 1.0e-6:
+            raise AssertionError(
+                "Manual through-zero CLI should expose dry-before-wet taps at frames 32/48; "
+                f"got {wet_trails[32]}/{wet_trails[48]}"
+            )
+
+        cancelled = render("cancelled", [
+            *shared_options,
+            "--manual-thru-zero-flanger-manual", "5",
+            "--manual-thru-zero-flanger-phase-reverse", "both",
+        ])
+        reinforced = render("reinforced", [
+            *shared_options,
+            "--manual-thru-zero-flanger-manual", "5",
+            "--manual-thru-zero-flanger-phase-reverse", "none",
+        ])
+        if abs(cancelled[32]) > 1.0e-6 or abs(reinforced[32] - expected) > 1.0e-6:
+            raise AssertionError(
+                "Manual through-zero CLI phase reversal should cancel or reinforce matched taps; "
+                f"got {cancelled[32]}/{reinforced[32]}"
+            )
+
+        invalid_phase = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--manual-thru-zero-flanger-phase-reverse", "diagonal"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid_phase.returncode == 0 or "phase reverse must be" not in invalid_phase.stderr:
+            raise AssertionError(
+                "Manual through-zero CLI accepted an invalid phase-reverse mode"
+            )
+
+
 def check_delay_time_modes(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 2049
@@ -2543,6 +2624,7 @@ def main() -> None:
     check_cloud_reverb(args.executable.resolve())
     check_three_stage_distortion(args.executable.resolve())
     check_flanger(args.executable.resolve())
+    check_manual_thru_zero_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())
     check_compressor(args.executable.resolve())
@@ -2557,7 +2639,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

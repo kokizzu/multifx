@@ -1074,6 +1074,9 @@ ENHANCER_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 DEFERRED_AGENT_DRAFT_PATHS = (
+    "include/tabletfx/effects/octave_fuzz.hpp",
+    "src/effects/octave_fuzz.cpp",
+    "tests/test_octave_fuzz.cpp",
     "include/tabletfx/effects/manual_thru_zero_flanger.hpp",
     "src/effects/manual_thru_zero_flanger.cpp",
     "tests/test_manual_thru_zero_flanger.cpp",
@@ -1481,6 +1484,27 @@ CLOUD_REVERB_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_TZF_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/manual_thru_zero_flanger.hpp",
+    "src/effects/manual_thru_zero_flanger.cpp",
+    "tests/test_manual_thru_zero_flanger.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "README.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 MERCATOR_DIST_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -1645,6 +1669,8 @@ CHECKPOINTS = {
                          "feat: add project-authored Celestial Reverb"),
     "cloud-reverb": (CLOUD_REVERB_CHECKPOINT_PATHS,
                      "feat: add project-authored Cloud Reverb"),
+    "fractal-tzf": (FRACTAL_TZF_CHECKPOINT_PATHS,
+                    "feat: add project-authored manual through-zero flanger"),
     "mercator-dist": (MERCATOR_DIST_CHECKPOINT_PATHS,
                       "feat: add project-authored three-stage distortion"),
     "fractal-three-voice-synth": (

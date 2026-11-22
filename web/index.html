@@ -169,8 +169,9 @@
            <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="78"><span class="effect-number">79</span><span class="effect-name">Three-Voice Tracked Synth · project-authored Fractal-inspired controls</span><span class="effect-default">Three oscillators · monophonic input tracker</span><span class="effect-category-tag">Synth</span></label>
            <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="79"><span class="effect-number">80</span><span class="effect-name">Cloud Reverb · project-authored modulated reverb</span><span class="effect-default">Mix · Tone · Decay · Diffuse · High/Low Damp · Rate/Depth · Spillover</span><span class="effect-category-tag">Reverb</span></label>
             <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="80"><span class="effect-number">81</span><span class="effect-name">Three-Stage Distortion · project-authored</span><span class="effect-default">Three nonlinear stages · two interstage drives · active Bass/Mid/Treble</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-            <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="81" checked><span class="effect-number">82</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-            <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="82" checked><span class="effect-number">83</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+            <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="81"><span class="effect-number">82</span><span class="effect-name">Manual Through-Zero Flanger · project-authored Fractal-inspired controls</span><span class="effect-default">Manual time · delayed dry crossing point · feedback · phase reverse</span><span class="effect-category-tag">Modulation</span></label>
+            <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="82" checked><span class="effect-number">83</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+            <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="83" checked><span class="effect-number">84</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -851,6 +852,41 @@
           <input id="mercator-level-db" type="range" min="-24" max="12" step="0.1" value="0">
         </label>
         <p class="hint">Project-authored three-stage soft clipping and active tone shaping. The controls borrow the documented stage ordering and names in Line 6 Helix Stadium 1.4 notes; the frequency response, bounds, defaults, clipping, and smoothing are independent project choices, not Line 6 settings or DSP parity.</p>
+      </div>
+      <div class="gain-controls" aria-label="Manual Through-Zero Flanger project-authored controls">
+        <label class="mix-control" for="manual-tzf-minimum-time">
+          <span>Minimum time · project range 0.34–19.99 ms</span><output id="manual-tzf-minimum-time-value" for="manual-tzf-minimum-time">0.34 ms</output>
+          <input id="manual-tzf-minimum-time" type="range" min="0.34" max="19.99" step="0.01" value="0.34">
+        </label>
+        <label class="mix-control" for="manual-tzf-maximum-time">
+          <span>Maximum time · project range 0.35–20 ms</span><output id="manual-tzf-maximum-time-value" for="manual-tzf-maximum-time">8.00 ms</output>
+          <input id="manual-tzf-maximum-time" type="range" min="0.35" max="20" step="0.01" value="8">
+        </label>
+        <label class="mix-control" for="manual-tzf-manual">
+          <span>Manual · project range 0–10 ms</span><output id="manual-tzf-manual-value" for="manual-tzf-manual">5.00 ms</output>
+          <input id="manual-tzf-manual" type="range" min="0" max="10" step="0.01" value="5">
+        </label>
+        <label class="mix-control" for="manual-tzf-dry-delay-position">
+          <span>Dry Delay crossing position · project range 0–100%</span><output id="manual-tzf-dry-delay-position-value" for="manual-tzf-dry-delay-position">50%</output>
+          <input id="manual-tzf-dry-delay-position" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+        <label class="mix-control" for="manual-tzf-feedback">
+          <span>Feedback · project range −100…+100%</span><output id="manual-tzf-feedback-value" for="manual-tzf-feedback">0%</output>
+          <input id="manual-tzf-feedback" type="range" min="-100" max="100" step="1" value="0">
+        </label>
+        <label class="mix-control" for="manual-tzf-phase-reverse">
+          <span>Phase reverse · project control</span><output id="manual-tzf-phase-reverse-value" for="manual-tzf-phase-reverse">Both</output>
+          <select id="manual-tzf-phase-reverse"><option value="0">None</option><option value="1">Left</option><option value="2">Right</option><option value="3" selected>Both</option></select>
+        </label>
+        <label class="mix-control" for="manual-tzf-mix">
+          <span>Wet mix · project range 0–100%</span><output id="manual-tzf-mix-value" for="manual-tzf-mix">50%</output>
+          <input id="manual-tzf-mix" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+        <label class="mix-control" for="manual-tzf-smoothing">
+          <span>Control smoothing · project range 0–1000 ms</span><output id="manual-tzf-smoothing-value" for="manual-tzf-smoothing">10 ms</output>
+          <input id="manual-tzf-smoothing" type="range" min="0" max="1000" step="1" value="10">
+        </label>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide</a> documents Manual Thru-Zero Flanger, a Thru-Zero Off/Auto/Manual mode, Manual at 0.01–10 ms, minimum/maximum flanger times spanning 0.340–20 ms, Dry Delay moving the cancellation point, feedback −100…+100%, and channel phase reverse. This project implements Manual mode only; its parameter mapping, ranges/defaults, and DSP are independent. Both paths are delayed; at the default 8 ms maximum the path latency is 384 frames at 48 kHz. Host/graph latency compensation is not implemented.</p>
       </div>
       <div class="gain-controls" aria-label="Round fuzz controls">
         <label class="mix-control" for="round-fuzz-amount">

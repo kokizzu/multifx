@@ -51,6 +51,7 @@
 #include "tabletfx/effects/harmonic_tremolo.hpp"
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
+#include "tabletfx/effects/manual_thru_zero_flanger.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -336,6 +337,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::MercatorDistortion>(
                                 static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::ManualThruZeroFlanger>(
+                                static_cast<float>(sample_rate), channels),
                             false});
     }
 
@@ -1764,6 +1768,26 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_manual_thru_zero_flanger(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::ManualThruZeroFlangerParameters parameters;
+        parameters.minimum_time_ms = values[0];
+        parameters.maximum_time_ms = values[1];
+        parameters.manual = values[2];
+        parameters.dry_delay_position = values[3];
+        parameters.feedback_percent = values[4];
+        const auto phase = static_cast<int>(values[5]);
+        parameters.phase_reverse = phase <= 0
+            ? tabletfx::FlangerPhaseReverse::None
+            : phase == 1 ? tabletfx::FlangerPhaseReverse::Left
+            : phase == 2 ? tabletfx::FlangerPhaseReverse::Right
+                         : tabletfx::FlangerPhaseReverse::Both;
+        parameters.mix = values[6];
+        parameters.smoothing_ms = values[7];
+        static_cast<tabletfx::ManualThruZeroFlanger*>(effects_[81].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3087,6 +3111,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_mercator_dist(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_mercator_distortion(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_manual_thru_zero_flanger(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_manual_thru_zero_flanger(values);
     }
 }
 

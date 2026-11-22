@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "fractal-three-voice-synth", "cloud-reverb", "three-stage-distortion", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "fractal-three-voice-synth", "cloud-reverb", "three-stage-distortion", "manual-thru-zero-flanger", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -341,6 +341,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [0.25, 0.5, 7, 0.8, 9000, 80, 0.3, 0.15, 0]);
       this.configureMercatorDistortion(parameters.mercatorDistortion ||
         [0.45, 0.45, 0, 0, 0, 0, 0, 0]);
+      this.configureManualThruZeroFlanger(parameters.manualThruZeroFlanger ||
+        [0.34, 8, 5, 0.5, 0, 3, 0.5, 10]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -535,6 +537,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     if (!pointer) return;
     this.module.HEAPF32.set(values, pointer >>> 2);
     this.module._tf_chain_set_mercator_dist(this.chain, pointer);
+    this.module._free(pointer);
+  }
+
+  configureManualThruZeroFlanger(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 8) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_manual_thru_zero_flanger(this.chain, pointer);
     this.module._free(pointer);
   }
 
@@ -900,6 +913,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureCloudReverb(message.value);
     } else if (message.type === "mercator-distortion" && this.ready) {
       this.configureMercatorDistortion(message.value);
+    } else if (message.type === "manual-thru-zero-flanger" && this.ready) {
+      this.configureManualThruZeroFlanger(message.value);
     } else if (message.type === "convolution-reverb" && this.ready) {
       this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
     } else if (message.type === "convolution-ir" && this.ready) {

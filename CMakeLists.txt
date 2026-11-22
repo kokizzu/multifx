@@ -26,6 +26,7 @@ add_library(tabletfx_core
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
+    src/effects/manual_thru_zero_flanger.cpp
     src/effects/phaser.cpp
     src/effects/overdrive.cpp
     src/effects/mid_overdrive.cpp
@@ -221,6 +222,12 @@ if(BUILD_TESTING)
     add_executable(tabletfx_flanger_tests tests/test_flanger.cpp)
     target_link_libraries(tabletfx_flanger_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_flanger_tests COMMAND tabletfx_flanger_tests)
+
+    add_executable(tabletfx_manual_thru_zero_flanger_tests
+        tests/test_manual_thru_zero_flanger.cpp)
+    target_link_libraries(tabletfx_manual_thru_zero_flanger_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_manual_thru_zero_flanger_tests
+        COMMAND tabletfx_manual_thru_zero_flanger_tests)
 
     add_executable(tabletfx_phaser_tests tests/test_phaser.cpp)
     target_link_libraries(tabletfx_phaser_tests PRIVATE tabletfx_core)

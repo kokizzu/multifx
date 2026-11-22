@@ -8,6 +8,7 @@
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
+#include "tabletfx/effects/manual_thru_zero_flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
 #include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/plate_reverb.hpp"
@@ -146,6 +147,8 @@ struct Options {
     tabletfx::PlexDelayParameters plex_delay{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
+    bool manual_thru_zero_flanger_enabled = false;
+    tabletfx::ManualThruZeroFlangerParameters manual_thru_zero_flanger{};
     bool phaser_enabled = false;
     tabletfx::PhaserParameters phaser{};
     bool vibrato_enabled = false;
@@ -666,6 +669,57 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--cloud-reverb") {
             options.cloud_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--manual-thru-zero-flanger") {
+            options.manual_thru_zero_flanger_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--manual-thru-zero-flanger-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            constexpr std::string_view prefix = "--manual-thru-zero-flanger-";
+            const std::string_view setting = key.substr(prefix.size());
+            if (setting == "phase-reverse") {
+                const std::string_view value(argv[++i]);
+                if (value == "none") {
+                    options.manual_thru_zero_flanger.phase_reverse =
+                        tabletfx::FlangerPhaseReverse::None;
+                } else if (value == "left") {
+                    options.manual_thru_zero_flanger.phase_reverse =
+                        tabletfx::FlangerPhaseReverse::Left;
+                } else if (value == "right") {
+                    options.manual_thru_zero_flanger.phase_reverse =
+                        tabletfx::FlangerPhaseReverse::Right;
+                } else if (value == "both") {
+                    options.manual_thru_zero_flanger.phase_reverse =
+                        tabletfx::FlangerPhaseReverse::Both;
+                } else {
+                    throw std::invalid_argument(
+                        "Manual through-zero flanger phase reverse must be none, left, right, or both");
+                }
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "minimum-time-ms") {
+                    options.manual_thru_zero_flanger.minimum_time_ms = value;
+                } else if (setting == "maximum-time-ms") {
+                    options.manual_thru_zero_flanger.maximum_time_ms = value;
+                } else if (setting == "manual") {
+                    options.manual_thru_zero_flanger.manual = value;
+                } else if (setting == "dry-delay-position") {
+                    options.manual_thru_zero_flanger.dry_delay_position = value;
+                } else if (setting == "feedback-percent") {
+                    options.manual_thru_zero_flanger.feedback_percent = value;
+                } else if (setting == "mix") {
+                    options.manual_thru_zero_flanger.mix = value;
+                } else if (setting == "smoothing-ms") {
+                    options.manual_thru_zero_flanger.smoothing_ms = value;
+                } else {
+                    throw std::invalid_argument("Unknown option: " + std::string(key));
+                }
+            }
+            options.manual_thru_zero_flanger_enabled = true;
             continue;
         }
         if (key == "--three-stage-distortion") {
@@ -3240,6 +3294,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Flanger>(
             static_cast<float>(sample_rate), channels, options.flanger));
     }
+    if (options.manual_thru_zero_flanger_enabled) {
+        effects.push_back(std::make_unique<tabletfx::ManualThruZeroFlanger>(
+            static_cast<float>(sample_rate), channels,
+            options.manual_thru_zero_flanger));
+    }
     if (options.phaser_enabled) {
         effects.push_back(std::make_unique<tabletfx::Phaser>(
             static_cast<float>(sample_rate), channels, options.phaser));
@@ -4793,6 +4852,15 @@ void print_usage() {
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
+                  " [--manual-thru-zero-flanger]"
+                  " [--manual-thru-zero-flanger-minimum-time-ms 0.340..19.990]"
+                  " [--manual-thru-zero-flanger-maximum-time-ms 0.350..20]"
+                  " [--manual-thru-zero-flanger-manual 0..10]"
+                  " [--manual-thru-zero-flanger-dry-delay-position 0..1]"
+                  " [--manual-thru-zero-flanger-feedback-percent -100..100]"
+                  " [--manual-thru-zero-flanger-phase-reverse none|left|right|both]"
+                  " [--manual-thru-zero-flanger-mix 0..1]"
+                  " [--manual-thru-zero-flanger-smoothing-ms 0..1000]"
                    " [--phaser-rate-hz Hz] [--phaser-min-hz Hz] [--phaser-max-hz Hz]"
                    " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
                    " [--vibrato-rate-hz 0.1..10] [--vibrato-depth-ms 0..1.5]"
