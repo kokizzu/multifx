@@ -1,6 +1,14 @@
 # Latency, quality, and DSP-load protocol
 
-## Latest DSP verification (Resonant Delay and 65-entry picker, 2026-11-22)
+## Latest DSP verification (Harmonic Tremolo and 66-entry picker, 2026-11-22)
+
+Harmonic Tremolo is a project-authored complementary low/high-band tremolo with opposing LFO phases. Its 48 kHz stereo/128-frame isolated synthetic benchmark measured 0.0776% p50 / 0.0795% p95 / 0.0825% p99 / 0.2944% p99.9 / 0.8258% maximum of a 2.667 ms callback and 136 B processor-owned memory. The effect has no fixed algorithmic latency; construction owns fixed state and process() allocates nothing.
+
+The synthetic full-chain benchmark reported 63.3250% p50 / 83.6152% p95 / 100.9092% p99 / 110.6711% p99.9 / 135.7905% maximum and 11,284,600 B owned memory. Its maximum exceeds one callback deadline; this processor-call stress result is not evidence of real-time safety on a device.
+
+make test passed 70/70 CTest cases plus offline CLI checks. make web-test passed browser Play/native parity in HeadlessChrome 151 with maximum absolute error 0.0000177590 and RMS error 0.00000292105; the 63-active-processor browser chain used 13,320,996 B plus 10,364 B tuner state within the fixed 16 MiB WASM heap. make audio-regression passed the 63-processor chain across five pickup positions and stereo/mono DI. Output remains very quiet, and browser callback timing has millisecond fallback resolution. No listening, live-device, or Fender sound/control parity is established.
+
+## Previous DSP verification (Resonant Delay and 65-entry picker, 2026-11-22)
 
 The project-authored Resonant Delay filters delayed audio through a per-channel band-pass biquad before output and feedback; dry input stays immediate. Controls are Time 350 ms (1–2,000 ms), Feedback 0.35 (0–0.95), Center 800 Hz (50…min(8,000 Hz, 0.45×sample rate)), Resonance Q 2 (0.5–12), and Mix 0.25 (0–1). Bounds/defaults and topology are project-authored, not HeadRush Prime RESO DELAY controls. A 2 s stereo ring uses 768,008 B at 48 kHz; construction allocates and process() does not. No isolated CPU benchmark was run. make web-test passed 69 CTest cases and the 65-entry picker/browser capture with a 62-active-processor native/WASM maximum absolute error of 0.0000121512 and RMS error 0.00000203987. make audio-regression passed five pickup positions plus stereo/mono DI through all 62 processors. Output is very quiet, so parity and finite audio do not establish useful musical level or sound quality. Manual listening, hardware-route performance, and device latency remain open.
 

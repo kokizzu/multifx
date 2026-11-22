@@ -17,6 +17,7 @@
 #include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/multiband_compressor.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
+#include "tabletfx/effects/harmonic_tremolo.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/triple_double_chorus.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"

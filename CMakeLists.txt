@@ -40,6 +40,7 @@ add_library(tabletfx_core
     src/effects/peak_limiter.cpp
     src/effects/poly_pitch_shifter.cpp
     src/effects/tremolo.cpp
+    src/effects/harmonic_tremolo.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -246,6 +247,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tremolo_tests tests/test_tremolo.cpp)
     target_link_libraries(tabletfx_tremolo_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tremolo_tests COMMAND tabletfx_tremolo_tests)
+
+    add_executable(tabletfx_harmonic_tremolo_tests tests/test_harmonic_tremolo.cpp)
+    target_link_libraries(tabletfx_harmonic_tremolo_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_harmonic_tremolo_tests COMMAND tabletfx_harmonic_tremolo_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

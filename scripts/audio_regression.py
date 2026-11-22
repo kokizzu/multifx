@@ -123,6 +123,12 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--round-fuzz-mix", "0.85",
         "--tremolo-rate-hz", "4", "--tremolo-depth", "0.2",
         "--tremolo-waveform", "sine", "--tremolo-sync", "off",
+        "--harmonic-tremolo-rate-hz", "3", "--harmonic-tremolo-depth", "0.65",
+        "--harmonic-tremolo-crossover-hz", "700",
+        "--harmonic-tremolo-waveform", "sine",
+        "--harmonic-tremolo-sync", "off",
+        "--harmonic-tremolo-stereo-alternation", "on",
+        "--harmonic-tremolo-smoothing-ms", "10",
         "--chorus-rate-hz", "0.8", "--chorus-delay-ms", "15",
         "--chorus-depth-ms", "7", "--chorus-mix", "0.2",
         "--dimension-chorus-version", "C", "--dimension-chorus-mode", "1",
@@ -347,7 +353,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 62:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 63:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -423,7 +429,7 @@ def main() -> None:
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav",
                            convolution_ir, "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 62-stage chain with a deterministic local convolution IR, including the project-authored five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 63-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

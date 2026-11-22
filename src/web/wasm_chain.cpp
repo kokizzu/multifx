@@ -42,6 +42,7 @@
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/tremolo.hpp"
+#include "tabletfx/effects/harmonic_tremolo.hpp"
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
@@ -275,6 +276,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::ResonantDelay>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::HarmonicTremolo>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -782,6 +786,34 @@ public:
         }
         tremolo->set_tempo_sync(tempo_sync != 0, tempo_bpm, beats_per_cycle);
         tremolo->set_depth(depth);
+    }
+
+    void configure_harmonic_tremolo(float rate_hz, float depth,
+                                    float crossover_hz,
+                                    std::uint32_t waveform,
+                                    std::uint32_t tempo_sync,
+                                    float tempo_bpm, float beats_per_cycle,
+                                    std::uint32_t stereo_alternation,
+                                    float smoothing_ms) noexcept {
+        auto* tremolo = static_cast<tabletfx::HarmonicTremolo*>(
+            effects_[63].effect.get());
+        tremolo->set_rate_hz(rate_hz);
+        tremolo->set_depth(depth);
+        tremolo->set_crossover_hz(crossover_hz);
+        switch (waveform) {
+        case 1:
+            tremolo->set_waveform(tabletfx::HarmonicTremoloWaveform::Triangle);
+            break;
+        case 2:
+            tremolo->set_waveform(tabletfx::HarmonicTremoloWaveform::Square);
+            break;
+        default:
+            tremolo->set_waveform(tabletfx::HarmonicTremoloWaveform::Sine);
+            break;
+        }
+        tremolo->set_tempo_sync(tempo_sync != 0, tempo_bpm, beats_per_cycle);
+        tremolo->set_stereo_alternation(stereo_alternation != 0);
+        tremolo->set_smoothing_ms(smoothing_ms);
     }
 
     void configure_chorus(float rate_hz, float base_delay_ms, float depth_ms,
@@ -2220,6 +2252,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tremolo(
         as_chain(opaque)->configure_tremolo(rate_hz, depth, waveform,
                                             tempo_sync, tempo_bpm,
                                             beats_per_cycle);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_harmonic_tremolo(
+    void* opaque, float rate_hz, float depth, float crossover_hz,
+    std::uint32_t waveform, std::uint32_t tempo_sync, float tempo_bpm,
+    float beats_per_cycle, std::uint32_t stereo_alternation,
+    float smoothing_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_harmonic_tremolo(
+            rate_hz, depth, crossover_hz, waveform, tempo_sync, tempo_bpm,
+            beats_per_cycle, stereo_alternation, smoothing_ms);
     }
 }
 

@@ -1876,6 +1876,44 @@ def check_resonant_delay(executable: Path) -> None:
             raise AssertionError("zero-feedback Resonant Delay must not produce a later repeat")
 
 
+def check_harmonic_tremolo(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(0.65 * 32767 * math.sin(2.0 * math.pi * 60.0 * index / sample_rate))
+        for index in range(sample_rate)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-harmonic-tremolo-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "low-tone.wav"
+        output = root / "harmonic.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--harmonic-tremolo-rate-hz", "1",
+             "--harmonic-tremolo-depth", "1",
+             "--harmonic-tremolo-crossover-hz", "700",
+             "--harmonic-tremolo-waveform", "square",
+             "--harmonic-tremolo-sync", "off",
+             "--harmonic-tremolo-stereo-alternation", "off",
+             "--harmonic-tremolo-smoothing-ms", "0"],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                "Harmonic Tremolo CLI render failed: "
+                f"stdout={result.stdout!r} stderr={result.stderr!r}"
+            )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Harmonic Tremolo CLI controls did not enable one processor")
+        rendered = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        low_band_on = math.sqrt(sum(value * value for value in rendered[4800:9600]) / 4800)
+        low_band_off = math.sqrt(sum(value * value for value in rendered[28800:33600]) / 4800)
+        if low_band_on <= low_band_off * 5.0:
+            raise AssertionError(
+                "Harmonic Tremolo should alternate a low-frequency tone between complementary LFO phases"
+            )
+
+
 def check_sweep_delay(executable: Path) -> None:
     sample_rate = 48000
     delay_frames = 96
@@ -2153,6 +2191,7 @@ def main() -> None:
     check_modulated_delay(args.executable.resolve())
     check_filtered_delay(args.executable.resolve())
     check_resonant_delay(args.executable.resolve())
+    check_harmonic_tremolo(args.executable.resolve())
     check_sweep_delay(args.executable.resolve())
     check_formant_filter(args.executable.resolve())
     check_harmonic_resonator(args.executable.resolve())

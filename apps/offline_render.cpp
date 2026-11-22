@@ -41,6 +41,7 @@
 #include "tabletfx/effects/phaser.hpp"
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/tremolo.hpp"
+#include "tabletfx/effects/harmonic_tremolo.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
@@ -98,6 +99,8 @@ struct Options {
     tabletfx::RoundFuzzParameters round_fuzz{};
     bool tremolo_enabled = false;
     tabletfx::TremoloParameters tremolo{};
+    bool harmonic_tremolo_enabled = false;
+    tabletfx::HarmonicTremoloParameters harmonic_tremolo{};
     bool chorus_enabled = false;
     tabletfx::ChorusParameters chorus{};
     bool dimension_chorus_enabled = false;
@@ -1592,6 +1595,50 @@ Options parse_options(int argc, char** argv, int first) {
             options.tremolo_enabled = true;
             continue;
         }
+        if (key == "--harmonic-tremolo-waveform") {
+            const std::string_view value(argv[++i]);
+            if (value == "sine") {
+                options.harmonic_tremolo.waveform =
+                    tabletfx::HarmonicTremoloWaveform::Sine;
+            } else if (value == "triangle") {
+                options.harmonic_tremolo.waveform =
+                    tabletfx::HarmonicTremoloWaveform::Triangle;
+            } else if (value == "square") {
+                options.harmonic_tremolo.waveform =
+                    tabletfx::HarmonicTremoloWaveform::Square;
+            } else {
+                throw std::invalid_argument(
+                    "Harmonic tremolo waveform must be sine, triangle, or square");
+            }
+            options.harmonic_tremolo_enabled = true;
+            continue;
+        }
+        if (key == "--harmonic-tremolo-sync") {
+            const std::string_view value(argv[++i]);
+            if (value == "on") {
+                options.harmonic_tremolo.tempo_sync = true;
+            } else if (value == "off") {
+                options.harmonic_tremolo.tempo_sync = false;
+            } else {
+                throw std::invalid_argument(
+                    "Harmonic tremolo sync must be 'on' or 'off'");
+            }
+            options.harmonic_tremolo_enabled = true;
+            continue;
+        }
+        if (key == "--harmonic-tremolo-stereo-alternation") {
+            const std::string_view value(argv[++i]);
+            if (value == "on") {
+                options.harmonic_tremolo.stereo_alternation = true;
+            } else if (value == "off") {
+                options.harmonic_tremolo.stereo_alternation = false;
+            } else {
+                throw std::invalid_argument(
+                    "Harmonic tremolo stereo alternation must be 'on' or 'off'");
+            }
+            options.harmonic_tremolo_enabled = true;
+            continue;
+        }
         if (key == "--touch-wah-direction") {
             const std::string_view value(argv[++i]);
             if (value == "up") {
@@ -1715,6 +1762,30 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--tremolo-beats-per-cycle") {
             options.tremolo.beats_per_cycle = value;
             options.tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-rate-hz") {
+            options.harmonic_tremolo.rate_hz = value;
+            options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-depth") {
+            options.harmonic_tremolo.depth = value;
+            options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-crossover-hz") {
+            options.harmonic_tremolo.crossover_hz = value;
+            options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-tempo-bpm") {
+            options.harmonic_tremolo.tempo_bpm = value;
+            options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-beats-per-cycle") {
+            options.harmonic_tremolo.beats_per_cycle = value;
+            options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--harmonic-tremolo-smoothing-ms") {
+            options.harmonic_tremolo.smoothing_ms = value;
+            options.harmonic_tremolo_enabled = true;
         }
         else if (key == "--chorus-rate-hz") {
             options.chorus.rate_hz = value;
@@ -2740,6 +2811,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Tremolo>(
             static_cast<float>(sample_rate), options.tremolo));
     }
+    if (options.harmonic_tremolo_enabled) {
+        effects.push_back(std::make_unique<tabletfx::HarmonicTremolo>(
+            static_cast<float>(sample_rate), options.harmonic_tremolo));
+    }
     if (options.chorus_enabled) {
         effects.push_back(std::make_unique<tabletfx::Chorus>(
             static_cast<float>(sample_rate), channels, options.chorus));
@@ -3407,6 +3482,9 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     tremolo_parameters.rate_hz = 4.0F;
     tremolo_parameters.depth = 0.2F;
     effects.push_back(std::make_unique<tabletfx::Tremolo>(sample_rate, tremolo_parameters));
+    tabletfx::HarmonicTremoloParameters harmonic_tremolo_parameters;
+    effects.push_back(std::make_unique<tabletfx::HarmonicTremolo>(
+        static_cast<float>(sample_rate), harmonic_tremolo_parameters));
     tabletfx::ChorusParameters chorus_parameters;
     chorus_parameters.rate_hz = 0.8F;
     chorus_parameters.base_delay_ms = 15.0F;
@@ -4054,6 +4132,11 @@ void run_bench() {
         parameters.depth = 0.5F;
         return std::make_unique<tabletfx::Tremolo>(static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("harmonic-tremolo", [=] {
+        tabletfx::HarmonicTremoloParameters parameters;
+        return std::make_unique<tabletfx::HarmonicTremolo>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("chorus", [=] {
         tabletfx::ChorusParameters parameters;
         parameters.rate_hz = 0.8F;
@@ -4102,6 +4185,14 @@ void print_usage() {
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
+                  " [--harmonic-tremolo-rate-hz Hz] [--harmonic-tremolo-depth 0..1]"
+                  " [--harmonic-tremolo-crossover-hz Hz]"
+                  " [--harmonic-tremolo-waveform sine|triangle|square]"
+                  " [--harmonic-tremolo-sync on|off]"
+                  " [--harmonic-tremolo-tempo-bpm BPM]"
+                  " [--harmonic-tremolo-beats-per-cycle beats]"
+                  " [--harmonic-tremolo-stereo-alternation on|off]"
+                  " [--harmonic-tremolo-smoothing-ms ms]"
                   " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
                   " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
                   " [--dimension-chorus] [--dimension-chorus-version C|D]"

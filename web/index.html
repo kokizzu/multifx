@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">65 of 65</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">66 of 66</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -149,8 +149,9 @@
         <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="60"><span class="effect-number">61</span><span class="effect-name">Phrase Looper · project-authored</span><span class="effect-default">Mono/stereo · one layer · 4 s at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
         <label class="effect-row" data-category="stereo"><input type="checkbox" data-effect="61"><span class="effect-number">62</span><span class="effect-name">Stereo Enhancer · project-authored</span><span class="effect-default">Modern width · Classic delay/pan · Stereoizer</span><span class="effect-category-tag">Stereo &amp; image</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="62"><span class="effect-number">63</span><span class="effect-name">Resonant Delay · project-authored</span><span class="effect-default">Resonant feedback · adjustable center/Q</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="63" checked><span class="effect-number">64</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="64" checked><span class="effect-number">65</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="63"><span class="effect-number">64</span><span class="effect-name">Harmonic Tremolo · project-authored</span><span class="effect-default">3 Hz · 65% · 700 Hz split</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="64" checked><span class="effect-number">65</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="65" checked><span class="effect-number">66</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -804,6 +805,21 @@
           <span>Beats per cycle</span>
           <select id="tremolo-beats-per-cycle"><option value="0.25">1/16 note</option><option value="0.5">1/8 note</option><option value="1" selected>Quarter note</option><option value="2">Half note</option><option value="4">Whole note</option></select>
         </label>
+      </div>
+      <div class="effect-parameter-group" aria-label="Harmonic Tremolo controls">
+        <h3>Harmonic Tremolo · project-authored</h3>
+        <p class="hint">A complementary low/high frequency split uses opposing amplitude modulation; optional stereo alternation swaps the band assignment in the right channel. These controls and ranges are project choices. Fender’s older Model Guide names Speed, Intensity, Shape, Tap Division, and 1960/1963 mode; the current guide does not establish the newer stereo model’s full parameter table. No Fender algorithm, settings, or sound parity is claimed.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="harmonic-tremolo-rate-hz"><span>Rate</span><output for="harmonic-tremolo-rate-hz">3.00 Hz</output><input id="harmonic-tremolo-rate-hz" type="range" min="0.05" max="20" step="0.01" value="3"></label>
+          <label class="mix-control" for="harmonic-tremolo-depth"><span>Depth</span><output for="harmonic-tremolo-depth">65%</output><input id="harmonic-tremolo-depth" type="range" min="0" max="1" step="0.01" value="0.65"></label>
+          <label class="mix-control" for="harmonic-tremolo-crossover-hz"><span>Low/high crossover</span><output for="harmonic-tremolo-crossover-hz">700 Hz</output><input id="harmonic-tremolo-crossover-hz" type="range" min="80" max="8000" step="1" value="700"></label>
+          <label class="mix-control" for="harmonic-tremolo-waveform"><span>Waveform</span><select id="harmonic-tremolo-waveform"><option value="sine" selected>Sine</option><option value="triangle">Triangle</option><option value="square">Square</option></select></label>
+          <label class="mix-control" for="harmonic-tremolo-sync"><span>Rate mode</span><select id="harmonic-tremolo-sync"><option value="off" selected>Free rate</option><option value="on">Tempo sync</option></select></label>
+          <label class="mix-control" for="harmonic-tremolo-tempo-bpm"><span>Tempo</span><output for="harmonic-tremolo-tempo-bpm">120 BPM</output><input id="harmonic-tremolo-tempo-bpm" type="range" min="30" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="harmonic-tremolo-beats-per-cycle"><span>Beats per cycle</span><select id="harmonic-tremolo-beats-per-cycle"><option value="0.0625">1/64</option><option value="0.125">1/32</option><option value="0.25">1/16</option><option value="0.5">1/8</option><option value="1" selected>Quarter</option><option value="2">Half</option><option value="4">Whole</option><option value="8">2 bars</option><option value="16">4 bars</option></select></label>
+          <label class="mix-control" for="harmonic-tremolo-stereo-alternation"><span>Stereo band alternation</span><select id="harmonic-tremolo-stereo-alternation"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+          <label class="mix-control" for="harmonic-tremolo-smoothing-ms"><span>Parameter smoothing</span><output for="harmonic-tremolo-smoothing-ms">10.0 ms</output><input id="harmonic-tremolo-smoothing-ms" type="range" min="0" max="1000" step="1" value="10"></label>
+        </div>
       </div>
       <div class="gain-controls" aria-label="Chorus controls">
         <label class="mix-control" for="chorus-rate-hz">
