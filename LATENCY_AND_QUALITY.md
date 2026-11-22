@@ -88,7 +88,7 @@ The project-authored Stereo Enhancer is integrated in the Stereo & image categor
 
 On a Ryzen 9 5950X Release build, the project-authored Shimmer Reverb measured 11.7097% p50 / 18.5503% p95 / 20.0691% p99 / 23.5008% p99.9 / 27.3648% maximum of a 2.667 ms callback at 48 kHz stereo/128 frames, with 647,792 B processor-owned memory. Its direct dry path is immediate; the pitch-return ring holds 128 frames (2.667 ms at 48 kHz) before pitch-shifter processing, which adds separate wet latency. This synthetic processor-call benchmark is not a live-route or listening measurement.
 
-At 48 kHz stereo/128 frames, the project-authored five-band peaking EQ measured 0.0896% p50 / 0.0900% p95 / 0.1403% p99 / 0.3386% p99.9 / 0.5438% maximum of a 2.667 ms callback and owned 256 B. It has no algorithmic latency; coefficients are prepared when parameters are configured, outside `process()`.
+At 48 kHz stereo/128 frames, the project-authored five-band peaking/shelf/cut EQ measured 0.0998% p50 / 0.1005% p95 / 0.2104% p99 / 0.4301% p99.9 / 0.6533% maximum of a 2.667 ms callback and owned 680 B. It has no algorithmic latency; coefficients are prepared when parameters are configured, outside `process()`.
 
 At 48 kHz stereo/128 frames, the maximum 0.5 s project-authored Convolution Reverb IR measured 5.1043% p50 / 6.4862% p95 / 18.1629% maximum of a 2.667 ms callback and owned 1,549,968 B. It uses a 128-frame partition and aligned dry path when an IR is loaded; this is fixed algorithmic latency, not measured device round-trip latency.
 
@@ -167,7 +167,7 @@ The saved processor rows below are the prior snapshot before DLY-20 and were mea
 | Phaser | 0.0821 | 0.0825 | 0.1230 | 0.2816 | 0.3431 | 280 |
 | Vibrato | 0.0525 | 0.0529 | 0.0724 | 0.2415 | 0.2704 | 1,696 |
 | Three-band parametric EQ | 0.0656 | 0.0926 | 0.1046 | 0.2974 | 0.4084 | 160 |
-| Five-band parametric EQ | 0.0896 | 0.0900 | 0.1403 | 0.3386 | 0.5438 | 256 |
+| Five-band parametric EQ | 0.0998 | 0.1005 | 0.2104 | 0.4301 | 0.6533 | 680 |
 | Delay, normal (2 s stereo allocation) | 0.1103 | 0.1155 | 0.2153 | 0.3465 | 0.7313 | 768,720 |
 | Room Reverb (large, 1.2 s decay) | 0.1736 | 0.1796 | 0.3225 | 0.4706 | 0.5430 | 115,688 |
 | Hall Reverb (3.2 s decay) | 0.2213 | 0.2246 | 0.3750 | 0.4538 | 0.7462 | 193,748 |

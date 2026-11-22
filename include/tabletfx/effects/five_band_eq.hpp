@@ -12,13 +12,23 @@
 
 namespace tabletfx {
 
+enum class FiveBandEQShape : std::uint8_t {
+    Peaking = 0,
+    LowShelf = 1,
+    HighShelf = 2,
+    LowCut = 3,
+    HighCut = 4,
+};
+
 struct FiveBandEQBand {
     float frequency_hz = 1000.0F;
     float gain_db = 0.0F;
     float q = 0.707F;
+    FiveBandEQShape shape = FiveBandEQShape::Peaking;
+    float slope_db_per_octave = 12.0F;
 };
 
-// Project-authored five-band peaking EQ. Parameters are prepared by
+// Project-authored five-band parametric EQ. Parameters are prepared by
 // configure(); process() uses fixed per-channel state and adds no delay.
 // Call configure/reset while the instance is not being processed.
 class FiveBandParametricEQ final : public Effect {
@@ -44,9 +54,9 @@ public:
         return bands_;
     }
 
-    // These project bounds use the Fractal family guide's useful per-band
-    // frequency spans as a reference, while keeping this implementation
-    // peaking-only and using the project's existing +/-18 dB and Q bounds.
+    // The five-band layout is project-authored. Its frequency spans use the
+    // Fractal family guide as a reference; bounds, shapes, shelf transition,
+    // and filter realization remain independent of the manufacturer's DSP.
     void configure(std::array<FiveBandEQBand, 5> bands) noexcept {
         constexpr std::array<float, 5> kMinimumFrequencyHz{
             20.0F, 100.0F, 100.0F, 100.0F, 200.0F};
@@ -70,10 +80,17 @@ public:
                 bands[band].gain_db, 0.0F, kMinimumGainDb, kMaximumGainDb);
             bands_[band].q = bounded(
                 bands[band].q, 0.707F, kMinimumQ, kMaximumQ);
-            coefficients_[band] = make_peak(
-                bands_[band].frequency_hz, bands_[band].gain_db,
-                bands_[band].q, sample_rate_);
-            neutral_ = neutral_ && bands_[band].gain_db == 0.0F;
+            bands_[band].shape = supported_shape(band, bands[band].shape)
+                                     ? bands[band].shape
+                                     : FiveBandEQShape::Peaking;
+            const float slope = bounded(
+                bands[band].slope_db_per_octave, 12.0F, 6.0F, 36.0F);
+            bands_[band].slope_db_per_octave =
+                std::round(slope / 6.0F) * 6.0F;
+            coefficients_[band] = make_band(bands_[band], sample_rate_);
+            neutral_ = neutral_ &&
+                       bands_[band].shape == FiveBandEQShape::Peaking &&
+                       bands_[band].gain_db == 0.0F;
         }
         reset();
     }
@@ -92,8 +109,12 @@ public:
                     continue;
                 }
                 for (std::size_t band = 0; band < coefficients_.size(); ++band) {
-                    sample = process_section(
-                        sample, coefficients_[band], states_[channel][band]);
+                    for (std::size_t section = 0;
+                         section < coefficients_[band].count; ++section) {
+                        sample = process_section(
+                            sample, coefficients_[band].sections[section],
+                            states_[channel][band][section]);
+                    }
                 }
                 interleaved[index] = sample;
             }
@@ -118,6 +139,11 @@ private:
         float z2 = 0.0F;
     };
 
+    struct BandCoefficients {
+        std::array<Coefficients, 3> sections{};
+        std::uint8_t count = 1;
+    };
+
     [[nodiscard]] static constexpr std::array<FiveBandEQBand, 5>
     default_parameters() noexcept {
         return {{{100.0F, 0.0F, 0.707F},
@@ -131,6 +157,23 @@ private:
                                        float lower, float upper) noexcept {
         if (!std::isfinite(value)) value = fallback;
         return std::clamp(value, lower, upper);
+    }
+
+    [[nodiscard]] static bool supported_shape(
+        std::size_t band, FiveBandEQShape shape) noexcept {
+        switch (shape) {
+        case FiveBandEQShape::Peaking:
+            return true;
+        case FiveBandEQShape::LowShelf:
+            return band <= 1;
+        case FiveBandEQShape::HighShelf:
+            return band >= 3;
+        case FiveBandEQShape::LowCut:
+            return band == 0;
+        case FiveBandEQShape::HighCut:
+            return band == 4;
+        }
+        return false;
     }
 
     [[nodiscard]] static Coefficients normalize(double b0, double b1, double b2,
@@ -169,6 +212,123 @@ private:
                          -2.0 * cosine, 1.0 - alpha / amplitude);
     }
 
+    [[nodiscard]] static Coefficients make_shelf(float frequency_hz,
+                                                  float gain_db,
+                                                  float sample_rate,
+                                                  bool high_shelf) noexcept {
+        if (gain_db == 0.0F) return {};
+        constexpr double kPi = 3.141592653589793238462643383279502884;
+        const double omega = 2.0 * kPi * static_cast<double>(frequency_hz) /
+                             static_cast<double>(sample_rate);
+        const double cosine = std::cos(omega);
+        const double sine = std::sin(omega);
+        const double amplitude = std::pow(10.0, static_cast<double>(gain_db) / 40.0);
+        constexpr double kShelfSlope = 1.0;
+        const double alpha = (sine / 2.0) * std::sqrt(
+            (amplitude + 1.0 / amplitude) * (1.0 / kShelfSlope - 1.0) + 2.0);
+        const double beta = 2.0 * std::sqrt(amplitude) * alpha;
+        if (high_shelf) {
+            return normalize(
+                amplitude * ((amplitude + 1.0) + (amplitude - 1.0) * cosine + beta),
+                -2.0 * amplitude * ((amplitude - 1.0) + (amplitude + 1.0) * cosine),
+                amplitude * ((amplitude + 1.0) + (amplitude - 1.0) * cosine - beta),
+                (amplitude + 1.0) - (amplitude - 1.0) * cosine + beta,
+                2.0 * ((amplitude - 1.0) - (amplitude + 1.0) * cosine),
+                (amplitude + 1.0) - (amplitude - 1.0) * cosine - beta);
+        }
+        return normalize(
+            amplitude * ((amplitude + 1.0) - (amplitude - 1.0) * cosine + beta),
+            2.0 * amplitude * ((amplitude - 1.0) - (amplitude + 1.0) * cosine),
+            amplitude * ((amplitude + 1.0) - (amplitude - 1.0) * cosine - beta),
+            (amplitude + 1.0) + (amplitude - 1.0) * cosine + beta,
+            -2.0 * ((amplitude - 1.0) + (amplitude + 1.0) * cosine),
+            (amplitude + 1.0) + (amplitude - 1.0) * cosine - beta);
+    }
+
+    [[nodiscard]] static Coefficients make_first_order(float frequency_hz,
+                                                        float sample_rate,
+                                                        bool high_pass) noexcept {
+        constexpr double kPi = 3.141592653589793238462643383279502884;
+        const double tangent = std::tan(
+            kPi * static_cast<double>(frequency_hz) /
+            static_cast<double>(sample_rate));
+        const double inverse = 1.0 / (1.0 + tangent);
+        const double a1 = (tangent - 1.0) * inverse;
+        if (high_pass) {
+            return normalize(inverse, -inverse, 0.0, 1.0, a1, 0.0);
+        }
+        return normalize(tangent * inverse, tangent * inverse, 0.0,
+                         1.0, a1, 0.0);
+    }
+
+    [[nodiscard]] static Coefficients make_second_order(float frequency_hz,
+                                                         float q,
+                                                         float sample_rate,
+                                                         bool high_pass) noexcept {
+        constexpr double kPi = 3.141592653589793238462643383279502884;
+        const double omega = 2.0 * kPi * static_cast<double>(frequency_hz) /
+                             static_cast<double>(sample_rate);
+        const double cosine = std::cos(omega);
+        const double alpha = std::sin(omega) / (2.0 * static_cast<double>(q));
+        const double b0 = high_pass ? (1.0 + cosine) / 2.0
+                                    : (1.0 - cosine) / 2.0;
+        const double b1 = high_pass ? -(1.0 + cosine) : 1.0 - cosine;
+        const double b2 = b0;
+        return normalize(b0, b1, b2, 1.0 + alpha, -2.0 * cosine,
+                         1.0 - alpha);
+    }
+
+    [[nodiscard]] static BandCoefficients make_butterworth(
+        float frequency_hz, float slope_db_per_octave, float sample_rate,
+        bool high_pass) noexcept {
+        constexpr double kPi = 3.141592653589793238462643383279502884;
+        const auto order = static_cast<unsigned>(
+            std::lround(slope_db_per_octave / 6.0F));
+        BandCoefficients result;
+        std::size_t section = 0;
+        if ((order & 1U) != 0U) {
+            result.sections[section++] = make_first_order(
+                frequency_hz, sample_rate, high_pass);
+        }
+        for (unsigned pair = 0; pair < order / 2U; ++pair) {
+            const double angle = (2.0 * static_cast<double>(pair) + 1.0) *
+                                 kPi / (2.0 * static_cast<double>(order));
+            const float q = static_cast<float>(1.0 / (2.0 * std::sin(angle)));
+            result.sections[section++] = make_second_order(
+                frequency_hz, q, sample_rate, high_pass);
+        }
+        result.count = static_cast<std::uint8_t>(section);
+        return result;
+    }
+
+    [[nodiscard]] static BandCoefficients make_band(
+        const FiveBandEQBand& band, float sample_rate) noexcept {
+        BandCoefficients result;
+        switch (band.shape) {
+        case FiveBandEQShape::Peaking:
+            result.sections[0] = make_peak(
+                band.frequency_hz, band.gain_db, band.q, sample_rate);
+            break;
+        case FiveBandEQShape::LowShelf:
+            result.sections[0] = make_shelf(
+                band.frequency_hz, band.gain_db, sample_rate, false);
+            break;
+        case FiveBandEQShape::HighShelf:
+            result.sections[0] = make_shelf(
+                band.frequency_hz, band.gain_db, sample_rate, true);
+            break;
+        case FiveBandEQShape::LowCut:
+            return make_butterworth(band.frequency_hz,
+                                    band.slope_db_per_octave,
+                                    sample_rate, true);
+        case FiveBandEQShape::HighCut:
+            return make_butterworth(band.frequency_hz,
+                                    band.slope_db_per_octave,
+                                    sample_rate, false);
+        }
+        return result;
+    }
+
     [[nodiscard]] static float process_section(float input,
                                                const Coefficients& coefficients,
                                                SectionState& state) noexcept {
@@ -189,8 +349,8 @@ private:
     std::uint16_t channels_;
     bool neutral_ = true;
     std::array<FiveBandEQBand, 5> bands_{};
-    std::array<Coefficients, 5> coefficients_{};
-    std::array<std::array<SectionState, 5>, 2> states_{};
+    std::array<BandCoefficients, 5> coefficients_{};
+    std::array<std::array<std::array<SectionState, 3>, 5>, 2> states_{};
 };
 
 } // namespace tabletfx

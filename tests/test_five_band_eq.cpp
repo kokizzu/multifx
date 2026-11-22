@@ -101,6 +101,105 @@ void test_each_band_uses_safe_project_bounds() {
             "non-finite controls did not restore documented project defaults");
 }
 
+void test_shelf_shapes_boost_only_their_side_of_the_spectrum() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    {
+        tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+        auto bands = eq.parameters();
+        bands[0].shape = tabletfx::FiveBandEQShape::LowShelf;
+        bands[0].frequency_hz = 500.0F;
+        bands[0].gain_db = 9.0F;
+        eq.configure(bands);
+        auto low = make_sine(kSampleRate, 100.0F, kFrames);
+        auto high = make_sine(kSampleRate, 8000.0F, kFrames);
+        eq.process(low, 1);
+        eq.reset();
+        eq.process(high, 1);
+        require(tail_rms(low, 1) > 0.45F,
+                "low shelf did not boost the low-frequency test tone");
+        require(tail_rms(high, 1) > 0.16F && tail_rms(high, 1) < 0.21F,
+                "low shelf changed the high-frequency passband unexpectedly");
+    }
+    {
+        tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+        auto bands = eq.parameters();
+        bands[4].shape = tabletfx::FiveBandEQShape::HighShelf;
+        bands[4].frequency_hz = 2000.0F;
+        bands[4].gain_db = 9.0F;
+        eq.configure(bands);
+        auto low = make_sine(kSampleRate, 100.0F, kFrames);
+        auto high = make_sine(kSampleRate, 8000.0F, kFrames);
+        eq.process(low, 1);
+        eq.reset();
+        eq.process(high, 1);
+        require(tail_rms(low, 1) > 0.16F && tail_rms(low, 1) < 0.21F,
+                "high shelf changed the low-frequency passband unexpectedly");
+        require(tail_rms(high, 1) > 0.45F,
+                "high shelf did not boost the high-frequency test tone");
+    }
+}
+
+void test_outer_band_blocking_slope_controls_cut_response() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    {
+        tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+        auto bands = eq.parameters();
+        bands[4].shape = tabletfx::FiveBandEQShape::HighCut;
+        bands[4].frequency_hz = 1000.0F;
+        bands[4].slope_db_per_octave = 36.0F;
+        eq.configure(bands);
+        auto below = make_sine(kSampleRate, 500.0F, kFrames);
+        auto above = make_sine(kSampleRate, 2000.0F, kFrames);
+        eq.process(below, 1);
+        eq.reset();
+        eq.process(above, 1);
+        require(tail_rms(below, 1) > 0.14F,
+                "high-cut filter removed its lower passband");
+        require(tail_rms(above, 1) < 0.01F,
+                "36 dB/oct high-cut filter did not sufficiently attenuate one octave above cutoff");
+    }
+    {
+        tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+        auto bands = eq.parameters();
+        bands[0].shape = tabletfx::FiveBandEQShape::LowCut;
+        bands[0].frequency_hz = 1000.0F;
+        bands[0].slope_db_per_octave = 24.0F;
+        eq.configure(bands);
+        auto below = make_sine(kSampleRate, 500.0F, kFrames);
+        auto above = make_sine(kSampleRate, 2000.0F, kFrames);
+        eq.process(below, 1);
+        eq.reset();
+        eq.process(above, 1);
+        require(tail_rms(below, 1) < 0.04F,
+                "24 dB/oct low-cut filter did not attenuate one octave below cutoff");
+        require(tail_rms(above, 1) > 0.14F,
+                "low-cut filter removed its upper passband");
+    }
+}
+
+void test_shapes_are_limited_to_project_supported_bands() {
+    tabletfx::FiveBandParametricEQ eq;
+    auto bands = eq.parameters();
+    bands[1].shape = tabletfx::FiveBandEQShape::HighCut;
+    bands[2].shape = tabletfx::FiveBandEQShape::LowShelf;
+    bands[4].slope_db_per_octave = 100.0F;
+    eq.configure(bands);
+    const auto actual = eq.parameters();
+    require(actual[1].shape == tabletfx::FiveBandEQShape::Peaking &&
+                actual[2].shape == tabletfx::FiveBandEQShape::Peaking,
+            "unsupported outer-band filter shapes were not reset to peaking");
+    require(actual[4].slope_db_per_octave == 36.0F,
+            "blocking slope was not clamped to the project maximum");
+
+    bands = actual;
+    bands[4].slope_db_per_octave = 8.0F;
+    eq.configure(bands);
+    require(eq.parameters()[4].slope_db_per_octave == 6.0F,
+            "blocking slope was not quantized to 6 dB/octave steps");
+}
+
 void test_stereo_state_is_independent_and_nonfinite_input_is_contained() {
     tabletfx::FiveBandParametricEQ eq(48000.0F, 2);
     auto bands = eq.parameters();
@@ -154,6 +253,9 @@ int main() {
         test_neutral_is_exact_passthrough_and_identifies_effect();
         test_each_band_boosts_its_center_frequency();
         test_each_band_uses_safe_project_bounds();
+        test_shelf_shapes_boost_only_their_side_of_the_spectrum();
+        test_outer_band_blocking_slope_controls_cut_response();
+        test_shapes_are_limited_to_project_supported_bands();
         test_stereo_state_is_independent_and_nonfinite_input_is_contained();
         test_processing_allocates_nothing();
         std::cout << "FiveBandEQ tests passed.\n";

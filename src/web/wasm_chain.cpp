@@ -638,13 +638,25 @@ public:
     }
 
     void configure_five_band_eq(float f1, float g1, float q1,
+                                std::uint32_t shape1, float slope1,
                                 float f2, float g2, float q2,
+                                std::uint32_t shape2, float slope2,
                                 float f3, float g3, float q3,
+                                std::uint32_t shape3, float slope3,
                                 float f4, float g4, float q4,
-                                float f5, float g5, float q5) noexcept {
+                                std::uint32_t shape4, float slope4,
+                                float f5, float g5, float q5,
+                                std::uint32_t shape5, float slope5) noexcept {
+        const auto shape = [](std::uint32_t value) noexcept {
+            return static_cast<tabletfx::FiveBandEQShape>(
+                value <= 4U ? value : 5U);
+        };
         const std::array<tabletfx::FiveBandEQBand, 5> bands{{
-            {f1, g1, q1}, {f2, g2, q2}, {f3, g3, q3},
-            {f4, g4, q4}, {f5, g5, q5},
+            {f1, g1, q1, shape(shape1), slope1},
+            {f2, g2, q2, shape(shape2), slope2},
+            {f3, g3, q3, shape(shape3), slope3},
+            {f4, g4, q4, shape(shape4), slope4},
+            {f5, g5, q5, shape(shape5), slope5},
         }};
         static_cast<tabletfx::FiveBandParametricEQ*>(effects_[59].effect.get())
             ->configure(bands);
@@ -2984,12 +2996,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_eq(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_five_band_eq(
     void* opaque,
-    float f1, float g1, float q1, float f2, float g2, float q2,
-    float f3, float g3, float q3, float f4, float g4, float q4,
-    float f5, float g5, float q5) noexcept {
+    float f1, float g1, float q1, std::uint32_t shape1, float slope1,
+    float f2, float g2, float q2, std::uint32_t shape2, float slope2,
+    float f3, float g3, float q3, std::uint32_t shape3, float slope3,
+    float f4, float g4, float q4, std::uint32_t shape4, float slope4,
+    float f5, float g5, float q5, std::uint32_t shape5, float slope5) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_five_band_eq(
-            f1, g1, q1, f2, g2, q2, f3, g3, q3, f4, g4, q4, f5, g5, q5);
+            f1, g1, q1, shape1, slope1, f2, g2, q2, shape2, slope2,
+            f3, g3, q3, shape3, slope3, f4, g4, q4, shape4, slope4,
+            f5, g5, q5, shape5, slope5);
     }
 }
 

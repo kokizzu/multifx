@@ -201,8 +201,9 @@ const DEFAULT_PARAMETERS = {
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
-  fiveBandEq: [100, 0, 0.707, 350, 0, 0.707, 1000, 0, 0.707,
-    3500, 0, 0.707, 8000, 0, 0.707],
+  fiveBandEq: [100, 0, 0.707, 0, 12, 350, 0, 0.707, 0, 12,
+    1000, 0, 0.707, 0, 12, 3500, 0, 0.707, 0, 12,
+    8000, 0, 0.707, 0, 12],
   delay: [350, 0.25, 0.25],
   delayBbd: false,
   delayTape: [0, 0.45, 0.35, 0.3, 0.08, 6],
@@ -983,6 +984,9 @@ const fiveBandEqControls = Array.from({ length: 5 }, (_, index) => {
     gainValue: document.querySelector(`#${id}-gain-value`),
     q: document.querySelector(`#${id}-q`),
     qValue: document.querySelector(`#${id}-q-value`),
+    shape: document.querySelector(`#${id}-shape`),
+    slope: document.querySelector(`#${id}-slope`),
+    slopeValue: document.querySelector(`#${id}-slope-value`),
   };
 });
 const shelfTiltMode = document.querySelector("#shelf-tilt-mode");
@@ -3731,10 +3735,17 @@ function updateFiveBandEQ() {
     const frequency = Number(band.frequency.value);
     const gain = Number(band.gain.value);
     const q = Number(band.q.value);
+    const shape = Number(band.shape.value);
+    const slope = band.slope ? Number(band.slope.value) : 12;
+    const isBlocking = shape === 3 || shape === 4;
     band.frequencyValue.value = `${frequency.toFixed(0)} Hz`;
     band.gainValue.value = `${gain.toFixed(1)} dB`;
     band.qValue.value = q.toFixed(2);
-    values.push(frequency, gain, q);
+    band.gain.disabled = isBlocking;
+    band.q.disabled = shape !== 0;
+    if (band.slope) band.slope.disabled = !isBlocking;
+    if (band.slopeValue) band.slopeValue.value = `${slope} dB/oct`;
+    values.push(frequency, gain, q, shape, slope);
   }
   DEFAULT_PARAMETERS.fiveBandEq = values;
   if (workletNode) {
@@ -3743,8 +3754,10 @@ function updateFiveBandEQ() {
 }
 
 for (const band of fiveBandEqControls) {
-  for (const control of [band.frequency, band.gain, band.q]) {
+  for (const control of [band.frequency, band.gain, band.q, band.shape, band.slope]
+    .filter(Boolean)) {
     control.addEventListener("input", updateFiveBandEQ);
+    control.addEventListener("change", updateFiveBandEQ);
   }
 }
 updateFiveBandEQ();
@@ -5493,14 +5506,27 @@ async function runBrowserSelfTest() {
      fiveBandEqControls[2].gain.value = "3.5";
      fiveBandEqControls[2].q.value = "2.25";
      fiveBandEqControls[2].q.dispatchEvent(new Event("input", { bubbles: true }));
-     if (DEFAULT_PARAMETERS.fiveBandEq[7] !== 3.5 ||
-         DEFAULT_PARAMETERS.fiveBandEq[8] !== 2.25 ||
+     fiveBandEqControls[0].shape.value = "1";
+     fiveBandEqControls[0].shape.dispatchEvent(new Event("input", { bubbles: true }));
+     fiveBandEqControls[4].shape.value = "4";
+     fiveBandEqControls[4].slope.value = "24";
+     fiveBandEqControls[4].slope.dispatchEvent(new Event("input", { bubbles: true }));
+     if (DEFAULT_PARAMETERS.fiveBandEq[11] !== 3.5 ||
+         DEFAULT_PARAMETERS.fiveBandEq[12] !== 2.25 ||
+         DEFAULT_PARAMETERS.fiveBandEq[3] !== 1 ||
+         DEFAULT_PARAMETERS.fiveBandEq[23] !== 4 ||
+         DEFAULT_PARAMETERS.fiveBandEq[24] !== 24 ||
+         !fiveBandEqControls[4].gain.disabled ||
+         !fiveBandEqControls[4].q.disabled ||
+         fiveBandEqControls[4].slope.disabled ||
          fiveBandEqControls[2].gainValue.value !== "3.5 dB" ||
          fiveBandEqControls[2].qValue.value !== "2.25") {
-       throw new Error("Five-band EQ controls must update the selected band and display its values.");
+       throw new Error("Five-band EQ shape, slope, and band controls must update the project parameters.");
      }
-     for (const [index, value] of defaultFiveBandEq.entries()) {
-       fiveBandEqControls[Math.floor(index / 3)][["frequency", "gain", "q"][index % 3]].value = String(value);
+     for (const [index, band] of fiveBandEqControls.entries()) {
+       const values = defaultFiveBandEq.slice(index * 5, index * 5 + 5);
+       [band.frequency, band.gain, band.q, band.shape, band.slope].filter(Boolean)
+         .forEach((control, controlIndex) => { control.value = String(values[controlIndex]); });
      }
      updateFiveBandEQ();
      const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
@@ -6620,8 +6646,9 @@ async function runBrowserSelfTest() {
          feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
          shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
          convolutionReverb: [0.35, -3],
-         fiveBandEq: [100, 1.5, 0.7, 350, -0.5, 1, 1000, 1, 0.7,
-           3500, -0.5, 0.8, 8000, 0.5, 0.7],
+         fiveBandEq: [100, 1.5, 0.7, 1, 12, 350, -0.5, 1, 0, 12,
+           1000, 1, 0.7, 0, 12, 3500, -0.5, 0.8, 0, 12,
+           8000, 0.5, 0.7, 4, 24],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],

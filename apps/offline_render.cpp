@@ -297,8 +297,8 @@ std::array<float, Count> parse_float_array(std::string_view name,
 
 bool set_five_band_eq_parameter(std::string_view key, Options& options,
                                 float value) {
-    constexpr std::array<std::string_view, 3> suffixes{
-        "frequency-hz", "gain-db", "q"};
+    constexpr std::array<std::string_view, 5> suffixes{
+        "frequency-hz", "gain-db", "q", "shape", "slope-db-per-octave"};
     for (std::size_t band = 0; band < options.five_band_eq.size(); ++band) {
         const std::string prefix = "--five-band-eq-band" +
                                    std::to_string(band + 1U) + "-";
@@ -307,7 +307,18 @@ bool set_five_band_eq_parameter(std::string_view key, Options& options,
             auto& selected = options.five_band_eq[band];
             if (parameter == 0) selected.frequency_hz = value;
             else if (parameter == 1) selected.gain_db = value;
-            else selected.q = value;
+            else if (parameter == 2) selected.q = value;
+            else if (parameter == 3) {
+                if (value < 0.0F || value > 4.0F || std::floor(value) != value) {
+                    throw std::invalid_argument(
+                        "Five-band EQ shape must be 0 (peaking), 1 (low shelf), "
+                        "2 (high shelf), 3 (low cut), or 4 (high cut)");
+                }
+                selected.shape = static_cast<tabletfx::FiveBandEQShape>(
+                    static_cast<std::uint8_t>(value));
+            } else {
+                selected.slope_db_per_octave = value;
+            }
             options.five_band_eq_enabled = true;
             return true;
         }

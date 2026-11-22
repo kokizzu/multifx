@@ -884,6 +884,8 @@ def browser_test() -> None:
               "--five-band-eq-band1-frequency-hz", "100",
               "--five-band-eq-band1-gain-db", "1.5",
               "--five-band-eq-band1-q", "0.7",
+              "--five-band-eq-band1-shape", "1",
+              "--five-band-eq-band1-slope-db-per-octave", "12",
               "--five-band-eq-band2-frequency-hz", "350",
               "--five-band-eq-band2-gain-db", "-0.5",
               "--five-band-eq-band2-q", "1",
@@ -896,6 +898,8 @@ def browser_test() -> None:
               "--five-band-eq-band5-frequency-hz", "8000",
               "--five-band-eq-band5-gain-db", "0.5",
               "--five-band-eq-band5-q", "0.7",
+              "--five-band-eq-band5-shape", "4",
+              "--five-band-eq-band5-slope-db-per-octave", "24",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

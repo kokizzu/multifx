@@ -2189,6 +2189,31 @@ def check_five_band_parametric_eq(executable: Path) -> None:
             raise AssertionError(
                 f"Five-band parametric EQ did not boost its center tone: {source_rms} -> {actual_rms}")
 
+    source_samples = [
+        int(round(0.25 * 32767 * math.sin(2.0 * math.pi * 2000.0 * frame / sample_rate)))
+        for frame in range(frames)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-five-band-eq-cut-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "two-kilohertz.wav"
+        output = root / "high-cut.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--five-band-eq-band5-frequency-hz", "1000",
+             "--five-band-eq-band5-shape", "4",
+             "--five-band-eq-band5-slope-db-per-octave", "36"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Five-band EQ high-cut options did not enable one processor")
+        rendered = struct.unpack("<" + "f" * frames, output.read_bytes()[44:])
+        actual_rms = math.sqrt(sum(sample * sample for sample in rendered) / frames)
+        source_rms = math.sqrt(sum((sample / 32768.0) ** 2 for sample in source_samples) / frames)
+        if not math.isfinite(actual_rms) or actual_rms >= source_rms * 0.02:
+            raise AssertionError(
+                f"Five-band EQ high cut did not attenuate one octave above cutoff: {source_rms} -> {actual_rms}")
+
 
 def check_note_generator(executable: Path) -> None:
     sample_rate = 48000
