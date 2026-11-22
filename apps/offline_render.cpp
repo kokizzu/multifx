@@ -134,6 +134,8 @@ struct Options {
     tabletfx::ConvolutionReverbParameters convolution_reverb{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
+    bool plex_delay_enabled = false;
+    tabletfx::PlexDelayParameters plex_delay{};
     bool flanger_enabled = false;
     tabletfx::FlangerParameters flanger{};
     bool phaser_enabled = false;
@@ -642,6 +644,49 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--grain-delay") {
             options.grain_delay_enabled = true;
+            continue;
+        }
+        if (key == "--plex-delay") {
+            options.plex_delay_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--plex-delay-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--plex-delay-").size());
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.plex_delay;
+            if (setting == "stack-mode") {
+                if (value == "off") parameters.stack_mode = tabletfx::PlexDelayStackMode::off;
+                else if (value == "stack") parameters.stack_mode = tabletfx::PlexDelayStackMode::stack;
+                else if (value == "hold") parameters.stack_mode = tabletfx::PlexDelayStackMode::hold;
+                else throw std::invalid_argument("Unknown Plex Delay stack mode");
+            } else {
+                const float number = parse_float(key, argv[i]);
+                if (setting == "lines") {
+                    parameters.active_lines = static_cast<std::uint8_t>(
+                        std::clamp(std::lround(number), 1L, 8L));
+                } else if (setting == "decay-seconds") {
+                    parameters.decay_seconds = number;
+                } else if (setting == "diffusion") {
+                    parameters.diffusion = number;
+                } else if (setting == "low-cut-hz") {
+                    parameters.low_cut_hz = number;
+                } else if (setting == "high-cut-hz") {
+                    parameters.high_cut_hz = number;
+                } else if (setting == "pre-delay-ms") {
+                    parameters.pre_delay_ms = number;
+                } else if (setting == "mix") {
+                    parameters.mix = number;
+                } else if (setting == "level-db") {
+                    parameters.level_db = number;
+                } else {
+                    throw std::invalid_argument("Unknown option: " + std::string(key));
+                }
+            }
+            options.plex_delay_enabled = true;
             continue;
         }
         if (key.starts_with("--diatonic-harmonizer-")) {
@@ -3157,6 +3202,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(
             static_cast<float>(sample_rate), channels, options.grain_delay));
     }
+    if (options.plex_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::PlexDelay>(
+            static_cast<float>(sample_rate), 2000.0F, options.plex_delay));
+    }
     if (options.pitch_feedback_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::PitchFeedbackDelay>(
             static_cast<float>(sample_rate), channels, 6000.0F,
@@ -4377,7 +4426,12 @@ void print_usage() {
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"
-                  " [--grain-delay-pitch-semitones -24..24] [--grain-delay-spray-ms 0..100]"
+                   " [--grain-delay-pitch-semitones -24..24] [--grain-delay-spray-ms 0..100]"
+                   " [--plex-delay] [--plex-delay-lines 1..8] [--plex-delay-decay-seconds 0.1..30]"
+                   " [--plex-delay-diffusion 0..1] [--plex-delay-pre-delay-ms 0..2000]"
+                   " [--plex-delay-low-cut-hz hz] [--plex-delay-high-cut-hz hz]"
+                   " [--plex-delay-mix 0..1] [--plex-delay-level-db dB]"
+                   " [--plex-delay-stack-mode off|stack|hold]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"

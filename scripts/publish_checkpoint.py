@@ -1391,6 +1391,32 @@ RHYTHM_TAP_DELAY_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+PLEX_DELAY_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "Makefile",
+    "GOAL.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/plex_delay.hpp",
+    "src/effects/plex_delay.cpp",
+    "tests/test_plex_delay.cpp",
+    "scripts/audio_regression.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1498,6 +1524,8 @@ CHECKPOINTS = {
                        "feat: add categorized project-authored Pitch Sequence"),
     "rhythm-tap-delay": (RHYTHM_TAP_DELAY_CHECKPOINT_PATHS,
                          "feat: add project-authored Rhythm Tap delay"),
+    "plex-delay": (PLEX_DELAY_CHECKPOINT_PATHS,
+                   "feat: add project-authored Plex matrix delay"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }

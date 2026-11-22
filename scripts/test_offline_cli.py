@@ -1060,6 +1060,39 @@ def check_grain_delay(executable: Path) -> None:
             raise AssertionError("Grain Delay controls did not change rendered guitar audio")
 
 
+def check_plex_delay(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-plex-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "plex-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--plex-delay", "--plex-delay-lines", "4",
+             "--plex-delay-decay-seconds", "2.5",
+             "--plex-delay-diffusion", "0.7",
+             "--plex-delay-pre-delay-ms", "5",
+             "--plex-delay-low-cut-hz", "80",
+             "--plex-delay-high-cut-hz", "6000",
+             "--plex-delay-mix", "0.5", "--plex-delay-level-db", "-2"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Plex Delay controls did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Plex Delay returned non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.05:
+            raise AssertionError("Plex Delay controls did not change rendered guitar audio")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -2262,6 +2295,7 @@ def main() -> None:
     check_pitch_feedback_delay(args.executable.resolve())
     check_feedback_generator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
+    check_plex_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

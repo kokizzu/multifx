@@ -571,6 +571,7 @@ Reference coverage: conventional, pitch, reverse, grain, resonant, hold, and rhy
 - [ ] **DLY-23 · P1** Dense 1–64-tap delay with shaped/randomized timing, amplitude and pan, feedback routing, predelay, diffusion, and optional input-envelope swell.
 
 - [ ] **DLY-24 · P1** Four-line delay with independent time/tempo, feedback, level/pan, and cross-feedback routing.
+- [ ] **DLY-25 · P1** Eight-line feedback-matrix delay with independent time/tempo/level/pan, master controls, decay, diffusion, cuts, predelay, Stack/Hold, wet filter/LFO, input envelope, ducker, mix controls, and tail/spillover behavior where supported.
 
 ### 10.7 Reverb and ambience
 

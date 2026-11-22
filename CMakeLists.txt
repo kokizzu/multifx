@@ -50,6 +50,7 @@ add_library(tabletfx_core
     src/effects/pugilist.cpp
     src/effects/vibe.cpp
     src/effects/multi_delay.cpp
+    src/effects/plex_delay.cpp
     src/effects/porta_preamp.cpp
     src/effects/pitch_sequence.cpp
     src/effects/vibrato.cpp
@@ -298,6 +299,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_multi_delay_tests tests/test_multi_delay.cpp)
     target_link_libraries(tabletfx_multi_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_multi_delay_tests COMMAND tabletfx_multi_delay_tests)
+
+    add_executable(tabletfx_plex_delay_tests tests/test_plex_delay.cpp)
+    target_link_libraries(tabletfx_plex_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_plex_delay_tests COMMAND tabletfx_plex_delay_tests)
 
     add_executable(tabletfx_porta_preamp_tests tests/test_porta_preamp.cpp)
     target_link_libraries(tabletfx_porta_preamp_tests PRIVATE tabletfx_core)

@@ -322,6 +322,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::RhythmTapDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::PlexDelay>(
+                                static_cast<float>(sample_rate), 2000.0F),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -823,6 +826,53 @@ public:
             parameters.common.tap_level_db[tap] = values[23U + tap];
         }
         delay->set_parameters(parameters);
+    }
+
+    void configure_plex_delay_global(
+        std::uint32_t active_lines, float tempo_bpm, float master_time,
+        float master_level, float master_pan, float decay_seconds,
+        float diffusion, float low_cut_hz, float high_cut_hz,
+        float pre_delay_ms, std::uint32_t stack_mode, float input_gain_db,
+        float mix, float level_db, float balance) noexcept {
+        auto* delay = static_cast<tabletfx::PlexDelay*>(
+            effects_[76].effect.get());
+        auto parameters = delay->parameters();
+        parameters.active_lines = static_cast<std::uint8_t>(
+            std::clamp(active_lines, 1U, 8U));
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.master_time = master_time;
+        parameters.master_level = master_level;
+        parameters.master_pan = master_pan;
+        parameters.decay_seconds = decay_seconds;
+        parameters.diffusion = diffusion;
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.pre_delay_ms = pre_delay_ms;
+        parameters.stack_mode = static_cast<tabletfx::PlexDelayStackMode>(
+            std::min(stack_mode, 2U));
+        parameters.input_gain_db = input_gain_db;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        parameters.balance = balance;
+        delay->configure(parameters);
+    }
+
+    void configure_plex_delay_line(std::uint32_t line, float time_ms,
+                                   std::uint32_t time_mode,
+                                   std::uint32_t division, float level,
+                                   float pan) noexcept {
+        if (line >= tabletfx::plex_delay_line_count) return;
+        auto* delay = static_cast<tabletfx::PlexDelay*>(
+            effects_[76].effect.get());
+        auto parameters = delay->parameters();
+        parameters.time_ms[line] = time_ms;
+        parameters.time_mode[line] = static_cast<tabletfx::DelayTimeMode>(
+            std::min(time_mode, 1U));
+        parameters.division[line] = static_cast<tabletfx::DelayDivision>(
+            std::min(division, 11U));
+        parameters.line_level[line] = level;
+        parameters.line_pan[line] = pan;
+        delay->configure(parameters);
     }
 
     void configure_auto_pan(float rate_hz, float depth, std::uint32_t waveform,
@@ -3015,6 +3065,30 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rhythm_tap_delay(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_rhythm_tap_delay(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_global(
+    void* opaque, std::uint32_t active_lines, float tempo_bpm,
+    float master_time, float master_level, float master_pan,
+    float decay_seconds, float diffusion, float low_cut_hz,
+    float high_cut_hz, float pre_delay_ms, std::uint32_t stack_mode,
+    float input_gain_db, float mix, float level_db, float balance) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plex_delay_global(
+            active_lines, tempo_bpm, master_time, master_level, master_pan,
+            decay_seconds, diffusion, low_cut_hz, high_cut_hz,
+            pre_delay_ms, stack_mode, input_gain_db, mix, level_db, balance);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_line(
+    void* opaque, std::uint32_t line, float time_ms,
+    std::uint32_t time_mode, std::uint32_t division,
+    float level, float pan) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plex_delay_line(
+            line, time_ms, time_mode, division, level, pan);
     }
 }
 

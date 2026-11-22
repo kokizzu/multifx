@@ -168,6 +168,9 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--grain-delay-mix", "0.15", "--grain-delay-grain-size-ms", "80",
         "--grain-delay-overlap", "2", "--grain-delay-pitch-semitones", "5",
         "--grain-delay-spray-ms", "20",
+        "--plex-delay", "--plex-delay-lines", "4",
+        "--plex-delay-decay-seconds", "2.5", "--plex-delay-diffusion", "0.65",
+        "--plex-delay-pre-delay-ms", "30", "--plex-delay-mix", "0.12",
         "--pitch-feedback-delay", "--pitch-feedback-delay-time-ms", "350",
         "--pitch-feedback-delay-feedback", "0.2",
         "--pitch-feedback-delay-mix", "0.15",
@@ -354,7 +357,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 64:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 65:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -430,7 +433,7 @@ def main() -> None:
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav",
                            convolution_ir, "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 64-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 65-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

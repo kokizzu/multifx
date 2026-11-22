@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -48,6 +48,34 @@ function configureMultiDelay(module, chain, parameters = {}) {
     Number(parameters.highCutHz ?? 20000), Number(parameters.inputGainDb ?? 0),
     Number(parameters.mix ?? 0.25), Number(parameters.levelDb ?? 0),
   );
+}
+
+function configurePlexDelay(module, chain, parameters = {}) {
+  const defaults = [
+    [45, 0, 9, 1, -0.85], [70, 0, 8, 1, -0.6],
+    [110, 0, 7, 1, -0.35], [150, 0, 6, 1, -0.1],
+    [220, 0, 4, 1, 0.1], [300, 0, 3, 1, 0.35],
+    [450, 0, 2, 1, 0.6], [600, 0, 0, 1, 0.85],
+  ];
+  const lines = Array.isArray(parameters.lines) && parameters.lines.length === 8
+    ? parameters.lines : defaults.map(([timeMs, timeMode, division, level, pan]) =>
+      ({ timeMs, timeMode, division, level, pan }));
+  module._tf_chain_set_plex_delay_global(
+    chain, parameters.activeLines ?? 8, parameters.tempoBpm ?? 120,
+    parameters.masterTime ?? 1, parameters.masterLevel ?? 1,
+    parameters.masterPan ?? 1, parameters.decaySeconds ?? 3,
+    parameters.diffusion ?? 0.5, parameters.lowCutHz ?? 20,
+    parameters.highCutHz ?? 20000, parameters.preDelayMs ?? 0,
+    parameters.stackMode ?? 0, parameters.inputGainDb ?? 0,
+    parameters.mix ?? 0.25, parameters.levelDb ?? 0,
+    parameters.balance ?? 0,
+  );
+  lines.forEach((line, index) => {
+    module._tf_chain_set_plex_delay_line(
+      chain, index, Number(line.timeMs), Number(line.timeMode),
+      Number(line.division), Number(line.level), Number(line.pan),
+    );
+  });
 }
 
 const wasmModulePromise = createWasmModule({ noInitialRun: true });
@@ -269,6 +297,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       ]);
+      configurePlexDelay(module, this.chain, parameters.plexDelay);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -662,6 +691,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePitchSequence(message.value);
     } else if (message.type === "rhythm-tap-delay" && this.ready) {
       this.configureRhythmTapDelay(message.value);
+    } else if (message.type === "plex-delay" && this.ready) {
+      configurePlexDelay(this.module, this.chain, message.value);
     } else if (message.type === "guitar-graphic-eq" && this.ready) {
       this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "bass-graphic-eq" && this.ready) {
