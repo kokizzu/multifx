@@ -148,6 +148,15 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--feedback-generator-dry-kill", "off",
         "--feedback-generator-dry-level", "1",
         "--feedback-generator-silence-threshold-db", "-48",
+        "--shimmer-reverb", "--shimmer-reverb-decay-seconds", "3.4",
+        "--shimmer-reverb-damping-hz", "7200",
+        "--shimmer-reverb-diffusion", "0.72",
+        "--shimmer-reverb-feedback", "0.35",
+        "--shimmer-reverb-high-pass-hz", "120",
+        "--shimmer-reverb-pitch-semitones", "7",
+        "--shimmer-reverb-intensity", "0.65",
+        "--shimmer-reverb-mix", "0.3",
+        "--shimmer-reverb-level-db", "-3",
         "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "2",
         "--flanger-depth-ms", "1", "--flanger-feedback", "0.35",
         "--flanger-feedback-polarity", "positive", "--flanger-mix", "0.2",
@@ -306,7 +315,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 58:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 59:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -373,7 +382,7 @@ def main() -> None:
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 58-stage chain, including the project-authored monophonic oscillator synth, Feedback Generator, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 59-stage chain, including the project-authored monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

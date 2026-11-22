@@ -53,6 +53,29 @@ def check_render(executable: Path) -> None:
         )
         if "frames=5" not in result.stdout or "processors=1" not in result.stdout:
             raise AssertionError(f"Unexpected render summary: {result.stdout}")
+        shimmer_output = root / "shimmer-output.wav"
+        shimmer_result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(shimmer_output),
+                "--shimmer-reverb", "--shimmer-reverb-decay-seconds", "3.4",
+                "--shimmer-reverb-damping-hz", "7200",
+                "--shimmer-reverb-diffusion", "0.72",
+                "--shimmer-reverb-feedback", "0.35",
+                "--shimmer-reverb-high-pass-hz", "120",
+                "--shimmer-reverb-pitch-semitones", "7",
+                "--shimmer-reverb-intensity", "0.65",
+                "--shimmer-reverb-mix", "0.3",
+                "--shimmer-reverb-level-db", "-3",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "frames=5" not in shimmer_result.stdout or "processors=1" not in shimmer_result.stdout:
+            raise AssertionError(f"Shimmer Reverb CLI was not enabled: {shimmer_result.stdout}")
+        shimmer_data = shimmer_output.read_bytes()
+        if len(shimmer_data) != 44 + len(input_samples) * 4:
+            raise AssertionError(f"Unexpected Shimmer Reverb WAV size: {len(shimmer_data)}")
         data = output.read_bytes()
         if len(data) != 44 + len(input_samples) * 4:
             raise AssertionError(f"Unexpected output WAV size: {len(data)}")

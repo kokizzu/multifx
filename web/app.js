@@ -57,6 +57,7 @@ const EFFECT_NAMES = [
   "Grain Delay · project-authored",
   "Pitch Feedback Delay · project-authored",
   "Feedback Generator · project-authored mono tracker",
+  "Shimmer Reverb · project-authored pitch-fed reverb",
   "Output level",
   "Peak limiter",
 ];
@@ -87,6 +88,7 @@ const DEFAULT_PARAMETERS = {
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
+  shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -227,6 +229,17 @@ const feedbackGeneratorControls = [
   document.querySelector("#feedback-generator-dry-kill"),
   document.querySelector("#feedback-generator-dry-level"),
   document.querySelector("#feedback-generator-silence-threshold-db"),
+];
+const shimmerReverbControls = [
+  document.querySelector("#shimmer-reverb-decay"),
+  document.querySelector("#shimmer-reverb-damping"),
+  document.querySelector("#shimmer-reverb-diffusion"),
+  document.querySelector("#shimmer-reverb-feedback"),
+  document.querySelector("#shimmer-reverb-high-pass"),
+  document.querySelector("#shimmer-reverb-pitch"),
+  document.querySelector("#shimmer-reverb-intensity"),
+  document.querySelector("#shimmer-reverb-mix"),
+  document.querySelector("#shimmer-reverb-level"),
 ];
 
 function appendResonatorControl(parent, labelText, index, options) {
@@ -1953,6 +1966,44 @@ for (const control of feedbackGeneratorControls) {
 }
 updateFeedbackGenerator();
 
+function updateShimmerReverb() {
+  const values = [
+    Number(shimmerReverbControls[0].value),
+    Number(shimmerReverbControls[1].value),
+    Number(shimmerReverbControls[2].value) / 100,
+    Number(shimmerReverbControls[3].value) / 100,
+    Number(shimmerReverbControls[4].value),
+    Number(shimmerReverbControls[5].value),
+    Number(shimmerReverbControls[6].value) / 100,
+    Number(shimmerReverbControls[7].value) / 100,
+    Number(shimmerReverbControls[8].value),
+  ];
+  DEFAULT_PARAMETERS.shimmerReverb = values;
+  const formats = [
+    (value) => `${value.toFixed(2)} s`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${value > 0 ? "+" : ""}${Number.isInteger(value) ? value : value.toFixed(1)} semitones`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} dB`,
+  ];
+  shimmerReverbControls.forEach((control, index) => {
+    control.parentElement.querySelector("output").value = formats[index](values[index]);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "shimmer-reverb", value: values });
+  }
+}
+
+for (const control of shimmerReverbControls) {
+  control.addEventListener("input", updateShimmerReverb);
+  control.addEventListener("change", updateShimmerReverb);
+}
+updateShimmerReverb();
+
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
@@ -3015,8 +3066,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 58 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 58 || effectRows.length !== 58 ||
+    const expectedEffectIds = Array.from({ length: 59 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 59 || effectRows.length !== 59 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -3027,9 +3078,10 @@ async function runBrowserSelfTest() {
         initialEffectState[47] || initialEffectState[48] || initialEffectState[49] ||
          initialEffectState[50] || initialEffectState[51] || initialEffectState[52] ||
          initialEffectState[53] || initialEffectState[54] || initialEffectState[55] ||
+         initialEffectState[56] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 58 ordered, categorized effects (IDs 0–57), with optional effects disabled by default.");
+      throw new Error("The effect picker must list 59 ordered, categorized effects (IDs 0–58), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -3146,7 +3198,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-          effectCount.value !== "10 of 58" ||
+          effectCount.value !== "10 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3154,8 +3206,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,57" ||
-        effectCount.value !== "9 of 58" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,58" ||
+        effectCount.value !== "9 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3164,7 +3216,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 58" ||
+        effectCount.value !== "7 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3173,7 +3225,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 58" ||
+        effectCount.value !== "7 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3181,7 +3233,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 58" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3189,7 +3241,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 58" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3197,7 +3249,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 58" ||
+    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the project-authored monophonic guitar synth without changing chain state.");
     }
@@ -3205,7 +3257,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 58" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -3213,9 +3265,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 58" ||
+    if (reverbIds.join(",") !== "28,29,30,31,56" || effectCount.value !== "5 of 59" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
+      throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
     effectCategoryFilter.value = "all";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3223,12 +3275,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 58") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 59") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "58 of 58" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "59 of 59" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -3331,6 +3383,25 @@ async function runBrowserSelfTest() {
       feedbackGeneratorControls[index].value = String(value);
     });
     updateFeedbackGenerator();
+    const defaultShimmerReverb = [...DEFAULT_PARAMETERS.shimmerReverb];
+    [shimmerReverbControls[0].value, shimmerReverbControls[1].value,
+      shimmerReverbControls[2].value, shimmerReverbControls[3].value,
+      shimmerReverbControls[4].value, shimmerReverbControls[5].value,
+      shimmerReverbControls[6].value, shimmerReverbControls[7].value,
+      shimmerReverbControls[8].value] = ["4.5", "7200", "72", "40", "160",
+        "7.5", "65", "38", "-3"];
+    shimmerReverbControls[0].dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.shimmerReverb.join(",") !==
+          "4.5,7200,0.72,0.4,160,7.5,0.65,0.38,-3" ||
+        shimmerReverbControls[5].parentElement.querySelector("output").value !== "+7.5 semitones" ||
+        shimmerReverbControls[3].parentElement.querySelector("output").value !== "40%") {
+      throw new Error("Shimmer Reverb controls must update project parameters and displays.");
+    }
+    defaultShimmerReverb.forEach((value, index) => {
+      shimmerReverbControls[index].value = String(index === 2 || index === 3 ||
+        index === 6 || index === 7 ? value * 100 : value);
+    });
+    updateShimmerReverb();
     const context = await getAudioContext();
     await context.resume();
     const stopClock = startSilentClock(context);
@@ -3422,8 +3493,9 @@ async function runBrowserSelfTest() {
           -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65],
         diatonicHarmonizer: [0.7, 2, 7, 0, 8000, 120, 0.2, 0, 120],
         grainDelay: [350, 0.25, 0.35, 80, 2, 7, 35],
-        pitchFeedbackDelay: [350, 0.35, 0.25, 7],
-        feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
+         pitchFeedbackDelay: [350, 0.35, 0.25, 7],
+         feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
+         shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
@@ -3658,6 +3730,13 @@ async function runBrowserSelfTest() {
       springReverbDwell.value, springReverbMix.value, springReverbLevel.value] =
       ["2.4", "0", "8000", "35", "20", "0"];
     updateSpringReverb();
+    [shimmerReverbControls[0].value, shimmerReverbControls[1].value,
+      shimmerReverbControls[2].value, shimmerReverbControls[3].value,
+      shimmerReverbControls[4].value, shimmerReverbControls[5].value,
+      shimmerReverbControls[6].value, shimmerReverbControls[7].value,
+      shimmerReverbControls[8].value] = ["3.4", "7200", "72", "35", "120",
+        "7", "65", "30", "-3"];
+    updateShimmerReverb();
     delayPreset.value = "slapback";
     applyDelayPreset();
     if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||
@@ -3831,7 +3910,7 @@ async function runBrowserSelfTest() {
     const inputChannels = Array.from({ length: decodedAudio.numberOfChannels }, (_, channel) =>
       decodedAudio.getChannelData(channel));
     let inputStartFrame = -1;
-    for (let start = 0; start + meters.frames <= inputChannels[0].length; start += 1) {
+    for (let start = inputChannels[0].length - meters.frames; start >= 0; start -= 1) {
       let candidatePeak = 0;
       let candidateSquares = 0;
       let candidateSamples = 0;
@@ -3859,12 +3938,13 @@ async function runBrowserSelfTest() {
     }
     let measuredOutputPeak = 0;
     let measuredOutputSquares = 0;
-    for (let i = outputStart; i < actual.length; i += 1) {
+    const outputEnd = outputStart + lastBlockSamples;
+    for (let i = outputStart; i < outputEnd; i += 1) {
       const magnitude = Math.abs(actual[i]);
       measuredOutputPeak = Math.max(measuredOutputPeak, magnitude);
       measuredOutputSquares += actual[i] * actual[i];
     }
-    const measuredOutputRms = Math.sqrt(measuredOutputSquares / Math.max(1, actual.length - outputStart));
+    const measuredOutputRms = Math.sqrt(measuredOutputSquares / Math.max(1, lastBlockSamples));
     if (Math.abs(meters.output.peak - measuredOutputPeak) > 1e-6 ||
         Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
       throw new Error("Output meter does not match the final processed audio block.");

@@ -30,6 +30,7 @@ PYTHON ?= python3
 	publish-pitch-arpeggiator-plan publish-pitch-arpeggiator \
 	publish-pitch-feedback-delay-plan publish-pitch-feedback-delay \
 	publish-feedback-generator-plan publish-feedback-generator \
+	publish-shimmer-reverb-plan publish-shimmer-reverb \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -278,6 +279,12 @@ publish-feedback-generator-plan:
 
 publish-feedback-generator:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint feedback-generator
+
+publish-shimmer-reverb-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint shimmer-reverb
+
+publish-shimmer-reverb:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint shimmer-reverb
 
 publish-mono-guitar-synth-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint mono-guitar-synth

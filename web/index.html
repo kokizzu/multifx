@@ -80,7 +80,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">58 of 58</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">59 of 59</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -140,8 +140,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="53"><span class="effect-number">54</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="54"><span class="effect-number">55</span><span class="effect-name">Pitch Feedback Delay</span><span class="effect-default">Pitch-shifted repeats · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="55"><span class="effect-number">56</span><span class="effect-name">Feedback Generator</span><span class="effect-default">Mono-tracked generated sustain · project-authored</span><span class="effect-category-tag">Dynamics</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="56" checked><span class="effect-number">57</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="57" checked><span class="effect-number">58</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="56"><span class="effect-number">57</span><span class="effect-name">Shimmer Reverb</span><span class="effect-default">Pitch-fed plate tail · project-authored</span><span class="effect-category-tag">Reverb</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="57" checked><span class="effect-number">58</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="58" checked><span class="effect-number">59</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -496,6 +497,21 @@
           <label class="mix-control" for="spring-reverb-level-db"><span>Wet level</span><output id="spring-reverb-level-value" for="spring-reverb-level-db">0.0 dB</output><input id="spring-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
         </div>
         <p class="hint">A project-authored dispersive feedback-delay-line spring-style effect, not an emulation of a named product or amp circuit. Dwell controls tank excitation and nonlinear drive. Wet pre-delay affects only the wet path. Bypass clears the tail (no spillover).</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Shimmer reverb controls">
+        <h3>Shimmer Reverb · project-authored pitch-fed reverb</h3>
+        <p class="hint">An original topology built from the project's plate reverb and polyphonic pitch shifter. The pitch-shifted wet signal feeds a bounded reverb return. The controls and ranges below are project-authored and do not copy a named pedal's parameter map; the implementation is not a commercial algorithm emulation. Bypass clears the tail and does not spill over.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="shimmer-reverb-decay"><span>Decay</span><output id="shimmer-reverb-decay-value" for="shimmer-reverb-decay">3.00 s</output><input id="shimmer-reverb-decay" type="range" min="0.2" max="12" step="0.05" value="3"></label>
+          <label class="mix-control" for="shimmer-reverb-damping"><span>Damping</span><output id="shimmer-reverb-damping-value" for="shimmer-reverb-damping">6500 Hz</output><input id="shimmer-reverb-damping" type="range" min="200" max="18000" step="100" value="6500"></label>
+          <label class="mix-control" for="shimmer-reverb-diffusion"><span>Diffusion</span><output id="shimmer-reverb-diffusion-value" for="shimmer-reverb-diffusion">85%</output><input id="shimmer-reverb-diffusion" type="range" min="0" max="100" step="1" value="85"></label>
+          <label class="mix-control" for="shimmer-reverb-feedback"><span>Pitch return</span><output id="shimmer-reverb-feedback-value" for="shimmer-reverb-feedback">25%</output><input id="shimmer-reverb-feedback" type="range" min="0" max="65" step="1" value="25"></label>
+          <label class="mix-control" for="shimmer-reverb-high-pass"><span>Return high-pass</span><output id="shimmer-reverb-high-pass-value" for="shimmer-reverb-high-pass">80 Hz</output><input id="shimmer-reverb-high-pass" type="range" min="20" max="1500" step="5" value="80"></label>
+          <label class="mix-control" for="shimmer-reverb-pitch"><span>Pitch shift</span><output id="shimmer-reverb-pitch-value" for="shimmer-reverb-pitch">+12 semitones</output><input id="shimmer-reverb-pitch" type="range" min="1" max="12" step="0.5" value="12"></label>
+          <label class="mix-control" for="shimmer-reverb-intensity"><span>Shimmer intensity</span><output id="shimmer-reverb-intensity-value" for="shimmer-reverb-intensity">100%</output><input id="shimmer-reverb-intensity" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="shimmer-reverb-mix"><span>Mix</span><output id="shimmer-reverb-mix-value" for="shimmer-reverb-mix">25%</output><input id="shimmer-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="shimmer-reverb-level"><span>Wet level</span><output id="shimmer-reverb-level-value" for="shimmer-reverb-level">0.0 dB</output><input id="shimmer-reverb-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">

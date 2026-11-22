@@ -20,6 +20,7 @@ add_library(tabletfx_core
     src/effects/mono_guitar_synth.cpp
     src/effects/pitch_feedback_delay.cpp
     src/effects/feedback_generator.cpp
+    src/effects/shimmer_reverb.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
@@ -163,6 +164,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_feedback_generator_tests tests/test_feedback_generator.cpp)
     target_link_libraries(tabletfx_feedback_generator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_feedback_generator_tests COMMAND tabletfx_feedback_generator_tests)
+
+    add_executable(tabletfx_shimmer_reverb_tests tests/test_shimmer_reverb.cpp)
+    target_link_libraries(tabletfx_shimmer_reverb_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_shimmer_reverb_tests COMMAND tabletfx_shimmer_reverb_tests)
 
     add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
     target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)

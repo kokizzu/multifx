@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -339,6 +339,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_set_feedback_generator(this.chain, ...values);
   }
 
+  configureShimmerReverb(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 9) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_shimmer_reverb(this.chain, pointer);
+    this.module._free(pointer);
+  }
+
   configurePitchArpeggiator(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 31) {
       return;
@@ -485,6 +496,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePitchFeedbackDelay(message.value);
     } else if (message.type === "feedback-generator" && this.ready) {
       this.configureFeedbackGenerator(message.value);
+    } else if (message.type === "shimmer-reverb" && this.ready) {
+      this.configureShimmerReverb(message.value);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

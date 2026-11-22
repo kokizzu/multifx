@@ -11,6 +11,7 @@
 #include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
+#include "tabletfx/effects/shimmer_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
@@ -254,6 +255,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::FeedbackGenerator>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::ShimmerReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -306,6 +310,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 55U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 56U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -918,6 +925,22 @@ public:
         parameters.dry_level = dry_level;
         parameters.silence_threshold_db = silence_threshold_db;
         static_cast<tabletfx::effects::FeedbackGenerator*>(effects_[55].effect.get())
+            ->configure(parameters);
+    }
+
+    void configure_shimmer_reverb(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::ShimmerReverbParameters parameters;
+        parameters.decay_seconds = values[0];
+        parameters.damping_hz = values[1];
+        parameters.diffusion = values[2];
+        parameters.feedback = values[3];
+        parameters.high_pass_hz = values[4];
+        parameters.pitch_semitones = values[5];
+        parameters.shimmer_intensity = values[6];
+        parameters.mix = values[7];
+        parameters.level_db = values[8];
+        static_cast<tabletfx::ShimmerReverb*>(effects_[56].effect.get())
             ->configure(parameters);
     }
 
@@ -2111,6 +2134,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_feedback_generator(
         as_chain(opaque)->configure_feedback_generator(
             type, gain, attack_ms, release_ms, dry_kill, dry_level,
             silence_threshold_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_shimmer_reverb(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_shimmer_reverb(values);
     }
 }
 
