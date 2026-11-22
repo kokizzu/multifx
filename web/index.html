@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">66 of 66</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">67 of 67</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -150,8 +150,9 @@
         <label class="effect-row" data-category="stereo"><input type="checkbox" data-effect="61"><span class="effect-number">62</span><span class="effect-name">Stereo Enhancer · project-authored</span><span class="effect-default">Modern width · Classic delay/pan · Stereoizer</span><span class="effect-category-tag">Stereo &amp; image</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="62"><span class="effect-number">63</span><span class="effect-name">Resonant Delay · project-authored</span><span class="effect-default">Resonant feedback · adjustable center/Q</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="63"><span class="effect-number">64</span><span class="effect-name">Harmonic Tremolo · project-authored</span><span class="effect-default">3 Hz · 65% · 700 Hz split</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="64" checked><span class="effect-number">65</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="65" checked><span class="effect-number">66</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="64"><span class="effect-number">65</span><span class="effect-name">Auto-Swell Delay · project-authored</span><span class="effect-default">Threshold-triggered swell · tap sync</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="65" checked><span class="effect-number">66</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="66" checked><span class="effect-number">67</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -998,6 +999,25 @@
           <label class="mix-control" for="resonant-delay-center-hz"><span>Resonant center</span><output id="resonant-delay-center-hz-value" for="resonant-delay-center-hz">800 Hz</output><input id="resonant-delay-center-hz" type="range" min="50" max="8000" step="1" value="800"></label>
           <label class="mix-control" for="resonant-delay-q"><span>Resonance Q</span><output id="resonant-delay-q-value" for="resonant-delay-q">2.0 Q</output><input id="resonant-delay-q" type="range" min="0.5" max="12" step="0.1" value="2"></label>
           <label class="mix-control" for="resonant-delay-mix"><span>Mix</span><output id="resonant-delay-mix-value" for="resonant-delay-mix">25%</output><input id="resonant-delay-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Auto-Swell Delay controls">
+        <h3>Auto-Swell Delay · project-authored</h3>
+        <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 names Time, Feedback, Mix, Tap Division, Swell, Mod, Tone, Sense, Taper (slow/normal/fast), Dry, and Spillover. The guide does not establish this effect’s numeric ranges or full signal topology. The ranges, detector, taper curves, and DSP here are project-authored; Fender algorithm, parameter, and sound parity are not claimed. Spillover lets the project delay tail continue when its effect row is bypassed.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="auto-swell-delay-time-ms"><span>Time</span><output for="auto-swell-delay-time-ms">350 ms</output><input id="auto-swell-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="auto-swell-delay-feedback"><span>Feedback</span><output for="auto-swell-delay-feedback">25%</output><input id="auto-swell-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
+          <label class="mix-control" for="auto-swell-delay-mix"><span>Mix</span><output for="auto-swell-delay-mix">25%</output><input id="auto-swell-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="auto-swell-delay-time-mode"><span>Time mode</span><select id="auto-swell-delay-time-mode"><option value="0" selected>Milliseconds</option><option value="1">Tempo sync</option></select></label>
+          <label class="mix-control" for="auto-swell-delay-tap-division"><span>Tap division</span><select id="auto-swell-delay-tap-division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4" selected>Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option></select></label>
+          <label class="mix-control" for="auto-swell-delay-tempo-bpm"><span>Tempo</span><output for="auto-swell-delay-tempo-bpm">120 BPM</output><input id="auto-swell-delay-tempo-bpm" type="range" min="20" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="auto-swell-delay-swell-ms"><span>Swell</span><output for="auto-swell-delay-swell-ms">300 ms</output><input id="auto-swell-delay-swell-ms" type="range" min="1" max="5000" step="1" value="300"></label>
+          <label class="mix-control" for="auto-swell-delay-mod"><span>Mod</span><output for="auto-swell-delay-mod">15%</output><input id="auto-swell-delay-mod" type="range" min="0" max="100" step="1" value="15"></label>
+          <label class="mix-control" for="auto-swell-delay-tone"><span>Tone</span><output for="auto-swell-delay-tone">70%</output><input id="auto-swell-delay-tone" type="range" min="0" max="100" step="1" value="70"></label>
+          <label class="mix-control" for="auto-swell-delay-sense-db"><span>Sense</span><output for="auto-swell-delay-sense-db">−36 dB</output><input id="auto-swell-delay-sense-db" type="range" min="-72" max="0" step="1" value="-36"></label>
+          <label class="mix-control" for="auto-swell-delay-taper"><span>Taper</span><select id="auto-swell-delay-taper"><option value="0">Slow</option><option value="1" selected>Normal</option><option value="2">Fast</option></select></label>
+          <label><input id="auto-swell-delay-dry" type="checkbox"> Dry signal follows swell</label>
+          <label><input id="auto-swell-delay-spillover" type="checkbox"> Spillover on bypass</label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Phrase Looper controls">

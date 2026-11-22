@@ -42,6 +42,7 @@
 #include "tabletfx/effects/poly_pitch_shifter.hpp"
 #include "tabletfx/effects/tremolo.hpp"
 #include "tabletfx/effects/harmonic_tremolo.hpp"
+#include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
@@ -101,6 +102,8 @@ struct Options {
     tabletfx::TremoloParameters tremolo{};
     bool harmonic_tremolo_enabled = false;
     tabletfx::HarmonicTremoloParameters harmonic_tremolo{};
+    bool auto_swell_delay_enabled = false;
+    tabletfx::AutoSwellDelayParameters auto_swell_delay{};
     bool chorus_enabled = false;
     tabletfx::ChorusParameters chorus{};
     bool dimension_chorus_enabled = false;
@@ -1091,6 +1094,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.sweep_delay_enabled = true;
             continue;
         }
+        if (key == "--auto-swell-delay") {
+            options.auto_swell_delay_enabled = true;
+            continue;
+        }
         if (key == "--multiband-slope" || key == "--multiband-low-detector" ||
             key == "--multiband-mid-detector" ||
             key == "--multiband-high-detector" ||
@@ -1223,6 +1230,66 @@ Options parse_options(int argc, char** argv, int first) {
             else if (value == "off") options.reverse_delay.spillover = false;
             else throw std::invalid_argument("Reverse-delay spillover must be on or off");
             options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell-delay-time-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --auto-swell-delay-time-mode");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "milliseconds" || value == "ms") {
+                options.auto_swell_delay.time_mode = tabletfx::DelayTimeMode::milliseconds;
+            } else if (value == "tempo-sync") {
+                options.auto_swell_delay.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+            } else {
+                throw std::invalid_argument(
+                    "Auto-Swell Delay time mode must be milliseconds or tempo-sync");
+            }
+            options.auto_swell_delay_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell-delay-tap-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --auto-swell-delay-tap-division");
+            }
+            options.auto_swell_delay.tap_division = parse_delay_division(argv[++i]);
+            options.auto_swell_delay_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell-delay-taper") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --auto-swell-delay-taper");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "slow") {
+                options.auto_swell_delay.taper = tabletfx::AutoSwellDelayTaper::slow;
+            } else if (value == "normal") {
+                options.auto_swell_delay.taper = tabletfx::AutoSwellDelayTaper::normal;
+            } else if (value == "fast") {
+                options.auto_swell_delay.taper = tabletfx::AutoSwellDelayTaper::fast;
+            } else {
+                throw std::invalid_argument(
+                    "Auto-Swell Delay taper must be slow, normal, or fast");
+            }
+            options.auto_swell_delay_enabled = true;
+            continue;
+        }
+        if (key == "--auto-swell-delay-dry" || key == "--auto-swell-delay-spillover") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            if (value != "on" && value != "off") {
+                throw std::invalid_argument(
+                    "Auto-Swell Delay Dry and Spillover values must be on or off");
+            }
+            const bool enabled = value == "on";
+            if (key == "--auto-swell-delay-dry") {
+                options.auto_swell_delay.dry = enabled;
+            } else {
+                options.auto_swell_delay.spillover = enabled;
+            }
+            options.auto_swell_delay_enabled = true;
             continue;
         }
         if (key == "--dimension-chorus-version") {
@@ -1786,6 +1853,38 @@ Options parse_options(int argc, char** argv, int first) {
         else if (key == "--harmonic-tremolo-smoothing-ms") {
             options.harmonic_tremolo.smoothing_ms = value;
             options.harmonic_tremolo_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-time-ms") {
+            options.auto_swell_delay.time_ms = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-feedback") {
+            options.auto_swell_delay.feedback = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-mix") {
+            options.auto_swell_delay.mix = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-tempo-bpm") {
+            options.auto_swell_delay.tempo_bpm = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-swell-ms") {
+            options.auto_swell_delay.swell_ms = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-mod") {
+            options.auto_swell_delay.mod = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-tone") {
+            options.auto_swell_delay.tone = value;
+            options.auto_swell_delay_enabled = true;
+        }
+        else if (key == "--auto-swell-delay-sense-db") {
+            options.auto_swell_delay.sense_db = value;
+            options.auto_swell_delay_enabled = true;
         }
         else if (key == "--chorus-rate-hz") {
             options.chorus.rate_hz = value;
@@ -2815,6 +2914,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::HarmonicTremolo>(
             static_cast<float>(sample_rate), options.harmonic_tremolo));
     }
+    if (options.auto_swell_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::AutoSwellDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.auto_swell_delay));
+    }
     if (options.chorus_enabled) {
         effects.push_back(std::make_unique<tabletfx::Chorus>(
             static_cast<float>(sample_rate), channels, options.chorus));
@@ -3485,6 +3589,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     tabletfx::HarmonicTremoloParameters harmonic_tremolo_parameters;
     effects.push_back(std::make_unique<tabletfx::HarmonicTremolo>(
         static_cast<float>(sample_rate), harmonic_tremolo_parameters));
+    effects.push_back(std::make_unique<tabletfx::AutoSwellDelay>(
+        static_cast<float>(sample_rate), channels));
     tabletfx::ChorusParameters chorus_parameters;
     chorus_parameters.rate_hz = 0.8F;
     chorus_parameters.base_delay_ms = 15.0F;
@@ -4137,6 +4243,11 @@ void run_bench() {
         return std::make_unique<tabletfx::HarmonicTremolo>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("auto-swell-delay", [=] {
+        tabletfx::AutoSwellDelayParameters parameters;
+        return std::make_unique<tabletfx::AutoSwellDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("chorus", [=] {
         tabletfx::ChorusParameters parameters;
         parameters.rate_hz = 0.8F;
@@ -4193,6 +4304,14 @@ void print_usage() {
                   " [--harmonic-tremolo-beats-per-cycle beats]"
                   " [--harmonic-tremolo-stereo-alternation on|off]"
                   " [--harmonic-tremolo-smoothing-ms ms]"
+                   " [--auto-swell-delay] [--auto-swell-delay-time-ms 1..2000]"
+                   " [--auto-swell-delay-feedback 0..0.95] [--auto-swell-delay-mix 0..1]"
+                   " [--auto-swell-delay-time-mode milliseconds|tempo-sync]"
+                   " [--auto-swell-delay-tap-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
+                   " [--auto-swell-delay-tempo-bpm 20..300] [--auto-swell-delay-swell-ms 1..5000]"
+                   " [--auto-swell-delay-mod 0..1] [--auto-swell-delay-tone 0..1]"
+                   " [--auto-swell-delay-sense-db -72..0] [--auto-swell-delay-taper slow|normal|fast]"
+                   " [--auto-swell-delay-dry on|off] [--auto-swell-delay-spillover on|off]"
                   " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
                   " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
                   " [--dimension-chorus] [--dimension-chorus-version C|D]"
@@ -4417,6 +4536,14 @@ void print_usage() {
                      " [--sweep-delay-resonance-q 0.5..12] [--sweep-delay-rate-hz 0.05..10]"
                      " [--sweep-delay-waveform sine|triangle|square]"
                      " [--sweep-delay-phase-degrees 0..360]\n"
+                  << "                 [--auto-swell-delay] [--auto-swell-delay-time-ms 1..2000]"
+                     " [--auto-swell-delay-feedback 0..0.95] [--auto-swell-delay-mix 0..1]"
+                     " [--auto-swell-delay-time-mode milliseconds|tempo-sync]"
+                     " [--auto-swell-delay-tap-division <delay-division>]"
+                     " [--auto-swell-delay-tempo-bpm 20..300] [--auto-swell-delay-swell-ms 1..5000]"
+                     " [--auto-swell-delay-mod 0..1] [--auto-swell-delay-tone 0..1]"
+                     " [--auto-swell-delay-sense-db -72..0] [--auto-swell-delay-taper slow|normal|fast]"
+                     " [--auto-swell-delay-dry on|off] [--auto-swell-delay-spillover on|off]\n"
                << "  tabletfx_offline --bench\n";
 }
 

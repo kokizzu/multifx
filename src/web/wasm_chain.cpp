@@ -14,6 +14,7 @@
 #include "tabletfx/effects/shimmer_reverb.hpp"
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
+#include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
@@ -89,7 +90,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(65);
+          effects_.reserve(66);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -280,6 +281,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::HarmonicTremolo>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::AutoSwellDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -316,6 +320,10 @@ public:
         }
         if (index == 38U) {
             static_cast<tabletfx::ReverseDelay*>(effects_[index].effect.get())
+                ->set_enabled(enabled);
+        }
+        if (index == 64U) {
+            static_cast<tabletfx::AutoSwellDelay*>(effects_[index].effect.get())
                 ->set_enabled(enabled);
         }
         if (index == 50U) {
@@ -367,7 +375,7 @@ public:
 
     void process_effect(std::uint32_t index) noexcept {
         if (frames_ == 0 || index >= effects_.size() ||
-            (!effects_[index].enabled && index != 38U)) {
+            (!effects_[index].enabled && index != 38U && index != 64U)) {
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
@@ -814,6 +822,33 @@ public:
         tremolo->set_tempo_sync(tempo_sync != 0, tempo_bpm, beats_per_cycle);
         tremolo->set_stereo_alternation(stereo_alternation != 0);
         tremolo->set_smoothing_ms(smoothing_ms);
+    }
+
+    void configure_auto_swell_delay(
+        float time_ms, float feedback, float mix, std::uint32_t time_mode,
+        std::uint32_t tap_division, float tempo_bpm, float swell_ms, float mod,
+        float tone, float sense_db, std::uint32_t taper,
+        std::uint32_t dry, std::uint32_t spillover) noexcept {
+        tabletfx::AutoSwellDelayParameters parameters;
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.time_mode = time_mode == 1U
+            ? tabletfx::DelayTimeMode::tempo_sync
+            : tabletfx::DelayTimeMode::milliseconds;
+        parameters.tap_division = static_cast<tabletfx::DelayDivision>(
+            std::min(tap_division, 11U));
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.swell_ms = swell_ms;
+        parameters.mod = mod;
+        parameters.tone = tone;
+        parameters.sense_db = sense_db;
+        parameters.taper = static_cast<tabletfx::AutoSwellDelayTaper>(
+            std::min(taper, 2U));
+        parameters.dry = dry != 0U;
+        parameters.spillover = spillover != 0U;
+        static_cast<tabletfx::AutoSwellDelay*>(effects_[64].effect.get())
+            ->configure(parameters);
     }
 
     void configure_chorus(float rate_hz, float base_delay_ms, float depth_ms,
@@ -2264,6 +2299,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_harmonic_tremolo(
         as_chain(opaque)->configure_harmonic_tremolo(
             rate_hz, depth, crossover_hz, waveform, tempo_sync, tempo_bpm,
             beats_per_cycle, stereo_alternation, smoothing_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_auto_swell_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    std::uint32_t time_mode, std::uint32_t tap_division, float tempo_bpm,
+    float swell_ms, float mod, float tone, float sense_db,
+    std::uint32_t taper, std::uint32_t dry, std::uint32_t spillover) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_auto_swell_delay(
+            time_ms, feedback, mix, time_mode, tap_division, tempo_bpm,
+            swell_ms, mod, tone, sense_db, taper, dry, spillover);
     }
 }
 

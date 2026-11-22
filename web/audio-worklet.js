@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -206,6 +206,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const harmonicTremolo = parameters.harmonicTremolo ||
         [3, 0.65, 700, 0, 0, 120, 1, 1, 10];
       module._tf_chain_set_harmonic_tremolo(this.chain, ...harmonicTremolo);
+      const autoSwellDelay = parameters.autoSwellDelay ||
+        [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0];
+      module._tf_chain_set_auto_swell_delay(this.chain, ...autoSwellDelay);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -602,6 +605,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_tremolo(this.chain, ...message.value);
     } else if (message.type === "harmonic-tremolo" && this.ready) {
       this.module._tf_chain_set_harmonic_tremolo(this.chain, ...message.value);
+    } else if (message.type === "auto-swell-delay" && this.ready) {
+      this.module._tf_chain_set_auto_swell_delay(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {
       this.module._tf_chain_set_chorus(this.chain, ...message.value);
     } else if (message.type === "dimension-chorus" && this.ready) {

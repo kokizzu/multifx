@@ -65,6 +65,7 @@ const EFFECT_NAMES = [
   "Stereo Enhancer · project-authored",
   "Resonant Delay · project-authored",
   "Harmonic Tremolo · project-authored",
+  "Auto-Swell Delay · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -96,6 +97,7 @@ const DEFAULT_PARAMETERS = {
   noteGenerator: [3, 0, 40, 0, 0.45, 1, 47, 1, 0.3, 2, 52, 0, 0.25, 0.6],
   enhancer: [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1],
   resonantDelay: [350, 0.35, 800, 2, 0.25],
+  autoSwellDelay: [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -537,6 +539,19 @@ const harmonicTremoloBpm = document.querySelector("#harmonic-tremolo-tempo-bpm")
 const harmonicTremoloDivision = document.querySelector("#harmonic-tremolo-beats-per-cycle");
 const harmonicTremoloStereo = document.querySelector("#harmonic-tremolo-stereo-alternation");
 const harmonicTremoloSmoothing = document.querySelector("#harmonic-tremolo-smoothing-ms");
+const autoSwellDelayTime = document.querySelector("#auto-swell-delay-time-ms");
+const autoSwellDelayFeedback = document.querySelector("#auto-swell-delay-feedback");
+const autoSwellDelayMix = document.querySelector("#auto-swell-delay-mix");
+const autoSwellDelayTimeMode = document.querySelector("#auto-swell-delay-time-mode");
+const autoSwellDelayTapDivision = document.querySelector("#auto-swell-delay-tap-division");
+const autoSwellDelayTempo = document.querySelector("#auto-swell-delay-tempo-bpm");
+const autoSwellDelaySwell = document.querySelector("#auto-swell-delay-swell-ms");
+const autoSwellDelayMod = document.querySelector("#auto-swell-delay-mod");
+const autoSwellDelayTone = document.querySelector("#auto-swell-delay-tone");
+const autoSwellDelaySense = document.querySelector("#auto-swell-delay-sense-db");
+const autoSwellDelayTaper = document.querySelector("#auto-swell-delay-taper");
+const autoSwellDelayDry = document.querySelector("#auto-swell-delay-dry");
+const autoSwellDelaySpillover = document.querySelector("#auto-swell-delay-spillover");
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
 const chorusDelay = document.querySelector("#chorus-delay-ms");
@@ -1933,6 +1948,59 @@ for (const control of [harmonicTremoloRate, harmonicTremoloDepth,
   control.addEventListener("input", updateHarmonicTremolo);
   control.addEventListener("change", updateHarmonicTremolo);
 }
+
+function updateAutoSwellDelay() {
+  const feedback = Number(autoSwellDelayFeedback.value) / 100;
+  const mix = Number(autoSwellDelayMix.value) / 100;
+  const mod = Number(autoSwellDelayMod.value) / 100;
+  const tone = Number(autoSwellDelayTone.value) / 100;
+  const sense = Number(autoSwellDelaySense.value);
+  const values = [
+    Number(autoSwellDelayTime.value),
+    feedback,
+    mix,
+    Number(autoSwellDelayTimeMode.value),
+    Number(autoSwellDelayTapDivision.value),
+    Number(autoSwellDelayTempo.value),
+    Number(autoSwellDelaySwell.value),
+    mod,
+    tone,
+    sense,
+    Number(autoSwellDelayTaper.value),
+    autoSwellDelayDry.checked ? 1 : 0,
+    autoSwellDelaySpillover.checked ? 1 : 0,
+  ];
+  DEFAULT_PARAMETERS.autoSwellDelay = values;
+  autoSwellDelayTime.parentElement.querySelector("output").value =
+    `${autoSwellDelayTime.value} ms`;
+  autoSwellDelayFeedback.parentElement.querySelector("output").value =
+    `${autoSwellDelayFeedback.value}%`;
+  autoSwellDelayMix.parentElement.querySelector("output").value =
+    `${autoSwellDelayMix.value}%`;
+  autoSwellDelayTempo.parentElement.querySelector("output").value =
+    `${autoSwellDelayTempo.value} BPM`;
+  autoSwellDelaySwell.parentElement.querySelector("output").value =
+    `${autoSwellDelaySwell.value} ms`;
+  autoSwellDelayMod.parentElement.querySelector("output").value =
+    `${autoSwellDelayMod.value}%`;
+  autoSwellDelayTone.parentElement.querySelector("output").value =
+    `${autoSwellDelayTone.value}%`;
+  autoSwellDelaySense.parentElement.querySelector("output").value =
+    `${sense < 0 ? "−" : ""}${Math.abs(sense)} dB`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "auto-swell-delay", value: values });
+  }
+}
+
+for (const control of [autoSwellDelayTime, autoSwellDelayFeedback,
+  autoSwellDelayMix, autoSwellDelayTimeMode, autoSwellDelayTapDivision,
+  autoSwellDelayTempo, autoSwellDelaySwell, autoSwellDelayMod,
+  autoSwellDelayTone, autoSwellDelaySense, autoSwellDelayTaper,
+  autoSwellDelayDry, autoSwellDelaySpillover]) {
+  control.addEventListener("input", updateAutoSwellDelay);
+  control.addEventListener("change", updateAutoSwellDelay);
+}
+updateAutoSwellDelay();
 
 function updateChorus() {
   const delayMs = Number(chorusDelay.value);
@@ -3462,9 +3530,12 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 66 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 66 || effectRows.length !== 66 ||
+      const expectedEffectIds = Array.from({ length: 67 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 67 || effectRows.length !== 67 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
+        EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
+        EFFECT_NAMES[65] !== "Output level" || EFFECT_NAMES[66] !== "Peak limiter" ||
+        initialEffectState[64] || !initialEffectState[65] || !initialEffectState[66] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -3477,10 +3548,10 @@ async function runBrowserSelfTest() {
            initialEffectState[56] || initialEffectState[57] ||
             initialEffectState[58] || initialEffectState[59] ||
             initialEffectState[60] || initialEffectState[61] ||
-            initialEffectState[62] || initialEffectState[63] ||
+             initialEffectState[62] || initialEffectState[63] || initialEffectState[64] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 66 ordered, categorized effects (IDs 0–65), with optional effects disabled by default.");
+        throw new Error("The effect picker must list 67 ordered, categorized effects (IDs 0–66), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -3597,6 +3668,83 @@ async function runBrowserSelfTest() {
     harmonicTremoloStereo.value = defaultHarmonicTremolo[7] === 0 ? "off" : "on";
     harmonicTremoloSmoothing.value = String(defaultHarmonicTremolo[8]);
     harmonicTremoloCrossover.dispatchEvent(new Event("input", { bubbles: true }));
+     const autoSwellDelayDefaults = [...DEFAULT_PARAMETERS.autoSwellDelay];
+     const autoSwellDelayRanges = [
+       [autoSwellDelayTime, "1", "2000"],
+       [autoSwellDelayFeedback, "0", "95"],
+       [autoSwellDelayMix, "0", "100"],
+       [autoSwellDelayTempo, "20", "300"],
+       [autoSwellDelaySwell, "1", "5000"],
+       [autoSwellDelayMod, "0", "100"],
+       [autoSwellDelayTone, "0", "100"],
+       [autoSwellDelaySense, "-72", "0"],
+     ];
+     const tapDivisionValues = [...autoSwellDelayTapDivision.options]
+       .map((option) => option.value).join(",");
+     const taperValues = [...autoSwellDelayTaper.options]
+       .map((option) => option.value).join(",");
+     const autoSwellHint = document.querySelector(
+       '.effect-parameter-group[aria-label="Auto-Swell Delay controls"] .hint',
+     ).textContent;
+     if (autoSwellDelayDefaults.join(",") !==
+           "350,0.25,0.25,0,4,120,300,0.15,0.7,-36,1,0,0" ||
+         autoSwellDelayRanges.some(([control, minimum, maximum]) =>
+           control.min !== minimum || control.max !== maximum) ||
+         [...autoSwellDelayTimeMode.options].map((option) => option.value).join(",") !== "0,1" ||
+         tapDivisionValues !== "0,1,2,3,4,5,6,7,8,9,10,11" ||
+         taperValues !== "0,1,2" ||
+         !autoSwellHint.includes("Model Guide v1.1.100") ||
+         !autoSwellHint.includes("numeric ranges") ||
+         !autoSwellHint.includes("parity are not claimed")) {
+       throw new Error("Auto-Swell Delay defaults, project control ranges, enum order, and vendor qualification must remain explicit.");
+     }
+     const autoSwellControls = [autoSwellDelayTime, autoSwellDelayFeedback,
+       autoSwellDelayMix, autoSwellDelayTimeMode, autoSwellDelayTapDivision,
+       autoSwellDelayTempo, autoSwellDelaySwell, autoSwellDelayMod,
+       autoSwellDelayTone, autoSwellDelaySense, autoSwellDelayTaper];
+     const autoSwellControlSnapshot = autoSwellControls.map((control) => control.value);
+     const autoSwellSwitchSnapshot = [autoSwellDelayDry.checked,
+       autoSwellDelaySpillover.checked];
+     const previousWorkletNode = workletNode;
+     const autoSwellMessages = [];
+     try {
+       workletNode = { port: { postMessage: (message) => autoSwellMessages.push(message) } };
+       autoSwellDelayTime.value = "650";
+       autoSwellDelayFeedback.value = "70";
+       autoSwellDelayMix.value = "40";
+       autoSwellDelayTimeMode.value = "1";
+       autoSwellDelayTapDivision.value = "8";
+       autoSwellDelayTempo.value = "96";
+       autoSwellDelaySwell.value = "900";
+       autoSwellDelayMod.value = "20";
+       autoSwellDelayTone.value = "35";
+       autoSwellDelaySense.value = "-42";
+       autoSwellDelayTaper.value = "2";
+       autoSwellDelayDry.checked = true;
+       autoSwellDelaySpillover.checked = true;
+       autoSwellDelayTime.dispatchEvent(new Event("input", { bubbles: true }));
+       const autoSwellMessage = autoSwellMessages.at(-1);
+       if (autoSwellMessage?.type !== "auto-swell-delay" ||
+           autoSwellMessage.value.join(",") !== "650,0.7,0.4,1,8,96,900,0.2,0.35,-42,2,1,1" ||
+           autoSwellDelayTime.parentElement.querySelector("output").value !== "650 ms" ||
+           autoSwellDelayFeedback.parentElement.querySelector("output").value !== "70%" ||
+           autoSwellDelayMix.parentElement.querySelector("output").value !== "40%" ||
+           autoSwellDelaySense.parentElement.querySelector("output").value !== "−42 dB") {
+         throw new Error("Auto-Swell Delay controls must send the 13-value worklet message in API order and update readouts.");
+       }
+     } finally {
+       workletNode = previousWorkletNode;
+       autoSwellControls.forEach((control, index) => {
+         control.value = autoSwellControlSnapshot[index];
+       });
+       autoSwellDelayDry.checked = autoSwellSwitchSnapshot[0];
+       autoSwellDelaySpillover.checked = autoSwellSwitchSnapshot[1];
+       updateAutoSwellDelay();
+     }
+     if (DEFAULT_PARAMETERS.autoSwellDelay.join(",") !==
+         "350,0.25,0.25,0,4,120,300,0.15,0.7,-36,1,0,0") {
+       throw new Error("Auto-Swell Delay self-test must restore its initial project-authored controls.");
+     }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -3638,7 +3786,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63" ||
-          effectCount.value !== "11 of 66" ||
+          effectCount.value !== "11 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3646,8 +3794,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,65" ||
-        effectCount.value !== "9 of 66" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,66" ||
+        effectCount.value !== "9 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3656,7 +3804,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 66" ||
+        effectCount.value !== "7 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3665,7 +3813,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 66" ||
+        effectCount.value !== "7 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3673,7 +3821,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 66" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -3681,7 +3829,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 66" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3689,7 +3837,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 66" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3697,7 +3845,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 66" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -3705,7 +3853,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60" || effectCount.value !== "1 of 66" ||
+    if (loopIds.join(",") !== "60" || effectCount.value !== "1 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list the phrase looper and preserve the current chain state.");
     }
@@ -3713,7 +3861,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 66" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -3741,15 +3889,15 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62" || effectCount.value !== "9 of 66" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64" || effectCount.value !== "10 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Delay category must include Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
+      throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 66" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 67" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -3759,12 +3907,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 66") {
+      if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 67") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      if (effectCount.value !== "66 of 66" || effectRows.some((row) => row.hidden)) {
+      if (effectCount.value !== "67 of 67" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -3948,6 +4096,14 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
+    const activeProcessorIndices = parityEnabled
+      .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
+        ? index : -1)
+      .filter((index) => index >= 0);
+    if (parityEnabled.length !== 67 || activeProcessorIndices.length !== 64 ||
+        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 64) {
+      throw new Error("The all-effect chain must contain 64 active processors between input trim and output utilities.");
+    }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
     parityEnabled[53] = false;
@@ -4587,6 +4743,7 @@ async function runBrowserSelfTest() {
       maxAbsoluteTolerance: maxAbsTolerance,
       rmsTolerance,
       processorMemoryBytes: chainMemoryBytes,
+      allEffectProcessorCount: activeProcessorIndices.length,
       tunerMemoryBytes,
       wasmLinearMemoryBytes: wasmMemoryBytes,
       timingResolution: timerResolution,

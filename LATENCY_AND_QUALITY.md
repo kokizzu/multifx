@@ -1,6 +1,14 @@
 # Latency, quality, and DSP-load protocol
 
-## Latest DSP verification (Harmonic Tremolo and 66-entry picker, 2026-11-22)
+## Latest DSP verification (Auto-Swell Delay and 67-entry picker, 2026-11-22)
+
+The project-authored Auto-Swell Delay has no added fixed dry-path latency, allocates its fixed delay storage at construction, and does not allocate in `process()`. At 48 kHz stereo, the 2 s ring uses 770,080 B. The isolated synthetic processor-call benchmark measured 0.2145% p50 / 0.2160% p95 / 0.2175% p99 / 0.4763% p99.9 / 2.7717% maximum of a 2.667 ms callback. This is not a live-device route measurement.
+
+The synthetic 64-stage full chain reported 62.8599% p50 / 81.0416% p95 / 100.8492% p99 / 126.6740% p99.9 / 154.3636% maximum with 12,054,680 B owned state; its maximum exceeds one callback deadline. This stress measurement does not establish real-time safety on hardware.
+
+`make test` passed 71/71 CTest cases plus offline CLI checks. `make web-test` passed the categorized 67-entry picker and HeadlessChrome 151 browser/WASM Play/native comparison over 64 active processors (maximum absolute error 0.0000146203; RMS error 0.00000285181); processor memory was 13,706,624 B plus 10,364 B tuner state within 16 MiB. `make audio-regression` passed five pickup positions plus Guitar-TECHS DI stereo/mono using local prerecorded fixtures; bridge, stereo-DI, and mono-DI output RMS were 6.90773e-6, 6.05366e-6, and 1.30725e-5. Output is very quiet. Browser timing has millisecond-fallback resolution, and no human listening or live hardware result is established.
+
+## Previous DSP verification (Harmonic Tremolo and 66-entry picker, 2026-11-22)
 
 Harmonic Tremolo is a project-authored complementary low/high-band tremolo with opposing LFO phases. Its 48 kHz stereo/128-frame isolated synthetic benchmark measured 0.0776% p50 / 0.0795% p95 / 0.0825% p99 / 0.2944% p99.9 / 0.8258% maximum of a 2.667 ms callback and 136 B processor-owned memory. The effect has no fixed algorithmic latency; construction owns fixed state and process() allocates nothing.
 

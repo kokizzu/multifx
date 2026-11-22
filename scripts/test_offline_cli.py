@@ -1914,6 +1914,50 @@ def check_harmonic_tremolo(executable: Path) -> None:
             )
 
 
+def check_auto_swell_delay(executable: Path) -> None:
+    sample_rate = 48000
+    source_samples = [
+        round(0.65 * 32767 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(sample_rate)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-auto-swell-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "steady-tone.wav"
+        output = root / "swell-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--auto-swell-delay", "--auto-swell-delay-time-ms", "10",
+             "--auto-swell-delay-feedback", "0", "--auto-swell-delay-mix", "1",
+             "--auto-swell-delay-time-mode", "milliseconds",
+             "--auto-swell-delay-tap-division", "quarter",
+             "--auto-swell-delay-tempo-bpm", "120",
+             "--auto-swell-delay-swell-ms", "200",
+             "--auto-swell-delay-mod", "0", "--auto-swell-delay-tone", "0.7",
+             "--auto-swell-delay-sense-db", "-72",
+             "--auto-swell-delay-taper", "normal",
+             "--auto-swell-delay-dry", "off", "--auto-swell-delay-spillover", "off"],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                "Auto-Swell Delay CLI render failed: "
+                f"stdout={result.stdout!r} stderr={result.stderr!r}"
+            )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Auto-Swell Delay controls did not enable one processor")
+        rendered = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        before_delay = rendered[:480]
+        if any(abs(value) > 0.002 for value in before_delay):
+            raise AssertionError("Auto-Swell Delay fully-wet output must respect its delay time")
+        early = rendered[1440:3840]
+        late = rendered[12000:14400]
+        early_rms = math.sqrt(sum(value * value for value in early) / len(early))
+        late_rms = math.sqrt(sum(value * value for value in late) / len(late))
+        if late_rms <= early_rms * 1.5:
+            raise AssertionError("Auto-Swell Delay must apply its configured onset swell to repeats")
+
+
 def check_sweep_delay(executable: Path) -> None:
     sample_rate = 48000
     delay_frames = 96
@@ -2192,6 +2236,7 @@ def main() -> None:
     check_filtered_delay(args.executable.resolve())
     check_resonant_delay(args.executable.resolve())
     check_harmonic_tremolo(args.executable.resolve())
+    check_auto_swell_delay(args.executable.resolve())
     check_sweep_delay(args.executable.resolve())
     check_formant_filter(args.executable.resolve())
     check_harmonic_resonator(args.executable.resolve())

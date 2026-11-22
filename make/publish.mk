@@ -6,7 +6,8 @@ PUBLISH_CHECKPOINTS := \
 	dimension-chorus triple-double-chorus four-band-resonator diatonic-harmonizer \
 	grain-delay pitch-arpeggiator pitch-feedback-delay feedback-generator \
 	shimmer-reverb convolution-reverb mono-guitar-synth flagship-catalog \
-	five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo
+ five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
+ auto-swell-delay
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
