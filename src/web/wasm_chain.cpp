@@ -16,6 +16,7 @@
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
+#include "tabletfx/effects/megatap_delay.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -93,7 +94,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(68);
+          effects_.reserve(69);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -296,6 +297,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::AutoPan>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::MegatapDelay>(
+                                static_cast<float>(sample_rate), 5000.0F),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -364,6 +368,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 62U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 68U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -754,6 +761,56 @@ public:
         panner->set_waveform(static_cast<tabletfx::AutoPanWaveform>(waveform));
         panner->set_tempo_sync(tempo_sync != 0U, tempo_bpm,
                                static_cast<tabletfx::AutoPanDivision>(division));
+    }
+
+    void configure_megatap_delay(
+        float delay_time_ms, std::uint32_t tap_count, float time_alpha,
+        float time_randomize_percent, std::uint32_t amplitude_shape,
+        float amplitude_alpha, float amplitude_randomize_percent,
+        std::uint32_t pan_shape, float pan_alpha_percent,
+        float stereo_spread_percent, float predelay_ms, float feedback,
+        std::uint32_t feedback_tap, float low_cut_hz, float high_cut_hz,
+        float diffusion_mix, float diffusion_time_ms,
+        float diffusion_lfo_rate_hz, float diffusion_lfo_depth_ms,
+        float envelope_threshold_db, float envelope_attack_ms,
+        float envelope_release_ms, float input_gain_db, float mix,
+        float level_db, std::uint32_t input_select,
+        std::uint32_t envelope_enabled) noexcept {
+        auto* delay = static_cast<tabletfx::MegatapDelay*>(effects_[68].effect.get());
+        auto parameters = delay->parameters();
+        parameters.delay_time_ms = delay_time_ms;
+        parameters.tap_count = static_cast<std::uint8_t>(
+            std::clamp(tap_count, 1U, 64U));
+        parameters.time_alpha = time_alpha;
+        parameters.time_randomize_percent = time_randomize_percent;
+        parameters.amplitude_shape = static_cast<tabletfx::MegatapAmplitudeShape>(
+            std::min(amplitude_shape, 4U));
+        parameters.amplitude_alpha = amplitude_alpha;
+        parameters.amplitude_randomize_percent = amplitude_randomize_percent;
+        parameters.pan_shape = static_cast<tabletfx::MegatapPanShape>(
+            std::min(pan_shape, 3U));
+        parameters.pan_alpha_percent = pan_alpha_percent;
+        parameters.stereo_spread_percent = stereo_spread_percent;
+        parameters.predelay_ms = predelay_ms;
+        parameters.feedback = feedback;
+        parameters.feedback_tap = static_cast<std::uint8_t>(
+            std::clamp(feedback_tap, 1U, 64U));
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.diffusion_mix = diffusion_mix;
+        parameters.diffusion_time_ms = diffusion_time_ms;
+        parameters.diffusion_lfo_rate_hz = diffusion_lfo_rate_hz;
+        parameters.diffusion_lfo_depth_ms = diffusion_lfo_depth_ms;
+        parameters.envelope_threshold_db = envelope_threshold_db;
+        parameters.envelope_attack_ms = envelope_attack_ms;
+        parameters.envelope_release_ms = envelope_release_ms;
+        parameters.input_gain_db = input_gain_db;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        parameters.input_select = static_cast<tabletfx::MegatapInputSelect>(
+            std::min(input_select, 2U));
+        parameters.envelope_enabled = envelope_enabled != 0U;
+        delay->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2756,6 +2813,30 @@ TABLETFX_WASM_EXPORT void tf_chain_set_auto_pan(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_auto_pan(rate_hz, depth, waveform,
                                              tempo_sync, tempo_bpm, division);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_megatap_delay(
+    void* opaque, float delay_time_ms, std::uint32_t tap_count,
+    float time_alpha, float time_randomize_percent,
+    std::uint32_t amplitude_shape, float amplitude_alpha,
+    float amplitude_randomize_percent, std::uint32_t pan_shape,
+    float pan_alpha_percent, float stereo_spread_percent, float predelay_ms,
+    float feedback, std::uint32_t feedback_tap, float low_cut_hz,
+    float high_cut_hz, float diffusion_mix, float diffusion_time_ms,
+    float diffusion_lfo_rate_hz, float diffusion_lfo_depth_ms,
+    float envelope_threshold_db, float envelope_attack_ms,
+    float envelope_release_ms, float input_gain_db, float mix, float level_db,
+    std::uint32_t input_select, std::uint32_t envelope_enabled) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_megatap_delay(
+            delay_time_ms, tap_count, time_alpha, time_randomize_percent,
+            amplitude_shape, amplitude_alpha, amplitude_randomize_percent,
+            pan_shape, pan_alpha_percent, stereo_spread_percent, predelay_ms,
+            feedback, feedback_tap, low_cut_hz, high_cut_hz, diffusion_mix,
+            diffusion_time_ms, diffusion_lfo_rate_hz, diffusion_lfo_depth_ms,
+            envelope_threshold_db, envelope_attack_ms, envelope_release_ms,
+            input_gain_db, mix, level_db, input_select, envelope_enabled);
     }
 }
 

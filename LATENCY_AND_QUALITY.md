@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Megatap Delay and 71-entry picker (2026-11-22)
+
+The project-authored Megatap Delay is a mono delay ring with mono/stereo input selection and dry-path channel preservation. Its fixed 1 MiB storage cap can hold the documented four-second tap line plus one-second predelay at 48 kHz; the available delay span falls at higher sample rates. It allocates at construction, not in `process()`. No isolated CPU benchmark or live-route measurement has been run.
+
+`make web-test` passed the current native and browser/WASM checks, including 75/75 CTest cases, picker/category assertions, and HeadlessChrome 151 Play. The browser smoke played local guitar audio through Megatap at slot 68 using a 50 ms, four-tap setup; captured output had a 0.8912509 peak and 47,400 active samples. The 66-active-stage browser/native numerical comparison deliberately leaves Megatap disabled because its offline CLI reference is not implemented; the smoke test verifies audible-path data flow, not Megatap parity. No audio-device listening or quality conclusion follows from this synthetic fixture.
+
 ## Auto-Pan and 70-entry picker (2026-11-22)
 
 Auto-Pan uses an equal-power stereo pan law with project-authored Rate 0.5 Hz (0.05–20 Hz), Depth 75% (0–100%), square/sine/triangle Type, optional tempo sync at 30–300 BPM, and a project-selected Tap Division. It adds no fixed latency, uses fixed object state, and does not allocate in `process()`. These values and DSP are project-authored; Fender's Tone Master Pro Model Guide v1.1.100 gives Orbit Stereo Panner control names and waveforms but no numeric bounds, defaults, or topology. No isolated Auto-Pan CPU or memory benchmark, listening check, or hardware test has been run.

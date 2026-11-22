@@ -12,6 +12,8 @@ Record exact app commit, OS build, interface/firmware, USB/power arrangement, po
 
 ## Offline prerecorded audio
 
+Latest browser/WASM checkpoint (project-authored Megatap Delay, 2026-11-22): `make web-test` passed the full native/browser target and categorized-picker checks. The general browser/native comparison still disables Megatap because the offline reference has no Megatap stage. A separate HeadlessChrome 151 Play smoke test enabled slot 68 with a 50 ms delay and four taps, played the local guitar fixture, and captured output with peak 0.8912509 and 47,400 active samples. This confirms the UI-to-WASM playback path, not numerical parity for Megatap, useful loudness, musical quality, or sound/control match to Fractal. No isolated CPU, hardware, or listening measurement is available.
+
 Latest browser/WASM checkpoint (project-authored Auto-Pan, 2026-11-22): `make web-test` passed the categorized control path and HeadlessChrome 151 Play/native comparison at 48 kHz with 128-frame blocks. The 66 active stages had maximum absolute error 0.0000147457 and RMS error 0.00000286683; Play output was captured. The mono browser fixture passes through Auto-Pan unchanged and therefore does not demonstrate stereo movement. Native Auto-Pan tests cover stereo motion for square, sine, and triangle waveforms. No dedicated stereo browser recording, prerecorded-chain regression, live route, hardware, or listening result is available for this effect.
 
 `make audio-fixtures-verify` passed for both external archives and the ignored local symlink `testdata/reference_audio`:

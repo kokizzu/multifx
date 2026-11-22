@@ -82,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">70 of 70</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">71 of 71</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -154,8 +154,9 @@
         <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="65"><span class="effect-number">66</span><span class="effect-name">Shuffling Looper · project-authored</span><span class="effect-default">8 slices · 8 steps · 70% playback</span><span class="effect-category-tag">Loop &amp; performance</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="66"><span class="effect-number">67</span><span class="effect-name">Ten-Tap Delay · project-authored</span><span class="effect-default">1–10 taps · tempo · spread</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="67"><span class="effect-number">68</span><span class="effect-name">Auto-Pan · project-authored</span><span class="effect-default">0.5 Hz · 75% · sine</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="68" checked><span class="effect-number">69</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="69" checked><span class="effect-number">70</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="68"><span class="effect-number">69</span><span class="effect-name">Megatap Delay · project-authored</span><span class="effect-default">1–64 taps · diffusion · tap shaping</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="69" checked><span class="effect-number">70</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="70" checked><span class="effect-number">71</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1103,6 +1104,49 @@
             <label class="mix-control" for="ten-tap-delay-tap-8-level-db"><span>Tap 8 level</span><output for="ten-tap-delay-tap-8-level-db">0 dB</output><input id="ten-tap-delay-tap-8-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
             <label class="mix-control" for="ten-tap-delay-tap-9-level-db"><span>Tap 9 level</span><output for="ten-tap-delay-tap-9-level-db">0 dB</output><input id="ten-tap-delay-tap-9-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
             <label class="mix-control" for="ten-tap-delay-tap-10-level-db"><span>Tap 10 level</span><output for="ten-tap-delay-tap-10-level-db">0 dB</output><input id="ten-tap-delay-tap-10-level-db" type="range" min="-80" max="20" step="1" value="0"></label>
+          </div>
+        </details>
+      </div>
+      <div class="effect-parameter-group" aria-label="Megatap Delay controls">
+        <h3>Megatap Delay · project-authored</h3>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide</a> documents a four-second, 64-tap FM9-family delay and controls for tap count/time, predelay (up to one second), feedback and feedback tap, tap-time/amplitude/pan shaping and randomization, stereo spread, diffusion/LFO, and an input envelope follower. Numeric bounds/defaults are not published for most settings. TabletFX uses project-authored bounds, defaults, diffusion, filters, panning and processing; its ring is capped at 1 MiB (at 48 kHz it can hold four seconds plus one second of predelay, while higher sample rates reduce that span). It does not copy Fractal presets, bypass modes or spillover behavior and claims no Fractal DSP, control or sound parity. Firmware v12.0 is listed for FM9 Original/Turbo, not separately for Mark II Turbo; family applicability is an inference.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="megatap-delay-time-ms"><span>Last tap time</span><output for="megatap-delay-time-ms">1000 ms</output><input id="megatap-delay-time-ms" type="range" min="1" max="4000" step="1" value="1000"></label>
+          <label class="mix-control" for="megatap-delay-tap-count"><span>Tap count</span><output for="megatap-delay-tap-count">16 taps</output><input id="megatap-delay-tap-count" type="range" min="1" max="64" step="1" value="16"></label>
+          <label class="mix-control" for="megatap-delay-predelay-ms"><span>Predelay</span><output for="megatap-delay-predelay-ms">0 ms</output><input id="megatap-delay-predelay-ms" type="range" min="0" max="1000" step="1" value="0"></label>
+          <label class="mix-control" for="megatap-delay-feedback"><span>Feedback</span><output for="megatap-delay-feedback">0%</output><input id="megatap-delay-feedback" type="range" min="0" max="95" step="1" value="0"></label>
+          <label class="mix-control" for="megatap-delay-feedback-tap"><span>Feedback tap</span><output for="megatap-delay-feedback-tap">Tap 16</output><input id="megatap-delay-feedback-tap" type="range" min="1" max="16" step="1" value="16"></label>
+          <label class="mix-control" for="megatap-delay-low-cut-hz"><span>Wet low cut</span><output for="megatap-delay-low-cut-hz">20 Hz</output><input id="megatap-delay-low-cut-hz" type="range" min="0" max="12000" step="10" value="20"></label>
+          <label class="mix-control" for="megatap-delay-high-cut-hz"><span>Wet high cut</span><output for="megatap-delay-high-cut-hz">20000 Hz</output><input id="megatap-delay-high-cut-hz" type="range" min="20" max="20000" step="10" value="20000"></label>
+          <label class="mix-control" for="megatap-delay-mix"><span>Mix</span><output for="megatap-delay-mix">25%</output><input id="megatap-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="megatap-delay-level-db"><span>Wet level</span><output for="megatap-delay-level-db">0.0 dB</output><input id="megatap-delay-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="megatap-delay-input-gain-db"><span>Effect input gain</span><output for="megatap-delay-input-gain-db">0.0 dB</output><input id="megatap-delay-input-gain-db" type="range" min="-24" max="24" step="0.5" value="0"></label>
+          <label class="mix-control" for="megatap-delay-input-select"><span>Effect input</span><output for="megatap-delay-input-select">Sum (L+R)</output><select id="megatap-delay-input-select"><option value="0" selected>Sum (L+R)</option><option value="1">Left only</option><option value="2">Right only</option></select></label>
+        </div>
+        <details class="tap-levels">
+          <summary>Tap time, amplitude and pan shaping</summary>
+          <div class="gain-controls">
+            <label class="mix-control" for="megatap-delay-time-alpha"><span>Time alpha</span><output for="megatap-delay-time-alpha">1.00</output><input id="megatap-delay-time-alpha" type="range" min="0.25" max="4" step="0.01" value="1"></label>
+            <label class="mix-control" for="megatap-delay-time-randomize"><span>Time randomize</span><output for="megatap-delay-time-randomize">0%</output><input id="megatap-delay-time-randomize" type="range" min="0" max="100" step="1" value="0"></label>
+            <label class="mix-control" for="megatap-delay-amplitude-shape"><span>Amplitude shape</span><output for="megatap-delay-amplitude-shape">Decreasing</output><select id="megatap-delay-amplitude-shape"><option value="0">Constant</option><option value="1">Increasing</option><option value="2" selected>Decreasing</option><option value="3">Sine</option><option value="4">Alternating · project-authored</option></select></label>
+            <label class="mix-control" for="megatap-delay-amplitude-alpha"><span>Amplitude alpha</span><output for="megatap-delay-amplitude-alpha">1.00</output><input id="megatap-delay-amplitude-alpha" type="range" min="0.25" max="4" step="0.01" value="1"></label>
+            <label class="mix-control" for="megatap-delay-amplitude-randomize"><span>Amplitude randomize</span><output for="megatap-delay-amplitude-randomize">0%</output><input id="megatap-delay-amplitude-randomize" type="range" min="0" max="100" step="1" value="0"></label>
+            <label class="mix-control" for="megatap-delay-pan-shape"><span>Pan shape</span><output for="megatap-delay-pan-shape">Increasing</output><select id="megatap-delay-pan-shape"><option value="0">Constant</option><option value="1" selected>Increasing</option><option value="2">Decreasing</option><option value="3">Sine</option></select></label>
+            <label class="mix-control" for="megatap-delay-pan-alpha"><span>Pan alpha / position</span><output for="megatap-delay-pan-alpha">100%</output><input id="megatap-delay-pan-alpha" type="range" min="0" max="100" step="1" value="100"></label>
+            <label class="mix-control" for="megatap-delay-stereo-spread"><span>Stereo spread</span><output for="megatap-delay-stereo-spread">0%</output><input id="megatap-delay-stereo-spread" type="range" min="-100" max="100" step="1" value="0"></label>
+          </div>
+        </details>
+        <details class="tap-levels">
+          <summary>Input diffusion and envelope follower</summary>
+          <div class="gain-controls">
+            <label class="mix-control" for="megatap-delay-diffusion-mix"><span>Diffusion mix</span><output for="megatap-delay-diffusion-mix">0%</output><input id="megatap-delay-diffusion-mix" type="range" min="0" max="100" step="1" value="0"></label>
+            <label class="mix-control" for="megatap-delay-diffusion-time-ms"><span>Diffusion time</span><output for="megatap-delay-diffusion-time-ms">10 ms</output><input id="megatap-delay-diffusion-time-ms" type="range" min="0.1" max="10" step="0.1" value="10"></label>
+            <label class="mix-control" for="megatap-delay-diffusion-rate-hz"><span>Diffusion LFO rate</span><output for="megatap-delay-diffusion-rate-hz">0.50 Hz</output><input id="megatap-delay-diffusion-rate-hz" type="range" min="0.05" max="5" step="0.05" value="0.5"></label>
+            <label class="mix-control" for="megatap-delay-diffusion-depth-ms"><span>Diffusion LFO depth</span><output for="megatap-delay-diffusion-depth-ms">0.00 ms</output><input id="megatap-delay-diffusion-depth-ms" type="range" min="0" max="2" step="0.01" value="0"></label>
+            <label class="slicer-sync" for="megatap-delay-envelope-enabled"><input id="megatap-delay-envelope-enabled" type="checkbox"><span>Enable input envelope swell</span></label>
+            <label class="mix-control" for="megatap-delay-envelope-threshold-db"><span>Envelope threshold</span><output for="megatap-delay-envelope-threshold-db">−70 dB</output><input id="megatap-delay-envelope-threshold-db" type="range" min="-90" max="0" step="1" value="-70"></label>
+            <label class="mix-control" for="megatap-delay-envelope-attack-ms"><span>Envelope attack</span><output for="megatap-delay-envelope-attack-ms">400 ms</output><input id="megatap-delay-envelope-attack-ms" type="range" min="1" max="5000" step="1" value="400"></label>
+            <label class="mix-control" for="megatap-delay-envelope-release-ms"><span>Envelope release</span><output for="megatap-delay-envelope-release-ms">15 ms</output><input id="megatap-delay-envelope-release-ms" type="range" min="1" max="5000" step="1" value="15"></label>
           </div>
         </details>
       </div>

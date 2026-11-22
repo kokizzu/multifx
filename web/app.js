@@ -69,6 +69,7 @@ const EFFECT_NAMES = [
   "Shuffling Looper · project-authored",
   "Ten-Tap Delay · project-authored",
   "Auto-Pan · project-authored",
+  "Megatap Delay · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -105,6 +106,8 @@ const DEFAULT_PARAMETERS = {
   tenTapDelay: [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   autoPan: [0.5, 0.75, 1, 0, 120, 5],
+  megatapDelay: [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
+    0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -613,6 +616,46 @@ const autoPanDivision = document.querySelector("#auto-pan-division");
 const autoPanControls = [
   autoPanRate, autoPanDepth, autoPanWaveform, autoPanTempoSync,
   autoPanTempo, autoPanDivision,
+];
+const megatapDelayTime = document.querySelector("#megatap-delay-time-ms");
+const megatapDelayTapCount = document.querySelector("#megatap-delay-tap-count");
+const megatapDelayTimeAlpha = document.querySelector("#megatap-delay-time-alpha");
+const megatapDelayTimeRandomize = document.querySelector("#megatap-delay-time-randomize");
+const megatapDelayAmplitudeShape = document.querySelector("#megatap-delay-amplitude-shape");
+const megatapDelayAmplitudeAlpha = document.querySelector("#megatap-delay-amplitude-alpha");
+const megatapDelayAmplitudeRandomize = document.querySelector("#megatap-delay-amplitude-randomize");
+const megatapDelayPanShape = document.querySelector("#megatap-delay-pan-shape");
+const megatapDelayPanAlpha = document.querySelector("#megatap-delay-pan-alpha");
+const megatapDelayStereoSpread = document.querySelector("#megatap-delay-stereo-spread");
+const megatapDelayPredelay = document.querySelector("#megatap-delay-predelay-ms");
+const megatapDelayFeedback = document.querySelector("#megatap-delay-feedback");
+const megatapDelayFeedbackTap = document.querySelector("#megatap-delay-feedback-tap");
+const megatapDelayLowCut = document.querySelector("#megatap-delay-low-cut-hz");
+const megatapDelayHighCut = document.querySelector("#megatap-delay-high-cut-hz");
+const megatapDelayDiffusionMix = document.querySelector("#megatap-delay-diffusion-mix");
+const megatapDelayDiffusionTime = document.querySelector("#megatap-delay-diffusion-time-ms");
+const megatapDelayDiffusionRate = document.querySelector("#megatap-delay-diffusion-rate-hz");
+const megatapDelayDiffusionDepth = document.querySelector("#megatap-delay-diffusion-depth-ms");
+const megatapDelayEnvelopeEnabled = document.querySelector("#megatap-delay-envelope-enabled");
+const megatapDelayEnvelopeThreshold = document.querySelector("#megatap-delay-envelope-threshold-db");
+const megatapDelayEnvelopeAttack = document.querySelector("#megatap-delay-envelope-attack-ms");
+const megatapDelayEnvelopeRelease = document.querySelector("#megatap-delay-envelope-release-ms");
+const megatapDelayInputGain = document.querySelector("#megatap-delay-input-gain-db");
+const megatapDelayMix = document.querySelector("#megatap-delay-mix");
+const megatapDelayLevel = document.querySelector("#megatap-delay-level-db");
+const megatapDelayInputSelect = document.querySelector("#megatap-delay-input-select");
+const megatapDelayControls = [
+  megatapDelayTime, megatapDelayTapCount, megatapDelayTimeAlpha,
+  megatapDelayTimeRandomize, megatapDelayAmplitudeShape,
+  megatapDelayAmplitudeAlpha, megatapDelayAmplitudeRandomize,
+  megatapDelayPanShape, megatapDelayPanAlpha, megatapDelayStereoSpread,
+  megatapDelayPredelay, megatapDelayFeedback, megatapDelayFeedbackTap,
+  megatapDelayLowCut, megatapDelayHighCut, megatapDelayDiffusionMix,
+  megatapDelayDiffusionTime, megatapDelayDiffusionRate,
+  megatapDelayDiffusionDepth, megatapDelayEnvelopeEnabled,
+  megatapDelayEnvelopeThreshold, megatapDelayEnvelopeAttack,
+  megatapDelayEnvelopeRelease, megatapDelayInputGain, megatapDelayMix,
+  megatapDelayLevel, megatapDelayInputSelect,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1266,6 +1309,75 @@ function updateAutoPanOptions() {
   }
 }
 
+function updateMegatapDelayOptions() {
+  const tapCount = Number(megatapDelayTapCount.value);
+  megatapDelayFeedbackTap.max = String(tapCount);
+  if (Number(megatapDelayFeedbackTap.value) > tapCount) {
+    megatapDelayFeedbackTap.value = String(tapCount);
+  }
+  const values = [
+    Number(megatapDelayTime.value), tapCount,
+    Number(megatapDelayTimeAlpha.value),
+    Number(megatapDelayTimeRandomize.value),
+    Number(megatapDelayAmplitudeShape.value),
+    Number(megatapDelayAmplitudeAlpha.value),
+    Number(megatapDelayAmplitudeRandomize.value),
+    Number(megatapDelayPanShape.value),
+    Number(megatapDelayPanAlpha.value),
+    Number(megatapDelayStereoSpread.value),
+    Number(megatapDelayPredelay.value),
+    Number(megatapDelayFeedback.value) / 100,
+    Number(megatapDelayFeedbackTap.value),
+    Number(megatapDelayLowCut.value), Number(megatapDelayHighCut.value),
+    Number(megatapDelayDiffusionMix.value) / 100,
+    Number(megatapDelayDiffusionTime.value),
+    Number(megatapDelayDiffusionRate.value),
+    Number(megatapDelayDiffusionDepth.value),
+    Number(megatapDelayEnvelopeThreshold.value),
+    Number(megatapDelayEnvelopeAttack.value),
+    Number(megatapDelayEnvelopeRelease.value),
+    Number(megatapDelayInputGain.value), Number(megatapDelayMix.value) / 100,
+    Number(megatapDelayLevel.value), Number(megatapDelayInputSelect.value),
+    megatapDelayEnvelopeEnabled.checked ? 1 : 0,
+  ];
+  DEFAULT_PARAMETERS.megatapDelay = values;
+  const show = (control, text) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = text;
+  };
+  show(megatapDelayTime, `${values[0]} ms`);
+  show(megatapDelayTapCount, `${values[1]} taps`);
+  show(megatapDelayTimeAlpha, values[2].toFixed(2));
+  show(megatapDelayTimeRandomize, `${values[3]}%`);
+  show(megatapDelayAmplitudeShape,
+    megatapDelayAmplitudeShape.selectedOptions[0].textContent);
+  show(megatapDelayAmplitudeAlpha, values[5].toFixed(2));
+  show(megatapDelayAmplitudeRandomize, `${values[6]}%`);
+  show(megatapDelayPanShape, megatapDelayPanShape.selectedOptions[0].textContent);
+  show(megatapDelayPanAlpha, `${values[8]}%`);
+  show(megatapDelayStereoSpread, `${values[9]}%`);
+  show(megatapDelayPredelay, `${values[10]} ms`);
+  show(megatapDelayFeedback, `${Math.round(values[11] * 100)}%`);
+  show(megatapDelayFeedbackTap, `Tap ${values[12]}`);
+  show(megatapDelayLowCut, values[13] === 0 ? "Off" : `${values[13]} Hz`);
+  show(megatapDelayHighCut, `${values[14]} Hz`);
+  show(megatapDelayDiffusionMix, `${Math.round(values[15] * 100)}%`);
+  show(megatapDelayDiffusionTime, `${values[16]} ms`);
+  show(megatapDelayDiffusionRate, `${values[17].toFixed(2)} Hz`);
+  show(megatapDelayDiffusionDepth, `${values[18].toFixed(2)} ms`);
+  show(megatapDelayEnvelopeThreshold, `${values[19]} dB`);
+  show(megatapDelayEnvelopeAttack, `${values[20]} ms`);
+  show(megatapDelayEnvelopeRelease, `${values[21]} ms`);
+  show(megatapDelayInputGain, `${values[22].toFixed(1)} dB`);
+  show(megatapDelayMix, `${Math.round(values[23] * 100)}%`);
+  show(megatapDelayLevel, `${values[24].toFixed(1)} dB`);
+  show(megatapDelayInputSelect,
+    megatapDelayInputSelect.selectedOptions[0].textContent);
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "megatap-delay", value: values });
+  }
+}
+
 function sendShufflingLooperCommand(command) {
   if (!workletNode) {
     shufflingLooperStatus.value = "Start processed playback before using the looper";
@@ -1858,6 +1970,10 @@ for (const control of tenTapDelayControls) {
 for (const control of autoPanControls) {
   control.addEventListener("input", updateAutoPanOptions);
   control.addEventListener("change", updateAutoPanOptions);
+}
+for (const control of megatapDelayControls) {
+  control.addEventListener("input", updateMegatapDelayOptions);
+  control.addEventListener("change", updateMegatapDelayOptions);
 }
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
@@ -3946,6 +4062,89 @@ async function runShufflingLooperBrowserSmokeTest(reference, captureView, captur
   }
 }
 
+async function runMegatapDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = megatapDelayControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 68 || index === 69 || index === 70);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Megatap Delay smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [megatapDelayTime.value, megatapDelayTapCount.value,
+      megatapDelayTimeAlpha.value, megatapDelayTimeRandomize.value,
+      megatapDelayAmplitudeShape.value, megatapDelayAmplitudeAlpha.value,
+      megatapDelayAmplitudeRandomize.value, megatapDelayPanShape.value,
+      megatapDelayPanAlpha.value, megatapDelayStereoSpread.value,
+      megatapDelayPredelay.value, megatapDelayFeedback.value,
+      megatapDelayFeedbackTap.value, megatapDelayLowCut.value,
+      megatapDelayHighCut.value, megatapDelayDiffusionMix.value,
+      megatapDelayDiffusionTime.value, megatapDelayDiffusionRate.value,
+      megatapDelayDiffusionDepth.value, megatapDelayEnvelopeThreshold.value,
+      megatapDelayEnvelopeAttack.value, megatapDelayEnvelopeRelease.value,
+      megatapDelayEnvelopeEnabled.checked, megatapDelayInputGain.value,
+      megatapDelayMix.value, megatapDelayLevel.value,
+      megatapDelayInputSelect.value] = [
+      "50", "4", "1", "0", "0", "1", "0", "0", "50", "0", "0", "0",
+      "4", "0", "20000", "0", "10", "0.5", "0", "-70", "400", "15",
+      false, "0", "100", "0", "0",
+    ];
+    updateMegatapDelayOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Megatap Delay playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let nonzeroSamples = 0;
+    for (const sample of actual) {
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) nonzeroSamples += 1;
+    }
+    if (peak < 1e-5 || nonzeroSamples < 32) {
+      throw new Error(`Megatap Delay produced no measurable processed output from local guitar audio (peak ${peak}, active samples ${nonzeroSamples}).`);
+    }
+    return { peak, nonzeroSamples, enabledEffectIndex: 68, delayTimeMs: 50, tapCount: 4 };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      megatapDelayControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateMegatapDelayOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -3958,16 +4157,18 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 70 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 70 || effectRows.length !== 70 ||
+      const expectedEffectIds = Array.from({ length: 71 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 71 || effectRows.length !== 71 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
         EFFECT_NAMES[66] !== "Ten-Tap Delay · project-authored" ||
         EFFECT_NAMES[67] !== "Auto-Pan · project-authored" ||
-        EFFECT_NAMES[68] !== "Output level" || EFFECT_NAMES[69] !== "Peak limiter" ||
+         EFFECT_NAMES[68] !== "Megatap Delay · project-authored" ||
+         EFFECT_NAMES[69] !== "Output level" || EFFECT_NAMES[70] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
-        initialEffectState[67] || !initialEffectState[68] || !initialEffectState[69] ||
+         initialEffectState[67] || initialEffectState[68] ||
+         !initialEffectState[69] || !initialEffectState[70] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -3982,9 +4183,9 @@ async function runBrowserSelfTest() {
             initialEffectState[60] || initialEffectState[61] ||
               initialEffectState[62] || initialEffectState[63] || initialEffectState[64] ||
               initialEffectState[65] ||
-        effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
+         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-          throw new Error("The effect picker must list 70 ordered, categorized effects (IDs 0–69), with optional effects disabled by default.");
+           throw new Error("The effect picker must list 71 ordered, categorized effects (IDs 0–70), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -4343,6 +4544,54 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.autoPan.join(",") !== autoPanDefaults.join(",")) {
       throw new Error("Auto-Pan self-test must restore its project-authored defaults.");
     }
+    const megatapDelayDefaults = [...DEFAULT_PARAMETERS.megatapDelay];
+    const megatapDelayControlSnapshot = megatapDelayControls.map((control) =>
+      control.type === "checkbox" ? control.checked : control.value);
+    const previousMegatapDelayWorklet = workletNode;
+    const megatapDelayMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => megatapDelayMessages.push(message) } };
+      [megatapDelayTime.value, megatapDelayTapCount.value,
+        megatapDelayTimeAlpha.value, megatapDelayTimeRandomize.value,
+        megatapDelayAmplitudeShape.value, megatapDelayAmplitudeAlpha.value,
+        megatapDelayAmplitudeRandomize.value, megatapDelayPanShape.value,
+        megatapDelayPanAlpha.value, megatapDelayStereoSpread.value,
+        megatapDelayPredelay.value, megatapDelayFeedback.value,
+        megatapDelayFeedbackTap.value, megatapDelayLowCut.value,
+        megatapDelayHighCut.value, megatapDelayDiffusionMix.value,
+        megatapDelayDiffusionTime.value, megatapDelayDiffusionRate.value,
+        megatapDelayDiffusionDepth.value, megatapDelayEnvelopeThreshold.value,
+        megatapDelayEnvelopeAttack.value, megatapDelayEnvelopeRelease.value,
+        megatapDelayEnvelopeEnabled.checked, megatapDelayInputGain.value,
+        megatapDelayMix.value, megatapDelayLevel.value,
+        megatapDelayInputSelect.value] = [
+        "750", "12", "0.75", "25", "1", "2", "10", "3", "60", "30",
+        "90", "45", "3", "120", "10000", "50", "5", "1.25", "1.5",
+        "-40", "250", "100", true, "3", "75", "-2", "2",
+      ];
+      megatapDelayInputSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      const megatapDelayMessage = megatapDelayMessages.at(-1);
+      if (megatapDelayMessage?.type !== "megatap-delay" ||
+          megatapDelayMessage.value.join(",") !==
+            "750,12,0.75,25,1,2,10,3,60,30,90,0.45,3,120,10000,0.5,5,1.25,1.5,-40,250,100,3,0.75,-2,2,1" ||
+          megatapDelayTime.parentElement.querySelector("output").value !== "750 ms" ||
+          megatapDelayFeedback.parentElement.querySelector("output").value !== "45%" ||
+          megatapDelayInputSelect.parentElement.querySelector("output").value !== "Right only") {
+        throw new Error(`Megatap Delay controls must send all project settings in WASM parameter order (type ${megatapDelayMessage?.type || "missing"}; values ${megatapDelayMessage?.value?.join(",") || "missing"}; time ${megatapDelayTime.parentElement.querySelector("output").value}; feedback ${megatapDelayFeedback.parentElement.querySelector("output").value}; input ${megatapDelayInputSelect.parentElement.querySelector("output").value}).`);
+      }
+    } finally {
+      workletNode = previousMegatapDelayWorklet;
+      megatapDelayTapCount.value = megatapDelayControlSnapshot[1];
+      megatapDelayFeedbackTap.max = megatapDelayTapCount.value;
+      megatapDelayControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = megatapDelayControlSnapshot[index];
+        else control.value = megatapDelayControlSnapshot[index];
+      });
+      updateMegatapDelayOptions();
+    }
+    if (DEFAULT_PARAMETERS.megatapDelay.join(",") !== megatapDelayDefaults.join(",")) {
+      throw new Error(`Megatap Delay self-test must restore project-authored defaults (expected ${megatapDelayDefaults.join(",")}; got ${DEFAULT_PARAMETERS.megatapDelay.join(",")}).`);
+    }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -4384,16 +4633,16 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67" ||
-          effectCount.value !== "12 of 70" ||
+          effectCount.value !== "12 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
+      throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
     effectCategoryFilter.value = "dynamics";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,69" ||
-        effectCount.value !== "9 of 70" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,70" ||
+        effectCount.value !== "9 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -4402,7 +4651,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 70" ||
+        effectCount.value !== "7 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -4411,7 +4660,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 70" ||
+        effectCount.value !== "7 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -4419,7 +4668,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 70" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -4427,7 +4676,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 70" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -4435,7 +4684,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 70" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -4443,7 +4692,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 70" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -4451,7 +4700,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 70" ||
+    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -4459,7 +4708,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 70" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -4487,7 +4736,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66" || effectCount.value !== "11 of 70" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68" || effectCount.value !== "12 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -4495,7 +4744,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 70" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 71" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -4505,12 +4754,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 70") {
+        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 71") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-        if (effectCount.value !== "70 of 70" || effectRows.some((row) => row.hidden)) {
+        if (effectCount.value !== "71 of 71" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4698,13 +4947,16 @@ async function runBrowserSelfTest() {
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-     if (parityEnabled.length !== 70 || activeProcessorIndices.length !== 67 ||
-         activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 67) {
-      throw new Error("The all-effect chain must contain 67 active processors between input trim and output utilities.");
+      if (parityEnabled.length !== 71 || activeProcessorIndices.length !== 68 ||
+          activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 68) {
+       throw new Error("The all-effect chain must contain 68 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
     parityEnabled[53] = false;
+     // Megatap's UI/WASM path is tested separately; the offline CLI reference
+     // does not implement this project-authored effect.
+     parityEnabled[68] = false;
     const testOptions = {
       enabled: parityEnabled,
       inputMuted: false,
@@ -5242,6 +5494,10 @@ async function runBrowserSelfTest() {
         Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
       throw new Error("Output meter does not match the final processed audio block.");
     }
+    testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
+    const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -5358,6 +5614,7 @@ async function runBrowserSelfTest() {
       localFileDecode: localFileDecoded,
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       playOutputCaptured: nonZeroSamples > 0,
+      megatapDelay: megatapDelaySmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,

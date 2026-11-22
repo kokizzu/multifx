@@ -564,6 +564,10 @@ Reference coverage: conventional, pitch, reverse, grain, resonant, hold, and rhy
 - [ ] **DLY-17 · P1** Hold/freeze delay with defined retrigger behavior.
 - [ ] **DLY-18 · P1** Lo-fi delay.
 - [ ] **DLY-19 · P1** Controlled self-oscillation mode with output protection and panic behavior.
+- [ ] **DLY-20 · P1** Swept-filter delay (approved addition).
+- [ ] **DLY-21 · P1** Delay with 1–10 level-controlled taps, stereo spacing/pan progression, and tone cuts.
+- [ ] **DLY-22 · P2** Quantized and learned custom-rhythm delay with pattern feedback.
+- [ ] **DLY-23 · P1** Dense 1–64-tap delay with shaped/randomized timing, amplitude and pan, feedback routing, predelay, diffusion, and optional input-envelope swell.
 
 ### 10.7 Reverb and ambience
 
