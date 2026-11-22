@@ -1075,9 +1075,12 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/pugilist.hpp",
     "src/effects/pugilist.cpp",
     "tests/test_pugilist.cpp",
-    "include/tabletfx/effects/multi_delay.hpp",
-    "src/effects/multi_delay.cpp",
-    "tests/test_multi_delay.cpp",
+    "include/tabletfx/effects/porta_preamp.hpp",
+    "src/effects/porta_preamp.cpp",
+    "tests/test_porta_preamp.cpp",
+    "include/tabletfx/effects/pitch_sequence.hpp",
+    "src/effects/pitch_sequence.cpp",
+    "tests/test_pitch_sequence.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1305,6 +1308,29 @@ VIBE_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+MULTI_DELAY_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "GOAL.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/multi_delay.hpp",
+    "src/effects/multi_delay.cpp",
+    "tests/test_multi_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "README.md",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1404,6 +1430,8 @@ CHECKPOINTS = {
         VIBE_CHECKPOINT_PATHS,
         "feat: add project-authored Vibe modulation",
     ),
+    "multi-delay": (MULTI_DELAY_CHECKPOINT_PATHS,
+                    "feat: add categorized project-authored Multi-Delay"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }

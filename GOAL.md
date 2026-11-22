@@ -570,6 +570,8 @@ Reference coverage: conventional, pitch, reverse, grain, resonant, hold, and rhy
 - [ ] **DLY-22 · P2** Quantized and learned custom-rhythm delay with pattern feedback.
 - [ ] **DLY-23 · P1** Dense 1–64-tap delay with shaped/randomized timing, amplitude and pan, feedback routing, predelay, diffusion, and optional input-envelope swell.
 
+- [ ] **DLY-24 · P1** Four-line delay with independent time/tempo, feedback, level/pan, and cross-feedback routing.
+
 ### 10.7 Reverb and ambience
 
 Reference coverage: algorithmic and convolution reverb families, pitch ambience, freeze, and spectral effects. [C2, C7, C11, C14, C19]

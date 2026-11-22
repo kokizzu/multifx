@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -26,6 +26,29 @@ const TUNER_FREQUENCY = EFFECTS.length + 12;
 const TUNER_CENTS = EFFECTS.length + 13;
 const TUNER_CONFIDENCE = EFFECTS.length + 14;
 const TUNER_TIME = EFFECTS.length + 15;
+
+function configureMultiDelay(module, chain, parameters = {}) {
+  const defaults = [
+    { timeMs: 250, timeMode: 0, division: 4, feedback: 0, crossFeedback: 0, level: 1, pan: 0.1 },
+    { timeMs: 375, timeMode: 0, division: 3, feedback: 0, crossFeedback: 0, level: 1, pan: 0.35 },
+    { timeMs: 500, timeMode: 0, division: 2, feedback: 0, crossFeedback: 0, level: 1, pan: 0.65 },
+    { timeMs: 750, timeMode: 0, division: 0, feedback: 0, crossFeedback: 0, level: 1, pan: 0.9 },
+  ];
+  const lines = Array.isArray(parameters.lines) ? parameters.lines : defaults;
+  for (let index = 0; index < 4; index += 1) {
+    const line = lines[index] || defaults[index];
+    module._tf_chain_set_multi_delay_line(
+      chain, index, Number(line.timeMs), Number(line.timeMode),
+      Number(line.division), Number(line.feedback), Number(line.crossFeedback),
+      Number(line.level), Number(line.pan),
+    );
+  }
+  module._tf_chain_set_multi_delay_global(
+    chain, Number(parameters.tempoBpm ?? 120), Number(parameters.lowCutHz ?? 20),
+    Number(parameters.highCutHz ?? 20000), Number(parameters.inputGainDb ?? 0),
+    Number(parameters.mix ?? 0.25), Number(parameters.levelDb ?? 0),
+  );
+}
 
 const wasmModulePromise = createWasmModule({ noInitialRun: true });
 
@@ -233,6 +256,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.chain, ...dualEngineDistortion);
       const vibe = parameters.vibe || [1.5, 0.7, 0.2, 2, 0.5, 1];
       module._tf_chain_set_vibe(this.chain, ...vibe);
+      configureMultiDelay(module, this.chain, parameters.multiDelay);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -596,6 +620,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_dual_engine_distortion(this.chain, ...message.value);
     } else if (message.type === "vibe" && this.ready) {
       this.module._tf_chain_set_vibe(this.chain, ...message.value);
+    } else if (message.type === "multi-delay" && this.ready) {
+      configureMultiDelay(this.module, this.chain, message.value);
     } else if (message.type === "guitar-graphic-eq" && this.ready) {
       this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "bass-graphic-eq" && this.ready) {

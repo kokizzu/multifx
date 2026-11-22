@@ -18,6 +18,11 @@ The project-authored split-band De-Esser uses a fixed band-pass detector per cha
 
 `make test` passed 76/76 CTest cases. `make web-test` passed the 72-entry Vocal FX picker and HeadlessChrome 151 local-guitar Play smoke for slot 69 at 6.5 kHz (captured peak 0.4818548; 47,999 active samples). De-Esser is disabled in the 66-stage browser/native comparison because the offline reference has no equivalent stage. There is no voice fixture, intelligibility test, human listening result, isolated CPU benchmark, or hardware test; the guitar smoke only confirms the browser control-to-WASM output path.
 
+## Multi-Delay and 75-entry picker (2026-11-22)
+
+The project-authored four-line Multi-Delay uses a shared 512 KiB ring-storage budget. At 48 kHz this permits about 682 ms per requested line; the upper control bound remains 2,000 ms and is clamped to the storage-supported maximum. Constructor allocation is fixed and `process()` does not allocate. No isolated CPU benchmark has been run.
+
+`make web-test` passed 79/79 CTest cases, the 75-entry picker checks, and local-guitar browser Play smoke with the stage at slot 72. Numerical browser/native parity disables this effect because the offline reference has no corresponding processor. These results do not establish useful loudness, musical quality, Fractal behavior, or performance on a live audio route.
 ## Megatap Delay and 71-entry picker (2026-11-22)
 
 The project-authored Megatap Delay is a mono delay ring with mono/stereo input selection and dry-path channel preservation. Its fixed 1 MiB storage cap can hold the documented four-second tap line plus one-second predelay at 48 kHz; the available delay span falls at higher sample rates. It allocates at construction, not in `process()`. No isolated CPU benchmark or live-route measurement has been run.

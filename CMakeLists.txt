@@ -49,6 +49,7 @@ add_library(tabletfx_core
     src/effects/de_esser.cpp
     src/effects/pugilist.cpp
     src/effects/vibe.cpp
+    src/effects/multi_delay.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -291,6 +292,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_vibe_tests tests/test_vibe.cpp)
     target_link_libraries(tabletfx_vibe_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_vibe_tests COMMAND tabletfx_vibe_tests)
+
+    add_executable(tabletfx_multi_delay_tests tests/test_multi_delay.cpp)
+    target_link_libraries(tabletfx_multi_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_multi_delay_tests COMMAND tabletfx_multi_delay_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

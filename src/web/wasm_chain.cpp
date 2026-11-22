@@ -95,7 +95,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(72);
+        effects_.reserve(73);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -310,6 +310,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::Vibe>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::MultiDelay>(
+                                static_cast<float>(sample_rate), 2000.0F),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -390,6 +393,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 71U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 72U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -873,6 +879,41 @@ public:
         auto* vibe = static_cast<tabletfx::Vibe*>(effects_[71].effect.get());
         vibe->set_parameters({rate_hz, depth, trem,
                               static_cast<std::uint8_t>(stages), spread, level});
+    }
+
+    void configure_multi_delay_line(
+        std::uint32_t line, float time_ms, std::uint32_t time_mode,
+        std::uint32_t division, float feedback, float cross_feedback,
+        float level, float pan) noexcept {
+        if (line >= tabletfx::multi_delay_line_count) return;
+        auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
+        auto parameters = delay->parameters();
+        parameters.time_ms[line] = time_ms;
+        parameters.time_mode[line] = time_mode <= 1U
+            ? static_cast<tabletfx::DelayTimeMode>(time_mode)
+            : static_cast<tabletfx::DelayTimeMode>(255U);
+        parameters.division[line] = division < 12U
+            ? static_cast<tabletfx::DelayDivision>(division)
+            : static_cast<tabletfx::DelayDivision>(255U);
+        parameters.feedback[line] = feedback;
+        parameters.cross_feedback[line] = cross_feedback;
+        parameters.level[line] = level;
+        parameters.pan[line] = pan;
+        delay->configure(parameters);
+    }
+
+    void configure_multi_delay_global(
+        float tempo_bpm, float low_cut_hz, float high_cut_hz,
+        float input_gain_db, float mix, float level_db) noexcept {
+        auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
+        auto parameters = delay->parameters();
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.input_gain_db = input_gain_db;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        delay->configure(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2929,6 +2970,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_vibe(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_vibe(rate_hz, depth, trem,
                                          stages, spread, level);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_line(
+    void* opaque, std::uint32_t line, float time_ms, std::uint32_t time_mode,
+    std::uint32_t division, float feedback, float cross_feedback,
+    float level, float pan) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multi_delay_line(
+            line, time_ms, time_mode, division, feedback, cross_feedback,
+            level, pan);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_global(
+    void* opaque, float tempo_bpm, float low_cut_hz, float high_cut_hz,
+    float input_gain_db, float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multi_delay_global(
+            tempo_bpm, low_cut_hz, high_cut_hz, input_gain_db, mix, level_db);
     }
 }
 

@@ -1,0 +1,197 @@
+#include "tabletfx/effects/multi_delay.hpp"
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <new>
+#include <stdexcept>
+#include <string>
+
+namespace {
+
+std::atomic<bool> watch_allocations{false};
+std::atomic<std::size_t> allocation_count{0};
+
+void require(bool condition, const std::string& message) {
+    if (!condition) throw std::runtime_error(message);
+}
+
+tabletfx::MultiDelayParameters impulse_parameters() {
+    tabletfx::MultiDelayParameters parameters;
+    parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
+    parameters.time_mode.fill(tabletfx::DelayTimeMode::milliseconds);
+    parameters.feedback.fill(0.0F);
+    parameters.cross_feedback.fill(0.0F);
+    parameters.level = {1.0F, 1.0F, 1.0F, 1.0F};
+    parameters.pan = {0.0F, 1.0F, 0.5F, 0.5F};
+    parameters.low_cut_hz = 0.0F;
+    parameters.high_cut_hz = 20000.0F;
+    parameters.mix = 1.0F;
+    return parameters;
+}
+
+} // namespace
+
+void* operator new(std::size_t size) {
+    if (watch_allocations.load(std::memory_order_relaxed)) {
+        allocation_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (void* memory = std::malloc(size)) return memory;
+    throw std::bad_alloc();
+}
+void* operator new[](std::size_t size) {
+    if (watch_allocations.load(std::memory_order_relaxed)) {
+        allocation_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (void* memory = std::malloc(size)) return memory;
+    throw std::bad_alloc();
+}
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete[](void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }
+
+namespace {
+
+void test_four_independent_times_and_pans() {
+    auto parameters = impulse_parameters();
+    tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+    require(delay.delay_samples(0U) == 8U &&
+                delay.delay_samples(1U) == 16U &&
+                delay.delay_samples(2U) == 24U &&
+                delay.delay_samples(3U) == 32U,
+            "the four parallel lines must retain independent delay times");
+
+    std::array<float, 80> stereo{};
+    stereo[0] = 1.0F;
+    stereo[1] = 1.0F;
+    delay.process(stereo, 2U);
+    require(stereo[0] == 0.0F && stereo[1] == 0.0F &&
+                stereo[16] > 0.8F && stereo[16] > stereo[17] &&
+                stereo[33] > 0.8F && stereo[33] > stereo[32],
+            "tap times and per-line stereo pan must be audible at their outputs");
+}
+
+void test_cyclic_cross_feedback_routes_between_lines() {
+    auto parameters = impulse_parameters();
+    parameters.level = {0.0F, 1.0F, 0.0F, 0.0F};
+    parameters.pan = {0.5F, 0.5F, 0.5F, 0.5F};
+    parameters.cross_feedback[0] = 0.5F;
+    tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+    std::array<float, 40> mono{};
+    mono[0] = 1.0F;
+    delay.process(mono, 1U);
+    require(mono[16] > 0.8F && mono[24] > mono[16] * 0.35F &&
+                mono[24] < mono[16] * 0.65F,
+            "line 1 must cross-feed line 2 and create its later repeat");
+}
+
+void test_self_feedback_and_negative_phase() {
+    auto parameters = impulse_parameters();
+    parameters.time_ms = {1.0F, 10.0F, 10.0F, 10.0F};
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.feedback[0] = 0.4F;
+    tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+    std::array<float, 32> mono{};
+    mono[0] = 1.0F;
+    delay.process(mono, 1U);
+    require(mono[8] > 0.8F && mono[16] > mono[8] * 0.3F &&
+                mono[16] < mono[8] * 0.5F,
+            "self feedback must repeat a selected line at a bounded gain");
+
+    parameters.feedback[0] = -0.4F;
+    delay.configure(parameters);
+    delay.reset();
+    mono.fill(0.0F);
+    mono[0] = 1.0F;
+    delay.process(mono, 1U);
+    require(mono[8] > 0.8F && mono[16] < 0.0F,
+            "negative feedback must invert the next repeat's polarity");
+}
+
+void test_tempo_sync_and_project_bounds() {
+    auto parameters = impulse_parameters();
+    parameters.time_mode[0] = tabletfx::DelayTimeMode::tempo_sync;
+    parameters.division[0] = tabletfx::DelayDivision::quarter;
+    parameters.tempo_bpm = 120.0F;
+    tabletfx::MultiDelay delay(8000.0F, 2000.0F, parameters);
+    require(delay.delay_samples(0U) == 4000U,
+            "quarter-note sync at 120 BPM must resolve to 500 ms");
+
+    parameters = delay.parameters();
+    parameters.time_ms[0] = 9000.0F;
+    parameters.time_ms[1] = -5.0F;
+    parameters.feedback[0] = 3.0F;
+    parameters.cross_feedback[0] = -3.0F;
+    parameters.level[0] = 9.0F;
+    parameters.pan[1] = -2.0F;
+    parameters.mix = 2.0F;
+    delay.configure(parameters);
+    const auto bounded = delay.parameters();
+    require(bounded.time_ms[0] == 2000.0F && bounded.time_ms[1] == 1.0F &&
+                bounded.feedback[0] == 0.45F &&
+                bounded.cross_feedback[0] == -0.45F &&
+                bounded.level[0] == 2.0F && bounded.pan[1] == 0.0F &&
+                bounded.mix == 1.0F,
+            "project-authored ranges must clamp times, feedback, levels and mix");
+}
+
+void test_memory_cap_reset_and_process_no_allocations() {
+    tabletfx::MultiDelay capped(384000.0F, 2000.0F);
+    require(capped.maximum_delay_ms() < 200.0F &&
+                capped.memory_bytes() <= sizeof(capped) +
+                    tabletfx::multi_delay_storage_limit_bytes,
+            "the fixed storage cap must bound high-rate delay duration");
+
+    auto parameters = impulse_parameters();
+    parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
+    parameters.cross_feedback[0] = 0.2F;
+    tabletfx::MultiDelay delay(48000.0F, 100.0F, parameters);
+    std::array<float, 256> audio{};
+    audio[0] = 0.75F;
+    audio[1] = -0.25F;
+    allocation_count.store(0U, std::memory_order_relaxed);
+    watch_allocations.store(true, std::memory_order_relaxed);
+    delay.process(audio, 2U);
+    watch_allocations.store(false, std::memory_order_relaxed);
+    require(allocation_count.load(std::memory_order_relaxed) == 0U,
+            "Multi-Delay process() must not allocate");
+    require(std::all_of(audio.begin(), audio.end(), [](float sample) {
+                return std::isfinite(sample);
+            }),
+            "stereo output with feedback must remain finite");
+
+    delay.reset();
+    std::array<float, 128> silence{};
+    delay.process(silence, 2U);
+    require(std::all_of(silence.begin(), silence.end(), [](float sample) {
+                return sample == 0.0F;
+            }),
+            "reset must clear all four delay lines and filter state");
+
+    std::array<float, 4> unsupported{1.0F, 2.0F, 3.0F, 4.0F};
+    delay.process(unsupported, 3U);
+    require(unsupported[0] == 1.0F && unsupported[3] == 4.0F,
+            "unsupported channel layouts must leave input unchanged");
+}
+
+} // namespace
+
+int main() {
+    try {
+        test_four_independent_times_and_pans();
+        test_cyclic_cross_feedback_routes_between_lines();
+        test_self_feedback_and_negative_phase();
+        test_tempo_sync_and_project_bounds();
+        test_memory_cap_reset_and_process_no_allocations();
+        std::cout << "Multi-Delay tests passed\n";
+    } catch (const std::exception& exception) {
+        std::cerr << "Multi-Delay tests failed: " << exception.what() << '\n';
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}

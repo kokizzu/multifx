@@ -83,7 +83,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">74 of 74</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">75 of 75</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -159,8 +159,9 @@
         <label class="effect-row" data-category="vocal"><input type="checkbox" data-effect="69"><span class="effect-number">70</span><span class="effect-name">De-Esser · project-authored</span><span class="effect-default">6.5 kHz · 12 dB maximum reduction</span><span class="effect-category-tag">Vocal FX</span></label>
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="70"><span class="effect-number">71</span><span class="effect-name">Dual-Engine Distortion · project-authored</span><span class="effect-default">A/B blend or series · bass boost</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="71"><span class="effect-number">72</span><span class="effect-name">Vibe · project-authored</span><span class="effect-default">1.5 Hz · 2 stages · 70% depth</span><span class="effect-category-tag">Modulation</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="72" checked><span class="effect-number">73</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="73" checked><span class="effect-number">74</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="72"><span class="effect-number">73</span><span class="effect-name">Multi-Delay · project-authored</span><span class="effect-default">4 parallel lines · cross-feedback</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="73" checked><span class="effect-number">74</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="74" checked><span class="effect-number">75</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1191,6 +1192,67 @@
           <label class="mix-control" for="vibe-spread"><span>Spread</span><output for="vibe-spread">50%</output><input id="vibe-spread" type="range" min="0" max="100" step="1" value="50"></label>
           <label class="mix-control" for="vibe-level"><span>Level</span><output for="vibe-level">1.00</output><input id="vibe-level" type="range" min="0" max="2" step="0.01" value="1"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Multi-Delay controls">
+        <h3>Multi-Delay · project-authored</h3>
+        <p class="hint"><a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide, November 2026, pp. 62–69</a> describes six Multi-Delay core types and many additional factory types. This project implements a bounded four-line parallel delay with cyclic cross-feedback, tempo sync, per-line level/pan, tone cuts, input gain, mix, and output level. It does not implement the guide’s full Quad-Tap, Quad Series, Diffusor, Quad Tape, or Quad Tap Band feature set and claims no Fractal DSP parity. Source times are 1–2000 ms; this implementation may clamp the maximum below 2000 ms due to its 512 KiB fixed storage budget. The FM9 download page lists firmware v12.0 for FM9 Original and FM9 Turbo, released July 7, 2026; it does not separately name an “FM9 Mk II Turbo.”</p>
+        <div class="gain-controls multi-delay-global-controls">
+          <label class="mix-control" for="multi-delay-tempo"><span>Tempo</span><output for="multi-delay-tempo">120 BPM</output><input id="multi-delay-tempo" type="range" min="20" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="multi-delay-low-cut"><span>Low Cut</span><output for="multi-delay-low-cut">20 Hz</output><input id="multi-delay-low-cut" type="range" min="0" max="20000" step="10" value="20"></label>
+          <label class="mix-control" for="multi-delay-high-cut"><span>High Cut</span><output for="multi-delay-high-cut">20000 Hz</output><input id="multi-delay-high-cut" type="range" min="20" max="20000" step="10" value="20000"></label>
+          <label class="mix-control" for="multi-delay-input-gain"><span>Input Gain</span><output for="multi-delay-input-gain">0 dB</output><input id="multi-delay-input-gain" type="range" min="-24" max="24" step="0.5" value="0"></label>
+          <label class="mix-control" for="multi-delay-mix"><span>Mix</span><output for="multi-delay-mix">25%</output><input id="multi-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="multi-delay-level"><span>Level</span><output for="multi-delay-level">0 dB</output><input id="multi-delay-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
+        <p id="multi-delay-time-limit" class="hint">Effective time ceiling: checking browser sample rate… (512 KiB fixed ring storage)</p>
+        <details class="multi-delay-tap" data-multi-delay-line="0">
+          <summary>Line 1</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Time</span><output></output><input data-control="timeMs" type="range" min="1" max="2000" step="1" value="250"></label>
+            <label class="mix-control"><span>Time Mode</span><output></output><select data-control="timeMode"><option value="0" selected>Milliseconds</option><option value="1">Tempo</option></select></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4" selected>Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option></select></label>
+            <label class="mix-control"><span>Feedback</span><output></output><input data-control="feedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Cross Feedback</span><output></output><input data-control="crossFeedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Level</span><output></output><input data-control="level" type="range" min="-200" max="200" step="1" value="100"></label>
+            <label class="mix-control"><span>Pan</span><output></output><input data-control="pan" type="range" min="0" max="100" step="1" value="10"></label>
+          </div>
+        </details>
+        <details class="multi-delay-tap" data-multi-delay-line="1">
+          <summary>Line 2</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Time</span><output></output><input data-control="timeMs" type="range" min="1" max="2000" step="1" value="375"></label>
+            <label class="mix-control"><span>Time Mode</span><output></output><select data-control="timeMode"><option value="0" selected>Milliseconds</option><option value="1">Tempo</option></select></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3" selected>Dotted quarter</option><option value="4">Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option></select></label>
+            <label class="mix-control"><span>Feedback</span><output></output><input data-control="feedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Cross Feedback</span><output></output><input data-control="crossFeedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Level</span><output></output><input data-control="level" type="range" min="-200" max="200" step="1" value="100"></label>
+            <label class="mix-control"><span>Pan</span><output></output><input data-control="pan" type="range" min="0" max="100" step="1" value="35"></label>
+          </div>
+        </details>
+        <details class="multi-delay-tap" data-multi-delay-line="2">
+          <summary>Line 3</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Time</span><output></output><input data-control="timeMs" type="range" min="1" max="2000" step="1" value="500"></label>
+            <label class="mix-control"><span>Time Mode</span><output></output><select data-control="timeMode"><option value="0" selected>Milliseconds</option><option value="1">Tempo</option></select></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2" selected>Half</option><option value="3">Dotted quarter</option><option value="4">Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option></select></label>
+            <label class="mix-control"><span>Feedback</span><output></output><input data-control="feedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Cross Feedback</span><output></output><input data-control="crossFeedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Level</span><output></output><input data-control="level" type="range" min="-200" max="200" step="1" value="100"></label>
+            <label class="mix-control"><span>Pan</span><output></output><input data-control="pan" type="range" min="0" max="100" step="1" value="65"></label>
+          </div>
+        </details>
+        <details class="multi-delay-tap" data-multi-delay-line="3">
+          <summary>Line 4</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Time</span><output></output><input data-control="timeMs" type="range" min="1" max="2000" step="1" value="750"></label>
+            <label class="mix-control"><span>Time Mode</span><output></output><select data-control="timeMode"><option value="0" selected>Milliseconds</option><option value="1">Tempo</option></select></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0" selected>Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4">Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option></select></label>
+            <label class="mix-control"><span>Feedback</span><output></output><input data-control="feedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Cross Feedback</span><output></output><input data-control="crossFeedback" type="range" min="-45" max="45" step="1" value="0"></label>
+            <label class="mix-control"><span>Level</span><output></output><input data-control="level" type="range" min="-200" max="200" step="1" value="100"></label>
+            <label class="mix-control"><span>Pan</span><output></output><input data-control="pan" type="range" min="0" max="100" step="1" value="90"></label>
+          </div>
+        </details>
       </div>
       <div class="effect-parameter-group" aria-label="Auto-Pan controls">
         <h3>Auto-Pan · project-authored</h3>
