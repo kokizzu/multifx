@@ -95,7 +95,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(70);
+        effects_.reserve(71);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -304,6 +304,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::DeEsser>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::DualEngineDistortion>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -378,6 +381,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 69U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 70U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -833,6 +839,26 @@ public:
         parameters.attack_ms = attack_ms;
         parameters.release_ms = release_ms;
         de_esser->configure(parameters);
+    }
+
+    void configure_dual_engine_distortion(
+        float gain_a, float tone_a, float gain_b, float tone_b,
+        float blend, std::uint32_t mode, std::uint32_t bass_boost,
+        float level_db) noexcept {
+        auto* distortion = static_cast<tabletfx::DualEngineDistortion*>(
+            effects_[70].effect.get());
+        auto parameters = distortion->parameters();
+        parameters.gain_a = gain_a;
+        parameters.tone_a = tone_a;
+        parameters.gain_b = gain_b;
+        parameters.tone_b = tone_b;
+        parameters.blend = blend;
+        parameters.mode = mode == 1U
+            ? tabletfx::DualEngineDistortionMode::Series
+            : tabletfx::DualEngineDistortionMode::Blend;
+        parameters.bass_boost = bass_boost != 0U;
+        parameters.level_db = level_db;
+        distortion->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2870,6 +2896,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_de_esser(
         as_chain(opaque)->configure_de_esser(
             detector_frequency_hz, detector_q, threshold_dbfs,
             max_reduction_db, attack_ms, release_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_dual_engine_distortion(
+    void* opaque, float gain_a, float tone_a, float gain_b, float tone_b,
+    float blend, std::uint32_t mode, std::uint32_t bass_boost,
+    float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_dual_engine_distortion(
+            gain_a, tone_a, gain_b, tone_b, blend, mode, bass_boost, level_db);
     }
 }
 

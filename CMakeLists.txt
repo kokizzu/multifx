@@ -47,6 +47,7 @@ add_library(tabletfx_core
     src/effects/auto_pan.cpp
     src/effects/megatap_delay.cpp
     src/effects/de_esser.cpp
+    src/effects/pugilist.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -281,6 +282,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_de_esser_tests tests/test_de_esser.cpp)
     target_link_libraries(tabletfx_de_esser_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_de_esser_tests COMMAND tabletfx_de_esser_tests)
+
+    add_executable(tabletfx_pugilist_tests tests/test_pugilist.cpp)
+    target_link_libraries(tabletfx_pugilist_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_pugilist_tests COMMAND tabletfx_pugilist_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

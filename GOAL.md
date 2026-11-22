@@ -516,6 +516,7 @@ Reference coverage: major drive families across all researched manufacturers; va
 - [ ] **DRV-20 · P1** Sample-rate reduction with controllable filtering.
 - [ ] **DRV-21 · P2** Lo-fi degradation/noise/wow-flutter combinations with independently adjustable components.
 - [ ] **DRV-22 · P1** Oversampling quality modes for nonlinear processors that need them; measure aliasing and added cost.
+- [ ] **DRV-23 · P1** Dual-engine distortion with selectable parallel blend or series routing, independent engine gain/tone controls, and optional bass boost.
 
 ### 10.5 Modulation
 

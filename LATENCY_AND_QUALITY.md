@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Dual-Engine Distortion and 73-entry picker (2026-11-22)
+
+The project-authored Dual-Engine Distortion uses two independent soft-clipping/tone paths with parallel Blend or Series routing, optional low-shelf Bass Boost, and output Level. A/B Gain/Tone and Blend are normalized project values; Level is −24…+12 dB. Controls ramp over 10 ms. It uses fixed per-channel scalar state, adds no delay, and allocates nothing in `process()`. No isolated CPU/aliasing measurement or human listening result has been run.
+
+`make test` passed 77/77 CTest cases. `make web-test` passed the 73-entry Drive & fuzz picker and HeadlessChrome 151 local-guitar Play smoke through slot 70 (peak 0.8912509; 47,999 active samples). The offline browser/native comparison disables this effect because the CLI reference lacks the stage. Fender's Tone Master Pro Model Guide v1.1.100 p. 27 documents Pugilist's control concepts but not numeric ranges/defaults or DSP details; all TabletFX bounds/processing are project-authored, and current firmware applicability is unverified.
+
 ## De-Esser and 72-entry picker (2026-11-22)
 
 The project-authored split-band De-Esser uses a fixed band-pass detector per channel, attack/release envelope smoothing, and attenuation of the detected band. It has no lookahead or allocated audio buffer; no isolated callback CPU measurement has been run. The frequency, Q, threshold, maximum reduction, attack, release, DSP, and ranges are project-authored because the checked HeadRush product page does not publish its De-Esser settings.

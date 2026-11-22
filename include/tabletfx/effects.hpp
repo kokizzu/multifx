@@ -22,6 +22,7 @@
 #include "tabletfx/effects/auto_pan.hpp"
 #include "tabletfx/effects/megatap_delay.hpp"
 #include "tabletfx/effects/de_esser.hpp"
+#include "tabletfx/effects/pugilist.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"

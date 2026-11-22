@@ -1265,6 +1265,28 @@ DE_ESSER_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+PUGILIST_CHECKPOINT_PATHS = (
+    "GOAL.md",
+    "CMakeLists.txt",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/pugilist.hpp",
+    "src/effects/pugilist.cpp",
+    "tests/test_pugilist.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "README.md",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1356,6 +1378,10 @@ CHECKPOINTS = {
                       "feat: add project-authored Megatap delay"),
     "de-esser": (DE_ESSER_CHECKPOINT_PATHS,
                  "feat: add project-authored De-Esser"),
+    "dual-engine-distortion": (
+        PUGILIST_CHECKPOINT_PATHS,
+        "feat: add project-authored dual-engine distortion",
+    ),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }
