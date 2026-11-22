@@ -108,6 +108,8 @@ struct Options {
     bool pitch_arpeggiator_enabled = false;
     bool pitch_arpeggiator_run_explicit = false;
     tabletfx::effects::PitchArpeggiatorParameters pitch_arpeggiator{};
+    bool mono_guitar_synth_enabled = false;
+    tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
@@ -540,6 +542,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.pitch_arpeggiator_enabled = true;
             continue;
         }
+        if (key == "--mono-guitar-synth") {
+            options.mono_guitar_synth_enabled = true;
+            continue;
+        }
         if (key == "--grain-delay") {
             options.grain_delay_enabled = true;
             continue;
@@ -703,6 +709,35 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.pitch_arpeggiator_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--mono-guitar-synth-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.mono_guitar_synth;
+            const std::string_view setting = key.substr(
+                std::string_view("--mono-guitar-synth-").size());
+            if (setting == "waveform") {
+                using Waveform = tabletfx::effects::MonoGuitarSynthWaveform;
+                if (value == "sine") parameters.waveform = Waveform::Sine;
+                else if (value == "triangle") parameters.waveform = Waveform::Triangle;
+                else if (value == "sawtooth") parameters.waveform = Waveform::Sawtooth;
+                else if (value == "square") parameters.waveform = Waveform::Square;
+                else throw std::invalid_argument(
+                    "Mono guitar synth waveform must be sine, triangle, sawtooth, or square");
+            } else {
+                const float number = parse_float(key, argv[i]);
+                if (setting == "mix") parameters.mix = number;
+                else if (setting == "level") parameters.level = number;
+                else if (setting == "gate-threshold-db") {
+                    parameters.gate_threshold_db = number;
+                } else if (setting == "attack-ms") parameters.attack_ms = number;
+                else if (setting == "release-ms") parameters.release_ms = number;
+                else if (setting == "portamento-ms") parameters.portamento_ms = number;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -2684,6 +2719,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate), options.pitch_arpeggiator);
         effects.push_back(std::move(arpeggiator));
     }
+    if (options.mono_guitar_synth_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::MonoGuitarSynth>(
+            static_cast<float>(sample_rate), options.mono_guitar_synth));
+    }
     if (options.grain_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(
             static_cast<float>(sample_rate), channels, options.grain_delay));
@@ -3427,6 +3466,14 @@ void run_bench() {
         return std::make_unique<tabletfx::effects::PitchArpeggiator>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("mono-guitar-synth", [=] {
+        tabletfx::effects::MonoGuitarSynthConfig parameters;
+        parameters.waveform = tabletfx::effects::MonoGuitarSynthWaveform::Sawtooth;
+        parameters.mix = 0.75F;
+        parameters.level = 0.6F;
+        return std::make_unique<tabletfx::effects::MonoGuitarSynth>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("grain-delay-worst-case", [=] {
         tabletfx::GrainDelayParameters parameters;
         parameters.time_ms = 2000.0F;
@@ -3731,6 +3778,11 @@ void print_usage() {
                   " [--pitch-arpeggiator-amplitude-alpha 0..1]"
                   " [--pitch-arpeggiator-pan-shape center|left-to-right|right-to-left|ping-pong]"
                   " [--pitch-arpeggiator-pan-alpha 0..1]"
+                  " [--mono-guitar-synth] [--mono-guitar-synth-waveform sine|triangle|sawtooth|square]"
+                  " [--mono-guitar-synth-mix 0..1] [--mono-guitar-synth-level 0..2]"
+                  " [--mono-guitar-synth-gate-threshold-db -90..0]"
+                  " [--mono-guitar-synth-attack-ms 0..2000] [--mono-guitar-synth-release-ms 0..5000]"
+                  " [--mono-guitar-synth-portamento-ms 0..250]"
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"

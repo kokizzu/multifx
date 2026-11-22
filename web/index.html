@@ -72,6 +72,7 @@
             <option value="eq">Equalizer</option>
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
+            <option value="synth">Synth</option>
             <option value="resonator">Resonator</option>
             <option value="reverb">Reverb</option>
           </select>
@@ -79,7 +80,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">55 of 55</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">56 of 56</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -135,9 +136,10 @@
         <label class="effect-row" data-category="resonator"><input type="checkbox" data-effect="49"><span class="effect-number">50</span><span class="effect-name">Four-band resonator</span><span class="effect-default">Manual or chord mode · project-authored DSP</span><span class="effect-category-tag">Resonator</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="50"><span class="effect-number">51</span><span class="effect-name">Diatonic Harmonizer</span><span class="effect-default">Monophonic pitch tracking · project-authored DSP</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="51"><span class="effect-number">52</span><span class="effect-name">Pitch Arpeggiator</span><span class="effect-default">16-step scale sequencer · monophonic tracker</span><span class="effect-category-tag">Pitch</span></label>
-        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="52"><span class="effect-number">53</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="53" checked><span class="effect-number">54</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="54" checked><span class="effect-number">55</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="52"><span class="effect-number">53</span><span class="effect-name">Mono Guitar Synth</span><span class="effect-default">Single-note oscillator tracker · project-authored DSP</span><span class="effect-category-tag">Synth</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="53"><span class="effect-number">54</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="54" checked><span class="effect-number">55</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="55" checked><span class="effect-number">56</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -848,6 +850,19 @@
           <label class="mix-control" for="pitch-arpeggiator-step-15"><span>Step 15</span><output id="pitch-arpeggiator-step-15-value" for="pitch-arpeggiator-step-15">0 degrees</output><input id="pitch-arpeggiator-step-15" type="range" min="-7" max="7" step="1" value="0"></label>
           <label class="mix-control" for="pitch-arpeggiator-step-16"><span>Step 16</span><output id="pitch-arpeggiator-step-16-value" for="pitch-arpeggiator-step-16">0 degrees</output><input id="pitch-arpeggiator-step-16" type="range" min="-7" max="7" step="1" value="0"></label>
           <label class="mix-control" for="pitch-arpeggiator-trigger-threshold"><span>Automatic phrase trigger (−90 = manual Run)</span><output id="pitch-arpeggiator-trigger-threshold-value" for="pitch-arpeggiator-trigger-threshold">Manual Run</output><input id="pitch-arpeggiator-trigger-threshold" type="range" min="-90" max="0" step="1" value="-90"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Mono Guitar Synth controls">
+        <h3>Mono Guitar Synth · project-authored single-note oscillator</h3>
+        <p class="hint">This is a project-authored monophonic oscillator controlled by a guitar-note tracker, not a port or sound match for any flagship synth. The detector accepts approximately 55–1,100 Hz and analyzes 1,024 samples (about 21.3 ms at 48 kHz); first-note response and pitch stability depend on the incoming guitar signal. Oscillator voice count does not imply polyphonic input tracking. No oversampling or bright-wave anti-aliasing claim is made.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="mono-guitar-synth-waveform"><span>Waveform</span><output id="mono-guitar-synth-waveform-value" for="mono-guitar-synth-waveform">Saw</output><select id="mono-guitar-synth-waveform"><option value="0">Sine</option><option value="1">Triangle</option><option value="2" selected>Saw</option><option value="3">Square</option></select></label>
+          <label class="mix-control" for="mono-guitar-synth-mix"><span>Mix</span><output id="mono-guitar-synth-mix-value" for="mono-guitar-synth-mix">75%</output><input id="mono-guitar-synth-mix" type="range" min="0" max="1" step="0.01" value="0.75"></label>
+          <label class="mix-control" for="mono-guitar-synth-level"><span>Oscillator level</span><output id="mono-guitar-synth-level-value" for="mono-guitar-synth-level">60%</output><input id="mono-guitar-synth-level" type="range" min="0" max="2" step="0.01" value="0.6"></label>
+          <label class="mix-control" for="mono-guitar-synth-gate-threshold-db"><span>Gate threshold</span><output id="mono-guitar-synth-gate-threshold-value" for="mono-guitar-synth-gate-threshold-db">−54 dBFS</output><input id="mono-guitar-synth-gate-threshold-db" type="range" min="-90" max="0" step="1" value="-54"></label>
+          <label class="mix-control" for="mono-guitar-synth-attack-ms"><span>Attack</span><output id="mono-guitar-synth-attack-value" for="mono-guitar-synth-attack-ms">8 ms</output><input id="mono-guitar-synth-attack-ms" type="range" min="0" max="2000" step="1" value="8"></label>
+          <label class="mix-control" for="mono-guitar-synth-release-ms"><span>Release</span><output id="mono-guitar-synth-release-value" for="mono-guitar-synth-release-ms">180 ms</output><input id="mono-guitar-synth-release-ms" type="range" min="0" max="5000" step="1" value="180"></label>
+          <label class="mix-control" for="mono-guitar-synth-portamento-ms"><span>Portamento</span><output id="mono-guitar-synth-portamento-value" for="mono-guitar-synth-portamento-ms">8 ms</output><input id="mono-guitar-synth-portamento-ms" type="range" min="0" max="250" step="1" value="8"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Grain Delay controls">

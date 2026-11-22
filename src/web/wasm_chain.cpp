@@ -85,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(53);
+          effects_.reserve(54);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -242,6 +242,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::PitchArpeggiator>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::MonoGuitarSynth>(
+                                static_cast<float>(sample_rate)),
+                            false});
         effects_.push_back({std::make_unique<tabletfx::GrainDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
@@ -288,6 +291,9 @@ public:
                 effects_[index].effect.get())->set_enabled(enabled);
         }
         if (index == 51U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 52U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -834,6 +840,32 @@ public:
             ->configure(parameters);
     }
 
+    void configure_mono_guitar_synth(const float* values,
+                                     std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 7U;
+        if (values == nullptr || value_count != kParameterCount) {
+            return;
+        }
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) {
+                return 2U;
+            }
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        tabletfx::effects::MonoGuitarSynthConfig config;
+        config.waveform = static_cast<tabletfx::effects::MonoGuitarSynthWaveform>(
+            selector(values[0], 3U));
+        config.mix = values[1];
+        config.level = values[2];
+        config.gate_threshold_db = values[3];
+        config.attack_ms = values[4];
+        config.release_ms = values[5];
+        config.portamento_ms = values[6];
+        static_cast<tabletfx::effects::MonoGuitarSynth*>(effects_[52].effect.get())
+            ->configure(config);
+    }
+
     void configure_grain_delay(float time_ms, float feedback, float mix,
                                float grain_size_ms, std::uint32_t overlap,
                                float pitch_semitones, float spray_ms) noexcept {
@@ -846,7 +878,7 @@ public:
             std::clamp(overlap, 0U, 255U));
         parameters.pitch_semitones = pitch_semitones;
         parameters.spray_ms = spray_ms;
-        static_cast<tabletfx::GrainDelay*>(effects_[52].effect.get())
+        static_cast<tabletfx::GrainDelay*>(effects_[53].effect.get())
             ->configure(parameters);
     }
 
@@ -2002,6 +2034,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pitch_arpeggiator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pitch_arpeggiator(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_mono_guitar_synth(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_mono_guitar_synth(values, value_count);
     }
 }
 

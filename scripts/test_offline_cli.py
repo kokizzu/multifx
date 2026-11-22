@@ -817,6 +817,79 @@ def check_pitch_arpeggiator(executable: Path) -> None:
             raise AssertionError("Pitch Arpeggiator accepted an unknown step division")
 
 
+def check_mono_guitar_synth(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 32768
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-mono-guitar-synth-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "single-note.wav"
+        disabled_output = root / "disabled.wav"
+        output = root / "synth.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        # Controls alone do not enable the optional synth stage.
+        disabled = subprocess.run(
+            [str(executable), "render", str(source), str(disabled_output),
+             "--mono-guitar-synth-waveform", "square"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=0" not in disabled.stdout:
+            raise AssertionError("Mono Guitar Synth must remain disabled without its enable flag")
+        dry = struct.unpack(f"<{frame_count}f", disabled_output.read_bytes()[44:])
+        expected_dry = [sample / 32768.0 for sample in source_samples]
+        if any(abs(actual - expected) > 1.0e-6
+               for actual, expected in zip(dry, expected_dry, strict=True)):
+            raise AssertionError("Disabled Mono Guitar Synth changed the dry render")
+
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--mono-guitar-synth", "--mono-guitar-synth-waveform", "sine",
+             "--mono-guitar-synth-mix", "1", "--mono-guitar-synth-level", "0.8",
+             "--mono-guitar-synth-gate-threshold-db", "-50",
+             "--mono-guitar-synth-attack-ms", "0",
+             "--mono-guitar-synth-release-ms", "100",
+             "--mono-guitar-synth-portamento-ms", "0"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Mono Guitar Synth controls did not instantiate one processor: {result.stdout}")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in rendered):
+            raise AssertionError("Mono Guitar Synth produced non-finite output")
+
+        # Ignore pitch acquisition and attack; measure stable positive crossings.
+        first = 4096
+        last = 24576
+        crossings: list[float] = []
+        for frame in range(first + 1, last):
+            before = rendered[frame - 1]
+            after = rendered[frame]
+            if before <= 0.0 < after:
+                fraction = -before / (after - before)
+                crossings.append(frame - 1 + fraction)
+        if len(crossings) < 2:
+            raise AssertionError("Mono Guitar Synth produced too few stable note cycles")
+        measured_hz = (len(crossings) - 1) * sample_rate / (crossings[-1] - crossings[0])
+        if abs(measured_hz - 220.0) > 4.0:
+            raise AssertionError(f"Mono Guitar Synth should track 220 Hz, measured {measured_hz:.2f} Hz")
+        stable = rendered[first:last]
+        rms = math.sqrt(sum(value * value for value in stable) / len(stable))
+        if not 0.45 < rms < 0.68:
+            raise AssertionError(f"Mono Guitar Synth mix/level controls produced RMS {rms:.4f}")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--mono-guitar-synth", "--mono-guitar-synth-waveform", "pulse"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0 or "waveform must be" not in invalid.stderr:
+            raise AssertionError("Mono Guitar Synth accepted an unknown waveform")
+
+
 def check_grain_delay(executable: Path) -> None:
     sample_rate = 8000
     frame_count = 4096
@@ -1843,6 +1916,7 @@ def main() -> None:
     check_four_band_resonator(args.executable.resolve())
     check_diatonic_harmonizer(args.executable.resolve())
     check_pitch_arpeggiator(args.executable.resolve())
+    check_mono_guitar_synth(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -1859,7 +1933,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, and Pitch Arpeggiator, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
