@@ -822,16 +822,22 @@ const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-
       .map((control) => [control.dataset.control, control]),
   ));
 const multiDelayTempo = document.querySelector("#multi-delay-tempo");
+const multiDelayTopology = document.querySelector("#multi-delay-topology");
 const multiDelayLowCut = document.querySelector("#multi-delay-low-cut");
 const multiDelayHighCut = document.querySelector("#multi-delay-high-cut");
 const multiDelayInputGain = document.querySelector("#multi-delay-input-gain");
 const multiDelayMix = document.querySelector("#multi-delay-mix");
 const multiDelayLevel = document.querySelector("#multi-delay-level");
+const multiDelaySeriesPanel = document.querySelector("#multi-delay-series-controls");
+const multiDelaySeriesFeedback = document.querySelector("#multi-delay-series-feedback");
+const multiDelaySeriesSend = document.querySelector("#multi-delay-series-send");
+const multiDelaySeriesReturn = document.querySelector("#multi-delay-series-return");
 const multiDelayTimeLimit = document.querySelector("#multi-delay-time-limit");
 const multiDelayControls = [
   ...multiDelayLineControls.flatMap((line) => Object.values(line)),
-  multiDelayTempo, multiDelayLowCut, multiDelayHighCut,
+  multiDelayTopology, multiDelayTempo, multiDelayLowCut, multiDelayHighCut,
   multiDelayInputGain, multiDelayMix, multiDelayLevel,
+  multiDelaySeriesFeedback, multiDelaySeriesSend, multiDelaySeriesReturn,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1889,12 +1895,16 @@ function updateMultiDelayOptions() {
   }));
   const value = {
     lines,
+    topology: Number(multiDelayTopology.value),
     tempoBpm: Number(multiDelayTempo.value),
     lowCutHz: Number(multiDelayLowCut.value),
     highCutHz: Number(multiDelayHighCut.value),
     inputGainDb: Number(multiDelayInputGain.value),
     mix: Number(multiDelayMix.value) / 100,
     levelDb: Number(multiDelayLevel.value),
+    seriesFeedback: Number(multiDelaySeriesFeedback.value) / 100,
+    seriesFeedbackSend: Number(multiDelaySeriesSend.value),
+    seriesFeedbackReturn: Number(multiDelaySeriesReturn.value),
   };
   DEFAULT_PARAMETERS.multiDelay = value;
   const divisions = ["Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
@@ -1906,7 +1916,10 @@ function updateMultiDelayOptions() {
   };
   multiDelayLineControls.forEach((line, index) => {
     const settings = lines[index];
+    const parallel = value.topology === 0;
     line.timeMs.disabled = settings.timeMode === 1;
+    line.feedback.disabled = !parallel;
+    line.crossFeedback.disabled = !parallel;
     show(line.timeMs, `${settings.timeMs} ms`);
     show(line.timeMode, settings.timeMode === 1 ? "Tempo" : "Milliseconds");
     show(line.division, divisions[settings.division] || "Quarter");
@@ -1915,6 +1928,14 @@ function updateMultiDelayOptions() {
     show(line.level, `${Math.round(settings.level * 100)}%`);
     show(line.pan, `${Math.round(settings.pan * 100)}%`);
   });
+  multiDelaySeriesPanel.classList.toggle("is-hidden", value.topology !== 1);
+  show(multiDelayTopology, value.topology === 1 ? "Quad Series" : "Quad Parallel");
+  show(multiDelaySeriesFeedback,
+    `${Math.round(value.seriesFeedback * 100)}%`);
+  show(multiDelaySeriesSend,
+    `Line ${value.seriesFeedbackSend + 1}`);
+  show(multiDelaySeriesReturn,
+    `Line ${value.seriesFeedbackReturn + 1}`);
   show(multiDelayTempo, `${value.tempoBpm} BPM`);
   show(multiDelayLowCut, value.lowCutHz === 0 ? "Off" : `${value.lowCutHz} Hz`);
   show(multiDelayHighCut, `${value.highCutHz} Hz`);
@@ -4979,12 +5000,16 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
         line[name].value = value;
       }
     });
+    multiDelayTopology.value = "1";
     multiDelayTempo.value = "96";
     multiDelayLowCut.value = "100";
     multiDelayHighCut.value = "8000";
     multiDelayInputGain.value = "2";
     multiDelayMix.value = "35";
     multiDelayLevel.value = "-2";
+    multiDelaySeriesFeedback.value = "35";
+    multiDelaySeriesSend.value = "3";
+    multiDelaySeriesReturn.value = "0";
     updateMultiDelayOptions();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
@@ -5016,7 +5041,10 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     if (peak < 1e-5 || activeSamples < 32) {
       throw new Error(`Multi-Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
     }
-    return { peak, activeSamples, enabledEffectIndex: 72, lines: 4 };
+    return {
+      peak, activeSamples, enabledEffectIndex: 72, lines: 4,
+      topology: "quad-series",
+    };
   } finally {
     stopSource(false);
     if (workletNode) {

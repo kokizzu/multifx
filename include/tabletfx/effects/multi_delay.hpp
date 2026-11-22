@@ -14,7 +14,13 @@ namespace tabletfx {
 inline constexpr std::size_t multi_delay_line_count = 4U;
 inline constexpr std::size_t multi_delay_storage_limit_bytes = 512U * 1024U;
 
+enum class MultiDelayTopology : std::uint32_t {
+    quad_parallel,
+    quad_series,
+};
+
 struct MultiDelayParameters {
+    MultiDelayTopology topology = MultiDelayTopology::quad_parallel;
     std::array<float, multi_delay_line_count> time_ms{
         250.0F, 375.0F, 500.0F, 750.0F};
     std::array<DelayTimeMode, multi_delay_line_count> time_mode{
@@ -27,6 +33,11 @@ struct MultiDelayParameters {
     // A line feeds itself; cross_feedback[i] routes line i to line (i + 1) % 4.
     std::array<float, multi_delay_line_count> feedback{};
     std::array<float, multi_delay_line_count> cross_feedback{};
+    // Series topology sends one tap back to a selected delay-line input.
+    // Selectors are zero-based in C++ and map to documented lines 1–4 in UI.
+    float series_feedback = 0.0F;
+    std::uint32_t series_feedback_send = 3U;
+    std::uint32_t series_feedback_return = 0U;
     // Project-authored linear tap gains and equal-power pan positions.
     std::array<float, multi_delay_line_count> level{1.0F, 1.0F, 1.0F, 1.0F};
     std::array<float, multi_delay_line_count> pan{0.1F, 0.35F, 0.65F, 0.9F};
@@ -38,29 +49,33 @@ struct MultiDelayParameters {
 };
 
 /*
- * Project-authored four-line parallel cross-feedback delay. Fractal's
- * November 2026 Blocks Guide, pp. 62–69, lists the FM9 Multi-Delay core types
- * Quad-Tap, Quad Parallel, Quad-Series, Quad Diffusor, Quad Tape, and Quad Tap
- * Band. This class implements only a basic Quad-Parallel-like topology:
- * independent delay lines, self feedback, and the documented cyclic
- * cross-feedback links 1->2, 2->3, 3->4, 4->1. Per-line Time/Tempo, Feedback,
- * Level and Pan concepts are represented, and the documented delay-time span
- * (1–2000 ms) is retained as the upper bound. Negative feedback is supported
- * for polarity inversion, as the guide describes.
+ * Project-authored four-line delay. Fractal's November 2026 Blocks Guide,
+ * printed pp. 57–62, lists the FM9 Multi-Delay core types Quad-Tap, Quad
+ * Parallel, Quad-Series, Quad Diffusor, Quad Tape, and Quad Tap Band. This
+ * class offers two limited topologies: a Quad-Parallel-like pattern with
+ * independent lines, self feedback, and cyclic cross-feedback links 1->2,
+ * 2->3, 3->4, 4->1; and a Quad-Series-like pattern with cumulative tap times
+ * and one selected output tap feeding one selected delay-line input. Per-line
+ * Time/Tempo, Feedback, Level and Pan concepts are represented, and the
+ * documented 0–2000 ms delay-time span informs the project upper bound.
+ * Negative feedback supports polarity inversion as described by the guide.
  *
  * Project choices are explicit: the lines use a summed mono effect input,
  * each delay is clamped to 1 ms minimum, tempo is shared at 20–300 BPM, the
- * available divisions come from this project, self/cross feedback is limited
- * to ±0.45 per link to bound each row's total feedback, level is linear
- * −2…+2, pan is 0…1, and a 512-KiB ring-storage cap may shorten the available
- * time below 2000 ms. Project-authored one-pole low/high cuts, input gain, mix,
- * and output level are included. The manual does not publish numeric ranges
- * for most controls; these project limits are not Fractal settings.
+ * available divisions come from this project, parallel self/cross feedback
+ * is limited to ±0.45 per link, and series feedback is limited to ±0.90.
+ * Series send/return selectors are zero-based in code (lines 1–4 in UI);
+ * level is linear −2…+2 and pan is 0…1. A 512-KiB ring-storage cap may shorten
+ * the available time below 2000 ms. Project-authored one-pole low/high cuts,
+ * input gain, mix, and output level are included. The manual does not publish
+ * numeric ranges for most controls; these project limits are not Fractal
+ * settings.
  *
- * The other five core types, their individual BPF/comb/ring-mod/chorus/tape
- * processing, time LFOs, diffuser, ducker, envelope follower, and full EQ page
- * are not implemented. This class does not reproduce Fractal DSP, presets,
- * controls, or sound. Mono/stereo input is accepted; the wet path is generated
+ * Quad-Tap, Quad Diffusor, Quad Tape, Quad Tap Band, their individual
+ * BPF/comb/ring-mod/chorus/tape processing, time LFOs, diffuser, ducker,
+ * envelope follower, and full EQ page are not implemented. This class does
+ * not reproduce Fractal DSP, presets, controls, or sound. Mono/stereo input is
+ * accepted; the wet path is generated
  * from a mono average and can be panned in stereo. Processing uses a
  * preallocated ring and performs no allocations.
  *

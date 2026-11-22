@@ -1014,6 +1014,20 @@ public:
         delay->configure(parameters);
     }
 
+    void configure_multi_delay_topology(
+        std::uint32_t topology, float series_feedback,
+        std::uint32_t feedback_send, std::uint32_t feedback_return) noexcept {
+        auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
+        auto parameters = delay->parameters();
+        parameters.topology = topology <= 1U
+            ? static_cast<tabletfx::MultiDelayTopology>(topology)
+            : static_cast<tabletfx::MultiDelayTopology>(255U);
+        parameters.series_feedback = series_feedback;
+        parameters.series_feedback_send = feedback_send;
+        parameters.series_feedback_return = feedback_return;
+        delay->configure(parameters);
+    }
+
     void configure_porta_preamp(float gain_1_db, float gain_2_db,
                                 float bass_db, float treble_db,
                                 float level_db) noexcept {
@@ -3173,6 +3187,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_global(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_multi_delay_global(
             tempo_bpm, low_cut_hz, high_cut_hz, input_gain_db, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_topology(
+    void* opaque, std::uint32_t topology, float series_feedback,
+    std::uint32_t feedback_send, std::uint32_t feedback_return) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multi_delay_topology(
+            topology, series_feedback, feedback_send, feedback_return);
     }
 }
 

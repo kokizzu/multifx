@@ -9,6 +9,7 @@ namespace tabletfx {
 namespace {
 
 constexpr double kPiOverTwo = 1.57079632679489661923;
+constexpr float kMaximumSeriesFeedback = 0.9F;
 
 } // namespace
 
@@ -122,6 +123,23 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
         kMinimumDelayMs, std::min(kMaximumDelayMs, maximum_delay_ms()));
     parameters.tempo_bpm = bounded(parameters.tempo_bpm,
         parameters_.tempo_bpm, kMinimumTempoBpm, kMaximumTempoBpm);
+    switch (parameters.topology) {
+    case MultiDelayTopology::quad_parallel:
+    case MultiDelayTopology::quad_series:
+        break;
+    default:
+        parameters.topology = parameters_.topology;
+        break;
+    }
+    parameters.series_feedback = bounded(parameters.series_feedback,
+        parameters_.series_feedback, -kMaximumSeriesFeedback,
+        kMaximumSeriesFeedback);
+    parameters.series_feedback_send = std::min(
+        parameters.series_feedback_send,
+        static_cast<std::uint32_t>(multi_delay_line_count - 1U));
+    parameters.series_feedback_return = std::min(
+        parameters.series_feedback_return,
+        static_cast<std::uint32_t>(multi_delay_line_count - 1U));
 
     for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
         parameters.time_ms[line] = bounded(parameters.time_ms[line],
@@ -267,14 +285,32 @@ void MultiDelay::process(std::span<float> interleaved,
             }
         }
 
-        for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
-            const std::size_t previous =
-                (line + multi_delay_line_count - 1U) % multi_delay_line_count;
-            const float feedback_input =
-                parameters_.feedback[line] * tap_outputs[line] +
-                parameters_.cross_feedback[previous] * tap_outputs[previous];
-            const std::size_t write_index = line * capacity_frames_ + write_frame_;
-            storage_[write_index] = safe_signal(effect_input + feedback_input);
+        if (parameters_.topology == MultiDelayTopology::quad_series) {
+            std::array<float, multi_delay_line_count> line_inputs{};
+            line_inputs[0] = effect_input;
+            for (std::size_t line = 1; line < multi_delay_line_count; ++line) {
+                line_inputs[line] = tap_outputs[line - 1U];
+            }
+            line_inputs[parameters_.series_feedback_return] = safe_signal(
+                line_inputs[parameters_.series_feedback_return] +
+                parameters_.series_feedback *
+                    tap_outputs[parameters_.series_feedback_send]);
+            for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+                const std::size_t write_index =
+                    line * capacity_frames_ + write_frame_;
+                storage_[write_index] = safe_signal(line_inputs[line]);
+            }
+        } else {
+            for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+                const std::size_t previous =
+                    (line + multi_delay_line_count - 1U) % multi_delay_line_count;
+                const float feedback_input =
+                    parameters_.feedback[line] * tap_outputs[line] +
+                    parameters_.cross_feedback[previous] * tap_outputs[previous];
+                const std::size_t write_index =
+                    line * capacity_frames_ + write_frame_;
+                storage_[write_index] = safe_signal(effect_input + feedback_input);
+            }
         }
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;
 

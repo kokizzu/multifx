@@ -140,6 +140,47 @@ void test_tempo_sync_and_project_bounds() {
             "project-authored ranges must clamp times, feedback, levels and mix");
 }
 
+void test_quad_series_compounds_delays_and_routes_selected_feedback() {
+    auto parameters = impulse_parameters();
+    parameters.topology = tabletfx::MultiDelayTopology::quad_series;
+    parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
+    parameters.feedback.fill(0.0F);
+    parameters.cross_feedback.fill(0.0F);
+    tabletfx::MultiDelay series(8000.0F, 100.0F, parameters);
+    std::array<float, 112> mono{};
+    mono[0] = 1.0F;
+    series.process(mono, 1U);
+    require(mono[8] > 0.5F && mono[24] > 0.5F &&
+                mono[48] > 0.5F && mono[80] > 0.5F,
+            "Quad Series taps must occur at compounded cumulative delay times");
+
+    parameters = impulse_parameters();
+    parameters.topology = tabletfx::MultiDelayTopology::quad_series;
+    parameters.time_ms = {1.0F, 20.0F, 30.0F, 40.0F};
+    parameters.feedback.fill(0.0F);
+    parameters.cross_feedback.fill(0.0F);
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.series_feedback = 0.5F;
+    parameters.series_feedback_send = 0U;
+    parameters.series_feedback_return = 0U;
+    tabletfx::MultiDelay feedback(8000.0F, 100.0F, parameters);
+    mono.fill(0.0F);
+    mono[0] = 1.0F;
+    feedback.process(mono, 1U);
+    require(mono[8] > 0.8F && mono[16] > 0.35F && mono[16] < 0.65F,
+            "Quad Series send/return feedback must create a bounded repeat");
+
+    parameters.series_feedback = 4.0F;
+    parameters.series_feedback_send = 9U;
+    parameters.series_feedback_return = 9U;
+    feedback.configure(parameters);
+    const auto bounded = feedback.parameters();
+    require(bounded.series_feedback == 0.9F &&
+                bounded.series_feedback_send == 3U &&
+                bounded.series_feedback_return == 3U,
+            "project Quad Series feedback and selector bounds must be enforced");
+}
+
 void test_memory_cap_reset_and_process_no_allocations() {
     tabletfx::MultiDelay capped(384000.0F, 2000.0F);
     require(capped.maximum_delay_ms() < 200.0F &&
@@ -187,6 +228,7 @@ int main() {
         test_cyclic_cross_feedback_routes_between_lines();
         test_self_feedback_and_negative_phase();
         test_tempo_sync_and_project_bounds();
+        test_quad_series_compounds_delays_and_routes_selected_feedback();
         test_memory_cap_reset_and_process_no_allocations();
         std::cout << "Multi-Delay tests passed\n";
     } catch (const std::exception& exception) {
