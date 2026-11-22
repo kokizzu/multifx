@@ -311,6 +311,16 @@ The current official [Fractal Audio Blocks Guide](https://www.fractalaudio.com/d
 TabletFX implements a project-authored four-line parallel/cyclic cross-feedback subset with per-line time/tempo, feedback, level/pan, shared cuts, input gain, Mix, and output Level. Its 512 KiB storage budget shortens the 2,000 ms source-informed upper bound to about 682 ms at 48 kHz. The other five core types, their additional per-line processing, Plex, Rhythm Tap, and all Fractal DSP/settings/sound parity remain open. FM9 v12.0 downloads checked 2026-11-22 list support for “FM9 Original and FM9 Turbo” without separately naming Mark II Turbo; this does not establish installed firmware or exact Mark II applicability.
 
 Sources: [November 2026 Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf), [FM9 downloads and firmware](https://www.fractalaudio.com/fm9-downloads/).
+
+## Line 6 Helix Stadium PortaBox 424 / project Porta Preamp (2026-11-22)
+
+Line 6's [Stadium 1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes) document the PortaBox 424 model and its Gain 1, Gain 2, Bass, Treble, and Level control names. The notes do not state numeric ranges/defaults or internal DSP. This confirms the named controls in the documented Stadium firmware scope only; it does not establish later firmware changes, an installed version, or behavior on any device.
+
+TabletFX implements a separate project-authored `porta-preamp` processor under Amp / preamp. It uses project defaults 6/3/0/0/0 dB and ranges of −12…+24 dB for each Gain, −12…+12 dB for Bass/Treble, and −24…+12 dB for Level. Its two smoothed soft-clipping gain stages and fixed tone shelves at 220 Hz/3 kHz are project choices. This does not reproduce the full PortaBox amp, its cabinet, Line 6 DSP, or sound.
+
+`make test` passed 80/80 CTest cases. `make web-test` passed the 76-entry picker and local-guitar Play smoke through slot 73 (peak 0.8912509; 47,906 active samples). This verifies the browser control-to-WASM route only. No isolated CPU test, device route, human listening, cabinet response, or Line 6 parity is established.
+
+Sources: [Helix Stadium 1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes), [current Stadium effects documentation](https://manuals.line6.com/en/helix-stadium/live/effect-blocks).
 ## HeadRush Prime Vocal FX / project De-Esser (2026-11-22)
 
 The current official [HeadRush Prime FX overview](https://www.headrushfx.com/products/prime/) lists seven Vocal FX: Auto-Tune, De-Esser, Vocal Distortion, Vocal Doubler, Vocal Harmony, Vocal Stutter, and Vocoder. It labels De-Esser as “HeadRush Original.” The Prime product page currently links the v5.2 user guide, but the linked PDF was not text-readable in this source pass. The product-page model list establishes the De-Esser's presence/category and attribution only; no model-specific control names, numeric bounds, defaults, introduction firmware, installed firmware, detector topology, or algorithm behavior are established.

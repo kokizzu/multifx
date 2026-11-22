@@ -25,6 +25,7 @@
 #include "tabletfx/effects/pugilist.hpp"
 #include "tabletfx/effects/vibe.hpp"
 #include "tabletfx/effects/multi_delay.hpp"
+#include "tabletfx/effects/porta_preamp.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"

@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Porta Preamp and 76-entry picker (2026-11-22)
+
+The project-authored Porta Preamp uses two gain stages with soft clipping, fixed Bass/Treble shelves, and Level. Defaults are 6/3/0/0/0 dB. The gain stages range −12…+24 dB; Bass/Treble −12…+12 dB; Level −24…+12 dB. Control changes smooth over 10 ms. The implementation has fixed state, no delay line or fixed latency, and no per-process allocation. No isolated CPU measurement or human listening result is available.
+
+`make test` passed 80/80 CTest cases. `make web-test` passed the 76-entry Amp / preamp picker and HeadlessChrome 151 local-guitar Play smoke at slot 73 (peak 0.8912509; 47,906 active samples). Browser/native parity excludes this project-authored stage because the offline CLI has no matching processor. Line 6's Stadium v1.4 notes document PortaBox 424 control labels but no ranges, defaults, or DSP; project settings and behavior do not claim Line 6 parity.
+
 ## Vibe and 74-entry picker (2026-11-22)
 
 The project-authored Vibe processor follows the control concepts documented for Line 6 Helix Stadium Essex Vibe. It uses one or two swept first-order all-pass stages, a dry/wet depth blend, amplitude modulation, stereo spread, and a linear output level. Rate is 1.5 Hz default (project range 0.1–10 Hz), Depth 70%, Trem 20%, Stages 2, Spread 50%, Level 1.0 (0–2). Defaults, ranges, topology, and DSP are project choices. Processing uses fixed state and no delay line; no isolated callback CPU measurement or human listening result has been run.

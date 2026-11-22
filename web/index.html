@@ -65,6 +65,7 @@
           <select id="effect-category-filter" aria-controls="effects-list">
             <option value="all">All categories</option>
             <option value="utility">Utility</option>
+            <option value="amp">Amp / preamp</option>
             <option value="dynamics">Dynamics</option>
             <option value="vocal">Vocal FX</option>
             <option value="filter">Filters &amp; wah</option>
@@ -83,7 +84,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">75 of 75</output>
+         <output id="effect-count" class="effect-count" aria-live="polite">76 of 76</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -160,8 +161,9 @@
         <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="70"><span class="effect-number">71</span><span class="effect-name">Dual-Engine Distortion · project-authored</span><span class="effect-default">A/B blend or series · bass boost</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="71"><span class="effect-number">72</span><span class="effect-name">Vibe · project-authored</span><span class="effect-default">1.5 Hz · 2 stages · 70% depth</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="72"><span class="effect-number">73</span><span class="effect-name">Multi-Delay · project-authored</span><span class="effect-default">4 parallel lines · cross-feedback</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="73" checked><span class="effect-number">74</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="74" checked><span class="effect-number">75</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="amp"><input type="checkbox" data-effect="73"><span class="effect-number">74</span><span class="effect-name">Porta Preamp · project-authored</span><span class="effect-default">Gain 1/2 · Bass · Treble · Level</span><span class="effect-category-tag">Amp / preamp</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="74" checked><span class="effect-number">75</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="75" checked><span class="effect-number">76</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1253,6 +1255,17 @@
             <label class="mix-control"><span>Pan</span><output></output><input data-control="pan" type="range" min="0" max="100" step="1" value="90"></label>
           </div>
         </details>
+      </div>
+      <div class="effect-parameter-group" aria-label="Porta Preamp controls">
+        <h3>Porta Preamp · project-authored</h3>
+        <p class="hint"><a href="https://kb.line6.com/helix-stadium-1-4-release-notes" target="_blank" rel="noreferrer">Line 6 Helix Stadium 1.4 release notes</a> describe PortaBox 424 controls Gain 1, Gain 2, Bass, Treble, and Level, without numeric ranges, defaults, or DSP topology. The ranges, 220 Hz/3 kHz tone shelves, two soft-clipped gain stages, and 10 ms smoothing below are project choices, not Line 6 emulation or sound parity. No oversampling or alias-quality claim is made.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="porta-preamp-gain1-db"><span>Gain 1</span><output for="porta-preamp-gain1-db">6.0 dB</output><input id="porta-preamp-gain1-db" type="range" min="-12" max="24" step="0.5" value="6"></label>
+          <label class="mix-control" for="porta-preamp-gain2-db"><span>Gain 2</span><output for="porta-preamp-gain2-db">3.0 dB</output><input id="porta-preamp-gain2-db" type="range" min="-12" max="24" step="0.5" value="3"></label>
+          <label class="mix-control" for="porta-preamp-bass-db"><span>Bass</span><output for="porta-preamp-bass-db">0.0 dB</output><input id="porta-preamp-bass-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="porta-preamp-treble-db"><span>Treble</span><output for="porta-preamp-treble-db">0.0 dB</output><input id="porta-preamp-treble-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="porta-preamp-level-db"><span>Level</span><output for="porta-preamp-level-db">0.0 dB</output><input id="porta-preamp-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
       </div>
       <div class="effect-parameter-group" aria-label="Auto-Pan controls">
         <h3>Auto-Pan · project-authored</h3>

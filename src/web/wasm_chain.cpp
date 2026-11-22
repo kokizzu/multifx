@@ -313,6 +313,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::MultiDelay>(
                                 static_cast<float>(sample_rate), 2000.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::PortaPreamp>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -914,6 +917,20 @@ public:
         parameters.mix = mix;
         parameters.level_db = level_db;
         delay->configure(parameters);
+    }
+
+    void configure_porta_preamp(float gain_1_db, float gain_2_db,
+                                float bass_db, float treble_db,
+                                float level_db) noexcept {
+        auto* preamp = static_cast<tabletfx::PortaPreamp*>(
+            effects_[73].effect.get());
+        auto parameters = preamp->parameters();
+        parameters.gain_1_db = gain_1_db;
+        parameters.gain_2_db = gain_2_db;
+        parameters.bass_db = bass_db;
+        parameters.treble_db = treble_db;
+        parameters.level_db = level_db;
+        preamp->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2990,6 +3007,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_global(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_multi_delay_global(
             tempo_bpm, low_cut_hz, high_cut_hz, input_gain_db, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_porta_preamp(
+    void* opaque, float gain_1_db, float gain_2_db,
+    float bass_db, float treble_db, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_porta_preamp(
+            gain_1_db, gain_2_db, bass_db, treble_db, level_db);
     }
 }
 
