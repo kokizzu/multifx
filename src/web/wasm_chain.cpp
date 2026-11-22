@@ -12,6 +12,7 @@
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/shimmer_reverb.hpp"
+#include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
@@ -86,7 +87,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(58);
+          effects_.reserve(59);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -258,6 +259,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::ShimmerReverb>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::ConvolutionReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -313,6 +317,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 56U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 57U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -942,6 +949,31 @@ public:
         parameters.level_db = values[8];
         static_cast<tabletfx::ShimmerReverb*>(effects_[56].effect.get())
             ->configure(parameters);
+    }
+
+    void configure_convolution_reverb(float mix, float level_db) noexcept {
+        tabletfx::ConvolutionReverbParameters parameters;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        static_cast<tabletfx::ConvolutionReverb*>(effects_[57].effect.get())
+            ->configure(parameters);
+    }
+
+    [[nodiscard]] bool load_convolution_reverb_ir(
+        const float* samples, std::uint32_t frames,
+        std::uint32_t ir_channels, std::uint32_t ir_sample_rate) noexcept {
+        if (samples == nullptr || frames == 0 ||
+            (ir_channels != 1 && ir_channels != 2) ||
+            frames > tabletfx::ConvolutionReverb::maximum_impulse_frames()) {
+            return false;
+        }
+        const std::size_t sample_count = static_cast<std::size_t>(frames) *
+                                         static_cast<std::size_t>(ir_channels);
+        return static_cast<tabletfx::ConvolutionReverb*>(
+                   effects_[57].effect.get())
+            ->load_impulse_response(
+                std::span<const float>(samples, sample_count),
+                static_cast<std::uint16_t>(ir_channels), ir_sample_rate);
     }
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
@@ -2142,6 +2174,23 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shimmer_reverb(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_shimmer_reverb(values);
     }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_convolution_reverb(
+    void* opaque, float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_convolution_reverb(mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_load_convolution_reverb_ir(
+    void* opaque, const float* samples, std::uint32_t frames,
+    std::uint32_t ir_channels, std::uint32_t ir_sample_rate) noexcept {
+    if (opaque == nullptr) return 0;
+    return as_chain(opaque)->load_convolution_reverb_ir(
+               samples, frames, ir_channels, ir_sample_rate)
+        ? 1U
+        : 0U;
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_flanger(

@@ -89,6 +89,39 @@ def check_render(executable: Path) -> None:
                 raise AssertionError(f"Sample {index}: expected {expected}, got {actual}")
 
 
+def check_convolution_reverb(executable: Path) -> None:
+    sample_rate = 48000
+    input_samples = [32767] + [0] * 255
+    ir_samples = [16384, 8192, 0, 0]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-convolution-reverb-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "input.wav"
+        impulse = root / "user-ir.wav"
+        output = root / "convolution.wav"
+        write_pcm16(source, sample_rate, input_samples)
+        write_pcm16(impulse, sample_rate, ir_samples)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--convolution-ir", str(impulse),
+                "--convolution-reverb-mix", "1",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Convolution Reverb CLI did not load one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(input_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Convolution Reverb produced non-finite output")
+        if max(abs(value) for value in values[:128]) > 2.0e-5:
+            raise AssertionError("Convolution Reverb wet output did not honor its 128-frame latency")
+        expected = (32767 / 32768.0) * (16384 / 32768.0)
+        if abs(values[128] - expected) > 1.0e-4:
+            raise AssertionError(f"Unexpected convolution impulse output: {values[128]} vs {expected}")
+
+
 def check_room_reverb(executable: Path) -> None:
     sample_rate = 8000
     frame_count = 4096
@@ -1990,6 +2023,7 @@ def main() -> None:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     check_render(args.executable.resolve())
+    check_convolution_reverb(args.executable.resolve())
     check_room_reverb(args.executable.resolve())
     check_hall_reverb(args.executable.resolve())
     check_plate_reverb(args.executable.resolve())

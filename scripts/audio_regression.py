@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+import math
 from pathlib import Path
 import re
+import struct
 import subprocess
 import sys
 import tempfile
+import wave
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audio_fixtures  # noqa: E402
@@ -70,7 +73,27 @@ def is_direct_input(path: Path, root: Path) -> bool:
     return bool(re.search(r"(?:^|[_-])di(?:$|[_-])", path.stem, re.IGNORECASE))
 
 
+def write_regression_ir(path: Path) -> None:
+    """Create a small deterministic mono room-like IR for local regression."""
+    sample_rate = 48_000
+    frames = 4096
+    pcm = bytearray()
+    for frame in range(frames):
+        if frame == 0:
+            sample = 0.55
+        else:
+            envelope = math.exp(-6.0 * frame / (frames - 1))
+            sample = 0.08 * envelope * math.sin(2.0 * math.pi * frame / 47.0)
+        pcm.extend(struct.pack("<h", round(max(-1.0, min(1.0, sample)) * 32767)))
+    with wave.open(str(path), "wb") as impulse:
+        impulse.setnchannels(1)
+        impulse.setsampwidth(2)
+        impulse.setframerate(sample_rate)
+        impulse.writeframes(pcm)
+
+
 def run_input(renderer: Path, source: Path, output: Path,
+              convolution_ir: Path,
               output_channels: str | None = None,
               delay_character: str = "digital",
               delay_tape_heads: bool = False) -> str:
@@ -80,6 +103,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--volume-position", "0.92", "--volume-min-db", "-96",
         "--volume-max-db", "0", "--volume-curve", "audio",
         "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
+        "--convolution-ir", str(convolution_ir),
         "--wah-position", "0.62", "--wah-min-hz", "350", "--wah-max-hz", "2200",
         "--wah-q", "4", "--wah-level-db", "0",
         "--touch-wah-sensitivity", "0.8", "--touch-wah-direction", "up",
@@ -315,7 +339,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 59:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 60:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -353,36 +377,45 @@ def main() -> None:
         raise FileNotFoundError(f"Offline renderer not found: {renderer}")
     with tempfile.TemporaryDirectory(prefix="tabletfx-audio-regression-", dir=data_dir) as temp_dir:
         output_root = Path(temp_dir)
+        convolution_ir = output_root / "local-regression-impulse.wav"
+        write_regression_ir(convolution_ir)
         for label in PICKUP_ORDER:
             source = pickups[label]
-            report = run_input(renderer, source, output_root / f"{label.replace('-', '_')}.wav")
+            report = run_input(renderer, source, output_root / f"{label.replace('-', '_')}.wav",
+                               convolution_ir)
             print(f"OK EGFxSet note {note}, {label}: {source.relative_to(clean_root)}; {report}")
             tape_report = run_input(
                 renderer, source, output_root / f"{label.replace('-', '_')}-tape.wav",
+                convolution_ir,
                 delay_character="tape",
             )
             print(f"OK EGFxSet Tape Echo note {note}, {label}: {tape_report}")
             heads_report = run_input(
                 renderer, source, output_root / f"{label.replace('-', '_')}-multi-head.wav",
+                convolution_ir,
                 delay_tape_heads=True,
             )
             print(f"OK EGFxSet Multi-head Echo note {note}, {label}: {heads_report}")
         source = music_files[0]
-        report = run_input(renderer, source, output_root / "guitar-techs-music.wav")
+        report = run_input(renderer, source, output_root / "guitar-techs-music.wav",
+                           convolution_ir)
         print(f"OK Guitar-TECHS DI performance: {source.relative_to(music_root)}; {report}")
         tape_report = run_input(
             renderer, source, output_root / "guitar-techs-music-tape.wav",
+            convolution_ir,
             delay_character="tape",
         )
         print(f"OK Guitar-TECHS DI Tape Echo performance: {tape_report}")
         heads_report = run_input(
             renderer, source, output_root / "guitar-techs-music-multi-head.wav",
+            convolution_ir,
             delay_tape_heads=True,
         )
         print(f"OK Guitar-TECHS DI Multi-head Echo performance: {heads_report}")
-        report = run_input(renderer, source, output_root / "guitar-techs-mono.wav", "mono")
+        report = run_input(renderer, source, output_root / "guitar-techs-mono.wav",
+                           convolution_ir, "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 59-stage chain, including the project-authored monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 60-stage chain with a deterministic local convolution IR, including the project-authored monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

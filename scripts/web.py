@@ -163,6 +163,8 @@ def build_web() -> None:
         "_tf_chain_set_pitch_feedback_delay",
         "_tf_chain_set_feedback_generator",
         "_tf_chain_set_shimmer_reverb",
+        "_tf_chain_set_convolution_reverb",
+        "_tf_chain_load_convolution_reverb_ir",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -236,6 +238,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
         str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
         str(ROOT / "src" / "effects" / "shimmer_reverb.cpp"),
+        str(ROOT / "src" / "effects" / "convolution_reverb.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -345,6 +348,15 @@ def make_tuner_test_audio(destination: Path, sample_rate: int = 48000,
         output.setframerate(sample_rate)
         output.writeframes(samples)
     return frames
+
+
+def make_convolution_test_ir(destination: Path, sample_rate: int = 48000) -> None:
+    samples = (16384, 8192, 4096, 2048)
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(struct.pack("<4h", *samples))
 
 
 def websocket_send(sock: socket.socket, opcode: int, payload: bytes) -> None:
@@ -510,8 +522,10 @@ def browser_test() -> None:
         input_path = temp_dir / "guitar-fixture.wav"
         reference_path = temp_dir / "native-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
+        convolution_ir_path = temp_dir / "convolution-ir.wav"
         make_test_audio(input_path)
         make_tuner_test_audio(tuner_path)
+        make_convolution_test_ir(convolution_ir_path)
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
             "--gain-db", "2", "--output-gain-db", "-1",
@@ -785,12 +799,16 @@ def browser_test() -> None:
               "--shimmer-reverb-intensity", "0.65",
               "--shimmer-reverb-mix", "0.3",
               "--shimmer-reverb-level-db", "-3",
+              "--convolution-ir", str(convolution_ir_path),
+              "--convolution-reverb-mix", "0.35",
+              "--convolution-reverb-level-db", "-3",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {
             "/__test_input.wav": input_path,
             "/__test_expected.wav": reference_path,
             "/__test_tuner.wav": tuner_path,
+            "/__test_convolution_ir.wav": convolution_ir_path,
         }
         server = ThreadingHTTPServer(("127.0.0.1", 0), LocalWebHandler)
         server.daemon_threads = True

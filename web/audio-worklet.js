@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -223,6 +223,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [350, 0.35, 0.25, 7]);
       this.configureFeedbackGenerator(parameters.feedbackGenerator ||
         [1, 0.35, 15, 600, 0, 1, -48]);
+      const convolutionReverb = parameters.convolutionReverb || [0.25, 0];
+      module._tf_chain_set_convolution_reverb(this.chain, ...convolutionReverb);
       const flanger = parameters.flanger || [0.25, 2, 1, 0.35, 0, 0.35];
       module._tf_chain_set_flanger(this.chain, ...flanger);
       const phaser = parameters.phaser || [0.5, 250, 1600, 0.2, 4, 0.5];
@@ -348,6 +350,60 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module.HEAPF32.set(values, pointer >>> 2);
     this.module._tf_chain_set_shimmer_reverb(this.chain, pointer);
     this.module._free(pointer);
+  }
+
+  loadConvolutionIR(message) {
+    const requestId = Number(message.requestId);
+    let pointer = 0;
+    try {
+      const frames = Number(message.frames);
+      const channels = Number(message.channels);
+      const sampleRate = Number(message.sampleRate);
+      if (!Number.isInteger(frames) || frames < 1 || frames > 24000 ||
+          ![1, 2].includes(channels) || !Number.isInteger(sampleRate) ||
+          sampleRate < 8000 || sampleRate > 192000 ||
+          !(message.left instanceof ArrayBuffer) ||
+          (channels === 2 && !(message.right instanceof ArrayBuffer))) {
+        throw new Error("The convolution IR message has an unsupported WAV shape or sample rate.");
+      }
+      const left = new Float32Array(message.left);
+      const right = channels === 2 ? new Float32Array(message.right) : null;
+      if (left.length !== frames || (right && right.length !== frames)) {
+        throw new Error("The convolution IR channel lengths do not match its frame count.");
+      }
+      const sampleCount = frames * channels;
+      pointer = this.module._malloc(sampleCount * Float32Array.BYTES_PER_ELEMENT);
+      if (!pointer) throw new Error("The fixed WASM heap has no room for the selected convolution IR.");
+      const heap = this.module.HEAPF32;
+      const offset = pointer >>> 2;
+      for (let frame = 0; frame < frames; frame += 1) {
+        heap[offset + frame * channels] = left[frame];
+        if (right) heap[offset + frame * channels + 1] = right[frame];
+      }
+      const loaded = this.module._tf_chain_load_convolution_reverb_ir(
+        this.chain, pointer, frames, channels, sampleRate,
+      );
+      if (loaded !== 1) {
+        throw new Error("The selected IR is invalid or exceeds the 24,000-frame target-rate limit.");
+      }
+      this.port.postMessage({
+        type: "convolution-ir-loaded",
+        requestId,
+        version: Number(message.version),
+        frames,
+        channels,
+        sampleRate,
+      });
+    } catch (error) {
+      this.port.postMessage({
+        type: "convolution-ir-error",
+        requestId,
+        version: Number(message.version),
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      if (pointer) this.module._free(pointer);
+    }
   }
 
   configurePitchArpeggiator(values) {
@@ -498,6 +554,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFeedbackGenerator(message.value);
     } else if (message.type === "shimmer-reverb" && this.ready) {
       this.configureShimmerReverb(message.value);
+    } else if (message.type === "convolution-reverb" && this.ready) {
+      this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
+    } else if (message.type === "convolution-ir" && this.ready) {
+      this.loadConvolutionIR(message);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

@@ -58,6 +58,7 @@ const EFFECT_NAMES = [
   "Pitch Feedback Delay · project-authored",
   "Feedback Generator · project-authored mono tracker",
   "Shimmer Reverb · project-authored pitch-fed reverb",
+  "Convolution Reverb · project-authored user IR",
   "Output level",
   "Peak limiter",
 ];
@@ -89,6 +90,7 @@ const DEFAULT_PARAMETERS = {
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
   shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
+  convolutionReverb: [0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -159,8 +161,11 @@ const TUNER_FREQUENCY = EFFECT_NAMES.length + 12;
 const TUNER_CENTS = EFFECT_NAMES.length + 13;
 const TUNER_CONFIDENCE = EFFECT_NAMES.length + 14;
 const TUNER_TIME = EFFECT_NAMES.length + 15;
+const MAX_CONVOLUTION_IR_FRAMES = 24000;
 
 const fileInput = document.querySelector("#audio-file");
+const convolutionIrFileInput = document.querySelector("#convolution-ir-file");
+const convolutionIrStatus = document.querySelector("#convolution-ir-status");
 const effectCategoryFilter = document.querySelector("#effect-category-filter");
 const effectSearch = document.querySelector("#effect-search");
 const effectsList = document.querySelector("#effects-list");
@@ -240,6 +245,10 @@ const shimmerReverbControls = [
   document.querySelector("#shimmer-reverb-intensity"),
   document.querySelector("#shimmer-reverb-mix"),
   document.querySelector("#shimmer-reverb-level"),
+];
+const convolutionReverbControls = [
+  document.querySelector("#convolution-reverb-mix"),
+  document.querySelector("#convolution-reverb-level"),
 ];
 
 function appendResonatorControl(parent, labelText, index, options) {
@@ -941,6 +950,11 @@ let playTask = Promise.resolve();
 let preparedChannels = 0;
 let pendingProcessorOptions = null;
 let lastTunerGeneration = 0;
+let decodedConvolutionIR = null;
+let convolutionIRVersion = 0;
+let convolutionIRUploadedVersion = -1;
+let convolutionIRRequestId = 0;
+const pendingConvolutionIRLoads = new Map();
 
 function setAudioStatus(text, state = "") {
   audioStatus.textContent = text;
@@ -1048,11 +1062,63 @@ async function prepareProcessor(testOptions = null) {
   }
 }
 
+function settleConvolutionIRLoad(message) {
+  const request = pendingConvolutionIRLoads.get(Number(message.requestId));
+  if (!request) return;
+  pendingConvolutionIRLoads.delete(Number(message.requestId));
+  clearTimeout(request.timeout);
+  if (message.type === "convolution-ir-loaded") {
+    if (request.version === convolutionIRVersion) {
+      convolutionIRUploadedVersion = request.version;
+    }
+    request.resolve(message);
+  } else {
+    request.reject(new Error(message.message || "The browser processor rejected the convolution IR."));
+  }
+}
+
+async function ensureConvolutionIRLoaded() {
+  if (!decodedConvolutionIR || !workletNode) return;
+  if (convolutionIRUploadedVersion === convolutionIRVersion) return;
+
+  const version = convolutionIRVersion;
+  const audio = decodedConvolutionIR.audio;
+  const channels = audio.numberOfChannels;
+  const left = new Float32Array(audio.getChannelData(0));
+  const right = channels === 2 ? new Float32Array(audio.getChannelData(1)) : null;
+  const requestId = ++convolutionIRRequestId;
+  const transfer = right ? [left.buffer, right.buffer] : [left.buffer];
+  const result = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingConvolutionIRLoads.delete(requestId);
+      reject(new Error("Timed out loading the local convolution IR into the browser processor."));
+    }, 10000);
+    pendingConvolutionIRLoads.set(requestId, { resolve, reject, timeout, version });
+  });
+  workletNode.port.postMessage({
+    type: "convolution-ir",
+    requestId,
+    version,
+    frames: audio.length,
+    channels,
+    sampleRate: audio.sampleRate,
+    left: left.buffer,
+    right: right?.buffer,
+  }, transfer);
+  await result;
+}
+
 async function setupProcessor(testOptions = null) {
   const context = await getAudioContext();
   const channels = decodedAudio.numberOfChannels;
   stopSource(false);
   if (workletNode) {
+    for (const request of pendingConvolutionIRLoads.values()) {
+      clearTimeout(request.timeout);
+      request.reject(new Error("The audio processor was rebuilt while loading the convolution IR."));
+    }
+    pendingConvolutionIRLoads.clear();
+    convolutionIRUploadedVersion = -1;
     try { workletNode.disconnect(); } catch { /* Already disconnected. */ }
     workletNode.port.close();
     workletNode = null;
@@ -1116,6 +1182,9 @@ async function setupProcessor(testOptions = null) {
       resolveReady(message);
     } else if (message?.type === "tuner-reading") {
       renderTunerReading(message);
+    } else if (message?.type === "convolution-ir-loaded" ||
+               message?.type === "convolution-ir-error") {
+      settleConvolutionIRLoad(message);
     } else if (message?.type === "error") {
       setAudioStatus(message.message || "Audio processor failed", "error");
       rejectReady(new Error(message.message || "Audio processor failed"));
@@ -1164,6 +1233,40 @@ async function loadFile(file, testOptions = null) {
   }
 }
 
+async function loadConvolutionIRFile(file) {
+  if (!file) return;
+  stopSource(true);
+  try {
+    const context = await getAudioContext();
+    const bytes = await file.arrayBuffer();
+    const audio = decodePcmWave(context, bytes) || await context.decodeAudioData(bytes);
+    if (audio.numberOfChannels < 1 || audio.numberOfChannels > 2) {
+      throw new Error(`Convolution IR must be mono or stereo; this file has ${audio.numberOfChannels} channels.`);
+    }
+    if (audio.length > MAX_CONVOLUTION_IR_FRAMES) {
+      throw new Error(`Convolution IR is ${audio.length} frames; this project accepts at most ${MAX_CONVOLUTION_IR_FRAMES} frames.`);
+    }
+    decodedConvolutionIR = { audio, fileName: file.name };
+    convolutionIRVersion += 1;
+    convolutionIRUploadedVersion = -1;
+    const duration = audio.length / audio.sampleRate;
+    convolutionIrStatus.textContent =
+      `${file.name} · ${audio.numberOfChannels} ch · ${audio.sampleRate} Hz · ${duration.toFixed(3)} s · local only`;
+    if (workletNode) {
+      await processorReady;
+      await ensureConvolutionIRLoaded();
+      setAudioStatus("Convolution IR loaded locally", "ready");
+    } else {
+      setAudioStatus("Convolution IR ready; it will load before playback", "ready");
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    convolutionIrStatus.textContent = message;
+    setAudioStatus(message, "error");
+    throw error;
+  }
+}
+
 function updateProgress() {
   if (!audioContext || !decodedAudio || !activeSource) return;
   const seconds = playbackOffset + audioContext.currentTime - playbackStartedAt;
@@ -1185,6 +1288,7 @@ async function startPlayback() {
   }
   pendingProcessorOptions = null;
   await processorReady;
+  await ensureConvolutionIRLoaded();
   stopSource(false);
   if (playbackOffset >= decodedAudio.duration) playbackOffset = 0;
   workletNode.port.postMessage({ type: "reset" });
@@ -1383,6 +1487,12 @@ function renderLoadRows(load) {
 fileInput.addEventListener("change", () => {
   loadTask = loadFile(fileInput.files?.[0] || null);
   loadTask.catch(() => {});
+});
+
+convolutionIrFileInput.addEventListener("change", () => {
+  const file = convolutionIrFileInput.files?.[0] || null;
+  const task = loadConvolutionIRFile(file);
+  task.catch(() => {});
 });
 
 playButton.addEventListener("click", () => {
@@ -2003,6 +2113,27 @@ for (const control of shimmerReverbControls) {
   control.addEventListener("change", updateShimmerReverb);
 }
 updateShimmerReverb();
+
+function updateConvolutionReverb() {
+  const values = [
+    Number(convolutionReverbControls[0].value) / 100,
+    Number(convolutionReverbControls[1].value),
+  ];
+  DEFAULT_PARAMETERS.convolutionReverb = values;
+  convolutionReverbControls[0].parentElement.querySelector("output").value =
+    `${Math.round(values[0] * 100)}%`;
+  convolutionReverbControls[1].parentElement.querySelector("output").value =
+    `${values[1].toFixed(1)} dB`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "convolution-reverb", value: values });
+  }
+}
+
+for (const control of convolutionReverbControls) {
+  control.addEventListener("input", updateConvolutionReverb);
+  control.addEventListener("change", updateConvolutionReverb);
+}
+updateConvolutionReverb();
 
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
@@ -3066,8 +3197,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 59 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 59 || effectRows.length !== 59 ||
+     const expectedEffectIds = Array.from({ length: 60 }, (_, index) => index);
+     if (EFFECT_NAMES.length !== 60 || effectRows.length !== 60 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -3078,10 +3209,10 @@ async function runBrowserSelfTest() {
         initialEffectState[47] || initialEffectState[48] || initialEffectState[49] ||
          initialEffectState[50] || initialEffectState[51] || initialEffectState[52] ||
          initialEffectState[53] || initialEffectState[54] || initialEffectState[55] ||
-         initialEffectState[56] ||
+          initialEffectState[56] || initialEffectState[57] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 59 ordered, categorized effects (IDs 0–58), with optional effects disabled by default.");
+       throw new Error("The effect picker must list 60 ordered, categorized effects (IDs 0–59), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -3198,7 +3329,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-          effectCount.value !== "10 of 59" ||
+          effectCount.value !== "10 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3206,8 +3337,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,58" ||
-        effectCount.value !== "9 of 59" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55,59" ||
+        effectCount.value !== "9 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3216,7 +3347,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 59" ||
+        effectCount.value !== "7 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3225,7 +3356,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 59" ||
+        effectCount.value !== "7 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3233,7 +3364,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 59" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3241,7 +3372,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 59" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3249,7 +3380,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 59" ||
+    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the project-authored monophonic guitar synth without changing chain state.");
     }
@@ -3257,7 +3388,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 59" ||
+     if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -3265,7 +3396,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31,56" || effectCount.value !== "5 of 59" ||
+     if (reverbIds.join(",") !== "28,29,30,31,56,57" || effectCount.value !== "6 of 60" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -3275,12 +3406,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 59") {
+     if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 60") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "59 of 59" || effectRows.some((row) => row.hidden)) {
+     if (effectCount.value !== "60 of 60" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -3423,11 +3554,15 @@ async function runBrowserSelfTest() {
     ]);
     testResult.textContent = "Reading local guitar fixture and native reference…";
     if (!inputResponse.ok || !referenceResponse.ok) throw new Error("Browser test fixtures were not served.");
-    const [inputBytes, referenceBytes, tunerBytes] = await Promise.all([
+     const [inputBytes, referenceBytes, tunerBytes, convolutionIRBytes] = await Promise.all([
       inputResponse.arrayBuffer(),
       referenceResponse.arrayBuffer(),
       fetch("/__test_tuner.wav").then((response) => {
         if (!response.ok) throw new Error("Browser tuner fixture was not served.");
+        return response.arrayBuffer();
+      }),
+      fetch("/__test_convolution_ir.wav").then((response) => {
+        if (!response.ok) throw new Error("Browser convolution IR fixture was not served.");
         return response.arrayBuffer();
       }),
     ]);
@@ -3496,6 +3631,7 @@ async function runBrowserSelfTest() {
          pitchFeedbackDelay: [350, 0.35, 0.25, 7],
          feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
          shimmerReverb: [3, 6500, 0.85, 0.25, 80, 12, 1, 0.25, 0],
+        convolutionReverb: [0.35, -3],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
@@ -3737,6 +3873,9 @@ async function runBrowserSelfTest() {
       shimmerReverbControls[8].value] = ["3.4", "7200", "72", "35", "120",
         "7", "65", "30", "-3"];
     updateShimmerReverb();
+     convolutionReverbControls[0].value = "35";
+     convolutionReverbControls[1].value = "-3";
+     updateConvolutionReverb();
     delayPreset.value = "slapback";
     applyDelayPreset();
     if (DEFAULT_PARAMETERS.delay[0] !== 110 || DEFAULT_PARAMETERS.delay[1] !== 0.12 ||
@@ -3830,6 +3969,14 @@ async function runBrowserSelfTest() {
         5000,
       )),
     ]);
+     await loadConvolutionIRFile(new File(
+       [convolutionIRBytes], "browser-convolution-ir.wav", { type: "audio/wav" },
+     ));
+     await prepareProcessor(testOptions);
+     await ensureConvolutionIRLoaded();
+     if (convolutionIRUploadedVersion !== convolutionIRVersion) {
+       throw new Error("The local convolution IR was not acknowledged by the WASM audio processor.");
+     }
     testResult.textContent = "Playing the processed chain and capturing its output…";
     playButton.click();
     await Promise.race([
@@ -4014,6 +4161,7 @@ async function runBrowserSelfTest() {
       } : null,
       levelMeters: { capturedBlock: meters, latestBlock: readLatestMeters() },
       localFileDecode: localFileDecoded,
+      convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       playOutputCaptured: nonZeroSamples > 0,
       tuner: tunerReading,
       tunerDetectionMs,

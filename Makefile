@@ -31,6 +31,7 @@ PYTHON ?= python3
 	publish-pitch-feedback-delay-plan publish-pitch-feedback-delay \
 	publish-feedback-generator-plan publish-feedback-generator \
 	publish-shimmer-reverb-plan publish-shimmer-reverb \
+	publish-convolution-reverb-plan publish-convolution-reverb \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -285,6 +286,12 @@ publish-shimmer-reverb-plan:
 
 publish-shimmer-reverb:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint shimmer-reverb
+
+publish-convolution-reverb-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint convolution-reverb
+
+publish-convolution-reverb:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint convolution-reverb
 
 publish-mono-guitar-synth-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint mono-guitar-synth

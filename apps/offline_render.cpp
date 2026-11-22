@@ -12,6 +12,7 @@
 #include "tabletfx/effects/hall_reverb.hpp"
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
+#include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -59,6 +60,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <numbers>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -116,6 +118,9 @@ struct Options {
     tabletfx::effects::FeedbackGeneratorParameters feedback_generator{};
     bool shimmer_reverb_enabled = false;
     tabletfx::ShimmerReverbParameters shimmer_reverb{};
+    bool convolution_reverb_enabled = false;
+    std::string convolution_ir_path;
+    tabletfx::ConvolutionReverbParameters convolution_reverb{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
@@ -562,6 +567,31 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--shimmer-reverb") {
             options.shimmer_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--convolution-reverb") {
+            options.convolution_reverb_enabled = true;
+            continue;
+        }
+        if (key == "--convolution-ir") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --convolution-ir");
+            }
+            options.convolution_ir_path = argv[++i];
+            options.convolution_reverb_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--convolution-reverb-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const float value = parse_float(key, argv[++i]);
+            const std::string_view setting = key.substr(
+                std::string_view("--convolution-reverb-").size());
+            if (setting == "mix") options.convolution_reverb.mix = value;
+            else if (setting == "level-db") options.convolution_reverb.level_db = value;
+            else throw std::invalid_argument("Unknown option: " + std::string(key));
+            options.convolution_reverb_enabled = true;
             continue;
         }
         if (key == "--grain-delay") {
@@ -2831,6 +2861,22 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::ShimmerReverb>(
             static_cast<float>(sample_rate), channels, options.shimmer_reverb));
     }
+    if (options.convolution_reverb_enabled) {
+        if (options.convolution_ir_path.empty()) {
+            throw std::invalid_argument(
+                "Convolution Reverb requires --convolution-ir INPUT.wav");
+        }
+        auto convolution = std::make_unique<tabletfx::ConvolutionReverb>(
+            static_cast<float>(sample_rate), channels, options.convolution_reverb);
+        const tabletfx::AudioBuffer ir =
+            tabletfx::read_wav(options.convolution_ir_path);
+        if (!convolution->load_impulse_response(
+                ir.interleaved, ir.channels, ir.sample_rate)) {
+            throw std::invalid_argument(
+                "Convolution IR must be finite mono/stereo WAV and fit the 24000-frame target-rate limit");
+        }
+        effects.push_back(std::move(convolution));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -3162,6 +3208,26 @@ void benchmark_chromatic_tuner(std::uint32_t sample_rate,
               << tuner.memory_bytes() << "," << signal.rms << '\n';
 }
 
+std::vector<float> make_convolution_benchmark_ir(std::uint32_t sample_rate,
+                                                 std::uint16_t channels) {
+    std::vector<float> impulse(
+        tabletfx::ConvolutionReverb::maximum_impulse_frames() * channels, 0.0F);
+    for (std::size_t frame = 0;
+         frame < tabletfx::ConvolutionReverb::maximum_impulse_frames(); ++frame) {
+        const float time = static_cast<float>(frame) /
+                           static_cast<float>(sample_rate);
+        const float decay = std::exp(-time / 0.08F);
+        const float sample = frame == 0
+            ? 0.8F
+            : 0.12F * decay * std::sin(
+                  2.0F * std::numbers::pi_v<float> * 1300.0F * time);
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            impulse[frame * channels + channel] = sample;
+        }
+    }
+    return impulse;
+}
+
 void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
                           std::size_t block_frames, std::size_t warmup_blocks,
                           std::size_t measured_blocks) {
@@ -3307,6 +3373,15 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), channels));
     effects.push_back(std::make_unique<tabletfx::ShimmerReverb>(
         static_cast<float>(sample_rate), channels));
+    auto convolution_reverb = std::make_unique<tabletfx::ConvolutionReverb>(
+        static_cast<float>(sample_rate), channels);
+    const std::vector<float> convolution_ir =
+        make_convolution_benchmark_ir(sample_rate, channels);
+    if (!convolution_reverb->load_impulse_response(
+            convolution_ir, channels, sample_rate)) {
+        throw std::runtime_error("Could not prepare the full-chain convolution IR");
+    }
+    effects.push_back(std::move(convolution_reverb));
     effects.push_back(std::make_unique<tabletfx::AutoSwell>(
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::RotarySpeaker>(
@@ -3624,6 +3699,16 @@ void run_bench() {
         return std::make_unique<tabletfx::ShimmerReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("convolution-reverb-max-0.5s", [=] {
+        auto effect = std::make_unique<tabletfx::ConvolutionReverb>(
+            static_cast<float>(sample_rate), channels);
+        const std::vector<float> impulse =
+            make_convolution_benchmark_ir(sample_rate, channels);
+        if (!effect->load_impulse_response(impulse, channels, sample_rate)) {
+            throw std::runtime_error("Could not prepare the convolution benchmark IR");
+        }
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3861,6 +3946,7 @@ void print_usage() {
                  " [--output-channels preserve|mono|stereo] [--mono-sum average|equal-power]"
                  " [--volume-position 0..1] [--volume-min-db dB] [--volume-max-db dB]"
                  " [--volume-curve linear|audio] [--limiter-ceiling-db dB] [--limiter-release-ms ms]"
+                  " [--convolution-ir IR.wav] [--convolution-reverb-mix 0..1] [--convolution-reverb-level-db dB]"
                  " [--wah-position 0..1] [--wah-min-hz Hz] [--wah-max-hz Hz] [--wah-q Q] [--wah-level-db dB]"
                   " [--touch-wah-sensitivity 0..1] [--touch-wah-direction up|down]"
                   " [--touch-wah-min-hz Hz] [--touch-wah-max-hz Hz] [--touch-wah-q Q]"
