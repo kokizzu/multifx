@@ -34,6 +34,10 @@ The project-authored split-band De-Esser uses a fixed band-pass detector per cha
 
 `make test` passed 76/76 CTest cases. `make web-test` passed the 72-entry Vocal FX picker and HeadlessChrome 151 local-guitar Play smoke for slot 69 at 6.5 kHz (captured peak 0.4818548; 47,999 active samples). De-Esser is disabled in the 66-stage browser/native comparison because the offline reference has no equivalent stage. There is no voice fixture, intelligibility test, human listening result, isolated CPU benchmark, or hardware test; the guitar smoke only confirms the browser control-to-WASM output path.
 
+## Quad Tape topology and 79-entry picker (2026-11-23)
+
+The existing Multi-Delay adds project-authored Quad Tape-like playback using four fractional read heads. Motor Speed scales target echo spacing and causes a bounded, interpolated read-head move; project limits are 0.8–1.2× and the maximum slew tracks the requested speed change (capped at 0.2 samples per output sample). These choices do not reproduce Fractal tape processing. make test passes the motor bounds and synthetic 1 kHz pitch-bend tests at 0.8× and 0.9×. make web-test reports 18,843,104 B processor state plus 10,364 B tuner state in a fixed 20 MiB WASM heap; its millisecond-fallback timing is too coarse for an isolated Quad Tape CPU benchmark. The 512 KiB delay ring remains shared across the four lines.
+
 ## Multi-Delay and 75-entry picker (2026-11-22)
 
 The project-authored four-line Multi-Delay uses a shared 512 KiB ring-storage budget. At 48 kHz this permits about 682 ms per requested line; the upper control bound remains 2,000 ms and is clamped to the storage-supported maximum. Constructor allocation is fixed and `process()` does not allocate. No isolated CPU benchmark has been run.

@@ -20,6 +20,7 @@ enum class MultiDelayTopology : std::uint32_t {
     quad_diffusor,
     quad_tap,
     quad_tap_band,
+    quad_tape,
 };
 
 struct MultiDelayParameters {
@@ -43,6 +44,8 @@ struct MultiDelayParameters {
     std::uint32_t series_feedback_return = 0U;
     float master_time = 1.0F;
     float master_feedback = 0.5F;
+    // Project-selected 0.8–1.2x range; 1.0x is normal motor speed.
+    float motor_speed = 1.0F;
     // Project-authored linear tap gains and equal-power pan positions.
     std::array<float, multi_delay_line_count> level{1.0F, 1.0F, 1.0F, 1.0F};
     std::array<float, multi_delay_line_count> pan{0.1F, 0.35F, 0.65F, 0.9F};
@@ -57,17 +60,19 @@ struct MultiDelayParameters {
  * Project-authored four-line delay. Fractal's November 2026 Blocks Guide,
  * printed pp. 62–68, lists the FM9 Multi-Delay core types Quad-Tap, Quad
  * Parallel, Quad-Series, Quad Diffusor, Quad Tape, and Quad Tap Band. This
- * class offers three limited topologies: a Quad-Parallel-like pattern with
- * independent lines, self feedback, and cyclic cross-feedback links 1->2,
- * 2->3, 3->4, 4->1; a Quad-Series-like pattern with cumulative tap times and
- * one selected output tap feeding one selected delay-line input; and a
- * four-stage cascaded all-pass diffuser with project-authored Master Time and
- * Master Feedback controls. Per-line Time/Tempo is represented in each
- * topology; per-line Feedback is only used in Parallel, while Series and
- * Diffusor use one block-level feedback control each. The documented
- * 1–2000 ms delay-time span informs the project upper bound. Negative
- * feedback supports polarity inversion as described by the guide where it is
- * documented.
+ * class offers limited project-authored analogues: Quad Parallel-like
+ * independent lines with self/cyclic cross-feedback links 1->2, 2->3, 3->4,
+ * 4->1; Quad Series-like cumulative tap times with one selected output tap
+ * feeding one selected delay-line input; a four-stage all-pass diffusor; four
+ * independent Quad-Tap-like delay lines; Quad Tap Band-like output filtering
+ * outside the feedback loop; and four Quad-Tape-like delay heads. The tape
+ * mode's project-authored Motor Speed control scales echo spacing and slews
+ * fractional read heads so stored echoes bend pitch as speed changes. Per-line
+ * Time/Tempo applies to each mode. Per-line Feedback is available in Parallel,
+ * Quad-Tap, Quad Tap Band, and Quad Tape; Series and Diffusor use one shared
+ * feedback control each. The documented 1–2,000 ms delay-time span informs the
+ * project upper bound. Negative feedback supports polarity inversion where
+ * the guide documents it.
  *
  * Project choices are explicit: the lines use a summed mono effect input,
  * each delay is clamped to 1 ms minimum, tempo is shared at 20–300 BPM, the
@@ -75,16 +80,20 @@ struct MultiDelayParameters {
  * is limited to ±0.45 per link, and series feedback is limited to ±0.90.
  * Series send/return selectors are zero-based in code (lines 1–4 in UI);
  * level is linear −2…+2 and pan is 0…1. Diffusor Master Time is 0.1…2 and its
- * Master Feedback value is 0…0.90, applied equally to all four stages. A
- * 512-KiB ring-storage cap may shorten the available time below 2000 ms.
+ * Master Feedback value is 0…0.90, applied equally to all four stages. Quad
+ * Tape Motor Speed is clamped to 0.8…1.2 (1.0 normal), a project-selected
+ * range because the guide gives no numeric limit for this control. A 512-KiB
+ * ring-storage cap may shorten the available time below 2,000 ms.
  * Project-authored one-pole low/high cuts, input gain, mix, and output level
  * are included. The manual does not publish numeric ranges for most controls;
  * these project limits are not Fractal settings.
  *
- * Quad-Tap, Quad Tape, Quad Tap Band, the guide's two-second diffuser DSP,
- * per-stage stereo filters/spread, individual BPF/comb/ring-mod/chorus/tape
- * processing, time LFOs, ducker, envelope follower, and full EQ page are not implemented. This class
- * does not reproduce Fractal DSP, presets, controls, or sound. Mono/stereo
+ * The tape interpolation and speed bounds are project-authored, not Fractal's
+ * proprietary tape model. Per-tap tape coloration, the guide's two-second
+ * diffuser DSP, per-stage stereo filters/spread, individual BPF/comb/ring-mod/
+ * chorus processing, time LFOs, ducker, envelope follower, and full EQ page
+ * are not implemented. This class does not reproduce Fractal DSP, presets,
+ * controls, or sound. Mono/stereo
  * input is accepted; the wet path is generated
  * from a mono average and can be panned in stereo. Processing uses a
  * preallocated ring and performs no allocations.
@@ -130,6 +139,9 @@ private:
     static constexpr float kMinimumTempoBpm = 20.0F;
     static constexpr float kMaximumTempoBpm = 300.0F;
     static constexpr float kMaximumLinkFeedback = 0.45F;
+    static constexpr float kMinimumMotorSpeed = 0.8F;
+    static constexpr float kMaximumMotorSpeed = 1.2F;
+    static constexpr float kMaximumReadHeadSlewPerSample = 0.2F;
     static constexpr float kMaximumLevel = 2.0F;
     static constexpr float kMaximumSignal = 8.0F;
 
@@ -140,9 +152,11 @@ private:
     [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
     [[nodiscard]] std::size_t read_frame(std::size_t delay,
                                          std::size_t line) const noexcept;
+    [[nodiscard]] float read_interpolated(float delay,
+                                          std::size_t line) const noexcept;
     [[nodiscard]] float filter_line(float input, std::size_t line) noexcept;
     [[nodiscard]] static float safe_signal(float value) noexcept;
-    void update_line_times() noexcept;
+    void update_line_times(bool initialize_tape_heads = false) noexcept;
 
     float sample_rate_ = 48000.0F;
     float requested_max_delay_ms_ = kMaximumDelayMs;
@@ -152,6 +166,8 @@ private:
 
     MultiDelayParameters parameters_{};
     std::array<std::size_t, multi_delay_line_count> delay_frames_{};
+    std::array<float, multi_delay_line_count> read_delay_frames_{};
+    float read_head_slew_per_sample_ = kMaximumReadHeadSlewPerSample;
     std::array<float, multi_delay_line_count> line_gains_{};
     std::array<float, multi_delay_line_count> left_gains_{};
     std::array<float, multi_delay_line_count> right_gains_{};

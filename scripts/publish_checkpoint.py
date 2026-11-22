@@ -1519,7 +1519,7 @@ CHECKPOINTS = {
         "feat: add project-authored Vibe modulation",
     ),
     "multi-delay": (MULTI_DELAY_CHECKPOINT_PATHS,
-                    "feat: add categorized project-authored Multi-Delay"),
+                    "feat: add Quad Tape motor-speed topology"),
     "porta-preamp": (PORTA_PREAMP_CHECKPOINT_PATHS,
                      "feat: add categorized project-authored Porta Preamp"),
     "pitch-sequence": (PITCH_SEQUENCE_CHECKPOINT_PATHS,

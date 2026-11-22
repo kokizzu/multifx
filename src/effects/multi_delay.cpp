@@ -119,6 +119,8 @@ std::size_t MultiDelay::delay_samples(std::size_t line) const noexcept {
 }
 
 void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
+    const bool was_quad_tape =
+        parameters_.topology == MultiDelayTopology::quad_tape;
     const float maximum_time = std::max(
         kMinimumDelayMs, std::min(kMaximumDelayMs, maximum_delay_ms()));
     parameters.tempo_bpm = bounded(parameters.tempo_bpm,
@@ -129,6 +131,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     case MultiDelayTopology::quad_diffusor:
     case MultiDelayTopology::quad_tap:
     case MultiDelayTopology::quad_tap_band:
+    case MultiDelayTopology::quad_tape:
         break;
     default:
         parameters.topology = parameters_.topology;
@@ -145,9 +148,18 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
         static_cast<std::uint32_t>(multi_delay_line_count - 1U));
     parameters.master_time = bounded(parameters.master_time,
         parameters_.master_time, 0.1F, 2.0F);
+    parameters.motor_speed = bounded(parameters.motor_speed,
+        parameters_.motor_speed, kMinimumMotorSpeed, kMaximumMotorSpeed);
+    const float motor_speed_change =
+        std::abs(parameters.motor_speed - parameters_.motor_speed);
+    if (motor_speed_change > 0.0F) {
+        read_head_slew_per_sample_ = std::min(
+            motor_speed_change, kMaximumReadHeadSlewPerSample);
+    }
     const float maximum_master_feedback =
         parameters.topology == MultiDelayTopology::quad_tap ||
-                parameters.topology == MultiDelayTopology::quad_tap_band
+                parameters.topology == MultiDelayTopology::quad_tap_band ||
+                parameters.topology == MultiDelayTopology::quad_tape
             ? 2.0F
             : 0.9F;
     parameters.master_feedback = bounded(parameters.master_feedback,
@@ -215,10 +227,11 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
         left_gains_[line] = static_cast<float>(std::cos(angle));
         right_gains_[line] = static_cast<float>(std::sin(angle));
     }
-    update_line_times();
+    update_line_times(!was_quad_tape &&
+                      parameters_.topology == MultiDelayTopology::quad_tape);
 }
 
-void MultiDelay::update_line_times() noexcept {
+void MultiDelay::update_line_times(bool initialize_tape_heads) noexcept {
     const float maximum_time = std::max(
         kMinimumDelayMs, std::min(kMaximumDelayMs, maximum_delay_ms()));
     for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
@@ -229,8 +242,12 @@ void MultiDelay::update_line_times() noexcept {
         }
         if (parameters_.topology == MultiDelayTopology::quad_diffusor ||
             parameters_.topology == MultiDelayTopology::quad_tap ||
-            parameters_.topology == MultiDelayTopology::quad_tap_band) {
+            parameters_.topology == MultiDelayTopology::quad_tap_band ||
+            parameters_.topology == MultiDelayTopology::quad_tape) {
             time_ms *= parameters_.master_time;
+        }
+        if (parameters_.topology == MultiDelayTopology::quad_tape) {
+            time_ms /= parameters_.motor_speed;
         }
         time_ms = std::clamp(time_ms, kMinimumDelayMs, maximum_time);
         const double requested_frames = std::round(
@@ -239,6 +256,10 @@ void MultiDelay::update_line_times() noexcept {
         delay_frames_[line] = std::clamp<std::size_t>(
             static_cast<std::size_t>(std::max(1.0, requested_frames)),
             1U, capacity_frames_ - 1U);
+        if (parameters_.topology != MultiDelayTopology::quad_tape ||
+            initialize_tape_heads) {
+            read_delay_frames_[line] = static_cast<float>(delay_frames_[line]);
+        }
     }
 }
 
@@ -249,6 +270,19 @@ std::size_t MultiDelay::read_frame(std::size_t delay,
         ? write_frame_ - offset
         : write_frame_ + capacity_frames_ - offset;
     return line * capacity_frames_ + frame;
+}
+
+float MultiDelay::read_interpolated(float delay,
+                                    std::size_t line) const noexcept {
+    const float bounded_delay = std::clamp(
+        delay, 1.0F, static_cast<float>(capacity_frames_ - 1U));
+    const std::size_t whole_delay = static_cast<std::size_t>(bounded_delay);
+    const float fraction = bounded_delay - static_cast<float>(whole_delay);
+    const float nearer = storage_[read_frame(whole_delay, line)];
+    const std::size_t farther_delay = std::min(whole_delay + 1U,
+                                                capacity_frames_ - 1U);
+    const float farther = storage_[read_frame(farther_delay, line)];
+    return nearer + fraction * (farther - nearer);
 }
 
 float MultiDelay::filter_line(float input, std::size_t line) noexcept {
@@ -319,8 +353,17 @@ void MultiDelay::process(std::span<float> interleaved,
             std::array<float, multi_delay_line_count> tap_outputs{};
             std::array<float, multi_delay_line_count> feedback_taps{};
             for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
-                const float delayed =
-                    storage_[read_frame(delay_frames_[line], line)];
+                float delayed = 0.0F;
+                if (parameters_.topology == MultiDelayTopology::quad_tape) {
+                    const float target = static_cast<float>(delay_frames_[line]);
+                    const float difference = target - read_delay_frames_[line];
+                    read_delay_frames_[line] += std::clamp(
+                        difference, -read_head_slew_per_sample_,
+                        read_head_slew_per_sample_);
+                    delayed = read_interpolated(read_delay_frames_[line], line);
+                } else {
+                    delayed = storage_[read_frame(delay_frames_[line], line)];
+                }
                 tap_outputs[line] = filter_line(delayed, line);
                 feedback_taps[line] =
                     parameters_.topology == MultiDelayTopology::quad_tap_band
@@ -364,7 +407,8 @@ void MultiDelay::process(std::span<float> interleaved,
                     const float self_feedback =
                         parameters_.feedback[line] * feedback_taps[line] *
                         (parameters_.topology == MultiDelayTopology::quad_tap ||
-                         parameters_.topology == MultiDelayTopology::quad_tap_band
+                         parameters_.topology == MultiDelayTopology::quad_tap_band ||
+                         parameters_.topology == MultiDelayTopology::quad_tape
                             ? parameters_.master_feedback
                             : 1.0F);
                     const float feedback_input =
@@ -397,6 +441,9 @@ void MultiDelay::reset() noexcept {
     low_cut_input_.fill(0.0F);
     low_cut_output_.fill(0.0F);
     high_cut_output_.fill(0.0F);
+    for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+        read_delay_frames_[line] = static_cast<float>(delay_frames_[line]);
+    }
     write_frame_ = 0U;
 }
 

@@ -130,7 +130,7 @@ const DEFAULT_PARAMETERS = {
     tempoBpm: 120, lowCutHz: 20, highCutHz: 20000,
     inputGainDb: 0, mix: 0.25, levelDb: 0,
     seriesFeedback: 0, seriesFeedbackSend: 3, seriesFeedbackReturn: 0,
-    masterTime: 1, masterFeedback: 0.5,
+    masterTime: 1, masterFeedback: 0.5, motorSpeed: 1,
   },
   portaPreamp: [6, 3, 0, 0, 0],
   pitchSequence: [
@@ -839,6 +839,8 @@ const multiDelaySeriesReturn = document.querySelector("#multi-delay-series-retur
 const multiDelayDiffusorPanel = document.querySelector("#multi-delay-diffusor-controls");
 const multiDelayDiffusorMasterTime = document.querySelector("#multi-delay-diffusor-master-time");
 const multiDelayDiffusorMasterFeedback = document.querySelector("#multi-delay-diffusor-master-feedback");
+const multiDelayMotorPanel = document.querySelector("#multi-delay-motor-controls");
+const multiDelayMotorSpeed = document.querySelector("#multi-delay-motor-speed");
 const multiDelayTopologyMasterHint = document.querySelector("#multi-delay-topology-master-hint");
 const multiDelayTimeLimit = document.querySelector("#multi-delay-time-limit");
 const multiDelayControls = [
@@ -847,6 +849,7 @@ const multiDelayControls = [
   multiDelayInputGain, multiDelayMix, multiDelayLevel,
   multiDelaySeriesFeedback, multiDelaySeriesSend, multiDelaySeriesReturn,
   multiDelayDiffusorMasterTime, multiDelayDiffusorMasterFeedback,
+  multiDelayMotorSpeed,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1887,7 +1890,7 @@ function updatePitchSequenceOptions() {
 function updateMultiDelayOptions() {
   const sampleRate = audioContext?.sampleRate || 48000;
   const topology = Number(multiDelayTopology.value);
-  const maximumMasterFeedbackPercent = topology === 3 || topology === 4 ? 200 : 90;
+  const maximumMasterFeedbackPercent = topology >= 3 ? 200 : 90;
   multiDelayDiffusorMasterFeedback.max = String(maximumMasterFeedbackPercent);
   if (Number(multiDelayDiffusorMasterFeedback.value) > maximumMasterFeedbackPercent) {
     multiDelayDiffusorMasterFeedback.value = String(maximumMasterFeedbackPercent);
@@ -1925,6 +1928,7 @@ function updateMultiDelayOptions() {
     seriesFeedbackReturn: Number(multiDelaySeriesReturn.value),
     masterTime: Number(multiDelayDiffusorMasterTime.value) / 100,
     masterFeedback: Number(multiDelayDiffusorMasterFeedback.value) / 100,
+    motorSpeed: Number(multiDelayMotorSpeed.value),
   };
   DEFAULT_PARAMETERS.multiDelay = value;
   const divisions = ["Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
@@ -1937,6 +1941,9 @@ function updateMultiDelayOptions() {
   const diffusor = value.topology === 2;
   const quadTap = value.topology === 3;
   const quadTapBand = value.topology === 4;
+  const quadTape = value.topology === 5;
+  multiDelayMotorPanel.classList.toggle("is-hidden", !quadTape);
+  multiDelayMotorSpeed.disabled = !quadTape;
   multiDelayLineControls.forEach((line, index) => {
     const settings = lines[index];
     const parallel = value.topology === 0;
@@ -1961,18 +1968,21 @@ function updateMultiDelayOptions() {
     show(line.pan, `${Math.round(settings.pan * 100)}%`);
   });
   multiDelaySeriesPanel.classList.toggle("is-hidden", value.topology !== 1);
-  multiDelayDiffusorPanel.classList.toggle("is-hidden", !diffusor && !quadTap && !quadTapBand);
+  multiDelayDiffusorPanel.classList.toggle("is-hidden", !diffusor && !quadTap && !quadTapBand && !quadTape);
   multiDelayDiffusorMasterFeedback.min = "0";
   multiDelayTopologyMasterHint.textContent = diffusor
     ? "One project Master Feedback value controls feedback across all four all-pass stages; each stage has its own Time/Tempo. Per-stage Feedback, tap Level/Pan, and cross-feedback are hidden. Documented diffuser stereo spread, filters, LFO, and input envelope follower remain unimplemented. Project bounds are 10–200% Time and 0–90% Feedback."
     : quadTapBand
       ? "Quad Tap Band-like mode filters the audible tap output after its feedback loop. Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Per-tap Time/Tempo, Feedback, Level, and Pan remain available; cross-feedback is disabled. Project bounds are 10–200% Time and 0–200% Feedback Scale."
-      : "For Quad-Tap, Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Each tap retains its own Time/Tempo, Feedback, Level, and Pan; cross-feedback is disabled. The project uses 10–200% Time and 0–200% Feedback Scale. These are project bounds, not Fractal numeric settings.";
+      : quadTape
+        ? "Quad Tape-like mode uses four independent delay heads. The guide documents Master Time and Motor Speed: 1.000 is normal speed, and while it moves the delay times and echo pitch change. The project range is 0.8–1.2× because no Quad Tape numeric range is published; read-head slew and interpolation are project-authored. Per-tap tape coloration, drive, diffusion, and other advanced pages remain unimplemented."
+        : "For Quad-Tap, Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Each tap retains its own Time/Tempo, Feedback, Level, and Pan; cross-feedback is disabled. The project uses 10–200% Time and 0–200% Feedback Scale. These are project bounds, not Fractal numeric settings.";
   const topologyName = value.topology === 1
     ? "Quad Series"
     : value.topology === 2 ? "Quad Diffusor"
       : value.topology === 3 ? "Quad-Tap"
-        : value.topology === 4 ? "Quad Tap Band" : "Quad Parallel";
+      : value.topology === 4 ? "Quad Tap Band"
+        : value.topology === 5 ? "Quad Tape" : "Quad Parallel";
   show(multiDelayTopology, topologyName);
   show(multiDelaySeriesFeedback,
     `${Math.round(value.seriesFeedback * 100)}%`);
@@ -1984,6 +1994,7 @@ function updateMultiDelayOptions() {
     `${Math.round(value.masterTime * 100)}%`);
   show(multiDelayDiffusorMasterFeedback,
     `${Math.round(value.masterFeedback * 100)}%`);
+  show(multiDelayMotorSpeed, `${value.motorSpeed.toFixed(3)}×`);
   show(multiDelayTempo, `${value.tempoBpm} BPM`);
   show(multiDelayLowCut, value.lowCutHz === 0 ? "Off" : `${value.lowCutHz} Hz`);
   show(multiDelayHighCut, `${value.highCutHz} Hz`);
@@ -5074,11 +5085,12 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     const captures = [];
     for (const [topology, name] of [
       [1, "quad-series"], [2, "quad-diffusor"], [3, "quad-tap"],
-      [4, "quad-tap-band"],
+      [4, "quad-tap-band"], [5, "quad-tape"],
     ]) {
       multiDelayTopology.value = String(topology);
       multiDelayDiffusorMasterTime.value = topology === 2 ? "130" : "100";
       multiDelayDiffusorMasterFeedback.value = topology === 2 ? "60" : "50";
+      multiDelayMotorSpeed.value = topology === 5 ? "0.8" : "1";
       updateMultiDelayOptions();
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
@@ -6112,6 +6124,20 @@ async function runBrowserSelfTest() {
           !multiDelayTopologyMasterHint.textContent.includes("after its feedback loop") ||
           multiDelayTopology.parentElement.querySelector("output").value !== "Quad Tap Band") {
         throw new Error("Quad Tap Band controls must expose independent feedback lines and describe its external filter position.");
+      }
+      multiDelayTopology.value = "5";
+      multiDelayMotorSpeed.value = "0.8";
+      updateMultiDelayOptions();
+      const quadTapeMessage = multiDelayMessages.at(-1);
+      if (quadTapeMessage?.value?.topology !== 5 ||
+          quadTapeMessage.value.motorSpeed !== 0.8 ||
+          multiDelayMotorPanel.classList.contains("is-hidden") ||
+          multiDelayMotorSpeed.disabled ||
+          multiDelayMotorSpeed.parentElement.querySelector("output").value !== "0.800×" ||
+          multiDelayDiffusorMasterFeedback.max !== "200" ||
+          multiDelayTopology.parentElement.querySelector("output").value !== "Quad Tape" ||
+          !multiDelayTopologyMasterHint.textContent.includes("while it moves")) {
+        throw new Error("Quad Tape controls must send motor speed and identify the project-authored read-head behavior.");
       }
     } finally {
       workletNode = previousMultiDelayWorklet;

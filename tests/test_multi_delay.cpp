@@ -10,6 +10,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -134,6 +135,97 @@ void test_quad_tap_band_places_filters_outside_feedback_loop() {
     require(external_filter[8] > 0.1F &&
                 external_filter[16] > filtered_feedback[16] * 1.4F,
             "Quad Tap Band must filter audible taps outside the feedback loop");
+}
+
+void test_quad_tape_motor_speed_scales_times_and_bends_echo_pitch() {
+    auto parameters = impulse_parameters();
+    parameters.topology = tabletfx::MultiDelayTopology::quad_tape;
+    parameters.time_ms = {250.0F, 300.0F, 350.0F, 400.0F};
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.pan.fill(0.5F);
+    parameters.feedback.fill(0.0F);
+    parameters.master_feedback = 0.0F;
+    parameters.mix = 1.0F;
+    tabletfx::MultiDelay delay(48000.0F, 1000.0F, parameters);
+    require(delay.delay_samples(0U) == 12000U,
+            "normal Quad Tape motor speed must preserve the selected delay time");
+
+    std::vector<float> pre_roll(19200U);
+    for (std::size_t frame = 0; frame < pre_roll.size(); ++frame) {
+        pre_roll[frame] = std::sin(
+            2.0F * 3.14159265358979323846F * 1000.0F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+    delay.process(pre_roll, 1U);
+
+    parameters = delay.parameters();
+    parameters.motor_speed = 0.8F;
+    delay.configure(parameters);
+    require(delay.delay_samples(0U) == 15000U,
+            "slower Quad Tape motor speed must lengthen the echo spacing");
+
+    std::vector<float> moving_tape(4800U);
+    for (std::size_t frame = 0; frame < moving_tape.size(); ++frame) {
+        const std::size_t input_frame = pre_roll.size() + frame;
+        moving_tape[frame] = std::sin(
+            2.0F * 3.14159265358979323846F * 1000.0F *
+            static_cast<float>(input_frame) / 48000.0F);
+    }
+    delay.process(moving_tape, 1U);
+
+    std::size_t positive_zero_crossings = 0U;
+    for (std::size_t frame = 2401U; frame < moving_tape.size(); ++frame) {
+        if (moving_tape[frame - 1U] <= 0.0F && moving_tape[frame] > 0.0F) {
+            ++positive_zero_crossings;
+        }
+    }
+    require(positive_zero_crossings >= 34U && positive_zero_crossings <= 45U,
+            "changing Quad Tape motor speed must bend the repeated tone toward 800 Hz");
+
+    auto near_normal_parameters = impulse_parameters();
+    near_normal_parameters.topology = tabletfx::MultiDelayTopology::quad_tape;
+    near_normal_parameters.time_ms[0] = 250.0F;
+    near_normal_parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    near_normal_parameters.pan.fill(0.5F);
+    near_normal_parameters.mix = 1.0F;
+    tabletfx::MultiDelay near_normal(48000.0F, 1000.0F,
+                                    near_normal_parameters);
+    std::vector<float> near_normal_pre_roll(19200U);
+    for (std::size_t frame = 0; frame < near_normal_pre_roll.size(); ++frame) {
+        near_normal_pre_roll[frame] = std::sin(
+            2.0F * 3.14159265358979323846F * 1000.0F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+    near_normal.process(near_normal_pre_roll, 1U);
+    near_normal_parameters = near_normal.parameters();
+    near_normal_parameters.motor_speed = 0.9F;
+    near_normal.configure(near_normal_parameters);
+    std::vector<float> near_normal_tape(4800U);
+    for (std::size_t frame = 0; frame < near_normal_tape.size(); ++frame) {
+        const std::size_t input_frame = near_normal_pre_roll.size() + frame;
+        near_normal_tape[frame] = std::sin(
+            2.0F * 3.14159265358979323846F * 1000.0F *
+            static_cast<float>(input_frame) / 48000.0F);
+    }
+    near_normal.process(near_normal_tape, 1U);
+    positive_zero_crossings = 0U;
+    for (std::size_t frame = 2401U; frame < near_normal_tape.size(); ++frame) {
+        if (near_normal_tape[frame - 1U] <= 0.0F &&
+            near_normal_tape[frame] > 0.0F) {
+            ++positive_zero_crossings;
+        }
+    }
+    require(positive_zero_crossings >= 39U && positive_zero_crossings <= 51U,
+            "a smaller Quad Tape motor-speed change must create a proportionally smaller pitch bend");
+
+    parameters.motor_speed = 4.0F;
+    delay.configure(parameters);
+    require(delay.parameters().motor_speed == 1.2F,
+            "Quad Tape motor speed must obey the project-authored upper bound");
+    parameters.motor_speed = -1.0F;
+    delay.configure(parameters);
+    require(delay.parameters().motor_speed == 0.8F,
+            "Quad Tape motor speed must obey the project-authored lower bound");
 }
 
 void test_self_feedback_and_negative_phase() {
@@ -311,6 +403,7 @@ int main() {
         test_cyclic_cross_feedback_routes_between_lines();
         test_quad_tap_keeps_four_feedback_lines_independent();
         test_quad_tap_band_places_filters_outside_feedback_loop();
+        test_quad_tape_motor_speed_scales_times_and_bends_echo_pitch();
         test_self_feedback_and_negative_phase();
         test_tempo_sync_and_project_bounds();
         test_quad_series_compounds_delays_and_routes_selected_feedback();

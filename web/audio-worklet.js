@@ -55,6 +55,7 @@ function configureMultiDelay(module, chain, parameters = {}) {
     Number(parameters.seriesFeedbackReturn ?? 0),
     Number(parameters.masterTime ?? 1),
     Number(parameters.masterFeedback ?? 1),
+    Number(parameters.motorSpeed ?? 1),
   );
 }
 
