@@ -85,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(54);
+          effects_.reserve(55);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -248,6 +248,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::GrainDelay>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::PitchFeedbackDelay>(
+                                static_cast<float>(sample_rate), channels, 6000.0F),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -294,6 +297,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 52U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 54U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -879,6 +885,17 @@ public:
         parameters.pitch_semitones = pitch_semitones;
         parameters.spray_ms = spray_ms;
         static_cast<tabletfx::GrainDelay*>(effects_[53].effect.get())
+            ->configure(parameters);
+    }
+
+    void configure_pitch_feedback_delay(float time_ms, float feedback,
+                                        float mix, float pitch_semitones) noexcept {
+        tabletfx::PitchFeedbackDelayParameters parameters;
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.pitch_semitones = pitch_semitones;
+        static_cast<tabletfx::PitchFeedbackDelay*>(effects_[54].effect.get())
             ->configure(parameters);
     }
 
@@ -2052,6 +2069,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_grain_delay(
         as_chain(opaque)->configure_grain_delay(
             time_ms, feedback, mix, grain_size_ms, overlap,
             pitch_semitones, spray_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch_feedback_delay(
+    void* opaque, float time_ms, float feedback, float mix,
+    float pitch_semitones) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch_feedback_delay(
+            time_ms, feedback, mix, pitch_semitones);
     }
 }
 

@@ -160,6 +160,7 @@ def build_web() -> None:
         "_tf_chain_set_pitch_arpeggiator",
         "_tf_chain_set_mono_guitar_synth",
         "_tf_chain_set_grain_delay",
+        "_tf_chain_set_pitch_feedback_delay",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -230,6 +231,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "pitch_arpeggiator.cpp"),
         str(ROOT / "src" / "effects" / "mono_guitar_synth.cpp"),
         str(ROOT / "src" / "effects" / "grain_delay.cpp"),
+        str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -759,6 +761,10 @@ def browser_test() -> None:
              "--grain-delay-feedback", "0.25", "--grain-delay-mix", "0.35",
              "--grain-delay-grain-size-ms", "80", "--grain-delay-overlap", "2",
              "--grain-delay-pitch-semitones", "7", "--grain-delay-spray-ms", "35",
+             "--pitch-feedback-delay", "--pitch-feedback-delay-time-ms", "350",
+             "--pitch-feedback-delay-feedback", "0.35",
+             "--pitch-feedback-delay-mix", "0.25",
+             "--pitch-feedback-delay-pitch-semitones", "7",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

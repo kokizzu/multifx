@@ -18,6 +18,7 @@ add_library(tabletfx_core
     src/effects/diatonic_harmonizer.cpp
     src/effects/pitch_arpeggiator.cpp
     src/effects/mono_guitar_synth.cpp
+    src/effects/pitch_feedback_delay.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
@@ -153,6 +154,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_mono_guitar_synth_tests tests/test_mono_guitar_synth.cpp)
     target_link_libraries(tabletfx_mono_guitar_synth_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_mono_guitar_synth_tests COMMAND tabletfx_mono_guitar_synth_tests)
+
+    add_executable(tabletfx_pitch_feedback_delay_tests tests/test_pitch_feedback_delay.cpp)
+    target_link_libraries(tabletfx_pitch_feedback_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_pitch_feedback_delay_tests COMMAND tabletfx_pitch_feedback_delay_tests)
 
     add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
     target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)

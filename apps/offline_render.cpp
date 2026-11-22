@@ -110,6 +110,8 @@ struct Options {
     tabletfx::effects::PitchArpeggiatorParameters pitch_arpeggiator{};
     bool mono_guitar_synth_enabled = false;
     tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
+    bool pitch_feedback_delay_enabled = false;
+    tabletfx::PitchFeedbackDelayParameters pitch_feedback_delay{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
@@ -546,6 +548,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.mono_guitar_synth_enabled = true;
             continue;
         }
+        if (key == "--pitch-feedback-delay") {
+            options.pitch_feedback_delay_enabled = true;
+            continue;
+        }
         if (key == "--grain-delay") {
             options.grain_delay_enabled = true;
             continue;
@@ -738,6 +744,22 @@ Options parse_options(int argc, char** argv, int first) {
                 else if (setting == "portamento-ms") parameters.portamento_ms = number;
                 else throw std::invalid_argument("Unknown option: " + std::string(key));
             }
+            continue;
+        }
+        if (key.starts_with("--pitch-feedback-delay-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const float value = parse_float(key, argv[++i]);
+            const std::string_view setting = key.substr(
+                std::string_view("--pitch-feedback-delay-").size());
+            auto& parameters = options.pitch_feedback_delay;
+            if (setting == "time-ms") parameters.time_ms = value;
+            else if (setting == "feedback") parameters.feedback = value;
+            else if (setting == "mix") parameters.mix = value;
+            else if (setting == "pitch-semitones") parameters.pitch_semitones = value;
+            else throw std::invalid_argument("Unknown option: " + std::string(key));
+            options.pitch_feedback_delay_enabled = true;
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -2727,6 +2749,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(
             static_cast<float>(sample_rate), channels, options.grain_delay));
     }
+    if (options.pitch_feedback_delay_enabled) {
+        effects.push_back(std::make_unique<tabletfx::PitchFeedbackDelay>(
+            static_cast<float>(sample_rate), channels, 6000.0F,
+            options.pitch_feedback_delay));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -3485,6 +3512,15 @@ void run_bench() {
         parameters.spray_ms = 100.0F;
         return std::make_unique<tabletfx::GrainDelay>(
             static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("pitch-feedback-delay", [=] {
+        tabletfx::PitchFeedbackDelayParameters parameters;
+        parameters.time_ms = 350.0F;
+        parameters.feedback = 0.35F;
+        parameters.mix = 0.25F;
+        parameters.pitch_semitones = 7.0F;
+        return std::make_unique<tabletfx::PitchFeedbackDelay>(
+            static_cast<float>(sample_rate), channels, 6000.0F, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;

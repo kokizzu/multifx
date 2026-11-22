@@ -80,7 +80,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">56 of 56</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">57 of 57</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -138,8 +138,9 @@
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="51"><span class="effect-number">52</span><span class="effect-name">Pitch Arpeggiator</span><span class="effect-default">16-step scale sequencer · monophonic tracker</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="52"><span class="effect-number">53</span><span class="effect-name">Mono Guitar Synth</span><span class="effect-default">Single-note oscillator tracker · project-authored DSP</span><span class="effect-category-tag">Synth</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="53"><span class="effect-number">54</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="54" checked><span class="effect-number">55</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="55" checked><span class="effect-number">56</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="54"><span class="effect-number">55</span><span class="effect-name">Pitch Feedback Delay</span><span class="effect-default">Pitch-shifted repeats · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="55" checked><span class="effect-number">56</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="56" checked><span class="effect-number">57</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -876,6 +877,16 @@
           <label class="mix-control" for="grain-delay-overlap"><span>Overlap</span><output id="grain-delay-overlap-value" for="grain-delay-overlap">2 grains</output><input id="grain-delay-overlap" type="range" min="1" max="4" step="1" value="2"></label>
           <label class="mix-control" for="grain-delay-pitch"><span>Pitch</span><output id="grain-delay-pitch-value" for="grain-delay-pitch">0 semitones</output><input id="grain-delay-pitch" type="range" min="-24" max="24" step="0.5" value="0"></label>
           <label class="mix-control" for="grain-delay-spray"><span>Spray</span><output id="grain-delay-spray-value" for="grain-delay-spray">0 ms</output><input id="grain-delay-spray" type="range" min="0" max="100" step="1" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Pitch Feedback Delay controls">
+        <h3>Pitch Feedback Delay · project-authored</h3>
+        <p class="hint">Each delayed pass is pitch-shifted before it feeds back, so repeats accumulate the selected interval. The controls and feedback design are project choices, not a claimed copy of a flagship algorithm. The internal polyphonic shifter compensates its reported latency when scheduling the repeat interval; its onset and transient texture remain part of the sound. This does not establish real-guitar quality or sound parity with any manufacturer effect.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="pitch-feedback-delay-time"><span>Time</span><output id="pitch-feedback-delay-time-value" for="pitch-feedback-delay-time">350 ms</output><input id="pitch-feedback-delay-time" type="range" min="40" max="6000" step="1" value="350"></label>
+          <label class="mix-control" for="pitch-feedback-delay-feedback"><span>Feedback</span><output id="pitch-feedback-delay-feedback-value" for="pitch-feedback-delay-feedback">35%</output><input id="pitch-feedback-delay-feedback" type="range" min="0" max="0.95" step="0.01" value="0.35"></label>
+          <label class="mix-control" for="pitch-feedback-delay-mix"><span>Mix</span><output id="pitch-feedback-delay-mix-value" for="pitch-feedback-delay-mix">25%</output><input id="pitch-feedback-delay-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="pitch-feedback-delay-pitch"><span>Pitch per repeat</span><output id="pitch-feedback-delay-pitch-value" for="pitch-feedback-delay-pitch">+7 semitones</output><input id="pitch-feedback-delay-pitch" type="range" min="-12" max="12" step="0.5" value="7"></label>
         </div>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">

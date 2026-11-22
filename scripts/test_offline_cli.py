@@ -890,6 +890,46 @@ def check_mono_guitar_synth(executable: Path) -> None:
             raise AssertionError("Mono Guitar Synth accepted an unknown waveform")
 
 
+def check_pitch_feedback_delay(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 32768
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-pitch-feedback-delay-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "single-note.wav"
+        output = root / "pitch-feedback-delay.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--pitch-feedback-delay", "--pitch-feedback-delay-time-ms", "40",
+             "--pitch-feedback-delay-feedback", "0.45",
+             "--pitch-feedback-delay-mix", "0.75",
+             "--pitch-feedback-delay-pitch-semitones", "7"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Pitch Feedback Delay controls did not instantiate one processor: {result.stdout}"
+            )
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        dry = [sample / 32768.0 for sample in source_samples]
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Pitch Feedback Delay produced non-finite output")
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.05:
+            raise AssertionError("Pitch Feedback Delay controls did not change rendered guitar audio")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--pitch-feedback-delay-unknown", "1"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Pitch Feedback Delay accepted an unknown control")
+
+
 def check_grain_delay(executable: Path) -> None:
     sample_rate = 8000
     frame_count = 4096
@@ -1917,6 +1957,7 @@ def main() -> None:
     check_diatonic_harmonizer(args.executable.resolve())
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
+    check_pitch_feedback_delay(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -1933,7 +1974,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ const EFFECT_NAMES = [
   "Pitch Arpeggiator · project-authored mono tracker",
   "Mono Guitar Synth · project-authored single-note tracker",
   "Grain Delay · project-authored",
+  "Pitch Feedback Delay · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -83,6 +84,7 @@ const DEFAULT_PARAMETERS = {
     0, 2, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -90],
   monoGuitarSynth: [2, 0.75, 0.6, -54, 8, 180, 8],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
+  pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
@@ -208,6 +210,12 @@ const grainDelayControls = [
   document.querySelector("#grain-delay-overlap"),
   document.querySelector("#grain-delay-pitch"),
   document.querySelector("#grain-delay-spray"),
+];
+const pitchFeedbackDelayControls = [
+  document.querySelector("#pitch-feedback-delay-time"),
+  document.querySelector("#pitch-feedback-delay-feedback"),
+  document.querySelector("#pitch-feedback-delay-mix"),
+  document.querySelector("#pitch-feedback-delay-pitch"),
 ];
 
 function appendResonatorControl(parent, labelText, index, options) {
@@ -1882,6 +1890,29 @@ for (const control of grainDelayControls) {
 }
 updateGrainDelay();
 
+function updatePitchFeedbackDelay() {
+  const values = pitchFeedbackDelayControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.pitchFeedbackDelay = values;
+  pitchFeedbackDelayControls[0].parentElement.querySelector("output").value =
+    `${Math.round(values[0])} ms`;
+  pitchFeedbackDelayControls[1].parentElement.querySelector("output").value =
+    `${Math.round(values[1] * 100)}%`;
+  pitchFeedbackDelayControls[2].parentElement.querySelector("output").value =
+    `${Math.round(values[2] * 100)}%`;
+  const pitchText = Number.isInteger(values[3]) ? String(values[3]) : values[3].toFixed(1);
+  pitchFeedbackDelayControls[3].parentElement.querySelector("output").value =
+    `${values[3] > 0 ? "+" : ""}${pitchText} semitones`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "pitch-feedback-delay", value: values });
+  }
+}
+
+for (const control of pitchFeedbackDelayControls) {
+  control.addEventListener("input", updatePitchFeedbackDelay);
+  control.addEventListener("change", updatePitchFeedbackDelay);
+}
+updatePitchFeedbackDelay();
+
 function updateFlanger() {
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
@@ -2944,8 +2975,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 56 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 56 || effectRows.length !== 56 ||
+    const expectedEffectIds = Array.from({ length: 57 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 57 || effectRows.length !== 57 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
@@ -2954,10 +2985,11 @@ async function runBrowserSelfTest() {
         initialEffectState[41] || initialEffectState[42] || initialEffectState[43] ||
         initialEffectState[44] || initialEffectState[45] || initialEffectState[46] ||
         initialEffectState[47] || initialEffectState[48] || initialEffectState[49] ||
-        initialEffectState[50] || initialEffectState[51] || initialEffectState[52] ||
+         initialEffectState[50] || initialEffectState[51] || initialEffectState[52] ||
+         initialEffectState[53] || initialEffectState[54] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 56 ordered, categorized effects (IDs 0–55), with optional effects disabled by default.");
+      throw new Error("The effect picker must list 57 ordered, categorized effects (IDs 0–56), with optional effects disabled by default.");
     }
     const defaultBitCrusher = [...DEFAULT_PARAMETERS.bitCrusher];
     bitCrusherBitDepth.value = "8";
@@ -3074,7 +3106,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48" ||
-          effectCount.value !== "10 of 56" ||
+          effectCount.value !== "10 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -3082,8 +3114,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,55" ||
-        effectCount.value !== "8 of 56" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56" ||
+        effectCount.value !== "8 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -3092,7 +3124,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 56" ||
+        effectCount.value !== "7 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -3101,7 +3133,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 56" ||
+        effectCount.value !== "7 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -3109,7 +3141,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 56" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -3117,7 +3149,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 56" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -3125,7 +3157,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 56" ||
+    if (synthIds.join(",") !== "52" || effectCount.value !== "1 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the project-authored monophonic guitar synth without changing chain state.");
     }
@@ -3133,15 +3165,15 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (delayIds.join(",") !== "21,38,39,40,41,42,53" || effectCount.value !== "7 of 56" ||
+    if (delayIds.join(",") !== "21,38,39,40,41,42,53,54" || effectCount.value !== "8 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Delay category must include Digital, Grain, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
+      throw new Error("The Delay category must include Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 56" ||
+    if (reverbIds.join(",") !== "28,29,30,31" || effectCount.value !== "4 of 57" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, and Spring Reverb without changing enabled state.");
     }
@@ -3151,12 +3183,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 56") {
+    if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 57") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-    if (effectCount.value !== "56 of 56" || effectRows.some((row) => row.hidden)) {
+    if (effectCount.value !== "57 of 57" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -3227,6 +3259,19 @@ async function runBrowserSelfTest() {
       grainDelayControls[index].value = String(value);
     });
     updateGrainDelay();
+    const defaultPitchFeedbackDelay = [...DEFAULT_PARAMETERS.pitchFeedbackDelay];
+    [pitchFeedbackDelayControls[0].value, pitchFeedbackDelayControls[1].value,
+      pitchFeedbackDelayControls[2].value, pitchFeedbackDelayControls[3].value] =
+      ["500", "0.6", "0.45", "4.5"];
+    pitchFeedbackDelayControls[0].dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.pitchFeedbackDelay.join(",") !== "500,0.6,0.45,4.5" ||
+        pitchFeedbackDelayControls[3].parentElement.querySelector("output").value !== "+4.5 semitones") {
+      throw new Error("Pitch Feedback Delay controls must update repeat timing, feedback, mix, pitch, and displays.");
+    }
+    defaultPitchFeedbackDelay.forEach((value, index) => {
+      pitchFeedbackDelayControls[index].value = String(value);
+    });
+    updatePitchFeedbackDelay();
     const context = await getAudioContext();
     await context.resume();
     const stopClock = startSilentClock(context);
@@ -3318,6 +3363,7 @@ async function runBrowserSelfTest() {
           -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65],
         diatonicHarmonizer: [0.7, 2, 7, 0, 8000, 120, 0.2, 0, 120],
         grainDelay: [350, 0.25, 0.35, 80, 2, 7, 35],
+        pitchFeedbackDelay: [350, 0.35, 0.25, 7],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],

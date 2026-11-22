@@ -24,6 +24,12 @@ Native CTest/offline CLI checks validate explicit opt-in, a synthetic 220 Hz out
 
 Primary sources: [Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) and [FM9 downloads/firmware](https://www.fractalaudio.com/fm9-downloads/), checked 2026-11-22.
 
+## Project-authored Pitch Feedback Delay
+
+The first incremental implementation in the Delay category is a project-authored feedback topology: each delayed pass goes through the pinned `PolyPitchShifter` primitive before returning to the feedback ring, so repeats accumulate the selected interval. Controls are Time 40–6,000 ms (350 ms default), Feedback 0–0.95 (0.35), Mix 0–1 (0.25), and Pitch per repeat −12…+12 semitones (+7). These choices are not copied from any flagship product, and the implementation is not a model, control, or sound match for a named commercial effect. The scheduler compensates the shifter's reported latency when targeting repeat-peak spacing, but the wet onset/transient remains shifter-derived; the dry path is immediate. Browser disable resets the internal delay rather than preserving spillover.
+
+Native tests cover the repeat timing/pitch, feedback/mix, bounds, block partitioning, reset, finite recovery, and allocation behavior. `make web-test` passed the 57-stage HeadlessChrome 151 control/category and Play/native capture check; maximum absolute error was 0.0000375805 and RMS error was 0.0000072368. `make audio-regression` passed five EGFxSet pickup-position renders and stereo/mono Guitar-TECHS DI renders with `processors=57`; full-chain RMS is very low and establishes bounded processing only. On Ryzen 9 5950X/GCC 13.3 Release at 48 kHz stereo/128 frames, the 6 s-capacity processor owns 2,798,168 B and measures 11.7153% p50 / 14.6963% p95 / 31.3741% maximum of a 2.667 ms callback deadline. The synthetic 57-stage stress chain's maximum reached 128.3022%, so occasional callback overruns remain possible in an all-effects stress configuration; this is not a live device measurement. Listening, hardware, and useful output-level verification remain open.
+
 ## Evidence ledger
 
 | Component or claim | Revision/version | Primary source | Finding | Status |
