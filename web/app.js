@@ -76,6 +76,7 @@ const EFFECT_NAMES = [
   "Multi-Delay · project-authored",
   "Porta Preamp · project-authored",
   "Pitch Sequence · project-authored poly transposition",
+  "Rhythm Tap Delay · project-authored learned rhythm",
   "Output level",
   "Peak limiter",
 ];
@@ -132,6 +133,11 @@ const DEFAULT_PARAMETERS = {
     0, 7, 12, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     4, 0, 0, 4, 250, 120, 15, 7, 40, 80, 1, 1,
+  ],
+  rhythmTapDelay: [
+    4, 120, 0, 25, 0, 50, 1, 100, 0, 20000, 0.25, 0, 0,
+    220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
@@ -632,6 +638,36 @@ const tenTapDelayControls = [
   tenTapDelayHighCut, tenTapDelayMix, tenTapDelayLevel, tenTapDelayMono,
   ...tenTapDelayTapLevels,
 ];
+const rhythmTapRepeatCount = document.querySelector("#rhythm-tap-repeat-count");
+const rhythmTapTempo = document.querySelector("#rhythm-tap-tempo-bpm");
+const rhythmTapQuantize = document.querySelector("#rhythm-tap-quantize");
+const rhythmTapFeedback = document.querySelector("#rhythm-tap-feedback");
+const rhythmTapDecay = document.querySelector("#rhythm-tap-decay");
+const rhythmTapSpread = document.querySelector("#rhythm-tap-spread");
+const rhythmTapPanShape = document.querySelector("#rhythm-tap-pan-shape");
+const rhythmTapPanAlpha = document.querySelector("#rhythm-tap-pan-alpha");
+const rhythmTapLowCut = document.querySelector("#rhythm-tap-low-cut-hz");
+const rhythmTapHighCut = document.querySelector("#rhythm-tap-high-cut-hz");
+const rhythmTapMix = document.querySelector("#rhythm-tap-mix");
+const rhythmTapLevel = document.querySelector("#rhythm-tap-level-db");
+const rhythmTapMono = document.querySelector("#rhythm-tap-mono");
+const rhythmTapTimes = Array.from({ length: 10 }, (_, index) =>
+  document.querySelector(`#rhythm-tap-time-${index + 1}-value`));
+const rhythmTapLevels = Array.from({ length: 10 }, (_, index) =>
+  document.querySelector(`#rhythm-tap-level-${index + 1}-db`));
+const rhythmTapControls = [
+  rhythmTapRepeatCount, rhythmTapTempo, rhythmTapQuantize, rhythmTapFeedback,
+  rhythmTapDecay, rhythmTapSpread, rhythmTapPanShape, rhythmTapPanAlpha,
+  rhythmTapLowCut, rhythmTapHighCut, rhythmTapMix, rhythmTapLevel,
+  rhythmTapMono, ...rhythmTapTimes, ...rhythmTapLevels,
+];
+const rhythmTapLearnStart = document.querySelector("#rhythm-tap-learn-start");
+const rhythmTapLearnTap = document.querySelector("#rhythm-tap-learn-tap");
+const rhythmTapLearnDone = document.querySelector("#rhythm-tap-learn-done");
+const rhythmTapLearnStatus = document.querySelector("#rhythm-tap-learn-status");
+let rhythmTapLearning = false;
+let rhythmTapLastTapAt = null;
+let rhythmTapCapturedIntervals = 0;
 const autoPanRate = document.querySelector("#auto-pan-rate-hz");
 const autoPanDepth = document.querySelector("#auto-pan-depth");
 const autoPanWaveform = document.querySelector("#auto-pan-waveform");
@@ -1388,6 +1424,119 @@ function updateTenTapDelayOptions() {
   });
   if (workletNode) {
     workletNode.port.postMessage({ type: "ten-tap-delay-options", value: values });
+  }
+}
+
+function updateRhythmTapDelayOptions() {
+  const quantize = Number(rhythmTapQuantize.value);
+  const maximumTapValue = quantize === 0 ? 2000 : 16;
+  for (const control of rhythmTapTimes) {
+    control.max = String(maximumTapValue);
+    if (Number(control.value) > maximumTapValue) {
+      control.value = String(maximumTapValue);
+    }
+  }
+  const intervalValues = rhythmTapTimes.map((control) => Number(control.value));
+  const tapLevels = rhythmTapLevels.map((control) => Number(control.value));
+  const values = [
+    Number(rhythmTapRepeatCount.value), Number(rhythmTapTempo.value), quantize,
+    Number(rhythmTapFeedback.value), Number(rhythmTapDecay.value),
+    Number(rhythmTapSpread.value), Number(rhythmTapPanShape.value),
+    Number(rhythmTapPanAlpha.value), Number(rhythmTapLowCut.value),
+    Number(rhythmTapHighCut.value), Number(rhythmTapMix.value) / 100,
+    Number(rhythmTapLevel.value), rhythmTapMono.checked ? 1 : 0,
+    ...intervalValues, ...tapLevels,
+  ];
+  DEFAULT_PARAMETERS.rhythmTapDelay = values;
+  const show = (control, text) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = text;
+  };
+  show(rhythmTapRepeatCount, `${values[0]} repeats`);
+  show(rhythmTapTempo, `${values[1]} BPM`);
+  show(rhythmTapQuantize,
+    rhythmTapQuantize.selectedOptions[0]?.textContent || "None");
+  show(rhythmTapFeedback, `${values[3]}%`);
+  show(rhythmTapDecay, `${values[4]}%`);
+  show(rhythmTapSpread, `${values[5]}%`);
+  show(rhythmTapPanAlpha, `${values[7]}%`);
+  show(rhythmTapLowCut, values[8] === 0 ? "Off" : `${values[8]} Hz`);
+  show(rhythmTapHighCut, `${values[9]} Hz`);
+  show(rhythmTapMix, `${Math.round(values[10] * 100)}%`);
+  show(rhythmTapLevel,
+    `${values[11] > 0 ? "+" : ""}${values[11]} dB`);
+  rhythmTapTempo.disabled = quantize === 0;
+  for (const [index, control] of rhythmTapTimes.entries()) {
+    show(control, quantize === 0
+      ? `${intervalValues[index]} ms`
+      : `${intervalValues[index]} div`);
+  }
+  for (const control of rhythmTapLevels) {
+    const value = Number(control.value);
+    show(control, `${value > 0 ? "+" : ""}${value} dB`);
+  }
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "rhythm-tap-delay", value: values });
+  }
+}
+
+function rhythmTapDivisionLengthMs() {
+  const beats = [0, 4, 2, 3, 4 / 3, 1, 1.5, 2 / 3,
+    0.5, 0.75, 1 / 3, 0.25, 0.375, 1 / 6, 0.125, 1 / 12];
+  const division = Number(rhythmTapQuantize.value);
+  if (division === 0) return 1;
+  return (60000 / Number(rhythmTapTempo.value)) * beats[division];
+}
+
+function beginRhythmTapLearning() {
+  rhythmTapLearning = true;
+  rhythmTapLastTapAt = null;
+  rhythmTapCapturedIntervals = 0;
+  rhythmTapLearnStart.disabled = true;
+  rhythmTapLearnTap.disabled = false;
+  rhythmTapLearnDone.disabled = false;
+  rhythmTapLearnStatus.value =
+    "Tap the first beat (dry signal), then each repeat. Up to 10 intervals.";
+}
+
+function captureRhythmTapLearningBeat() {
+  if (!rhythmTapLearning) return;
+  const now = performance.now();
+  if (rhythmTapLastTapAt === null) {
+    rhythmTapLastTapAt = now;
+    rhythmTapLearnStatus.value = "Dry beat recorded · tap the first repeat";
+    return;
+  }
+  if (rhythmTapCapturedIntervals >= rhythmTapTimes.length) {
+    rhythmTapLearnStatus.value = "Maximum of 10 repeat intervals reached";
+    return;
+  }
+  const quantize = Number(rhythmTapQuantize.value);
+  const elapsedMs = Math.max(1, now - rhythmTapLastTapAt);
+  const interval = quantize === 0
+    ? Math.round(elapsedMs)
+    : Math.max(1, Math.round(elapsedMs / rhythmTapDivisionLengthMs()));
+  rhythmTapTimes[rhythmTapCapturedIntervals].value = String(interval);
+  rhythmTapCapturedIntervals += 1;
+  rhythmTapLastTapAt = now;
+  rhythmTapRepeatCount.value = String(rhythmTapCapturedIntervals);
+  updateRhythmTapDelayOptions();
+  rhythmTapLearnStatus.value =
+    `Captured ${rhythmTapCapturedIntervals} interval${rhythmTapCapturedIntervals === 1 ? "" : "s"}`;
+}
+
+function finishRhythmTapLearning() {
+  rhythmTapLearning = false;
+  rhythmTapLearnStart.disabled = false;
+  rhythmTapLearnTap.disabled = true;
+  rhythmTapLearnDone.disabled = true;
+  if (rhythmTapCapturedIntervals > 0) {
+    rhythmTapRepeatCount.value = String(rhythmTapCapturedIntervals);
+    updateRhythmTapDelayOptions();
+    rhythmTapLearnStatus.value =
+      `Learned ${rhythmTapCapturedIntervals} repeat interval${rhythmTapCapturedIntervals === 1 ? "" : "s"}`;
+  } else {
+    rhythmTapLearnStatus.value = "No repeat intervals captured";
   }
 }
 
@@ -2258,6 +2407,14 @@ for (const control of tenTapDelayControls) {
   control.addEventListener("input", updateTenTapDelayOptions);
   control.addEventListener("change", updateTenTapDelayOptions);
 }
+for (const control of rhythmTapControls) {
+  control.addEventListener("input", updateRhythmTapDelayOptions);
+  control.addEventListener("change", updateRhythmTapDelayOptions);
+}
+rhythmTapLearnStart.addEventListener("click", beginRhythmTapLearning);
+rhythmTapLearnTap.addEventListener("click", captureRhythmTapLearningBeat);
+rhythmTapLearnDone.addEventListener("click", finishRhythmTapLearning);
+updateRhythmTapDelayOptions();
 for (const control of autoPanControls) {
   control.addEventListener("input", updateAutoPanOptions);
   control.addEventListener("change", updateAutoPanOptions);
@@ -4828,10 +4985,10 @@ async function runPitchSequenceBrowserSmokeTest(reference, captureView, captureB
   const previousControls = pitchSequenceControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 74 || index === 75 || index === 76);
+    index === 74 || index === 76 || index === 77);
   try {
     await processorReady;
-    if (!workletNode || !decodedAudio || !audioContext) {
+  if (!workletNode || !decodedAudio || !audioContext) {
       throw new Error("Pitch Sequence smoke test requires the ready browser chain and local guitar audio.");
     }
     await audioContext.resume();
@@ -4905,6 +5062,102 @@ async function runPitchSequenceBrowserSmokeTest(reference, captureView, captureB
   }
 }
 
+async function runRhythmTapBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = rhythmTapControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 75 || index === 76 || index === 77);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Rhythm Tap smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    rhythmTapQuantize.value = "0";
+    updateRhythmTapDelayOptions();
+    rhythmTapLearnStart.click();
+    rhythmTapLearnTap.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    rhythmTapLearnTap.click();
+    rhythmTapLearnDone.click();
+    const learnedIntervalMs = Number(rhythmTapTimes[0].value);
+    if (rhythmTapRepeatCount.value !== "1" ||
+        rhythmTapLearnStatus.value !== "Learned 1 repeat interval" ||
+        !Number.isFinite(learnedIntervalMs) || learnedIntervalMs < 1 ||
+        learnedIntervalMs > 2000) {
+      throw new Error("Rhythm Tap Learn must record the dry beat and save a bounded repeat interval.");
+    }
+    rhythmTapRepeatCount.value = "4";
+    rhythmTapTempo.value = "120";
+    rhythmTapQuantize.value = "0";
+    rhythmTapFeedback.value = "20";
+    rhythmTapDecay.value = "0";
+    rhythmTapSpread.value = "70";
+    rhythmTapPanShape.value = "1";
+    rhythmTapPanAlpha.value = "100";
+    rhythmTapLowCut.value = "0";
+    rhythmTapHighCut.value = "20000";
+    rhythmTapMix.value = "100";
+    rhythmTapLevel.value = "0";
+    rhythmTapMono.checked = false;
+    [40, 70, 100, 140, 220, 220, 220, 220, 220, 220]
+      .forEach((value, index) => { rhythmTapTimes[index].value = String(value); });
+    rhythmTapLevels.forEach((control) => { control.value = "0"; });
+    updateRhythmTapDelayOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Rhythm Tap playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    for (const sample of actual) {
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+    }
+    if (peak < 1e-5 || activeSamples < 32) {
+      throw new Error(`Rhythm Tap produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+    }
+    return { peak, activeSamples, enabledEffectIndex: 75,
+      intervalMs: [40, 70, 100, 140], feedbackPercent: 20, learnedIntervalMs };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      rhythmTapControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateRhythmTapDelayOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -4917,8 +5170,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 77 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 77 || effectRows.length !== 77 ||
+        const expectedEffectIds = Array.from({ length: 78 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 78 || effectRows.length !== 78 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -4931,13 +5184,15 @@ async function runBrowserSelfTest() {
           EFFECT_NAMES[72] !== "Multi-Delay · project-authored" ||
             EFFECT_NAMES[73] !== "Porta Preamp · project-authored" ||
             EFFECT_NAMES[74] !== "Pitch Sequence · project-authored poly transposition" ||
-            EFFECT_NAMES[75] !== "Output level" || EFFECT_NAMES[76] !== "Peak limiter" ||
+            EFFECT_NAMES[75] !== "Rhythm Tap Delay · project-authored learned rhythm" ||
+            EFFECT_NAMES[76] !== "Output level" || EFFECT_NAMES[77] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
           initialEffectState[71] || initialEffectState[72] ||
             initialEffectState[73] || initialEffectState[74] ||
-            !initialEffectState[75] || !initialEffectState[76] ||
+            initialEffectState[75] || !initialEffectState[76] ||
+            !initialEffectState[77] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -4954,7 +5209,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-              throw new Error("The effect picker must list 77 ordered, categorized effects (IDs 0–76), with optional effects disabled by default.");
+              throw new Error("The effect picker must list 78 ordered, categorized effects (IDs 0–77), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -5240,7 +5495,7 @@ async function runBrowserSelfTest() {
           "4,220,120,0,30,0,50,100,1,100,0,20000,0.25,0,0,0,0,0,0,0,0,0,0,0,0" ||
         tenTapRanges.some(([control, minimum, maximum]) =>
           control.min !== minimum || control.max !== maximum) ||
-        !tenTapHint.includes("June 2023") ||
+        !tenTapHint.includes("November 2026") ||
         !tenTapHint.includes("Rhythm Tap") ||
         !tenTapHint.includes("not Fractal sound/control parity")) {
       throw new Error("Ten-Tap Delay controls must expose the documented type controls and explicit project limits.");
@@ -5618,7 +5873,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 77" ||
+      if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Vocal FX filter must list the project-authored De-Esser and preserve chain state.");
     }
@@ -5627,7 +5882,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71" ||
-            effectCount.value !== "13 of 77" ||
+            effectCount.value !== "13 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -5635,8 +5890,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,76" ||
-          effectCount.value !== "9 of 77" ||
+      if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,77" ||
+          effectCount.value !== "9 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -5645,7 +5900,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (driveIds.join(",") !== "9,10,11,12,13,14,46,70" ||
-           effectCount.value !== "8 of 77" ||
+           effectCount.value !== "8 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -5653,7 +5908,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 77" ||
+      if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 78" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -5662,7 +5917,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-          effectCount.value !== "7 of 77" ||
+          effectCount.value !== "7 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -5670,7 +5925,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 77" ||
+      if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -5678,7 +5933,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 77" ||
+      if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -5686,7 +5941,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 77" ||
+      if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -5694,7 +5949,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 77" ||
+      if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -5702,7 +5957,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 77" ||
+      if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -5710,7 +5965,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 77" ||
+      if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -5738,7 +5993,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72" || effectCount.value !== "13 of 77" ||
+        if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75" || effectCount.value !== "14 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -5746,7 +6001,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 77" ||
+        if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 78" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -5756,12 +6011,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 77") {
+          if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 78") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-          if (effectCount.value !== "77 of 77" || effectRows.some((row) => row.hidden)) {
+          if (effectCount.value !== "78 of 78" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -5945,16 +6200,17 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
-     // Project-authored Vibe, Multi-Delay, Porta Preamp, and Pitch Sequence have separate browser playback smokes.
+     // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, and Rhythm Tap have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
      parityEnabled[73] = false;
      parityEnabled[74] = false;
+     parityEnabled[75] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-      if (parityEnabled.length !== 77 || activeProcessorIndices.length !== 70 ||
+      if (parityEnabled.length !== 78 || activeProcessorIndices.length !== 70 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 70) {
        throw new Error("The all-effect chain must contain 70 optional processors between input trim and output utilities.");
     }
@@ -6533,6 +6789,10 @@ async function runBrowserSelfTest() {
     const pitchSequenceSmoke = await runPitchSequenceBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Rhythm Tap playback on local guitar audio…";
+    const rhythmTapDelaySmoke = await runRhythmTapBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -6656,6 +6916,7 @@ async function runBrowserSelfTest() {
       multiDelay: multiDelaySmoke,
       portaPreamp: portaPreampSmoke,
       pitchSequence: pitchSequenceSmoke,
+      rhythmTapDelay: rhythmTapDelaySmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,

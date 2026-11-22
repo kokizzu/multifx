@@ -169,6 +169,7 @@ def build_web() -> None:
         "_tf_chain_shuffling_looper_steps",
         "_tf_chain_set_ten_tap_delay_options",
         "_tf_chain_set_ten_tap_delay_level",
+        "_tf_chain_set_rhythm_tap_delay",
         "_tf_chain_set_auto_pan",
         "_tf_chain_set_megatap_delay",
         "_tf_chain_set_de_esser",

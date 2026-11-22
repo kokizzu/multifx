@@ -59,8 +59,19 @@ struct TenTapDelayParameters {
     std::array<float, ten_tap_delay_max_taps> tap_level_db{};
 };
 
+struct RhythmTapDelayParameters {
+    TenTapDelayParameters common{};
+    TenTapDivision quantize = TenTapDivision::free;
+    float feedback_percent = 25.0F;
+    // Each value is the interval from the preceding repeat. Values are in
+    // milliseconds when quantize is free, or in quantized divs otherwise.
+    std::array<float, ten_tap_delay_max_taps> tap_time_values{
+        220.0F, 220.0F, 220.0F, 220.0F, 220.0F,
+        220.0F, 220.0F, 220.0F, 220.0F, 220.0F};
+};
+
 /*
- * Project-authored Ten-Tap Delay. The June 2023 Fractal Audio Blocks Guide
+ * Project-authored Ten-Tap Delay. The November 2026 Fractal Audio Blocks Guide
  * documents Ten-Tap Delay controls for the FM9 family: 1–10 taps, delay time /
  * tempo, decay, shuffle, stereo spread and ratio, pan shape/alpha, low/high cut,
  * and per-tap level (-80 to +20 dB). This class implements the named controls as
@@ -74,18 +85,17 @@ struct TenTapDelayParameters {
  * available delay at high sample rates. Processing uses preallocated storage
  * and performs no allocations.
  *
- * Rhythm Tap Delay is a separate Fractal type. Its feedback, learned custom
- * intervals, quantized intervals, and tap-entry workflow are not implemented
- * here. FM9 family documentation applies to the FM9 family; applicability to
- * the specifically named FM9 Mk II Turbo is inferred from Fractal's family
- * material, not stated as a separate firmware compatibility line.
+ * Rhythm Tap Delay is a separate Fractal type implemented below. FM9 family
+ * documentation applies to the FM9 family; applicability to the specifically
+ * named FM9 Mk II Turbo is inferred from Fractal's family material, not stated
+ * as a separate firmware compatibility line.
  *
  * Source: https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf
- * Guide revision: June 2023. The FM9 downloads page lists v12.0 (2026-07-07)
+ * Guide revision: November 2026. The FM9 downloads page lists v12.0 (2026-07-07)
  * for FM9 Original and FM9 Turbo, but does not separately name the FM9 Mk II
  * Turbo; installed device firmware is unknown.
  */
-class TenTapDelay final : public Effect {
+class TenTapDelay : public Effect {
 public:
     explicit TenTapDelay(float sample_rate = 48000.0F,
                          std::uint16_t channels = 2,
@@ -113,11 +123,22 @@ public:
                  std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
+protected:
+    void configure_rhythm_pattern(
+        TenTapDivision quantize, float feedback_percent,
+        const std::array<float, ten_tap_delay_max_taps>& tap_time_values) noexcept;
+    [[nodiscard]] std::size_t delay_storage_bytes() const noexcept {
+        return storage_.capacity() * sizeof(float);
+    }
+
 private:
+    friend class RhythmTapDelay;
+
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumDelayMs = 1.0F;
     static constexpr float kMaximumDelayMs = 2000.0F;
+    static constexpr float kMaximumRequestedDelayMs = 20000.0F;
     static constexpr float kMinimumLevelDb = -80.0F;
     static constexpr float kMaximumLevelDb = 20.0F;
     static constexpr float kMaximumSignal = 8.0F;
@@ -149,6 +170,49 @@ private:
     std::array<float, 2> high_cut_output_{};
     float low_cut_coefficient_ = 0.0F;
     float high_cut_coefficient_ = 1.0F;
+    bool rhythm_mode_ = false;
+    TenTapDivision rhythm_quantize_ = TenTapDivision::free;
+    float rhythm_feedback_percent_ = 0.0F;
+    std::array<float, ten_tap_delay_max_taps> rhythm_tap_time_values_{};
+};
+
+/*
+ * Project-authored Rhythm Tap Delay sharing the Ten-Tap delay-line, filtering,
+ * panning, and level path. The November 2026 Fractal guide documents custom
+ * inter-tap milliseconds or quantized divs, Learn-by-tapping, per-tap levels,
+ * and final-repeat feedback that regenerates the full pattern. Learn interaction
+ * is provided by the browser UI; values here are already converted to ms/divs.
+ *
+ * Feedback ceiling, defaults, interval bounds, interpolation, exact feedback
+ * placement, buffer cap, and DSP are project choices because Fractal does not
+ * publish their numeric bounds or implementation. Pattern length is exposed as
+ * a project control; the guide documents Tap Time 1–10 but excludes a Number of
+ * Taps parameter. No Fractal sound, preset, or algorithm parity is claimed.
+ *
+ * Source: https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf
+ * Guide revision: November 2026; firmware applicability follows the qualified
+ * FM9-family note on TenTapDelay above.
+ */
+class RhythmTapDelay final : public TenTapDelay {
+public:
+    explicit RhythmTapDelay(float sample_rate = 48000.0F,
+                            std::uint16_t channels = 2,
+                            RhythmTapDelayParameters parameters = {});
+
+    [[nodiscard]] std::string_view id() const noexcept override {
+        return "rhythm-tap-delay";
+    }
+    [[nodiscard]] std::size_t memory_bytes() const noexcept override {
+        return sizeof(*this) + delay_storage_bytes();
+    }
+
+    void set_parameters(RhythmTapDelayParameters parameters) noexcept;
+    [[nodiscard]] RhythmTapDelayParameters parameters() const noexcept {
+        return parameters_;
+    }
+
+private:
+    RhythmTapDelayParameters parameters_{};
 };
 
 } // namespace tabletfx

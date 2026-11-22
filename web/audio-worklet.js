@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -264,6 +264,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         4, 0, 0, 4, 250, 120, 15, 7, 40, 80, 1, 1,
       ]);
+      this.configureRhythmTapDelay(parameters.rhythmTapDelay || [
+        4, 120, 0, 25, 0, 50, 1, 100, 0, 20000, 0.25, 0, 0,
+        220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      ]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -500,6 +505,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureRhythmTapDelay(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >> 2);
+    this.module._tf_chain_set_rhythm_tap_delay(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   configureMonoGuitarSynth(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 7) {
       return;
@@ -644,6 +660,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_porta_preamp(this.chain, ...message.value);
     } else if (message.type === "pitch-sequence" && this.ready) {
       this.configurePitchSequence(message.value);
+    } else if (message.type === "rhythm-tap-delay" && this.ready) {
+      this.configureRhythmTapDelay(message.value);
     } else if (message.type === "guitar-graphic-eq" && this.ready) {
       this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "bass-graphic-eq" && this.ready) {

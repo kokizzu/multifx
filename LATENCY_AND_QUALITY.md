@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Rhythm Tap Delay and 78-entry picker (2026-11-22)
+
+The project-authored Rhythm Tap stage adds a preallocated ring capped at 1 MiB and a 20 s requested maximum; effective maximum depends on sample rate and mono/stereo storage. C++ processing has no per-block allocation. The browser chain uses 17,793,612 B of processor state plus 10,364 B tuner state in a fixed 20 MiB WASM heap. `make test` passed 81/81 CTest cases and `make web-test` passed the 78-entry picker, 70-stage browser/native parity, and separate Play capture on a generated local guitar-like fixture. The Rhythm Tap capture was peak 0.7162358 / 46,079 active samples; the effect is excluded from numeric parity because the offline CLI has no matching implementation. No Rhythm Tap isolated CPU benchmark, listening check, or live device-route measurement has been run. Chrome 151 exposes only millisecond-resolution worklet timing here; its per-stage percentages are too coarse for a processor benchmark.
+
 ## Pitch Sequence and 77-entry picker (2026-11-22)
 
 Project-authored Pitch Sequence uses the shared STFT polyphonic pitch shifter, with a programmed semitone transposition per step and no note tracker or scale quantizer. Its pitch-shifter algorithm reports 5.33 ms nominal latency at 48 kHz; host buffering and end-to-end response have not been measured. The effect preallocates a 120 ms input-history ring for sample-loop Freeze and an aligned dry delay. Glitch offsets are deterministic pseudo-random pitch changes; Freeze is not spectral freezing. These are project-authored controls and DSP, not Fender model parity.

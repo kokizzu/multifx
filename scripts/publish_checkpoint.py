@@ -660,6 +660,7 @@ HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
     "RESEARCH.md",
+    "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
 MULTIBAND_COMPRESSOR_CHECKPOINT_PATHS = (
@@ -1370,6 +1371,26 @@ PITCH_SEQUENCE_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+RHYTHM_TAP_DELAY_CHECKPOINT_PATHS = (
+    "include/tabletfx/effects/ten_tap_delay.hpp",
+    "src/effects/ten_tap_delay.cpp",
+    "tests/test_ten_tap_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "README.md",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1475,6 +1496,8 @@ CHECKPOINTS = {
                      "feat: add categorized project-authored Porta Preamp"),
     "pitch-sequence": (PITCH_SEQUENCE_CHECKPOINT_PATHS,
                        "feat: add categorized project-authored Pitch Sequence"),
+    "rhythm-tap-delay": (RHYTHM_TAP_DELAY_CHECKPOINT_PATHS,
+                         "feat: add project-authored Rhythm Tap delay"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }

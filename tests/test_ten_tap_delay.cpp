@@ -186,6 +186,82 @@ void test_impulse_output_filters_mono_and_reset() {
             "mono mode and wet tone filters must retain finite output");
 }
 
+void test_rhythm_tap_custom_spacing_quantize_and_bounds() {
+    tabletfx::RhythmTapDelayParameters parameters;
+    parameters.common = impulse_parameters();
+    parameters.common.tap_count = 4;
+    parameters.common.decay_percent = 0.0F;
+    parameters.common.spread_percent = 0.0F;
+    parameters.quantize = tabletfx::TenTapDivision::free;
+    parameters.feedback_percent = 0.0F;
+    parameters.tap_time_values = {10.0F, 30.0F, 20.0F, 40.0F, 220.0F,
+                                  220.0F, 220.0F, 220.0F, 220.0F, 220.0F};
+    tabletfx::RhythmTapDelay delay(8000.0F, 1, parameters);
+    require(delay.tap_delay_samples(0, 0) == 80U &&
+                delay.tap_delay_samples(1, 0) == 320U &&
+                delay.tap_delay_samples(2, 0) == 480U &&
+                delay.tap_delay_samples(3, 0) == 800U,
+            "free rhythm intervals must accumulate from the preceding repeat");
+    require(delay.id() == "rhythm-tap-delay" &&
+                delay.parameters().common.shuffle_percent == 0.0F &&
+                delay.parameters().common.ratio_percent == 100.0F,
+            "Rhythm Tap must remain distinct from Ten-Tap shuffle and stereo ratio controls");
+
+    parameters.common.tempo_bpm = 300.0F;
+    parameters.common.tap_count = 3;
+    parameters.quantize = tabletfx::TenTapDivision::quarter;
+    parameters.tap_time_values = {1.0F, 2.0F, 3.0F, 1.0F, 1.0F,
+                                  1.0F, 1.0F, 1.0F, 1.0F, 1.0F};
+    delay.set_parameters(parameters);
+    require(delay.tap_delay_samples(0, 0) == 1600U &&
+                delay.tap_delay_samples(1, 0) == 4800U &&
+                delay.tap_delay_samples(2, 0) == 9600U,
+            "quantized rhythm intervals must accumulate at the selected tempo");
+
+    parameters.feedback_percent = 120.0F;
+    parameters.common.tap_count = 0;
+    parameters.tap_time_values[0] = 0.0F;
+    parameters.tap_time_values[1] = 9000.0F;
+    delay.set_parameters(parameters);
+    const auto bounded = delay.parameters();
+    require(bounded.feedback_percent == 95.0F &&
+                bounded.common.tap_count == 1U &&
+                bounded.tap_time_values[0] == 1.0F &&
+                bounded.tap_time_values[1] == 2000.0F,
+            "project-defined feedback, repeat-count, and interval bounds must be enforced");
+}
+
+void test_rhythm_tap_feedback_repeats_pattern_and_processing_allocates_nothing() {
+    tabletfx::RhythmTapDelayParameters parameters;
+    parameters.common = impulse_parameters();
+    parameters.common.tap_count = 2;
+    parameters.common.decay_percent = 0.0F;
+    parameters.common.low_cut_hz = 0.0F;
+    parameters.common.high_cut_hz = 20000.0F;
+    parameters.common.mix = 1.0F;
+    parameters.feedback_percent = 50.0F;
+    parameters.tap_time_values.fill(1.0F);
+    tabletfx::RhythmTapDelay delay(8000.0F, 1, parameters);
+    std::array<float, 64> audio{};
+    audio[0] = 1.0F;
+    delay.process(audio, 1);
+    require(audio[8] > 0.5F && audio[16] > 0.5F,
+            "the input must produce the configured first rhythm pattern");
+    require(audio[24] > 0.2F && audio[24] < 0.8F &&
+                audio[40] > 0.08F && audio[40] < 0.45F,
+            "feedback from the final repeat must regenerate the pattern with decay");
+
+    delay.reset();
+    std::array<float, 256> repeated{};
+    repeated.fill(0.125F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        delay.process(repeated, 1);
+    }
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "Rhythm Tap processing must not allocate");
+}
+
 void test_memory_cap_channel_mismatch_and_no_process_allocations() {
     tabletfx::TenTapDelay capped(384000.0F, 2, 2000.0F);
     require(capped.memory_bytes() <= sizeof(capped) +
@@ -193,6 +269,11 @@ void test_memory_cap_channel_mismatch_and_no_process_allocations() {
             "delay storage must stay under its fixed one-MiB cap");
     require(capped.maximum_delay_ms() < 400.0F,
             "high-rate stereo buffer must report its memory-limited maximum");
+    tabletfx::RhythmTapDelay rhythm_capped(384000.0F, 2);
+    require(rhythm_capped.memory_bytes() <= sizeof(rhythm_capped) +
+                tabletfx::ten_tap_delay_storage_limit_bytes &&
+                rhythm_capped.maximum_delay_ms() < 400.0F,
+            "Rhythm Tap must honor the same high-rate stereo storage cap");
 
     bool rejected_layout = false;
     try {
@@ -228,11 +309,13 @@ int main() {
         test_ten_tap_spacing_decay_and_stereo_ratio();
         test_tempo_division_and_tap_count_change();
         test_impulse_output_filters_mono_and_reset();
+        test_rhythm_tap_custom_spacing_quantize_and_bounds();
+        test_rhythm_tap_feedback_repeats_pattern_and_processing_allocates_nothing();
         test_memory_cap_channel_mismatch_and_no_process_allocations();
     } catch (const std::exception& error) {
         std::cerr << "FAIL: " << error.what() << '\n';
         return 1;
     }
-    std::cout << "PASS: Fractal-family Ten-Tap project-authored delay controls\n";
+    std::cout << "PASS: Fractal-family Ten-Tap and Rhythm Tap project-authored delay controls\n";
     return 0;
 }

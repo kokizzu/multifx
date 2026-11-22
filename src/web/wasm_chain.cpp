@@ -319,6 +319,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::PitchSequence>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::RhythmTapDelay>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -402,6 +405,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 72U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 75U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -780,6 +786,42 @@ public:
         auto* delay = static_cast<tabletfx::TenTapDelay*>(effects_[66].effect.get());
         auto parameters = delay->parameters();
         parameters.tap_level_db[tap] = level_db;
+        delay->set_parameters(parameters);
+    }
+
+    void configure_rhythm_tap_delay(const float* values,
+                                    std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 33U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        auto* delay = static_cast<tabletfx::RhythmTapDelay*>(
+            effects_[75].effect.get());
+        auto parameters = delay->parameters();
+        const auto bounded_integer = [](float value,
+                                        std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(std::clamp(
+                value, 0.0F, static_cast<float>(maximum)));
+        };
+        parameters.common.tap_count = static_cast<std::uint8_t>(
+            std::clamp(bounded_integer(values[0], 10U), 1U, 10U));
+        parameters.common.tempo_bpm = values[1];
+        parameters.quantize = static_cast<tabletfx::TenTapDivision>(
+            std::min(bounded_integer(values[2], 15U), 15U));
+        parameters.feedback_percent = values[3];
+        parameters.common.decay_percent = values[4];
+        parameters.common.spread_percent = values[5];
+        parameters.common.pan_shape = static_cast<tabletfx::TenTapPanShape>(
+            std::min(bounded_integer(values[6], 3U), 3U));
+        parameters.common.pan_alpha_percent = values[7];
+        parameters.common.low_cut_hz = values[8];
+        parameters.common.high_cut_hz = values[9];
+        parameters.common.mix = values[10];
+        parameters.common.level_db = values[11];
+        parameters.common.mono = bounded_integer(values[12], 1U) != 0U;
+        for (std::size_t tap = 0; tap < tabletfx::ten_tap_delay_max_taps; ++tap) {
+            parameters.tap_time_values[tap] = values[13U + tap];
+            parameters.common.tap_level_db[tap] = values[23U + tap];
+        }
         delay->set_parameters(parameters);
     }
 
@@ -2966,6 +3008,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_ten_tap_delay_level(
     void* opaque, std::uint32_t tap, float level_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ten_tap_delay_level(tap, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_rhythm_tap_delay(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_rhythm_tap_delay(values, value_count);
     }
 }
 

@@ -28,9 +28,9 @@ TenTapDelay::TenTapDelay(float sample_rate, std::uint16_t channels,
         sample_rate_ > kMaximumSampleRate || channels_ == 0U || channels_ > 2U ||
         !std::isfinite(requested_max_delay_ms_) ||
         requested_max_delay_ms_ < kMinimumDelayMs ||
-        requested_max_delay_ms_ > kMaximumDelayMs) {
+        requested_max_delay_ms_ > kMaximumRequestedDelayMs) {
         throw std::invalid_argument(
-            "Ten-Tap Delay requires 8–384 kHz, mono/stereo, and a 1–2000 ms buffer request");
+            "Ten-Tap Delay requires 8–384 kHz, mono/stereo, and a 1–20000 ms buffer request");
     }
 
     const std::size_t maximum_storage_samples =
@@ -61,6 +61,19 @@ TenTapDelay::TenTapDelay(float sample_rate, std::uint16_t channels,
     }
 
     set_parameters(parameters);
+}
+
+void TenTapDelay::configure_rhythm_pattern(
+    TenTapDivision quantize, float feedback_percent,
+    const std::array<float, ten_tap_delay_max_taps>& tap_time_values) noexcept {
+    if (!valid_division(quantize)) quantize = TenTapDivision::free;
+    rhythm_mode_ = true;
+    rhythm_quantize_ = quantize;
+    rhythm_feedback_percent_ = bounded(feedback_percent, 0.0F, 0.0F, 95.0F);
+    for (std::size_t tap = 0; tap < ten_tap_delay_max_taps; ++tap) {
+        rhythm_tap_time_values_[tap] = bounded(
+            tap_time_values[tap], 220.0F, 1.0F, kMaximumDelayMs);
+    }
 }
 
 float TenTapDelay::bounded(float value, float fallback,
@@ -225,15 +238,28 @@ void TenTapDelay::set_parameters(TenTapDelayParameters parameters) noexcept {
     }
     parameters_ = parameters;
 
-    const float interval_ms = std::min(tap_interval_ms(), max_time);
     const std::size_t max_frames = capacity_frames_ - 1U;
     const float ratio = parameters_.ratio_percent / 100.0F;
     const float shuffle = parameters_.shuffle_percent / 200.0F;
     const float decay_gain = 1.0F - parameters_.decay_percent / 100.0F;
+    float cumulative_rhythm_ms = 0.0F;
+    const float rhythm_division_ms = rhythm_quantize_ == TenTapDivision::free
+        ? 0.0F
+        : (60000.0F / parameters_.tempo_bpm) * division_beats(rhythm_quantize_);
     for (std::size_t tap = 0; tap < ten_tap_delay_max_taps; ++tap) {
         const float tap_number = static_cast<float>(tap + 1U);
         const float shuffle_offset = (tap % 2U == 1U) ? shuffle : 0.0F;
-        const float right_ms = interval_ms * (tap_number + shuffle_offset);
+        float right_ms = 0.0F;
+        if (rhythm_mode_) {
+            const float interval_ms = rhythm_quantize_ == TenTapDivision::free
+                ? rhythm_tap_time_values_[tap]
+                : rhythm_tap_time_values_[tap] * rhythm_division_ms;
+            cumulative_rhythm_ms += interval_ms;
+            right_ms = cumulative_rhythm_ms;
+        } else {
+            const float interval_ms = std::min(tap_interval_ms(), max_time);
+            right_ms = interval_ms * (tap_number + shuffle_offset);
+        }
         const float left_ms = right_ms * ratio;
         const std::array<float, 2> times{left_ms, right_ms};
         for (std::size_t channel = 0; channel < 2U; ++channel) {
@@ -305,6 +331,7 @@ void TenTapDelay::process(std::span<float> interleaved,
         double wet_left = 0.0;
         double wet_right = 0.0;
         double wet_mono = 0.0;
+        std::array<float, 2> final_tap_signal{};
         for (std::size_t tap = 0; tap < parameters_.tap_count; ++tap) {
             float left = read_delay(delay_frames_[tap][0], 0U);
             float right = channels_ == 2U
@@ -321,6 +348,12 @@ void TenTapDelay::process(std::span<float> interleaved,
                 right = right_average;
             }
             const double gain = static_cast<double>(level_gains_[tap]);
+            if (tap + 1U == parameters_.tap_count) {
+                final_tap_signal[0] = bounded_signal(
+                    static_cast<double>(left) * gain);
+                final_tap_signal[1] = bounded_signal(
+                    static_cast<double>(right) * gain);
+            }
             if (channels_ == 1U) {
                 wet_mono += 0.5 * (static_cast<double>(left) +
                                    static_cast<double>(right)) * gain;
@@ -336,13 +369,20 @@ void TenTapDelay::process(std::span<float> interleaved,
 
         const std::size_t write_offset =
             write_frame_ * static_cast<std::size_t>(channels_);
+        const float feedback_gain = rhythm_mode_
+            ? rhythm_feedback_percent_ / 100.0F
+            : 0.0F;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const float input_mono = channels_ == 2U
                 ? 0.5F * (dry[0] + dry[1])
                 : dry[0];
-            storage_[write_offset + channel] = parameters_.mono
-                ? input_mono
-                : dry[channel];
+            const float input = parameters_.mono ? input_mono : dry[channel];
+            const float feedback = parameters_.mono
+                ? 0.5F * (final_tap_signal[0] + final_tap_signal[1])
+                : final_tap_signal[channel];
+            storage_[write_offset + channel] = bounded_signal(
+                static_cast<double>(input) +
+                static_cast<double>(feedback) * feedback_gain);
         }
 
         if (channels_ == 1U) {
@@ -382,6 +422,38 @@ void TenTapDelay::reset() noexcept {
     low_cut_output_.fill(0.0F);
     high_cut_output_.fill(0.0F);
     write_frame_ = 0;
+}
+
+RhythmTapDelay::RhythmTapDelay(float sample_rate, std::uint16_t channels,
+                               RhythmTapDelayParameters parameters)
+    : TenTapDelay(sample_rate, channels, 20000.0F, parameters.common) {
+    set_parameters(parameters);
+}
+
+void RhythmTapDelay::set_parameters(
+    RhythmTapDelayParameters parameters) noexcept {
+    if (!TenTapDelay::valid_division(parameters.quantize)) {
+        parameters.quantize = parameters_.quantize;
+    }
+    parameters.feedback_percent = TenTapDelay::bounded(
+        parameters.feedback_percent, parameters_.feedback_percent, 0.0F, 95.0F);
+    for (std::size_t tap = 0; tap < ten_tap_delay_max_taps; ++tap) {
+        parameters.tap_time_values[tap] = TenTapDelay::bounded(
+            parameters.tap_time_values[tap], parameters_.tap_time_values[tap],
+            1.0F, TenTapDelay::kMaximumDelayMs);
+    }
+    parameters.common.tap_count = std::clamp(
+        parameters.common.tap_count, std::uint8_t{1},
+        static_cast<std::uint8_t>(ten_tap_delay_max_taps));
+    parameters.common.division = TenTapDivision::free;
+    parameters.common.shuffle_percent = 0.0F;
+    parameters.common.ratio_percent = 100.0F;
+    parameters_ = parameters;
+    configure_rhythm_pattern(parameters_.quantize,
+                             parameters_.feedback_percent,
+                             parameters_.tap_time_values);
+    TenTapDelay::set_parameters(parameters_.common);
+    parameters_.common = TenTapDelay::parameters();
 }
 
 } // namespace tabletfx
