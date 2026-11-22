@@ -930,6 +930,50 @@ def check_pitch_feedback_delay(executable: Path) -> None:
             raise AssertionError("Pitch Feedback Delay accepted an unknown control")
 
 
+def check_feedback_generator(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 32768
+    source_samples = [
+        round(10000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-feedback-generator-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "single-note.wav"
+        output = root / "feedback-generator.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--feedback-generator", "--feedback-generator-type", "octave-up",
+             "--feedback-generator-gain", "0.65",
+             "--feedback-generator-attack-ms", "10",
+             "--feedback-generator-release-ms", "300",
+             "--feedback-generator-dry-kill", "on",
+             "--feedback-generator-dry-level", "0",
+             "--feedback-generator-silence-threshold-db", "-72"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Feedback Generator controls did not instantiate one processor: {result.stdout}"
+            )
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Feedback Generator produced non-finite output")
+        if max(abs(sample) for sample in rendered) < 1.0e-3:
+            raise AssertionError("Feedback Generator did not produce a tracked tone")
+        if max(abs(sample) for sample in rendered) > 1.0:
+            raise AssertionError("Feedback Generator exceeded its documented output ceiling")
+
+        invalid = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--feedback-generator-type", "random"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid.returncode == 0:
+            raise AssertionError("Feedback Generator accepted an unsupported pitch mode")
+
+
 def check_grain_delay(executable: Path) -> None:
     sample_rate = 8000
     frame_count = 4096
@@ -1958,6 +2002,7 @@ def main() -> None:
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
     check_pitch_feedback_delay(args.executable.resolve())
+    check_feedback_generator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
@@ -1974,7 +2019,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

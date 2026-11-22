@@ -112,6 +112,8 @@ struct Options {
     tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
     bool pitch_feedback_delay_enabled = false;
     tabletfx::PitchFeedbackDelayParameters pitch_feedback_delay{};
+    bool feedback_generator_enabled = false;
+    tabletfx::effects::FeedbackGeneratorParameters feedback_generator{};
     bool grain_delay_enabled = false;
     tabletfx::GrainDelayParameters grain_delay{};
     bool flanger_enabled = false;
@@ -552,6 +554,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.pitch_feedback_delay_enabled = true;
             continue;
         }
+        if (key == "--feedback-generator") {
+            options.feedback_generator_enabled = true;
+            continue;
+        }
         if (key == "--grain-delay") {
             options.grain_delay_enabled = true;
             continue;
@@ -760,6 +766,41 @@ Options parse_options(int argc, char** argv, int first) {
             else if (setting == "pitch-semitones") parameters.pitch_semitones = value;
             else throw std::invalid_argument("Unknown option: " + std::string(key));
             options.pitch_feedback_delay_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--feedback-generator-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--feedback-generator-").size());
+            auto& parameters = options.feedback_generator;
+            if (setting == "type") {
+                const std::string_view value(argv[++i]);
+                using Type = tabletfx::effects::FeedbackGeneratorType;
+                if (value == "octave-down") parameters.type = Type::OctaveDown;
+                else if (value == "unison") parameters.type = Type::Unison;
+                else if (value == "octave-up") parameters.type = Type::OctaveUp;
+                else throw std::invalid_argument(
+                    "Feedback Generator type must be octave-down, unison, or octave-up");
+            } else if (setting == "dry-kill") {
+                const std::string_view value(argv[++i]);
+                using DryKill = tabletfx::effects::FeedbackGeneratorDryKill;
+                if (value == "off") parameters.dry_kill = DryKill::Off;
+                else if (value == "on") parameters.dry_kill = DryKill::On;
+                else throw std::invalid_argument(
+                    "Feedback Generator dry kill must be off or on");
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "gain") parameters.feedback_gain = value;
+                else if (setting == "attack-ms") parameters.attack_ms = value;
+                else if (setting == "release-ms") parameters.release_ms = value;
+                else if (setting == "dry-level") parameters.dry_level = value;
+                else if (setting == "silence-threshold-db") {
+                    parameters.silence_threshold_db = value;
+                } else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.feedback_generator_enabled = true;
             continue;
         }
         if (key.starts_with("--grain-delay-")) {
@@ -2754,6 +2795,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate), channels, 6000.0F,
             options.pitch_feedback_delay));
     }
+    if (options.feedback_generator_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::FeedbackGenerator>(
+            static_cast<float>(sample_rate), channels,
+            options.feedback_generator));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -3171,6 +3217,9 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
     arpeggiator_parameters.mix = 0.5F;
     effects.push_back(std::make_unique<tabletfx::effects::PitchArpeggiator>(
         static_cast<float>(sample_rate), arpeggiator_parameters));
+    tabletfx::effects::FeedbackGeneratorParameters feedback_generator_parameters;
+    effects.push_back(std::make_unique<tabletfx::effects::FeedbackGenerator>(
+        static_cast<float>(sample_rate), channels, feedback_generator_parameters));
     tabletfx::OpticalCompressorParameters optical_parameters;
     optical_parameters.threshold_db = -24.0F;
     optical_parameters.ratio = 3.0F;
@@ -3522,6 +3571,12 @@ void run_bench() {
         return std::make_unique<tabletfx::PitchFeedbackDelay>(
             static_cast<float>(sample_rate), channels, 6000.0F, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("feedback-generator-unison", [=] {
+        tabletfx::effects::FeedbackGeneratorParameters parameters;
+        parameters.type = tabletfx::effects::FeedbackGeneratorType::Unison;
+        return std::make_unique<tabletfx::effects::FeedbackGenerator>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("rhythmic-slicer", [=] {
         tabletfx::RhythmicSlicerParameters parameters;
         parameters.depth = 0.5F;
@@ -3819,6 +3874,10 @@ void print_usage() {
                   " [--mono-guitar-synth-gate-threshold-db -90..0]"
                   " [--mono-guitar-synth-attack-ms 0..2000] [--mono-guitar-synth-release-ms 0..5000]"
                   " [--mono-guitar-synth-portamento-ms 0..250]"
+                  " [--feedback-generator] [--feedback-generator-type octave-down|unison|octave-up]"
+                  " [--feedback-generator-gain 0..1] [--feedback-generator-attack-ms 0..2000]"
+                  " [--feedback-generator-release-ms 0..5000] [--feedback-generator-dry-kill off|on]"
+                  " [--feedback-generator-dry-level 0..1] [--feedback-generator-silence-threshold-db -90..0]"
                   " [--grain-delay] [--grain-delay-time-ms 20..2000]"
                   " [--grain-delay-feedback 0..0.9] [--grain-delay-mix 0..1]"
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"

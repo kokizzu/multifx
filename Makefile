@@ -29,6 +29,7 @@ PYTHON ?= python3
 	publish-grain-delay-plan publish-grain-delay \
 	publish-pitch-arpeggiator-plan publish-pitch-arpeggiator \
 	publish-pitch-feedback-delay-plan publish-pitch-feedback-delay \
+	publish-feedback-generator-plan publish-feedback-generator \
 	publish-flagship-catalog-plan publish-flagship-catalog
 
 DATA_DIR ?= auto
@@ -271,6 +272,12 @@ publish-pitch-feedback-delay-plan:
 
 publish-pitch-feedback-delay:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint pitch-feedback-delay
+
+publish-feedback-generator-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint feedback-generator
+
+publish-feedback-generator:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint feedback-generator
 
 publish-mono-guitar-synth-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint mono-guitar-synth

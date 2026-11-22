@@ -80,7 +80,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">57 of 57</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">58 of 58</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -139,8 +139,9 @@
         <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="52"><span class="effect-number">53</span><span class="effect-name">Mono Guitar Synth</span><span class="effect-default">Single-note oscillator tracker · project-authored DSP</span><span class="effect-category-tag">Synth</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="53"><span class="effect-number">54</span><span class="effect-name">Grain Delay</span><span class="effect-default">Granular delay · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="54"><span class="effect-number">55</span><span class="effect-name">Pitch Feedback Delay</span><span class="effect-default">Pitch-shifted repeats · project-authored DSP</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="55" checked><span class="effect-number">56</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="56" checked><span class="effect-number">57</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="55"><span class="effect-number">56</span><span class="effect-name">Feedback Generator</span><span class="effect-default">Mono-tracked generated sustain · project-authored</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="56" checked><span class="effect-number">57</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="57" checked><span class="effect-number">58</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -887,6 +888,19 @@
           <label class="mix-control" for="pitch-feedback-delay-feedback"><span>Feedback</span><output id="pitch-feedback-delay-feedback-value" for="pitch-feedback-delay-feedback">35%</output><input id="pitch-feedback-delay-feedback" type="range" min="0" max="0.95" step="0.01" value="0.35"></label>
           <label class="mix-control" for="pitch-feedback-delay-mix"><span>Mix</span><output id="pitch-feedback-delay-mix-value" for="pitch-feedback-delay-mix">25%</output><input id="pitch-feedback-delay-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
           <label class="mix-control" for="pitch-feedback-delay-pitch"><span>Pitch per repeat</span><output id="pitch-feedback-delay-pitch-value" for="pitch-feedback-delay-pitch">+7 semitones</output><input id="pitch-feedback-delay-pitch" type="range" min="-12" max="12" step="0.5" value="7"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Feedback Generator controls">
+        <h3>Feedback Generator · project-authored</h3>
+        <p class="hint">This is a bounded, mono-note-tracked sine sustain generator with unison or one-octave modes. It is not a physical feedback simulator or a copy of Line 6 Feedbacker. Chord reference, random harmonic modes, onset/offset thresholds, Retrigger, and Trails are not implemented. The current fixed chain places it late; the Line 6 guidance recommends placing its Feedbacker early. Output is hard-limited to ±1.0.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="feedback-generator-type"><span>Generated pitch</span><output id="feedback-generator-type-value" for="feedback-generator-type">Unison</output><select id="feedback-generator-type"><option value="0">Octave down</option><option value="1" selected>Unison</option><option value="2">Octave up</option></select></label>
+          <label class="mix-control" for="feedback-generator-gain"><span>Generated level</span><output id="feedback-generator-gain-value" for="feedback-generator-gain">35%</output><input id="feedback-generator-gain" type="range" min="0" max="1" step="0.01" value="0.35"></label>
+          <label class="mix-control" for="feedback-generator-attack-ms"><span>Attack</span><output id="feedback-generator-attack-ms-value" for="feedback-generator-attack-ms">15 ms</output><input id="feedback-generator-attack-ms" type="range" min="0" max="2000" step="1" value="15"></label>
+          <label class="mix-control" for="feedback-generator-release-ms"><span>Release</span><output id="feedback-generator-release-ms-value" for="feedback-generator-release-ms">600 ms</output><input id="feedback-generator-release-ms" type="range" min="0" max="5000" step="1" value="600"></label>
+          <label class="mix-control" for="feedback-generator-dry-kill"><span>Dry Kill</span><output id="feedback-generator-dry-kill-value" for="feedback-generator-dry-kill">Off</output><select id="feedback-generator-dry-kill"><option value="0" selected>Off</option><option value="1">On</option></select></label>
+          <label class="mix-control" for="feedback-generator-dry-level"><span>Dry level</span><output id="feedback-generator-dry-level-value" for="feedback-generator-dry-level">100%</output><input id="feedback-generator-dry-level" type="range" min="0" max="1" step="0.01" value="1"></label>
+          <label class="mix-control" for="feedback-generator-silence-threshold-db"><span>Silence threshold</span><output id="feedback-generator-silence-threshold-db-value" for="feedback-generator-silence-threshold-db">-48 dBFS</output><input id="feedback-generator-silence-threshold-db" type="range" min="-90" max="0" step="1" value="-48"></label>
         </div>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">

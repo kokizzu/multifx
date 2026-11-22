@@ -161,6 +161,7 @@ def build_web() -> None:
         "_tf_chain_set_mono_guitar_synth",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
+        "_tf_chain_set_feedback_generator",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -232,6 +233,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "mono_guitar_synth.cpp"),
         str(ROOT / "src" / "effects" / "grain_delay.cpp"),
         str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
+        str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -765,6 +767,13 @@ def browser_test() -> None:
              "--pitch-feedback-delay-feedback", "0.35",
              "--pitch-feedback-delay-mix", "0.25",
              "--pitch-feedback-delay-pitch-semitones", "7",
+             "--feedback-generator", "--feedback-generator-type", "unison",
+             "--feedback-generator-gain", "0.35",
+             "--feedback-generator-attack-ms", "15",
+             "--feedback-generator-release-ms", "600",
+             "--feedback-generator-dry-kill", "off",
+             "--feedback-generator-dry-level", "1",
+             "--feedback-generator-silence-threshold-db", "-48",
         ]
         run(renderer_command, cwd=ROOT)
         LocalWebHandler.test_files = {

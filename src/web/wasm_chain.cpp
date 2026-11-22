@@ -85,7 +85,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(55);
+          effects_.reserve(58);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -251,6 +251,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::PitchFeedbackDelay>(
                                 static_cast<float>(sample_rate), channels, 6000.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::FeedbackGenerator>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -300,6 +303,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 54U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 55U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -896,6 +902,22 @@ public:
         parameters.mix = mix;
         parameters.pitch_semitones = pitch_semitones;
         static_cast<tabletfx::PitchFeedbackDelay*>(effects_[54].effect.get())
+            ->configure(parameters);
+    }
+
+    void configure_feedback_generator(
+        std::uint32_t type, float gain, float attack_ms, float release_ms,
+        std::uint32_t dry_kill, float dry_level,
+        float silence_threshold_db) noexcept {
+        tabletfx::effects::FeedbackGeneratorParameters parameters;
+        parameters.type = static_cast<tabletfx::effects::FeedbackGeneratorType>(type);
+        parameters.feedback_gain = gain;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.dry_kill = static_cast<tabletfx::effects::FeedbackGeneratorDryKill>(dry_kill);
+        parameters.dry_level = dry_level;
+        parameters.silence_threshold_db = silence_threshold_db;
+        static_cast<tabletfx::effects::FeedbackGenerator*>(effects_[55].effect.get())
             ->configure(parameters);
     }
 
@@ -2078,6 +2100,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pitch_feedback_delay(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pitch_feedback_delay(
             time_ms, feedback, mix, pitch_semitones);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_feedback_generator(
+    void* opaque, std::uint32_t type, float gain, float attack_ms,
+    float release_ms, std::uint32_t dry_kill, float dry_level,
+    float silence_threshold_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_feedback_generator(
+            type, gain, attack_ms, release_ms, dry_kill, dry_level,
+            silence_threshold_db);
     }
 }
 

@@ -8,6 +8,7 @@
 #include "tabletfx/effects/pitch_arpeggiator.hpp"
 #include "tabletfx/effects/mono_guitar_synth.hpp"
 #include "tabletfx/effects/pitch_feedback_delay.hpp"
+#include "tabletfx/effects/feedback_generator.hpp"
 #include "tabletfx/effects/grain_delay.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
 #include "tabletfx/effects/multiband_compressor.hpp"
