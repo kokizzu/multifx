@@ -90,6 +90,30 @@ void test_cyclic_cross_feedback_routes_between_lines() {
             "line 1 must cross-feed line 2 and create its later repeat");
 }
 
+void test_quad_tap_keeps_four_feedback_lines_independent() {
+    auto parameters = impulse_parameters();
+    parameters.topology = tabletfx::MultiDelayTopology::quad_tap;
+    parameters.level = {0.0F, 1.0F, 0.0F, 0.0F};
+    parameters.feedback[1] = 0.5F;
+    parameters.master_feedback = 0.8F;
+    parameters.cross_feedback[0] = 0.5F;
+    tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+    std::array<float, 48> mono{};
+    mono[0] = 1.0F;
+    delay.process(mono, 1U);
+    require(mono[16] > 0.8F && std::abs(mono[24]) < 1e-6F &&
+                mono[32] > 0.3F && mono[32] < 0.45F,
+            "Quad-Tap lines must keep their self-feedback independent and ignore cross-feedback");
+    parameters = delay.parameters();
+    parameters.master_time = 1.5F;
+    delay.configure(parameters);
+    require(delay.delay_samples(0U) == 12U &&
+                delay.delay_samples(1U) == 24U &&
+                delay.delay_samples(2U) == 36U &&
+                delay.delay_samples(3U) == 48U,
+            "Quad-Tap Master Time must scale all four independent delays");
+}
+
 void test_self_feedback_and_negative_phase() {
     auto parameters = impulse_parameters();
     parameters.time_ms = {1.0F, 10.0F, 10.0F, 10.0F};
@@ -263,6 +287,7 @@ int main() {
     try {
         test_four_independent_times_and_pans();
         test_cyclic_cross_feedback_routes_between_lines();
+        test_quad_tap_keeps_four_feedback_lines_independent();
         test_self_feedback_and_negative_phase();
         test_tempo_sync_and_project_bounds();
         test_quad_series_compounds_delays_and_routes_selected_feedback();

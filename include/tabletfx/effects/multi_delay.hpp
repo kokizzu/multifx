@@ -18,6 +18,7 @@ enum class MultiDelayTopology : std::uint32_t {
     quad_parallel,
     quad_series,
     quad_diffusor,
+    quad_tap,
 };
 
 struct MultiDelayParameters {

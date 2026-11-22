@@ -838,6 +838,7 @@ const multiDelaySeriesReturn = document.querySelector("#multi-delay-series-retur
 const multiDelayDiffusorPanel = document.querySelector("#multi-delay-diffusor-controls");
 const multiDelayDiffusorMasterTime = document.querySelector("#multi-delay-diffusor-master-time");
 const multiDelayDiffusorMasterFeedback = document.querySelector("#multi-delay-diffusor-master-feedback");
+const multiDelayTopologyMasterHint = document.querySelector("#multi-delay-topology-master-hint");
 const multiDelayTimeLimit = document.querySelector("#multi-delay-time-limit");
 const multiDelayControls = [
   ...multiDelayLineControls.flatMap((line) => Object.values(line)),
@@ -1881,6 +1882,12 @@ function updatePitchSequenceOptions() {
 
 function updateMultiDelayOptions() {
   const sampleRate = audioContext?.sampleRate || 48000;
+  const topology = Number(multiDelayTopology.value);
+  const maximumMasterFeedbackPercent = topology === 3 ? 200 : 90;
+  multiDelayDiffusorMasterFeedback.max = String(maximumMasterFeedbackPercent);
+  if (Number(multiDelayDiffusorMasterFeedback.value) > maximumMasterFeedbackPercent) {
+    multiDelayDiffusorMasterFeedback.value = String(maximumMasterFeedbackPercent);
+  }
   const maximumFrames = Math.floor((512 * 1024) /
     (Float32Array.BYTES_PER_ELEMENT * 4));
   const maximumDelayMs = Math.max(1, Math.min(2000,
@@ -1902,7 +1909,7 @@ function updateMultiDelayOptions() {
   }));
   const value = {
     lines,
-    topology: Number(multiDelayTopology.value),
+    topology,
     tempoBpm: Number(multiDelayTempo.value),
     lowCutHz: Number(multiDelayLowCut.value),
     highCutHz: Number(multiDelayHighCut.value),
@@ -1923,11 +1930,12 @@ function updateMultiDelayOptions() {
     const output = control.parentElement.querySelector("output");
     if (output) output.value = text;
   };
+  const diffusor = value.topology === 2;
+  const quadTap = value.topology === 3;
   multiDelayLineControls.forEach((line, index) => {
     const settings = lines[index];
     const parallel = value.topology === 0;
     const series = value.topology === 1;
-    const diffusor = value.topology === 2;
     line.timeMs.disabled = settings.timeMode === 1;
     line.feedback.disabled = series || diffusor;
     line.crossFeedback.disabled = !parallel;
@@ -1948,10 +1956,15 @@ function updateMultiDelayOptions() {
     show(line.pan, `${Math.round(settings.pan * 100)}%`);
   });
   multiDelaySeriesPanel.classList.toggle("is-hidden", value.topology !== 1);
-  multiDelayDiffusorPanel.classList.toggle("is-hidden", value.topology !== 2);
+  multiDelayDiffusorPanel.classList.toggle("is-hidden", !diffusor && !quadTap);
+  multiDelayDiffusorMasterFeedback.min = "0";
+  multiDelayTopologyMasterHint.textContent = diffusor
+    ? "One project Master Feedback value controls feedback across all four all-pass stages; each stage has its own Time/Tempo. Per-stage Feedback, tap Level/Pan, and cross-feedback are hidden. Documented diffuser stereo spread, filters, LFO, and input envelope follower remain unimplemented. Project bounds are 10–200% Time and 0–90% Feedback."
+    : "For Quad-Tap, Master Time scales all four delay times and Master Feedback scales each tap’s feedback setting. Each tap retains its own Time/Tempo, Feedback, Level, and Pan; cross-feedback is disabled. The project uses 10–200% Time and 0–200% Feedback Scale. These are project bounds, not Fractal numeric settings.";
   const topologyName = value.topology === 1
     ? "Quad Series"
-    : value.topology === 2 ? "Quad Diffusor" : "Quad Parallel";
+    : value.topology === 2 ? "Quad Diffusor"
+      : value.topology === 3 ? "Quad-Tap" : "Quad Parallel";
   show(multiDelayTopology, topologyName);
   show(multiDelaySeriesFeedback,
     `${Math.round(value.seriesFeedback * 100)}%`);
@@ -5042,7 +5055,9 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
       workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
     });
     const captures = [];
-    for (const [topology, name] of [[1, "quad-series"], [2, "quad-diffusor"]]) {
+    for (const [topology, name] of [
+      [1, "quad-series"], [2, "quad-diffusor"], [3, "quad-tap"],
+    ]) {
       multiDelayTopology.value = String(topology);
       multiDelayDiffusorMasterTime.value = topology === 2 ? "130" : "100";
       multiDelayDiffusorMasterFeedback.value = topology === 2 ? "60" : "50";
@@ -6029,6 +6044,31 @@ async function runBrowserSelfTest() {
           !firstLine.crossFeedback.parentElement.classList.contains("is-hidden") ||
           multiDelayTopology.parentElement.querySelector("output").value !== "Quad Diffusor") {
         throw new Error("Quad Diffusor controls must send master values, expose diffuser feedback bounds, and show the active topology.");
+      }
+      multiDelayTopology.value = "3";
+      multiDelayDiffusorMasterTime.value = "120";
+      multiDelayDiffusorMasterFeedback.value = "80";
+      multiDelayDiffusorMasterFeedback.dispatchEvent(new Event("input", { bubbles: true }));
+      const quadTapMessage = multiDelayMessages.at(-1);
+      if (quadTapMessage?.value?.topology !== 3 ||
+          quadTapMessage.value.masterTime !== 1.2 ||
+          quadTapMessage.value.masterFeedback !== 0.8 ||
+          multiDelayDiffusorPanel.classList.contains("is-hidden") ||
+          firstLine.feedback.disabled || firstLine.feedback.parentElement.classList.contains("is-hidden") ||
+          !firstLine.crossFeedback.disabled || !firstLine.crossFeedback.parentElement.classList.contains("is-hidden") ||
+          firstLine.level.disabled || firstLine.level.parentElement.classList.contains("is-hidden") ||
+          firstLine.pan.disabled || firstLine.pan.parentElement.classList.contains("is-hidden") ||
+          multiDelayDiffusorMasterFeedback.max !== "200" ||
+          multiDelayTopology.parentElement.querySelector("output").value !== "Quad-Tap") {
+        throw new Error("Quad-Tap controls must expose independent tap feedback, level, pan and shared scaling without cross-feedback.");
+      }
+      multiDelayDiffusorMasterFeedback.value = "160";
+      multiDelayDiffusorMasterFeedback.dispatchEvent(new Event("input", { bubbles: true }));
+      multiDelayTopology.value = "2";
+      updateMultiDelayOptions();
+      if (multiDelayDiffusorMasterFeedback.value !== "90" ||
+          multiDelayMessages.at(-1)?.value?.masterFeedback !== 0.9) {
+        throw new Error("Switching from Quad-Tap to Diffusor must clamp Master Feedback to its topology-specific project range.");
       }
     } finally {
       workletNode = previousMultiDelayWorklet;

@@ -127,6 +127,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     case MultiDelayTopology::quad_parallel:
     case MultiDelayTopology::quad_series:
     case MultiDelayTopology::quad_diffusor:
+    case MultiDelayTopology::quad_tap:
         break;
     default:
         parameters.topology = parameters_.topology;
@@ -143,8 +144,10 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
         static_cast<std::uint32_t>(multi_delay_line_count - 1U));
     parameters.master_time = bounded(parameters.master_time,
         parameters_.master_time, 0.1F, 2.0F);
+    const float maximum_master_feedback =
+        parameters.topology == MultiDelayTopology::quad_tap ? 2.0F : 0.9F;
     parameters.master_feedback = bounded(parameters.master_feedback,
-        parameters_.master_feedback, 0.0F, 0.9F);
+        parameters_.master_feedback, 0.0F, maximum_master_feedback);
 
     for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
         parameters.time_ms[line] = bounded(parameters.time_ms[line],
@@ -220,7 +223,8 @@ void MultiDelay::update_line_times() noexcept {
             time_ms = 60000.0F / parameters_.tempo_bpm *
                       beats_for_division(parameters_.division[line]);
         }
-        if (parameters_.topology == MultiDelayTopology::quad_diffusor) {
+        if (parameters_.topology == MultiDelayTopology::quad_diffusor ||
+            parameters_.topology == MultiDelayTopology::quad_tap) {
             time_ms *= parameters_.master_time;
         }
         time_ms = std::clamp(time_ms, kMinimumDelayMs, maximum_time);
@@ -342,9 +346,18 @@ void MultiDelay::process(std::span<float> interleaved,
                 for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
                     const std::size_t previous =
                         (line + multi_delay_line_count - 1U) % multi_delay_line_count;
+                    const float cross_feedback =
+                        parameters_.topology == MultiDelayTopology::quad_parallel
+                            ? parameters_.cross_feedback[previous] *
+                                  tap_outputs[previous]
+                            : 0.0F;
+                    const float self_feedback =
+                        parameters_.feedback[line] * tap_outputs[line] *
+                        (parameters_.topology == MultiDelayTopology::quad_tap
+                            ? parameters_.master_feedback
+                            : 1.0F);
                     const float feedback_input =
-                        parameters_.feedback[line] * tap_outputs[line] +
-                        parameters_.cross_feedback[previous] * tap_outputs[previous];
+                        self_feedback + cross_feedback;
                     const std::size_t write_index =
                         line * capacity_frames_ + write_frame_;
                     storage_[write_index] = safe_signal(effect_input + feedback_input);
