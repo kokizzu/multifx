@@ -44,6 +44,7 @@ add_library(tabletfx_core
     src/effects/auto_swell_delay.cpp
     src/effects/shuffling_looper.cpp
     src/effects/ten_tap_delay.cpp
+    src/effects/auto_pan.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -266,6 +267,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_ten_tap_delay_tests tests/test_ten_tap_delay.cpp)
     target_link_libraries(tabletfx_ten_tap_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_ten_tap_delay_tests COMMAND tabletfx_ten_tap_delay_tests)
+
+    add_executable(tabletfx_auto_pan_tests tests/test_auto_pan.cpp)
+    target_link_libraries(tabletfx_auto_pan_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_auto_pan_tests COMMAND tabletfx_auto_pan_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

@@ -68,6 +68,7 @@ const EFFECT_NAMES = [
   "Auto-Swell Delay · project-authored",
   "Shuffling Looper · project-authored",
   "Ten-Tap Delay · project-authored",
+  "Auto-Pan · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -103,6 +104,7 @@ const DEFAULT_PARAMETERS = {
   shufflingLooper: [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12],
   tenTapDelay: [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  autoPan: [0.5, 0.75, 1, 0, 120, 5],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -601,6 +603,16 @@ const tenTapDelayControls = [
   tenTapDelayPanShape, tenTapDelayPanAlpha, tenTapDelayLowCut,
   tenTapDelayHighCut, tenTapDelayMix, tenTapDelayLevel, tenTapDelayMono,
   ...tenTapDelayTapLevels,
+];
+const autoPanRate = document.querySelector("#auto-pan-rate-hz");
+const autoPanDepth = document.querySelector("#auto-pan-depth");
+const autoPanWaveform = document.querySelector("#auto-pan-waveform");
+const autoPanTempoSync = document.querySelector("#auto-pan-tempo-sync");
+const autoPanTempo = document.querySelector("#auto-pan-tempo-bpm");
+const autoPanDivision = document.querySelector("#auto-pan-division");
+const autoPanControls = [
+  autoPanRate, autoPanDepth, autoPanWaveform, autoPanTempoSync,
+  autoPanTempo, autoPanDivision,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1234,6 +1246,26 @@ function updateTenTapDelayOptions() {
   }
 }
 
+function updateAutoPanOptions() {
+  const values = [
+    Number(autoPanRate.value),
+    Number(autoPanDepth.value) / 100,
+    Number(autoPanWaveform.value),
+    autoPanTempoSync.checked ? 1 : 0,
+    Number(autoPanTempo.value),
+    Number(autoPanDivision.value),
+  ];
+  DEFAULT_PARAMETERS.autoPan = values;
+  autoPanRate.parentElement.querySelector("output").value = `${values[0].toFixed(2)} Hz`;
+  autoPanDepth.parentElement.querySelector("output").value = `${Math.round(values[1] * 100)}%`;
+  autoPanTempo.parentElement.querySelector("output").value = `${values[4]} BPM`;
+  autoPanTempo.disabled = values[3] === 0;
+  autoPanDivision.disabled = values[3] === 0;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "auto-pan", value: values });
+  }
+}
+
 function sendShufflingLooperCommand(command) {
   if (!workletNode) {
     shufflingLooperStatus.value = "Start processed playback before using the looper";
@@ -1822,6 +1854,10 @@ for (const control of shufflingLooperControls) {
 for (const control of tenTapDelayControls) {
   control.addEventListener("input", updateTenTapDelayOptions);
   control.addEventListener("change", updateTenTapDelayOptions);
+}
+for (const control of autoPanControls) {
+  control.addEventListener("input", updateAutoPanOptions);
+  control.addEventListener("change", updateAutoPanOptions);
 }
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
@@ -3922,15 +3958,16 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 69 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 69 || effectRows.length !== 69 ||
+      const expectedEffectIds = Array.from({ length: 70 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 70 || effectRows.length !== 70 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
         EFFECT_NAMES[66] !== "Ten-Tap Delay · project-authored" ||
-        EFFECT_NAMES[67] !== "Output level" || EFFECT_NAMES[68] !== "Peak limiter" ||
+        EFFECT_NAMES[67] !== "Auto-Pan · project-authored" ||
+        EFFECT_NAMES[68] !== "Output level" || EFFECT_NAMES[69] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
-        !initialEffectState[67] || !initialEffectState[68] ||
+        initialEffectState[67] || !initialEffectState[68] || !initialEffectState[69] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -3947,7 +3984,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
         effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-         throw new Error("The effect picker must list 69 ordered, categorized effects (IDs 0–68), with optional effects disabled by default.");
+          throw new Error("The effect picker must list 70 ordered, categorized effects (IDs 0–69), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -4276,6 +4313,36 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.tenTapDelay.join(",") !== tenTapDefaults.join(",")) {
       throw new Error("Ten-Tap Delay self-test must restore its project-authored defaults.");
     }
+    const autoPanDefaults = [...DEFAULT_PARAMETERS.autoPan];
+    const autoPanControlSnapshot = autoPanControls.map((control) =>
+      control.type === "checkbox" ? control.checked : control.value);
+    const previousAutoPanWorklet = workletNode;
+    const autoPanMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => autoPanMessages.push(message) } };
+      [autoPanRate.value, autoPanDepth.value, autoPanWaveform.value,
+        autoPanTempoSync.checked, autoPanTempo.value, autoPanDivision.value] =
+        ["2.5", "50", "2", true, "90", "7"];
+      autoPanDivision.dispatchEvent(new Event("change", { bubbles: true }));
+      const autoPanMessage = autoPanMessages.at(-1);
+      if (autoPanMessage?.type !== "auto-pan" ||
+          autoPanMessage.value.join(",") !== "2.5,0.5,2,1,90,7" ||
+          autoPanRate.parentElement.querySelector("output").value !== "2.50 Hz" ||
+          autoPanDepth.parentElement.querySelector("output").value !== "50%" ||
+          autoPanTempo.disabled || autoPanDivision.disabled) {
+        throw new Error("Auto-Pan controls must send rate, depth, type, sync, tempo, and division in WASM order.");
+      }
+    } finally {
+      workletNode = previousAutoPanWorklet;
+      autoPanControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = autoPanControlSnapshot[index];
+        else control.value = autoPanControlSnapshot[index];
+      });
+      updateAutoPanOptions();
+    }
+    if (DEFAULT_PARAMETERS.autoPan.join(",") !== autoPanDefaults.join(",")) {
+      throw new Error("Auto-Pan self-test must restore its project-authored defaults.");
+    }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -4316,8 +4383,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63" ||
-          effectCount.value !== "11 of 69" ||
+    if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67" ||
+          effectCount.value !== "12 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filtering by effect category changed chain state or returned the wrong effects.");
     }
@@ -4325,8 +4392,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,68" ||
-        effectCount.value !== "9 of 69" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,69" ||
+        effectCount.value !== "9 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -4335,7 +4402,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 69" ||
+        effectCount.value !== "7 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -4344,7 +4411,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 69" ||
+        effectCount.value !== "7 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -4352,7 +4419,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 69" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -4360,7 +4427,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 69" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -4368,7 +4435,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 69" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -4376,7 +4443,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 69" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -4384,7 +4451,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 69" ||
+    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -4392,7 +4459,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 69" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -4420,7 +4487,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66" || effectCount.value !== "11 of 69" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66" || effectCount.value !== "11 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -4428,7 +4495,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 69" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 70" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -4438,12 +4505,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-       if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 69") {
+        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 70") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-       if (effectCount.value !== "69 of 69" || effectRows.some((row) => row.hidden)) {
+        if (effectCount.value !== "70 of 70" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4631,9 +4698,9 @@ async function runBrowserSelfTest() {
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 69 || activeProcessorIndices.length !== 66 ||
-        activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 66) {
-      throw new Error("The all-effect chain must contain 66 active processors between input trim and output utilities.");
+     if (parityEnabled.length !== 70 || activeProcessorIndices.length !== 67 ||
+         activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 67) {
+      throw new Error("The all-effect chain must contain 67 active processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.

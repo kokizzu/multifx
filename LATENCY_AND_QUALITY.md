@@ -1,6 +1,12 @@
 # Latency, quality, and DSP-load protocol
 
-## Ten-Tap Delay and 69-entry picker (2026-11-22)
+## Auto-Pan and 70-entry picker (2026-11-22)
+
+Auto-Pan uses an equal-power stereo pan law with project-authored Rate 0.5 Hz (0.05–20 Hz), Depth 75% (0–100%), square/sine/triangle Type, optional tempo sync at 30–300 BPM, and a project-selected Tap Division. It adds no fixed latency, uses fixed object state, and does not allocate in `process()`. These values and DSP are project-authored; Fender's Tone Master Pro Model Guide v1.1.100 gives Orbit Stereo Panner control names and waveforms but no numeric bounds, defaults, or topology. No isolated Auto-Pan CPU or memory benchmark, listening check, or hardware test has been run.
+
+`make test` passed 74/74 CTest cases. `make web-test` passed HeadlessChrome 151 browser/WASM Play/native comparison at 48 kHz/128 frames with 66 active processors (maximum absolute error 0.0000147457; RMS error 0.00000286683), categorized control checks, and captured Play output. The browser WASM processor state is 14,859,928 B plus 10,364 B tuner state within a fixed 16 MiB heap. The comparison fixture is mono, so browser numerical parity does not exercise stereo movement or establish audible quality. The overall synthetic full-chain maximum remains above one callback deadline as documented in the benchmark tables below.
+
+## Previous checkpoint: Ten-Tap Delay and 69-entry picker (2026-11-22)
 
 `make test` passed documentation validation, 11 audio-fixture safety tests, and 73/73 CTest cases. `make web-test` passed HeadlessChrome 151 browser/WASM Play/native comparison at 48 kHz/128 frames with 66 active processors (maximum absolute error 0.0000147457; RMS error 0.00000286683). Ten-Tap is included in the categorized Delay chain. The browser processor state is 14,859,844 B plus 10,364 B tuner state inside the fixed 16 MiB heap; browser Play output was captured. No isolated Ten-Tap CPU measurement or human listening/hardware check was run. The synthetic chain output remains quiet, so numerical parity is not evidence of useful loudness or musical quality.
 

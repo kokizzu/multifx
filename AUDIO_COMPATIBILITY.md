@@ -12,6 +12,8 @@ Record exact app commit, OS build, interface/firmware, USB/power arrangement, po
 
 ## Offline prerecorded audio
 
+Latest browser/WASM checkpoint (project-authored Auto-Pan, 2026-11-22): `make web-test` passed the categorized control path and HeadlessChrome 151 Play/native comparison at 48 kHz with 128-frame blocks. The 66 active stages had maximum absolute error 0.0000147457 and RMS error 0.00000286683; Play output was captured. The mono browser fixture passes through Auto-Pan unchanged and therefore does not demonstrate stereo movement. Native Auto-Pan tests cover stereo motion for square, sine, and triangle waveforms. No dedicated stereo browser recording, prerecorded-chain regression, live route, hardware, or listening result is available for this effect.
+
 `make audio-fixtures-verify` passed for both external archives and the ignored local symlink `testdata/reference_audio`:
 
 Latest integration (Auto-Swell Delay, 2026-11-22): `make audio-regression` passed the 64-processor chain over all five EGFxSet pickup positions and Guitar-TECHS DI stereo plus average stereo-to-mono, with the deterministic local mono convolution IR. Tape Echo and multi-head variants also rendered; all reports matched `processors=64` and stayed below the limiter ceiling. Bridge-pickup output RMS was 6.90773e-6; Guitar-TECHS stereo DI was 6.05366e-6 and mono-converted DI was 1.30725e-5. These very quiet, synthetic-chain renders check finite bounded processing over prerecorded guitar inputs; they do not establish useful sound level, musical quality, or listening/device behavior.

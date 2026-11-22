@@ -15,6 +15,7 @@
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
+#include "tabletfx/effects/auto_pan.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -92,7 +93,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(67);
+          effects_.reserve(68);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -291,6 +292,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::TenTapDelay>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::AutoPan>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -739,6 +743,17 @@ public:
         auto parameters = delay->parameters();
         parameters.tap_level_db[tap] = level_db;
         delay->set_parameters(parameters);
+    }
+
+    void configure_auto_pan(float rate_hz, float depth, std::uint32_t waveform,
+                            std::uint32_t tempo_sync, float tempo_bpm,
+                            std::uint32_t division) noexcept {
+        auto* panner = static_cast<tabletfx::AutoPan*>(effects_[67].effect.get());
+        panner->set_rate_hz(rate_hz);
+        panner->set_depth(depth);
+        panner->set_waveform(static_cast<tabletfx::AutoPanWaveform>(waveform));
+        panner->set_tempo_sync(tempo_sync != 0U, tempo_bpm,
+                               static_cast<tabletfx::AutoPanDivision>(division));
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2731,6 +2746,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_ten_tap_delay_level(
     void* opaque, std::uint32_t tap, float level_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ten_tap_delay_level(tap, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_auto_pan(
+    void* opaque, float rate_hz, float depth, std::uint32_t waveform,
+    std::uint32_t tempo_sync, float tempo_bpm,
+    std::uint32_t division) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_auto_pan(rate_hz, depth, waveform,
+                                             tempo_sync, tempo_bpm, division);
     }
 }
 
