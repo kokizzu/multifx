@@ -120,6 +120,7 @@ const DEFAULT_PARAMETERS = {
   dualEngineDistortion: [0.25, 0.7, 0.6, 0.5, 0.5, 0, 0, 0],
   vibe: [1.5, 0.7, 0.2, 2, 0.5, 1],
   multiDelay: {
+    topology: 0,
     lines: [
       { timeMs: 250, timeMode: 0, division: 4, feedback: 0, crossFeedback: 0, level: 1, pan: 0.1 },
       { timeMs: 375, timeMode: 0, division: 3, feedback: 0, crossFeedback: 0, level: 1, pan: 0.35 },
@@ -128,6 +129,8 @@ const DEFAULT_PARAMETERS = {
     ],
     tempoBpm: 120, lowCutHz: 20, highCutHz: 20000,
     inputGainDb: 0, mix: 0.25, levelDb: 0,
+    seriesFeedback: 0, seriesFeedbackSend: 3, seriesFeedbackReturn: 0,
+    masterTime: 1, masterFeedback: 0.5,
   },
   portaPreamp: [6, 3, 0, 0, 0],
   pitchSequence: [
@@ -1926,12 +1929,16 @@ function updateMultiDelayOptions() {
     const series = value.topology === 1;
     const diffusor = value.topology === 2;
     line.timeMs.disabled = settings.timeMode === 1;
-    line.feedback.disabled = series;
+    line.feedback.disabled = series || diffusor;
     line.crossFeedback.disabled = !parallel;
     line.level.disabled = diffusor;
     line.pan.disabled = diffusor;
-    line.feedback.min = diffusor ? "-90" : "-45";
-    line.feedback.max = diffusor ? "90" : "45";
+    line.feedback.parentElement.classList.toggle("is-hidden", diffusor);
+    line.crossFeedback.parentElement.classList.toggle("is-hidden", !parallel);
+    line.level.parentElement.classList.toggle("is-hidden", diffusor);
+    line.pan.parentElement.classList.toggle("is-hidden", diffusor);
+    line.feedback.min = "-45";
+    line.feedback.max = "45";
     show(line.timeMs, `${settings.timeMs} ms`);
     show(line.timeMode, settings.timeMode === 1 ? "Tempo" : "Milliseconds");
     show(line.division, divisions[settings.division] || "Quarter");
@@ -5038,7 +5045,7 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     for (const [topology, name] of [[1, "quad-series"], [2, "quad-diffusor"]]) {
       multiDelayTopology.value = String(topology);
       multiDelayDiffusorMasterTime.value = topology === 2 ? "130" : "100";
-      multiDelayDiffusorMasterFeedback.value = topology === 2 ? "110" : "100";
+      multiDelayDiffusorMasterFeedback.value = topology === 2 ? "60" : "50";
       updateMultiDelayOptions();
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
@@ -6008,16 +6015,18 @@ async function runBrowserSelfTest() {
       }
       multiDelayTopology.value = "2";
       multiDelayDiffusorMasterTime.value = "150";
-      multiDelayDiffusorMasterFeedback.value = "125";
+      multiDelayDiffusorMasterFeedback.value = "50";
       multiDelayDiffusorMasterFeedback.dispatchEvent(new Event("input", { bubbles: true }));
       const diffusorMessage = multiDelayMessages.at(-1);
       if (diffusorMessage?.value?.topology !== 2 ||
           diffusorMessage.value.masterTime !== 1.5 ||
-          diffusorMessage.value.masterFeedback !== 1.25 ||
+          diffusorMessage.value.masterFeedback !== 0.5 ||
           !multiDelaySeriesPanel.classList.contains("is-hidden") ||
           multiDelayDiffusorPanel.classList.contains("is-hidden") ||
-          firstLine.feedback.min !== "-90" || firstLine.feedback.max !== "90" ||
-          !firstLine.level.disabled || !firstLine.pan.disabled ||
+          !firstLine.feedback.disabled || !firstLine.feedback.parentElement.classList.contains("is-hidden") ||
+          !firstLine.level.disabled || !firstLine.level.parentElement.classList.contains("is-hidden") ||
+          !firstLine.pan.disabled || !firstLine.pan.parentElement.classList.contains("is-hidden") ||
+          !firstLine.crossFeedback.parentElement.classList.contains("is-hidden") ||
           multiDelayTopology.parentElement.querySelector("output").value !== "Quad Diffusor") {
         throw new Error("Quad Diffusor controls must send master values, expose diffuser feedback bounds, and show the active topology.");
       }

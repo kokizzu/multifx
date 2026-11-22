@@ -40,7 +40,7 @@ struct MultiDelayParameters {
     std::uint32_t series_feedback_send = 3U;
     std::uint32_t series_feedback_return = 0U;
     float master_time = 1.0F;
-    float master_feedback = 1.0F;
+    float master_feedback = 0.5F;
     // Project-authored linear tap gains and equal-power pan positions.
     std::array<float, multi_delay_line_count> level{1.0F, 1.0F, 1.0F, 1.0F};
     std::array<float, multi_delay_line_count> pan{0.1F, 0.35F, 0.65F, 0.9F};
@@ -53,33 +53,35 @@ struct MultiDelayParameters {
 
 /*
  * Project-authored four-line delay. Fractal's November 2026 Blocks Guide,
- * printed pp. 57–62, lists the FM9 Multi-Delay core types Quad-Tap, Quad
+ * printed pp. 62–68, lists the FM9 Multi-Delay core types Quad-Tap, Quad
  * Parallel, Quad-Series, Quad Diffusor, Quad Tape, and Quad Tap Band. This
  * class offers three limited topologies: a Quad-Parallel-like pattern with
  * independent lines, self feedback, and cyclic cross-feedback links 1->2,
  * 2->3, 3->4, 4->1; a Quad-Series-like pattern with cumulative tap times and
  * one selected output tap feeding one selected delay-line input; and a
  * four-stage cascaded all-pass diffuser with project-authored Master Time and
- * Master Feedback controls. Per-line Time/Tempo and Feedback concepts are
- * represented; the documented 0–2000 ms delay-time span informs the project
- * upper bound. Negative feedback supports polarity inversion as described by
- * the guide.
+ * Master Feedback controls. Per-line Time/Tempo is represented in each
+ * topology; per-line Feedback is only used in Parallel, while Series and
+ * Diffusor use one block-level feedback control each. The documented
+ * 1–2000 ms delay-time span informs the project upper bound. Negative
+ * feedback supports polarity inversion as described by the guide where it is
+ * documented.
  *
  * Project choices are explicit: the lines use a summed mono effect input,
  * each delay is clamped to 1 ms minimum, tempo is shared at 20–300 BPM, the
  * available divisions come from this project, parallel self/cross feedback
  * is limited to ±0.45 per link, and series feedback is limited to ±0.90.
  * Series send/return selectors are zero-based in code (lines 1–4 in UI);
- * level is linear −2…+2 and pan is 0…1. Diffusor line feedback is limited to
- * ±0.90; its project Master Time is 0.1…2 and Master Feedback is 0…2. A
+ * level is linear −2…+2 and pan is 0…1. Diffusor Master Time is 0.1…2 and its
+ * Master Feedback value is 0…0.90, applied equally to all four stages. A
  * 512-KiB ring-storage cap may shorten the available time below 2000 ms.
  * Project-authored one-pole low/high cuts, input gain, mix, and output level
  * are included. The manual does not publish numeric ranges for most controls;
  * these project limits are not Fractal settings.
  *
- * Quad-Tap, Quad Tape, Quad Tap Band, the documented two-second diffuser
- * stages, individual BPF/comb/ring-mod/chorus/tape processing, time LFOs,
- * ducker, envelope follower, and full EQ page are not implemented. This class
+ * Quad-Tap, Quad Tape, Quad Tap Band, the guide's two-second diffuser DSP,
+ * per-stage stereo filters/spread, individual BPF/comb/ring-mod/chorus/tape
+ * processing, time LFOs, ducker, envelope follower, and full EQ page are not implemented. This class
  * does not reproduce Fractal DSP, presets, controls, or sound. Mono/stereo
  * input is accepted; the wet path is generated
  * from a mono average and can be panned in stereo. Processing uses a

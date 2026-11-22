@@ -144,7 +144,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     parameters.master_time = bounded(parameters.master_time,
         parameters_.master_time, 0.1F, 2.0F);
     parameters.master_feedback = bounded(parameters.master_feedback,
-        parameters_.master_feedback, 0.0F, 2.0F);
+        parameters_.master_feedback, 0.0F, 0.9F);
 
     for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
         parameters.time_ms[line] = bounded(parameters.time_ms[line],
@@ -289,7 +289,7 @@ void MultiDelay::process(std::span<float> interleaved,
                 const float delayed_state =
                     storage_[read_frame(delay_frames_[line], line)];
                 const float feedback = std::clamp(
-                    parameters_.feedback[line] * parameters_.master_feedback,
+                    parameters_.master_feedback,
                     -0.9F, 0.9F);
                 const float stage_output = safe_signal(
                     delayed_state - feedback * stage_input);

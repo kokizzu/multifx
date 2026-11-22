@@ -185,7 +185,7 @@ void test_quad_diffusor_allpass_chain_and_project_master_controls() {
     auto parameters = impulse_parameters();
     parameters.topology = tabletfx::MultiDelayTopology::quad_diffusor;
     parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
-    parameters.feedback = {0.5F, 0.5F, 0.5F, 0.5F};
+    parameters.master_feedback = 0.5F;
     parameters.cross_feedback.fill(0.0F);
     parameters.low_cut_hz = 0.0F;
     parameters.high_cut_hz = 20000.0F;
@@ -203,7 +203,7 @@ void test_quad_diffusor_allpass_chain_and_project_master_controls() {
 
     parameters = diffuser.parameters();
     parameters.master_time = 2.0F;
-    parameters.master_feedback = 2.0F;
+    parameters.master_feedback = 0.9F;
     diffuser.configure(parameters);
     require(diffuser.delay_samples(0U) == 16U &&
                 diffuser.delay_samples(1U) == 32U &&
@@ -214,7 +214,7 @@ void test_quad_diffusor_allpass_chain_and_project_master_controls() {
     parameters.master_feedback = 20.0F;
     diffuser.configure(parameters);
     require(diffuser.parameters().master_time == 2.0F &&
-                diffuser.parameters().master_feedback == 2.0F,
+                diffuser.parameters().master_feedback == 0.9F,
             "project Quad Diffusor master-control bounds must be enforced");
 }
 
