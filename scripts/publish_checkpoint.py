@@ -1454,6 +1454,29 @@ CELESTIAL_REVERB_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+CLOUD_REVERB_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "README.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/cloud_reverb.hpp",
+    "src/effects/cloud_reverb.cpp",
+    "tests/test_cloud_reverb.cpp",
+    "scripts/test_offline_cli.py",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
     "Makefile",
     "make/publish.mk",
@@ -1592,6 +1615,8 @@ CHECKPOINTS = {
                  "feat: add categorized stereo enhancer"),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),
+    "cloud-reverb": (CLOUD_REVERB_CHECKPOINT_PATHS,
+                     "feat: add project-authored Cloud Reverb"),
     "fractal-three-voice-synth": (
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
         "feat: add project-authored three-voice tracked synth",

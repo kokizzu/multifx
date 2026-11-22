@@ -1179,6 +1179,41 @@ def check_celestial_reverb(executable: Path) -> None:
             raise AssertionError("Celestial Reverb controls did not change rendered guitar audio")
 
 
+def check_cloud_reverb(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 4096
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-cloud-reverb-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-tone.wav"
+        output = root / "cloud-reverb.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--cloud-reverb", "--cloud-reverb-mix", "0.7",
+             "--cloud-reverb-tone", "0.65",
+             "--cloud-reverb-decay-seconds", "7",
+             "--cloud-reverb-diffusion", "0.8",
+             "--cloud-reverb-high-damp-hz", "3000",
+             "--cloud-reverb-low-damp-hz", "120",
+             "--cloud-reverb-modulation-rate-hz", "0.7",
+             "--cloud-reverb-modulation-depth", "0.3",
+             "--cloud-reverb-spillover", "on"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Cloud Reverb controls did not instantiate one processor")
+        rendered = struct.unpack(f"<{frame_count}f", output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("Cloud Reverb returned non-finite output")
+        dry = [sample / 32768.0 for sample in source_samples]
+        if max(abs(a - b) for a, b in zip(dry, rendered, strict=True)) < 0.02:
+            raise AssertionError("Cloud Reverb controls did not change rendered guitar audio")
+
+
 def check_flanger(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [32767] + [0] * 159
@@ -2471,6 +2506,7 @@ def main() -> None:
     check_grain_delay(args.executable.resolve())
     check_plex_delay(args.executable.resolve())
     check_celestial_reverb(args.executable.resolve())
+    check_cloud_reverb(args.executable.resolve())
     check_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_vibrato(args.executable.resolve())

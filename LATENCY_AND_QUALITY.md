@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Cloud Reverb and 82-entry picker (2026-11-23)
+
+Project-authored Cloud Reverb uses bounded mono/stereo state, smoothed controls, and no allocation in `process()`. Its browser/WASM smoke ran on a generated guitar-like input; the general browser/native comparison disables it because the offline renderer has no matching stage. The 70-active-stage comparison reports 0.0000139687 maximum absolute error and 0.0000026858 RMS error. The separate Cloud smoke returned peak 0.0864311 with 47,997 active samples. Full-chain browser state was 20,629,216 B plus 10,364 B tuner state inside a fixed 20 MiB WASM heap; this is not Cloud's isolated memory cost. No isolated Cloud callback benchmark, listening result, or device-route measurement has been run. Chrome 151 exposes only millisecond-fallback AudioWorklet timing in this environment, which is too coarse for an isolated processor benchmark.
+
 ## Rhythm Tap Delay and 78-entry picker (2026-11-22)
 
 The project-authored Rhythm Tap stage adds a preallocated ring capped at 1 MiB and a 20 s requested maximum; effective maximum depends on sample rate and mono/stereo storage. C++ processing has no per-block allocation. The browser chain uses 17,793,612 B of processor state plus 10,364 B tuner state in a fixed 20 MiB WASM heap. `make test` passed 81/81 CTest cases and `make web-test` passed the 78-entry picker, 70-stage browser/native parity, and separate Play capture on a generated local guitar-like fixture. The Rhythm Tap capture was peak 0.7162358 / 46,079 active samples; the effect is excluded from numeric parity because the offline CLI has no matching implementation. No Rhythm Tap isolated CPU benchmark, listening check, or live device-route measurement has been run. Chrome 151 exposes only millisecond-resolution worklet timing here; its per-stage percentages are too coarse for a processor benchmark.

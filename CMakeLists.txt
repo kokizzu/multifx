@@ -53,6 +53,7 @@ add_library(tabletfx_core
     src/effects/multi_delay.cpp
     src/effects/plex_delay.cpp
     src/effects/celestial_reverb.cpp
+    src/effects/cloud_reverb.cpp
     src/effects/porta_preamp.cpp
     src/effects/pitch_sequence.cpp
     src/effects/vibrato.cpp
@@ -363,6 +364,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_spring_reverb_tests tests/test_spring_reverb.cpp)
     target_link_libraries(tabletfx_spring_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_spring_reverb_tests COMMAND tabletfx_spring_reverb_tests)
+
+    add_executable(tabletfx_cloud_reverb_tests tests/test_cloud_reverb.cpp)
+    target_link_libraries(tabletfx_cloud_reverb_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_cloud_reverb_tests COMMAND tabletfx_cloud_reverb_tests)
 
     add_executable(tabletfx_auto_swell_tests tests/test_auto_swell.cpp)
     target_link_libraries(tabletfx_auto_swell_tests PRIVATE tabletfx_core)

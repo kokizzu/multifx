@@ -2,6 +2,8 @@
 
 No audio hardware has been probed by this repository yet. All rows remain unverified until collected directly.
 
+Latest Cloud Reverb browser/WASM check (2026-11-23): `make test` passed 85/85 CTest cases and 11 fixture-safety checks. `make web-browser-test` passed the 82-entry categorized picker and 70-active-stage browser/native comparison (maximum absolute error 0.0000139687; RMS error 0.0000026858). A separate HeadlessChrome 151 Play smoke used a generated local guitar-like fixture with Cloud Reverb at slot 79 and recorded peak 0.0864311 / 47,997 active samples, with the documented controls dispatched and block spillover enabled. The general comparison disables Cloud because the offline native reference does not configure it. The browser chain reported 20,629,216 B processor state plus 10,364 B tuner state in a fixed 20 MiB WASM heap. This confirms browser control-to-WASM playback only; it does not establish audible quality, Fender parity, a prerecorded-user recording result, hardware behavior, or isolated CPU cost.
+
 **Project-authored Filtered Delay timing update (2026-11-23):** Free milliseconds remain available; tempo sync supports 20–300 BPM and whole, dotted, triplet, 1/32, and 1/64 divisions. The direct dry path and repeat-only low/high cuts are preserved. `make test` passed 84/84 CTest cases plus fixture checks; `make web-test` passed the 81-entry categorized picker, Filtered Delay UI self-check, local guitar Play capture, and 70-stage browser/native comparison (maximum absolute error 0.000013969; RMS error 0.000002686). These are code/UI checks, not device or listening evidence.
 
 | Host | Required configuration | Observed device/OS/API/route | Build/audio test | Result |

@@ -84,7 +84,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">81 of 81</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">82 of 82</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -167,8 +167,9 @@
          <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="76"><span class="effect-number">77</span><span class="effect-name">Plex Matrix Delay · project-authored</span><span class="effect-default">Up to 8 lines · matrix feedback · Stack/Hold</span><span class="effect-category-tag">Delay</span></label>
           <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="77"><span class="effect-number">78</span><span class="effect-name">Celestial Reverb · project-authored</span><span class="effect-default">Dual pitch feedback · spillover option</span><span class="effect-category-tag">Reverb</span></label>
            <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="78"><span class="effect-number">79</span><span class="effect-name">Three-Voice Tracked Synth · project-authored Fractal-inspired controls</span><span class="effect-default">Three oscillators · monophonic input tracker</span><span class="effect-category-tag">Synth</span></label>
-           <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="79" checked><span class="effect-number">80</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-           <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="80" checked><span class="effect-number">81</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+           <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="79"><span class="effect-number">80</span><span class="effect-name">Cloud Reverb · project-authored modulated reverb</span><span class="effect-default">Mix · Tone · Decay · Diffuse · High/Low Damp · Rate/Depth · Spillover</span><span class="effect-category-tag">Reverb</span></label>
+           <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="80" checked><span class="effect-number">81</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+           <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="81" checked><span class="effect-number">82</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -593,6 +594,21 @@
           <label class="mix-control" for="celestial-reverb-high-cut"><span>High Cut</span><output id="celestial-reverb-high-cut-value" for="celestial-reverb-high-cut">9000 Hz</output><input id="celestial-reverb-high-cut" type="range" min="200" max="20000" step="100" value="9000"></label>
           <label class="mix-control" for="celestial-reverb-blend"><span>Blend</span><output id="celestial-reverb-blend-value" for="celestial-reverb-blend">50%</output><input id="celestial-reverb-blend" type="range" min="0" max="100" step="1" value="50"></label>
           <label class="mix-control" for="celestial-reverb-spillover"><span>Spillover</span><output id="celestial-reverb-spillover-value" for="celestial-reverb-spillover">Off</output><input id="celestial-reverb-spillover" type="checkbox"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Cloud reverb controls">
+        <h3>Cloud Reverb · project-authored modulated reverb</h3>
+        <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100</a> (p. 55) lists Mix, Tone, Decay, Diffuse, High Damp, Low Damp, Rate, Depth, and Spillover; it describes pitch modulation but does not publish numeric ranges, defaults, a modulation waveform, or DSP topology. Fender's current checked firmware history lists v1.8.85 (2026-11-18) and records a High Damp increment change in v1.2.56; that does not identify firmware installed on any unit. TabletFX uses project-selected controls, bounds, defaults, and modulation DSP, not Fender settings or algorithm parity. Spillover keeps this block's tail on bypass only; preset/rig spillover is not implemented.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="cloud-reverb-mix"><span>Mix</span><output id="cloud-reverb-mix-value" for="cloud-reverb-mix">25%</output><input id="cloud-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="cloud-reverb-tone"><span>Tone</span><output id="cloud-reverb-tone-value" for="cloud-reverb-tone">50%</output><input id="cloud-reverb-tone" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="cloud-reverb-decay"><span>Decay</span><output id="cloud-reverb-decay-value" for="cloud-reverb-decay">7.00 s</output><input id="cloud-reverb-decay" type="range" min="0.2" max="20" step="0.1" value="7"></label>
+          <label class="mix-control" for="cloud-reverb-diffusion"><span>Diffuse</span><output id="cloud-reverb-diffusion-value" for="cloud-reverb-diffusion">80%</output><input id="cloud-reverb-diffusion" type="range" min="0" max="100" step="1" value="80"></label>
+          <label class="mix-control" for="cloud-reverb-high-damp"><span>High Damp</span><output id="cloud-reverb-high-damp-value" for="cloud-reverb-high-damp">9000 Hz</output><input id="cloud-reverb-high-damp" type="range" min="1000" max="20000" step="100" value="9000"></label>
+          <label class="mix-control" for="cloud-reverb-low-damp"><span>Low Damp</span><output id="cloud-reverb-low-damp-value" for="cloud-reverb-low-damp">80 Hz</output><input id="cloud-reverb-low-damp" type="range" min="20" max="1000" step="10" value="80"></label>
+          <label class="mix-control" for="cloud-reverb-modulation-rate"><span>Rate</span><output id="cloud-reverb-modulation-rate-value" for="cloud-reverb-modulation-rate">0.30 Hz</output><input id="cloud-reverb-modulation-rate" type="range" min="0.05" max="8" step="0.05" value="0.3"></label>
+          <label class="mix-control" for="cloud-reverb-modulation-depth"><span>Depth</span><output id="cloud-reverb-modulation-depth-value" for="cloud-reverb-modulation-depth">15%</output><input id="cloud-reverb-modulation-depth" type="range" min="0" max="100" step="1" value="15"></label>
+          <label class="mix-control" for="cloud-reverb-spillover"><span>Spillover</span><output id="cloud-reverb-spillover-value" for="cloud-reverb-spillover">Off</output><input id="cloud-reverb-spillover" type="checkbox"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Convolution reverb controls">

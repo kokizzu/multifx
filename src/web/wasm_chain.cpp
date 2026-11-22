@@ -331,6 +331,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::CloudReverb>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1727,6 +1730,22 @@ public:
             ->configure(parameters);
     }
 
+    void configure_cloud_reverb(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::CloudReverbParameters parameters;
+        parameters.mix = values[0];
+        parameters.tone = values[1];
+        parameters.decay_seconds = values[2];
+        parameters.diffusion = values[3];
+        parameters.high_damp_hz = values[4];
+        parameters.low_damp_hz = values[5];
+        parameters.modulation_rate_hz = values[6];
+        parameters.modulation_depth = values[7];
+        parameters.spillover = values[8] != 0.0F;
+        static_cast<tabletfx::CloudReverb*>(effects_[79].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3036,6 +3055,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_celestial_reverb(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_celestial_reverb(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_cloud_reverb(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_cloud_reverb(values);
     }
 }
 
