@@ -1016,15 +1016,18 @@ public:
 
     void configure_multi_delay_topology(
         std::uint32_t topology, float series_feedback,
-        std::uint32_t feedback_send, std::uint32_t feedback_return) noexcept {
+        std::uint32_t feedback_send, std::uint32_t feedback_return,
+        float master_time, float master_feedback) noexcept {
         auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
         auto parameters = delay->parameters();
-        parameters.topology = topology <= 1U
+        parameters.topology = topology <= 2U
             ? static_cast<tabletfx::MultiDelayTopology>(topology)
             : static_cast<tabletfx::MultiDelayTopology>(255U);
         parameters.series_feedback = series_feedback;
         parameters.series_feedback_send = feedback_send;
         parameters.series_feedback_return = feedback_return;
+        parameters.master_time = master_time;
+        parameters.master_feedback = master_feedback;
         delay->configure(parameters);
     }
 
@@ -3192,10 +3195,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_global(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_topology(
     void* opaque, std::uint32_t topology, float series_feedback,
-    std::uint32_t feedback_send, std::uint32_t feedback_return) noexcept {
+    std::uint32_t feedback_send, std::uint32_t feedback_return,
+    float master_time, float master_feedback) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_multi_delay_topology(
-            topology, series_feedback, feedback_send, feedback_return);
+            topology, series_feedback, feedback_send, feedback_return,
+            master_time, master_feedback);
     }
 }
 

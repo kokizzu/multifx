@@ -832,12 +832,16 @@ const multiDelaySeriesPanel = document.querySelector("#multi-delay-series-contro
 const multiDelaySeriesFeedback = document.querySelector("#multi-delay-series-feedback");
 const multiDelaySeriesSend = document.querySelector("#multi-delay-series-send");
 const multiDelaySeriesReturn = document.querySelector("#multi-delay-series-return");
+const multiDelayDiffusorPanel = document.querySelector("#multi-delay-diffusor-controls");
+const multiDelayDiffusorMasterTime = document.querySelector("#multi-delay-diffusor-master-time");
+const multiDelayDiffusorMasterFeedback = document.querySelector("#multi-delay-diffusor-master-feedback");
 const multiDelayTimeLimit = document.querySelector("#multi-delay-time-limit");
 const multiDelayControls = [
   ...multiDelayLineControls.flatMap((line) => Object.values(line)),
   multiDelayTopology, multiDelayTempo, multiDelayLowCut, multiDelayHighCut,
   multiDelayInputGain, multiDelayMix, multiDelayLevel,
   multiDelaySeriesFeedback, multiDelaySeriesSend, multiDelaySeriesReturn,
+  multiDelayDiffusorMasterTime, multiDelayDiffusorMasterFeedback,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1905,6 +1909,8 @@ function updateMultiDelayOptions() {
     seriesFeedback: Number(multiDelaySeriesFeedback.value) / 100,
     seriesFeedbackSend: Number(multiDelaySeriesSend.value),
     seriesFeedbackReturn: Number(multiDelaySeriesReturn.value),
+    masterTime: Number(multiDelayDiffusorMasterTime.value) / 100,
+    masterFeedback: Number(multiDelayDiffusorMasterFeedback.value) / 100,
   };
   DEFAULT_PARAMETERS.multiDelay = value;
   const divisions = ["Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
@@ -1917,9 +1923,15 @@ function updateMultiDelayOptions() {
   multiDelayLineControls.forEach((line, index) => {
     const settings = lines[index];
     const parallel = value.topology === 0;
+    const series = value.topology === 1;
+    const diffusor = value.topology === 2;
     line.timeMs.disabled = settings.timeMode === 1;
-    line.feedback.disabled = !parallel;
+    line.feedback.disabled = series;
     line.crossFeedback.disabled = !parallel;
+    line.level.disabled = diffusor;
+    line.pan.disabled = diffusor;
+    line.feedback.min = diffusor ? "-90" : "-45";
+    line.feedback.max = diffusor ? "90" : "45";
     show(line.timeMs, `${settings.timeMs} ms`);
     show(line.timeMode, settings.timeMode === 1 ? "Tempo" : "Milliseconds");
     show(line.division, divisions[settings.division] || "Quarter");
@@ -1929,13 +1941,21 @@ function updateMultiDelayOptions() {
     show(line.pan, `${Math.round(settings.pan * 100)}%`);
   });
   multiDelaySeriesPanel.classList.toggle("is-hidden", value.topology !== 1);
-  show(multiDelayTopology, value.topology === 1 ? "Quad Series" : "Quad Parallel");
+  multiDelayDiffusorPanel.classList.toggle("is-hidden", value.topology !== 2);
+  const topologyName = value.topology === 1
+    ? "Quad Series"
+    : value.topology === 2 ? "Quad Diffusor" : "Quad Parallel";
+  show(multiDelayTopology, topologyName);
   show(multiDelaySeriesFeedback,
     `${Math.round(value.seriesFeedback * 100)}%`);
   show(multiDelaySeriesSend,
     `Line ${value.seriesFeedbackSend + 1}`);
   show(multiDelaySeriesReturn,
     `Line ${value.seriesFeedbackReturn + 1}`);
+  show(multiDelayDiffusorMasterTime,
+    `${Math.round(value.masterTime * 100)}%`);
+  show(multiDelayDiffusorMasterFeedback,
+    `${Math.round(value.masterFeedback * 100)}%`);
   show(multiDelayTempo, `${value.tempoBpm} BPM`);
   show(multiDelayLowCut, value.lowCutHz === 0 ? "Off" : `${value.lowCutHz} Hz`);
   show(multiDelayHighCut, `${value.highCutHz} Hz`);
@@ -5000,7 +5020,6 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
         line[name].value = value;
       }
     });
-    multiDelayTopology.value = "1";
     multiDelayTempo.value = "96";
     multiDelayLowCut.value = "100";
     multiDelayHighCut.value = "8000";
@@ -5010,40 +5029,46 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     multiDelaySeriesFeedback.value = "35";
     multiDelaySeriesSend.value = "3";
     multiDelaySeriesReturn.value = "0";
-    updateMultiDelayOptions();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
       checkbox.checked = testEnabled[index];
       workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
     });
-    workletNode.port.postMessage({ type: "reset" });
-    workletNode.port.postMessage({ type: "capture-reset" });
-    Atomics.store(captureView, 0, 0);
-    Atomics.store(captureView, 1, 0);
-    playbackOffset = 0;
-    playButton.click();
-    await Promise.race([
-      playTask,
-      new Promise((_, reject) => setTimeout(
-        () => reject(new Error("Timed out starting Multi-Delay playback.")), 5000,
-      )),
-    ]);
-    await waitForCapture(captureView, reference.samples.length);
-    stopSource(false);
-    const actual = new Float32Array(captureBuffer);
-    let peak = 0;
-    let activeSamples = 0;
-    for (const sample of actual) {
-      const magnitude = Math.abs(sample);
-      peak = Math.max(peak, magnitude);
-      if (magnitude > 1e-6) activeSamples += 1;
-    }
-    if (peak < 1e-5 || activeSamples < 32) {
-      throw new Error(`Multi-Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+    const captures = [];
+    for (const [topology, name] of [[1, "quad-series"], [2, "quad-diffusor"]]) {
+      multiDelayTopology.value = String(topology);
+      multiDelayDiffusorMasterTime.value = topology === 2 ? "130" : "100";
+      multiDelayDiffusorMasterFeedback.value = topology === 2 ? "110" : "100";
+      updateMultiDelayOptions();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${name} Multi-Delay playback.`)), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const actual = new Float32Array(captureBuffer);
+      let peak = 0;
+      let activeSamples = 0;
+      for (const sample of actual) {
+        const magnitude = Math.abs(sample);
+        peak = Math.max(peak, magnitude);
+        if (magnitude > 1e-6) activeSamples += 1;
+      }
+      if (peak < 1e-5 || activeSamples < 32) {
+        throw new Error(`${name} Multi-Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+      }
+      captures.push({ peak, activeSamples, topology: name });
     }
     return {
-      peak, activeSamples, enabledEffectIndex: 72, lines: 4,
-      topology: "quad-series",
+      ...captures[0], enabledEffectIndex: 72, lines: 4, topologies: captures,
     };
   } finally {
     stopSource(false);
@@ -5980,6 +6005,21 @@ async function runBrowserSelfTest() {
       }
       if (!firstLine.timeMs.disabled) {
         throw new Error("Tempo-synced Multi-Delay must disable its free-time control.");
+      }
+      multiDelayTopology.value = "2";
+      multiDelayDiffusorMasterTime.value = "150";
+      multiDelayDiffusorMasterFeedback.value = "125";
+      multiDelayDiffusorMasterFeedback.dispatchEvent(new Event("input", { bubbles: true }));
+      const diffusorMessage = multiDelayMessages.at(-1);
+      if (diffusorMessage?.value?.topology !== 2 ||
+          diffusorMessage.value.masterTime !== 1.5 ||
+          diffusorMessage.value.masterFeedback !== 1.25 ||
+          !multiDelaySeriesPanel.classList.contains("is-hidden") ||
+          multiDelayDiffusorPanel.classList.contains("is-hidden") ||
+          firstLine.feedback.min !== "-90" || firstLine.feedback.max !== "90" ||
+          !firstLine.level.disabled || !firstLine.pan.disabled ||
+          multiDelayTopology.parentElement.querySelector("output").value !== "Quad Diffusor") {
+        throw new Error("Quad Diffusor controls must send master values, expose diffuser feedback bounds, and show the active topology.");
       }
     } finally {
       workletNode = previousMultiDelayWorklet;

@@ -181,6 +181,43 @@ void test_quad_series_compounds_delays_and_routes_selected_feedback() {
             "project Quad Series feedback and selector bounds must be enforced");
 }
 
+void test_quad_diffusor_allpass_chain_and_project_master_controls() {
+    auto parameters = impulse_parameters();
+    parameters.topology = tabletfx::MultiDelayTopology::quad_diffusor;
+    parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
+    parameters.feedback = {0.5F, 0.5F, 0.5F, 0.5F};
+    parameters.cross_feedback.fill(0.0F);
+    parameters.low_cut_hz = 0.0F;
+    parameters.high_cut_hz = 20000.0F;
+    parameters.mix = 1.0F;
+    tabletfx::MultiDelay diffuser(8000.0F, 100.0F, parameters);
+    std::array<float, 128> mono{};
+    mono[0] = 1.0F;
+    diffuser.process(mono, 1U);
+    require(std::abs(mono[0]) > 0.03F && std::abs(mono[80]) > 0.01F,
+            "Quad Diffusor must cascade four feedback all-pass sections");
+    require(std::all_of(mono.begin(), mono.end(), [](float sample) {
+                return std::isfinite(sample) && std::abs(sample) <= 8.0F;
+            }),
+            "Quad Diffusor output must remain finite and bounded");
+
+    parameters = diffuser.parameters();
+    parameters.master_time = 2.0F;
+    parameters.master_feedback = 2.0F;
+    diffuser.configure(parameters);
+    require(diffuser.delay_samples(0U) == 16U &&
+                diffuser.delay_samples(1U) == 32U &&
+                diffuser.delay_samples(2U) == 48U &&
+                diffuser.delay_samples(3U) == 64U,
+            "Quad Diffusor Master Time must scale all four diffuser delays");
+    parameters.master_time = 20.0F;
+    parameters.master_feedback = 20.0F;
+    diffuser.configure(parameters);
+    require(diffuser.parameters().master_time == 2.0F &&
+                diffuser.parameters().master_feedback == 2.0F,
+            "project Quad Diffusor master-control bounds must be enforced");
+}
+
 void test_memory_cap_reset_and_process_no_allocations() {
     tabletfx::MultiDelay capped(384000.0F, 2000.0F);
     require(capped.maximum_delay_ms() < 200.0F &&
@@ -229,6 +266,7 @@ int main() {
         test_self_feedback_and_negative_phase();
         test_tempo_sync_and_project_bounds();
         test_quad_series_compounds_delays_and_routes_selected_feedback();
+        test_quad_diffusor_allpass_chain_and_project_master_controls();
         test_memory_cap_reset_and_process_no_allocations();
         std::cout << "Multi-Delay tests passed\n";
     } catch (const std::exception& exception) {

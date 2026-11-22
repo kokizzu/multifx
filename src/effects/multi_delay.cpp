@@ -126,6 +126,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     switch (parameters.topology) {
     case MultiDelayTopology::quad_parallel:
     case MultiDelayTopology::quad_series:
+    case MultiDelayTopology::quad_diffusor:
         break;
     default:
         parameters.topology = parameters_.topology;
@@ -140,6 +141,10 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     parameters.series_feedback_return = std::min(
         parameters.series_feedback_return,
         static_cast<std::uint32_t>(multi_delay_line_count - 1U));
+    parameters.master_time = bounded(parameters.master_time,
+        parameters_.master_time, 0.1F, 2.0F);
+    parameters.master_feedback = bounded(parameters.master_feedback,
+        parameters_.master_feedback, 0.0F, 2.0F);
 
     for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
         parameters.time_ms[line] = bounded(parameters.time_ms[line],
@@ -150,9 +155,12 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
         if (!valid_division(parameters.division[line])) {
             parameters.division[line] = parameters_.division[line];
         }
+        const float maximum_feedback =
+            parameters.topology == MultiDelayTopology::quad_diffusor
+                ? 0.9F
+                : kMaximumLinkFeedback;
         parameters.feedback[line] = bounded(parameters.feedback[line],
-            parameters_.feedback[line], -kMaximumLinkFeedback,
-            kMaximumLinkFeedback);
+            parameters_.feedback[line], -maximum_feedback, maximum_feedback);
         parameters.cross_feedback[line] = bounded(
             parameters.cross_feedback[line],
             parameters_.cross_feedback[line], -kMaximumLinkFeedback,
@@ -212,6 +220,9 @@ void MultiDelay::update_line_times() noexcept {
             time_ms = 60000.0F / parameters_.tempo_bpm *
                       beats_for_division(parameters_.division[line]);
         }
+        if (parameters_.topology == MultiDelayTopology::quad_diffusor) {
+            time_ms *= parameters_.master_time;
+        }
         time_ms = std::clamp(time_ms, kMinimumDelayMs, maximum_time);
         const double requested_frames = std::round(
             static_cast<double>(sample_rate_) *
@@ -269,47 +280,75 @@ void MultiDelay::process(std::span<float> interleaved,
         const float effect_input = safe_signal(
             summed_input * input_gain_linear_);
 
-        std::array<float, multi_delay_line_count> tap_outputs{};
         float wet_left = 0.0F;
         float wet_right = 0.0F;
         float wet_mono = 0.0F;
-        for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
-            const float delayed = storage_[read_frame(delay_frames_[line], line)];
-            tap_outputs[line] = filter_line(delayed, line);
-            const float levelled = tap_outputs[line] * line_gains_[line];
-            if (channels == 1U) {
-                wet_mono += levelled;
-            } else {
-                wet_left += levelled * left_gains_[line];
-                wet_right += levelled * right_gains_[line];
-            }
-        }
-
-        if (parameters_.topology == MultiDelayTopology::quad_series) {
-            std::array<float, multi_delay_line_count> line_inputs{};
-            line_inputs[0] = effect_input;
-            for (std::size_t line = 1; line < multi_delay_line_count; ++line) {
-                line_inputs[line] = tap_outputs[line - 1U];
-            }
-            line_inputs[parameters_.series_feedback_return] = safe_signal(
-                line_inputs[parameters_.series_feedback_return] +
-                parameters_.series_feedback *
-                    tap_outputs[parameters_.series_feedback_send]);
+        if (parameters_.topology == MultiDelayTopology::quad_diffusor) {
+            float stage_input = effect_input;
             for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+                const float delayed_state =
+                    storage_[read_frame(delay_frames_[line], line)];
+                const float feedback = std::clamp(
+                    parameters_.feedback[line] * parameters_.master_feedback,
+                    -0.9F, 0.9F);
+                const float stage_output = safe_signal(
+                    delayed_state - feedback * stage_input);
                 const std::size_t write_index =
                     line * capacity_frames_ + write_frame_;
-                storage_[write_index] = safe_signal(line_inputs[line]);
+                storage_[write_index] = safe_signal(
+                    stage_input + feedback * stage_output);
+                stage_input = stage_output;
+            }
+            const float wet = filter_line(stage_input, 0U);
+            if (channels == 1U) {
+                wet_mono = wet;
+            } else {
+                wet_left = wet;
+                wet_right = wet;
             }
         } else {
+            std::array<float, multi_delay_line_count> tap_outputs{};
             for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
-                const std::size_t previous =
-                    (line + multi_delay_line_count - 1U) % multi_delay_line_count;
-                const float feedback_input =
-                    parameters_.feedback[line] * tap_outputs[line] +
-                    parameters_.cross_feedback[previous] * tap_outputs[previous];
-                const std::size_t write_index =
-                    line * capacity_frames_ + write_frame_;
-                storage_[write_index] = safe_signal(effect_input + feedback_input);
+                const float delayed =
+                    storage_[read_frame(delay_frames_[line], line)];
+                tap_outputs[line] = filter_line(delayed, line);
+                const float levelled = tap_outputs[line] * line_gains_[line];
+                if (channels == 1U) {
+                    wet_mono += levelled;
+                } else {
+                    wet_left += levelled * left_gains_[line];
+                    wet_right += levelled * right_gains_[line];
+                }
+            }
+
+            if (parameters_.topology == MultiDelayTopology::quad_series) {
+                std::array<float, multi_delay_line_count> line_inputs{};
+                line_inputs[0] = effect_input;
+                for (std::size_t line = 1;
+                     line < multi_delay_line_count; ++line) {
+                    line_inputs[line] = tap_outputs[line - 1U];
+                }
+                line_inputs[parameters_.series_feedback_return] = safe_signal(
+                    line_inputs[parameters_.series_feedback_return] +
+                    parameters_.series_feedback *
+                        tap_outputs[parameters_.series_feedback_send]);
+                for (std::size_t line = 0;
+                     line < multi_delay_line_count; ++line) {
+                    const std::size_t write_index =
+                        line * capacity_frames_ + write_frame_;
+                    storage_[write_index] = safe_signal(line_inputs[line]);
+                }
+            } else {
+                for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+                    const std::size_t previous =
+                        (line + multi_delay_line_count - 1U) % multi_delay_line_count;
+                    const float feedback_input =
+                        parameters_.feedback[line] * tap_outputs[line] +
+                        parameters_.cross_feedback[previous] * tap_outputs[previous];
+                    const std::size_t write_index =
+                        line * capacity_frames_ + write_frame_;
+                    storage_[write_index] = safe_signal(effect_input + feedback_input);
+                }
             }
         }
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;

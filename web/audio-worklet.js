@@ -53,6 +53,8 @@ function configureMultiDelay(module, chain, parameters = {}) {
     Number(parameters.seriesFeedback ?? 0),
     Number(parameters.seriesFeedbackSend ?? 3),
     Number(parameters.seriesFeedbackReturn ?? 0),
+    Number(parameters.masterTime ?? 1),
+    Number(parameters.masterFeedback ?? 1),
   );
 }
 
