@@ -97,6 +97,33 @@ bool PlexDelay::valid_stack_mode(PlexDelayStackMode mode) noexcept {
     return false;
 }
 
+bool PlexDelay::valid_filter_type(PlexWetFilterType type) noexcept {
+    switch (type) {
+    case PlexWetFilterType::bypass:
+    case PlexWetFilterType::low_pass:
+    case PlexWetFilterType::band_pass:
+    case PlexWetFilterType::high_pass:
+    case PlexWetFilterType::low_shelf:
+    case PlexWetFilterType::high_shelf:
+    case PlexWetFilterType::peaking:
+    case PlexWetFilterType::notch:
+    case PlexWetFilterType::all_pass:
+        return true;
+    }
+    return false;
+}
+
+bool PlexDelay::valid_lfo_type(PlexFilterLfoType type) noexcept {
+    switch (type) {
+    case PlexFilterLfoType::sine:
+    case PlexFilterLfoType::triangle:
+    case PlexFilterLfoType::square:
+    case PlexFilterLfoType::saw:
+        return true;
+    }
+    return false;
+}
+
 float PlexDelay::beats_for_division(DelayDivision division) noexcept {
     switch (division) {
     case DelayDivision::whole: return 4.0F;
@@ -179,6 +206,40 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         parameters_.level_db, -24.0F, 12.0F);
     parameters.balance = bounded(parameters.balance,
         parameters_.balance, -1.0F, 1.0F);
+    if (!valid_filter_type(parameters.wet_filter_type)) {
+        parameters.wet_filter_type = parameters_.wet_filter_type;
+    }
+    parameters.wet_filter_frequency_hz = bounded(
+        parameters.wet_filter_frequency_hz,
+        parameters_.wet_filter_frequency_hz, 20.0F, maximum_filter_hz);
+    parameters.wet_filter_q = bounded(parameters.wet_filter_q,
+        parameters_.wet_filter_q, 0.25F, 12.0F);
+    parameters.wet_filter_gain_db = bounded(parameters.wet_filter_gain_db,
+        parameters_.wet_filter_gain_db, -18.0F, 18.0F);
+    if (!valid_lfo_type(parameters.filter_lfo_type)) {
+        parameters.filter_lfo_type = parameters_.filter_lfo_type;
+    }
+    parameters.filter_lfo_rate_hz = bounded(parameters.filter_lfo_rate_hz,
+        parameters_.filter_lfo_rate_hz, 0.01F, 10.0F);
+    parameters.filter_mod_frequency_hz = bounded(
+        parameters.filter_mod_frequency_hz,
+        parameters_.filter_mod_frequency_hz, 20.0F, maximum_filter_hz);
+    parameters.envelope_threshold_db = bounded(
+        parameters.envelope_threshold_db,
+        parameters_.envelope_threshold_db, -90.0F, 0.0F);
+    parameters.envelope_attack_ms = bounded(parameters.envelope_attack_ms,
+        parameters_.envelope_attack_ms, 1.0F, 5000.0F);
+    parameters.envelope_release_ms = bounded(parameters.envelope_release_ms,
+        parameters_.envelope_release_ms, 1.0F, 5000.0F);
+    parameters.ducker_attenuation_db = bounded(
+        parameters.ducker_attenuation_db,
+        parameters_.ducker_attenuation_db, 0.0F, 36.0F);
+    parameters.ducker_threshold_db = bounded(parameters.ducker_threshold_db,
+        parameters_.ducker_threshold_db, -90.0F, 0.0F);
+    parameters.ducker_release_ms = bounded(parameters.ducker_release_ms,
+        parameters_.ducker_release_ms, 1.0F, 5000.0F);
+    parameters.stereo_spread = bounded(parameters.stereo_spread,
+        parameters_.stereo_spread, -2.0F, 2.0F);
     parameters_ = parameters;
 
     input_gain_linear_ = static_cast<float>(std::pow(
@@ -193,6 +254,24 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
     high_cut_coefficient_ = 1.0F - std::exp(
         -2.0F * static_cast<float>(kPi) *
         parameters_.high_cut_hz / sample_rate_);
+    filter_lfo_phase_increment_ = 2.0F * static_cast<float>(kPi) *
+        parameters_.filter_lfo_rate_hz / sample_rate_;
+    envelope_threshold_linear_ = static_cast<float>(std::pow(
+        10.0, static_cast<double>(parameters_.envelope_threshold_db) / 20.0));
+    envelope_attack_coefficient_ = std::exp(
+        -1.0F / (parameters_.envelope_attack_ms * 0.001F * sample_rate_));
+    envelope_release_coefficient_ = std::exp(
+        -1.0F / (parameters_.envelope_release_ms * 0.001F * sample_rate_));
+    ducker_threshold_linear_ = static_cast<float>(std::pow(
+        10.0, static_cast<double>(parameters_.ducker_threshold_db) / 20.0));
+    ducker_attenuation_linear_ = static_cast<float>(std::pow(
+        10.0, -static_cast<double>(parameters_.ducker_attenuation_db) / 20.0));
+    ducker_attack_coefficient_ = std::exp(-1.0F / (0.005F * sample_rate_));
+    ducker_release_coefficient_ = std::exp(
+        -1.0F / (parameters_.ducker_release_ms * 0.001F * sample_rate_));
+    if (!parameters_.filter_lfo_enabled) {
+        update_wet_filter_target(parameters_.wet_filter_frequency_hz);
+    }
 
     update_times();
     for (std::size_t line = 0; line < plex_delay_line_count; ++line) {
@@ -206,6 +285,190 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         feedback_gains_[line] = std::exp(
             -3.0F * delay_seconds / parameters_.decay_seconds);
     }
+}
+
+PlexDelay::BiquadCoefficients PlexDelay::make_wet_filter(
+    float frequency_hz) const noexcept {
+    BiquadCoefficients coefficients;
+    if (parameters_.wet_filter_type == PlexWetFilterType::bypass) {
+        return coefficients;
+    }
+
+    const float maximum_hz = std::max(
+        20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
+    const double frequency = std::clamp(
+        static_cast<double>(frequency_hz), 20.0,
+        static_cast<double>(maximum_hz));
+    const double q = static_cast<double>(parameters_.wet_filter_q);
+    const double gain = std::pow(
+        10.0, static_cast<double>(parameters_.wet_filter_gain_db) / 40.0);
+    const double omega = 2.0 * kPi * frequency /
+                         static_cast<double>(sample_rate_);
+    const double sine = std::sin(omega);
+    const double cosine = std::cos(omega);
+    const double alpha = sine / (2.0 * q);
+    double b0 = 1.0;
+    double b1 = 0.0;
+    double b2 = 0.0;
+    double a0 = 1.0;
+    double a1 = 0.0;
+    double a2 = 0.0;
+
+    switch (parameters_.wet_filter_type) {
+    case PlexWetFilterType::bypass:
+        return coefficients;
+    case PlexWetFilterType::low_pass:
+        b0 = (1.0 - cosine) * 0.5;
+        b1 = 1.0 - cosine;
+        b2 = b0;
+        a0 = 1.0 + alpha;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha;
+        break;
+    case PlexWetFilterType::high_pass:
+        b0 = (1.0 + cosine) * 0.5;
+        b1 = -(1.0 + cosine);
+        b2 = b0;
+        a0 = 1.0 + alpha;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha;
+        break;
+    case PlexWetFilterType::band_pass:
+        b0 = alpha;
+        b1 = 0.0;
+        b2 = -alpha;
+        a0 = 1.0 + alpha;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha;
+        break;
+    case PlexWetFilterType::notch:
+        b0 = 1.0;
+        b1 = -2.0 * cosine;
+        b2 = 1.0;
+        a0 = 1.0 + alpha;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha;
+        break;
+    case PlexWetFilterType::all_pass:
+        b0 = 1.0 - alpha;
+        b1 = -2.0 * cosine;
+        b2 = 1.0 + alpha;
+        a0 = 1.0 + alpha;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha;
+        break;
+    case PlexWetFilterType::peaking:
+        b0 = 1.0 + alpha * gain;
+        b1 = -2.0 * cosine;
+        b2 = 1.0 - alpha * gain;
+        a0 = 1.0 + alpha / gain;
+        a1 = -2.0 * cosine;
+        a2 = 1.0 - alpha / gain;
+        break;
+    case PlexWetFilterType::low_shelf: {
+        const double beta = std::sqrt(gain) / q;
+        b0 = gain * ((gain + 1.0) - (gain - 1.0) * cosine + beta * sine);
+        b1 = 2.0 * gain * ((gain - 1.0) - (gain + 1.0) * cosine);
+        b2 = gain * ((gain + 1.0) - (gain - 1.0) * cosine - beta * sine);
+        a0 = (gain + 1.0) + (gain - 1.0) * cosine + beta * sine;
+        a1 = -2.0 * ((gain - 1.0) + (gain + 1.0) * cosine);
+        a2 = (gain + 1.0) + (gain - 1.0) * cosine - beta * sine;
+        break;
+    }
+    case PlexWetFilterType::high_shelf: {
+        const double beta = std::sqrt(gain) / q;
+        b0 = gain * ((gain + 1.0) + (gain - 1.0) * cosine + beta * sine);
+        b1 = -2.0 * gain * ((gain - 1.0) + (gain + 1.0) * cosine);
+        b2 = gain * ((gain + 1.0) + (gain - 1.0) * cosine - beta * sine);
+        a0 = (gain + 1.0) - (gain - 1.0) * cosine + beta * sine;
+        a1 = 2.0 * ((gain - 1.0) - (gain + 1.0) * cosine);
+        a2 = (gain + 1.0) - (gain - 1.0) * cosine - beta * sine;
+        break;
+    }
+    }
+
+    if (!std::isfinite(a0) || std::abs(a0) < 1.0e-12) return {};
+    const double reciprocal = 1.0 / a0;
+    coefficients.b0 = static_cast<float>(b0 * reciprocal);
+    coefficients.b1 = static_cast<float>(b1 * reciprocal);
+    coefficients.b2 = static_cast<float>(b2 * reciprocal);
+    coefficients.a1 = static_cast<float>(a1 * reciprocal);
+    coefficients.a2 = static_cast<float>(a2 * reciprocal);
+    return coefficients;
+}
+
+void PlexDelay::update_wet_filter_target(float frequency_hz) noexcept {
+    wet_filter_target_coefficients_ = make_wet_filter(frequency_hz);
+    const float ramp = static_cast<float>(kFilterCoefficientUpdateFrames);
+    wet_filter_coefficient_step_ = {
+        (wet_filter_target_coefficients_.b0 - wet_filter_coefficients_.b0) / ramp,
+        (wet_filter_target_coefficients_.b1 - wet_filter_coefficients_.b1) / ramp,
+        (wet_filter_target_coefficients_.b2 - wet_filter_coefficients_.b2) / ramp,
+        (wet_filter_target_coefficients_.a1 - wet_filter_coefficients_.a1) / ramp,
+        (wet_filter_target_coefficients_.a2 - wet_filter_coefficients_.a2) / ramp,
+    };
+    wet_filter_ramp_remaining_ = kFilterCoefficientUpdateFrames;
+}
+
+float PlexDelay::lfo_value() const noexcept {
+    const float phase = filter_lfo_phase_ / (2.0F * static_cast<float>(kPi));
+    switch (parameters_.filter_lfo_type) {
+    case PlexFilterLfoType::sine:
+        return std::sin(filter_lfo_phase_);
+    case PlexFilterLfoType::triangle:
+        return 1.0F - 4.0F * std::abs(phase - std::floor(phase + 0.5F));
+    case PlexFilterLfoType::square:
+        return std::sin(filter_lfo_phase_) >= 0.0F ? 1.0F : -1.0F;
+    case PlexFilterLfoType::saw:
+        return 2.0F * (phase - std::floor(phase)) - 1.0F;
+    }
+    return 0.0F;
+}
+
+void PlexDelay::advance_wet_filter() noexcept {
+    if (wet_filter_update_remaining_ == 0U) {
+        if (parameters_.filter_lfo_enabled) {
+            const float position = 0.5F * (lfo_value() + 1.0F);
+            const float frequency = parameters_.wet_filter_frequency_hz +
+                (parameters_.filter_mod_frequency_hz -
+                 parameters_.wet_filter_frequency_hz) * position;
+            update_wet_filter_target(frequency);
+        }
+        wet_filter_update_remaining_ = kFilterCoefficientUpdateFrames;
+    }
+    if (wet_filter_ramp_remaining_ > 0U) {
+        wet_filter_coefficients_.b0 += wet_filter_coefficient_step_.b0;
+        wet_filter_coefficients_.b1 += wet_filter_coefficient_step_.b1;
+        wet_filter_coefficients_.b2 += wet_filter_coefficient_step_.b2;
+        wet_filter_coefficients_.a1 += wet_filter_coefficient_step_.a1;
+        wet_filter_coefficients_.a2 += wet_filter_coefficient_step_.a2;
+        --wet_filter_ramp_remaining_;
+        if (wet_filter_ramp_remaining_ == 0U) {
+            wet_filter_coefficients_ = wet_filter_target_coefficients_;
+        }
+    }
+    --wet_filter_update_remaining_;
+    filter_lfo_phase_ += filter_lfo_phase_increment_;
+    if (filter_lfo_phase_ >= 2.0F * static_cast<float>(kPi)) {
+        filter_lfo_phase_ -= 2.0F * static_cast<float>(kPi);
+    }
+}
+
+float PlexDelay::process_wet_filter(float input,
+                                    std::size_t channel) noexcept {
+    if (parameters_.wet_filter_type == PlexWetFilterType::bypass) return input;
+    auto& state = wet_filter_state_[channel];
+    const float output = safe_signal(
+        wet_filter_coefficients_.b0 * input +
+        wet_filter_coefficients_.b1 * state.input_1 +
+        wet_filter_coefficients_.b2 * state.input_2 -
+        wet_filter_coefficients_.a1 * state.output_1 -
+        wet_filter_coefficients_.a2 * state.output_2);
+    state.input_2 = state.input_1;
+    state.input_1 = input;
+    state.output_2 = state.output_1;
+    state.output_1 = output;
+    return output;
 }
 
 void PlexDelay::update_times() noexcept {
@@ -282,8 +545,34 @@ void PlexDelay::process(std::span<float> interleaved,
             ? safe_signal(interleaved[offset + 1U]) : dry_left;
         const float summed_input = channels == 2U
             ? 0.5F * (dry_left + dry_right) : dry_left;
+        const float detector_peak = std::max(std::abs(dry_left),
+                                             std::abs(dry_right));
+        const float envelope_coefficient = detector_peak > envelope_value_
+            ? envelope_attack_coefficient_ : envelope_release_coefficient_;
+        envelope_value_ = envelope_coefficient * envelope_value_ +
+            (1.0F - envelope_coefficient) * detector_peak;
+        const float envelope_send_gain = !parameters_.envelope_enabled
+            ? 1.0F
+            : (envelope_value_ < envelope_threshold_linear_ ? 0.0F
+                : std::clamp((envelope_value_ - envelope_threshold_linear_) /
+                    std::max(1.0e-6F, 1.0F - envelope_threshold_linear_),
+                    0.0F, 1.0F));
         const float input = parameters_.stack_mode == PlexDelayStackMode::hold
-            ? 0.0F : safe_signal(summed_input * input_gain_linear_);
+            ? 0.0F : safe_signal(summed_input * input_gain_linear_ *
+                                 envelope_send_gain);
+        const float ducker_envelope_coefficient =
+            detector_peak > ducker_envelope_
+                ? ducker_attack_coefficient_ : ducker_release_coefficient_;
+        ducker_envelope_ = ducker_envelope_coefficient * ducker_envelope_ +
+            (1.0F - ducker_envelope_coefficient) * detector_peak;
+        const float ducker_target =
+            parameters_.ducker_attenuation_db > 0.0F &&
+                    ducker_envelope_ >= ducker_threshold_linear_
+                ? ducker_attenuation_linear_ : 1.0F;
+        const float ducker_gain_coefficient = ducker_target < ducker_gain_
+            ? ducker_attack_coefficient_ : ducker_release_coefficient_;
+        ducker_gain_ = ducker_gain_coefficient * ducker_gain_ +
+            (1.0F - ducker_gain_coefficient) * ducker_target;
         const float pre_delayed = pre_delay_frames_ == 0U
             ? input : storage_[read_index(pre_delay_frames_, plex_delay_line_count)];
 
@@ -333,6 +622,19 @@ void PlexDelay::process(std::span<float> interleaved,
         }
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;
 
+        advance_wet_filter();
+        if (channels == 1U) {
+            wet_mono = process_wet_filter(wet_mono, 0U) * ducker_gain_;
+        } else {
+            wet_left = process_wet_filter(wet_left, 0U) * ducker_gain_;
+            wet_right = process_wet_filter(wet_right, 1U) * ducker_gain_;
+            const float mid = 0.5F * (wet_left + wet_right);
+            const float side = 0.5F * (wet_left - wet_right) *
+                               parameters_.stereo_spread;
+            wet_left = safe_signal(mid + side);
+            wet_right = safe_signal(mid - side);
+        }
+
         if (channels == 1U) {
             interleaved[offset] = safe_signal(
                 dry_left * (1.0F - mix) +
@@ -353,6 +655,17 @@ void PlexDelay::reset() noexcept {
     low_cut_input_.fill(0.0F);
     low_cut_output_.fill(0.0F);
     high_cut_output_.fill(0.0F);
+    wet_filter_state_.fill({});
+    wet_filter_coefficients_ = make_wet_filter(
+        parameters_.wet_filter_frequency_hz);
+    wet_filter_target_coefficients_ = wet_filter_coefficients_;
+    wet_filter_coefficient_step_ = {0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+    wet_filter_ramp_remaining_ = 0U;
+    wet_filter_update_remaining_ = 0U;
+    filter_lfo_phase_ = 0.0F;
+    envelope_value_ = 0.0F;
+    ducker_envelope_ = 0.0F;
+    ducker_gain_ = 1.0F;
     write_frame_ = 0U;
 }
 

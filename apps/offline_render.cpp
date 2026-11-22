@@ -676,6 +676,23 @@ Options parse_options(int argc, char** argv, int first) {
                 else if (value == "stack") parameters.stack_mode = tabletfx::PlexDelayStackMode::stack;
                 else if (value == "hold") parameters.stack_mode = tabletfx::PlexDelayStackMode::hold;
                 else throw std::invalid_argument("Unknown Plex Delay stack mode");
+            } else if (setting == "wet-filter-type") {
+                if (value == "bypass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::bypass;
+                else if (value == "low-pass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::low_pass;
+                else if (value == "band-pass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::band_pass;
+                else if (value == "high-pass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::high_pass;
+                else if (value == "low-shelf") parameters.wet_filter_type = tabletfx::PlexWetFilterType::low_shelf;
+                else if (value == "high-shelf") parameters.wet_filter_type = tabletfx::PlexWetFilterType::high_shelf;
+                else if (value == "peaking") parameters.wet_filter_type = tabletfx::PlexWetFilterType::peaking;
+                else if (value == "notch") parameters.wet_filter_type = tabletfx::PlexWetFilterType::notch;
+                else if (value == "all-pass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::all_pass;
+                else throw std::invalid_argument("Unknown Plex Delay wet filter type");
+            } else if (setting == "filter-lfo-type") {
+                if (value == "sine") parameters.filter_lfo_type = tabletfx::PlexFilterLfoType::sine;
+                else if (value == "triangle") parameters.filter_lfo_type = tabletfx::PlexFilterLfoType::triangle;
+                else if (value == "square") parameters.filter_lfo_type = tabletfx::PlexFilterLfoType::square;
+                else if (value == "saw") parameters.filter_lfo_type = tabletfx::PlexFilterLfoType::saw;
+                else throw std::invalid_argument("Unknown Plex Delay filter LFO type");
             } else {
                 const float number = parse_float(key, argv[i]);
                 if (setting == "lines") {
@@ -695,6 +712,34 @@ Options parse_options(int argc, char** argv, int first) {
                     parameters.mix = number;
                 } else if (setting == "level-db") {
                     parameters.level_db = number;
+                } else if (setting == "filter-frequency-hz") {
+                    parameters.wet_filter_frequency_hz = number;
+                } else if (setting == "filter-q") {
+                    parameters.wet_filter_q = number;
+                } else if (setting == "filter-gain-db") {
+                    parameters.wet_filter_gain_db = number;
+                } else if (setting == "filter-lfo-enabled") {
+                    parameters.filter_lfo_enabled = number != 0.0F;
+                } else if (setting == "filter-lfo-rate-hz") {
+                    parameters.filter_lfo_rate_hz = number;
+                } else if (setting == "filter-mod-frequency-hz") {
+                    parameters.filter_mod_frequency_hz = number;
+                } else if (setting == "envelope-enabled") {
+                    parameters.envelope_enabled = number != 0.0F;
+                } else if (setting == "envelope-threshold-db") {
+                    parameters.envelope_threshold_db = number;
+                } else if (setting == "envelope-attack-ms") {
+                    parameters.envelope_attack_ms = number;
+                } else if (setting == "envelope-release-ms") {
+                    parameters.envelope_release_ms = number;
+                } else if (setting == "ducker-attenuation-db") {
+                    parameters.ducker_attenuation_db = number;
+                } else if (setting == "ducker-threshold-db") {
+                    parameters.ducker_threshold_db = number;
+                } else if (setting == "ducker-release-ms") {
+                    parameters.ducker_release_ms = number;
+                } else if (setting == "stereo-spread") {
+                    parameters.stereo_spread = number;
                 } else {
                     throw std::invalid_argument("Unknown option: " + std::string(key));
                 }
@@ -4445,6 +4490,14 @@ void print_usage() {
                    " [--plex-delay-diffusion 0..1] [--plex-delay-pre-delay-ms 0..2000]"
                    " [--plex-delay-low-cut-hz hz] [--plex-delay-high-cut-hz hz]"
                    " [--plex-delay-mix 0..1] [--plex-delay-level-db dB]"
+                    " [--plex-delay-wet-filter-type bypass|low-pass|band-pass|high-pass|low-shelf|high-shelf|peaking|notch|all-pass]"
+                    " [--plex-delay-filter-frequency-hz hz] [--plex-delay-filter-q q] [--plex-delay-filter-gain-db dB]"
+                    " [--plex-delay-filter-lfo-enabled 0|1] [--plex-delay-filter-lfo-type sine|triangle|square|saw]"
+                    " [--plex-delay-filter-lfo-rate-hz hz] [--plex-delay-filter-mod-frequency-hz hz]"
+                    " [--plex-delay-envelope-enabled 0|1] [--plex-delay-envelope-threshold-db dB]"
+                    " [--plex-delay-envelope-attack-ms ms] [--plex-delay-envelope-release-ms ms]"
+                    " [--plex-delay-ducker-attenuation-db dB] [--plex-delay-ducker-threshold-db dB]"
+                    " [--plex-delay-ducker-release-ms ms] [--plex-delay-stereo-spread -2..2]"
                    " [--plex-delay-stack-mode off|stack|hold]"
                   " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"

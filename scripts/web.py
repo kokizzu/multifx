@@ -171,6 +171,7 @@ def build_web() -> None:
         "_tf_chain_set_ten_tap_delay_level",
         "_tf_chain_set_rhythm_tap_delay",
         "_tf_chain_set_plex_delay_global",
+        "_tf_chain_set_plex_delay_advanced",
         "_tf_chain_set_plex_delay_line",
         "_tf_chain_set_auto_pan",
         "_tf_chain_set_megatap_delay",

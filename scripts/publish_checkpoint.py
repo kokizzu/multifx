@@ -1077,6 +1077,9 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/pugilist.hpp",
     "src/effects/pugilist.cpp",
     "tests/test_pugilist.cpp",
+    "include/tabletfx/effects/celestial_reverb.hpp",
+    "src/effects/celestial_reverb.cpp",
+    "tests/test_celestial_reverb.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1398,6 +1401,7 @@ PLEX_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "Makefile",
     "GOAL.md",
+    "README.md",
     "apps/offline_render.cpp",
     "include/tabletfx/effects.hpp",
     "include/tabletfx/effects/plex_delay.hpp",

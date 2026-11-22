@@ -11,6 +11,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -217,6 +218,124 @@ void test_unknown_enums_and_nonfinite_inputs_recover() {
             "nonfinite and extreme input samples should not contaminate output");
 }
 
+float render_plex_sine_rms(tabletfx::PlexDelayParameters parameters,
+                           float frequency_hz) {
+    parameters.active_lines = 1U;
+    parameters.time_ms[0] = 1.0F;
+    parameters.time_mode[0] = tabletfx::DelayTimeMode::milliseconds;
+    parameters.line_level[0] = 1.0F;
+    parameters.line_pan[0] = 0.0F;
+    parameters.diffusion = 0.0F;
+    parameters.low_cut_hz = 0.0F;
+    parameters.high_cut_hz = 20000.0F;
+    parameters.mix = 1.0F;
+    tabletfx::PlexDelay delay(8000.0F, 100.0F, parameters);
+    std::array<float, 8000U> audio{};
+    for (std::size_t i = 0; i < audio.size(); ++i) {
+        audio[i] = 0.2F * std::sin(2.0F * 3.14159265358979323846F *
+                                   frequency_hz * static_cast<float>(i) /
+                                   8000.0F);
+    }
+    delay.process(audio, 1U);
+    double square_sum = 0.0;
+    for (std::size_t i = 6000U; i < audio.size(); ++i) {
+        square_sum += static_cast<double>(audio[i]) * audio[i];
+    }
+    return static_cast<float>(std::sqrt(square_sum / 2000.0));
+}
+
+void test_wet_filter_and_lfo_controls() {
+    auto p = simple_parameters();
+    p.wet_filter_type = tabletfx::PlexWetFilterType::low_pass;
+    p.wet_filter_frequency_hz = 600.0F;
+    const float low = render_plex_sine_rms(p, 200.0F);
+    const float high = render_plex_sine_rms(p, 2400.0F);
+    require(low > high * 4.0F,
+            "the wet low-pass should attenuate upper frequencies");
+
+    p.wet_filter_type = tabletfx::PlexWetFilterType::peaking;
+    p.wet_filter_frequency_hz = 500.0F;
+    p.wet_filter_q = 4.0F;
+    p.wet_filter_gain_db = 6.0F;
+    const float static_peak = render_plex_sine_rms(p, 1500.0F);
+    p.filter_lfo_enabled = true;
+    p.filter_lfo_type = tabletfx::PlexFilterLfoType::triangle;
+    p.filter_lfo_rate_hz = 2.0F;
+    p.filter_mod_frequency_hz = 3000.0F;
+    const float modulated_peak = render_plex_sine_rms(p, 1500.0F);
+    require(std::abs(modulated_peak - static_peak) > 0.001F,
+            "the filter LFO should modulate the wet filter frequency");
+}
+
+void test_envelope_send_and_ducker() {
+    auto p = simple_parameters();
+    p.wet_filter_type = tabletfx::PlexWetFilterType::bypass;
+    p.time_ms[0] = 1.0F;
+    p.line_level.fill(0.0F);
+    p.line_level[0] = 1.0F;
+    p.mix = 1.0F;
+    p.diffusion = 0.0F;
+    p.low_cut_hz = 0.0F;
+    p.high_cut_hz = 20000.0F;
+    const float open_send = render_plex_sine_rms(p, 500.0F);
+    p.envelope_enabled = true;
+    p.envelope_threshold_db = -12.0F;
+    p.envelope_attack_ms = 1.0F;
+    p.envelope_release_ms = 1.0F;
+    const float shaped_send = render_plex_sine_rms(p, 500.0F);
+    require(shaped_send < open_send * 0.8F,
+            "the envelope follower should scale the effect send");
+
+    p.envelope_enabled = false;
+    p.ducker_attenuation_db = 24.0F;
+    p.ducker_threshold_db = -30.0F;
+    p.ducker_release_ms = 20.0F;
+    const float ducked = render_plex_sine_rms(p, 500.0F);
+    require(ducked < open_send * 0.5F,
+            "the ducker should reduce wet output while input exceeds threshold");
+}
+
+void test_stereo_spread_and_advanced_bounds() {
+    auto p = simple_parameters();
+    p.active_lines = 1U;
+    p.time_ms[0] = 1.0F;
+    p.line_pan[0] = -1.0F;
+    p.mix = 1.0F;
+    p.stereo_spread = 2.0F;
+    tabletfx::PlexDelay delay(8000.0F, 100.0F, p);
+    std::array<float, 24U> stereo{};
+    stereo[0] = 1.0F;
+    stereo[1] = 1.0F;
+    delay.process(stereo, 2U);
+    require(stereo[16U] > 0.7F && stereo[17U] < -0.2F,
+            "200% spread should widen a hard-left wet image around the center");
+
+    auto bounded = delay.parameters();
+    bounded.wet_filter_frequency_hz = 50000.0F;
+    bounded.wet_filter_q = 100.0F;
+    bounded.wet_filter_gain_db = 100.0F;
+    bounded.filter_lfo_rate_hz = 100.0F;
+    bounded.filter_mod_frequency_hz = -100.0F;
+    bounded.envelope_threshold_db = -200.0F;
+    bounded.envelope_attack_ms = 0.0F;
+    bounded.ducker_attenuation_db = 100.0F;
+    bounded.ducker_threshold_db = -200.0F;
+    bounded.ducker_release_ms = 0.0F;
+    bounded.stereo_spread = -20.0F;
+    delay.configure(bounded);
+    const auto safe = delay.parameters();
+    require(safe.wet_filter_frequency_hz == 3600.0F &&
+                safe.wet_filter_q == 12.0F && safe.wet_filter_gain_db == 18.0F &&
+                safe.filter_lfo_rate_hz == 10.0F &&
+                safe.filter_mod_frequency_hz == 20.0F &&
+                safe.envelope_threshold_db == -90.0F &&
+                safe.envelope_attack_ms == 1.0F &&
+                safe.ducker_attenuation_db == 36.0F &&
+                safe.ducker_threshold_db == -90.0F &&
+                safe.ducker_release_ms == 1.0F && safe.stereo_spread == -2.0F,
+            "advanced controls should clamp to project-authored ranges");
+}
+
 } // namespace
 
 int main() {
@@ -227,6 +346,9 @@ int main() {
         test_stack_hold_and_reset();
         test_memory_cap_finite_audio_and_no_process_allocations();
         test_unknown_enums_and_nonfinite_inputs_recover();
+        test_wet_filter_and_lfo_controls();
+        test_envelope_send_and_ducker();
+        test_stereo_spread_and_advanced_bounds();
         std::cout << "Plex Delay tests passed\n";
     } catch (const std::exception& error) {
         std::cerr << "Plex Delay test failure: " << error.what() << '\n';

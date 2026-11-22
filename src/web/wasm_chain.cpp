@@ -870,6 +870,39 @@ public:
         delay->configure(parameters);
     }
 
+    void configure_plex_delay_advanced(
+        std::uint32_t filter_type, float filter_frequency_hz, float filter_q,
+        float filter_gain_db, std::uint32_t filter_lfo_enabled,
+        std::uint32_t filter_lfo_type, float filter_lfo_rate_hz,
+        float filter_mod_frequency_hz, std::uint32_t envelope_enabled,
+        float envelope_threshold_db, float envelope_attack_ms,
+        float envelope_release_ms, float ducker_attenuation_db,
+        float ducker_threshold_db, float ducker_release_ms,
+        float stereo_spread) noexcept {
+        auto* delay = static_cast<tabletfx::PlexDelay*>(
+            effects_[76].effect.get());
+        auto parameters = delay->parameters();
+        parameters.wet_filter_type = static_cast<tabletfx::PlexWetFilterType>(
+            std::min(filter_type, 8U));
+        parameters.wet_filter_frequency_hz = filter_frequency_hz;
+        parameters.wet_filter_q = filter_q;
+        parameters.wet_filter_gain_db = filter_gain_db;
+        parameters.filter_lfo_enabled = filter_lfo_enabled != 0U;
+        parameters.filter_lfo_type = static_cast<tabletfx::PlexFilterLfoType>(
+            std::min(filter_lfo_type, 3U));
+        parameters.filter_lfo_rate_hz = filter_lfo_rate_hz;
+        parameters.filter_mod_frequency_hz = filter_mod_frequency_hz;
+        parameters.envelope_enabled = envelope_enabled != 0U;
+        parameters.envelope_threshold_db = envelope_threshold_db;
+        parameters.envelope_attack_ms = envelope_attack_ms;
+        parameters.envelope_release_ms = envelope_release_ms;
+        parameters.ducker_attenuation_db = ducker_attenuation_db;
+        parameters.ducker_threshold_db = ducker_threshold_db;
+        parameters.ducker_release_ms = ducker_release_ms;
+        parameters.stereo_spread = stereo_spread;
+        delay->configure(parameters);
+    }
+
     void configure_plex_delay_line(std::uint32_t line, float time_ms,
                                    std::uint32_t time_mode,
                                    std::uint32_t division, float level,
@@ -3121,6 +3154,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_global(
             active_lines, tempo_bpm, master_time, master_level, master_pan,
             decay_seconds, diffusion, low_cut_hz, high_cut_hz,
             pre_delay_ms, stack_mode, input_gain_db, mix, level_db, balance);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_advanced(
+    void* opaque, std::uint32_t filter_type, float filter_frequency_hz,
+    float filter_q, float filter_gain_db, std::uint32_t filter_lfo_enabled,
+    std::uint32_t filter_lfo_type, float filter_lfo_rate_hz,
+    float filter_mod_frequency_hz, std::uint32_t envelope_enabled,
+    float envelope_threshold_db, float envelope_attack_ms,
+    float envelope_release_ms, float ducker_attenuation_db,
+    float ducker_threshold_db, float ducker_release_ms,
+    float stereo_spread) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plex_delay_advanced(
+            filter_type, filter_frequency_hz, filter_q, filter_gain_db,
+            filter_lfo_enabled, filter_lfo_type, filter_lfo_rate_hz,
+            filter_mod_frequency_hz, envelope_enabled,
+            envelope_threshold_db, envelope_attack_ms, envelope_release_ms,
+            ducker_attenuation_db, ducker_threshold_db, ducker_release_ms,
+            stereo_spread);
     }
 }
 

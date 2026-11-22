@@ -79,6 +79,24 @@ function configurePlexDelay(module, chain, parameters = {}) {
     parameters.mix ?? 0.25, parameters.levelDb ?? 0,
     parameters.balance ?? 0,
   );
+  module._tf_chain_set_plex_delay_advanced(
+    chain, Number(parameters.wetFilterType ?? 0),
+    Number(parameters.wetFilterFrequencyHz ?? 2000),
+    Number(parameters.wetFilterQ ?? 0.707),
+    Number(parameters.wetFilterGainDb ?? 0),
+    Number(parameters.filterLfoEnabled ?? false),
+    Number(parameters.filterLfoType ?? 0),
+    Number(parameters.filterLfoRateHz ?? 0.5),
+    Number(parameters.filterModFrequencyHz ?? 2000),
+    Number(parameters.envelopeEnabled ?? false),
+    Number(parameters.envelopeThresholdDb ?? -70),
+    Number(parameters.envelopeAttackMs ?? 400),
+    Number(parameters.envelopeReleaseMs ?? 15),
+    Number(parameters.duckerAttenuationDb ?? 0),
+    Number(parameters.duckerThresholdDb ?? -30),
+    Number(parameters.duckerReleaseMs ?? 200),
+    Number(parameters.stereoSpread ?? 1),
+  );
   lines.forEach((line, index) => {
     module._tf_chain_set_plex_delay_line(
       chain, index, Number(line.timeMs), Number(line.timeMode),

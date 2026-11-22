@@ -20,6 +20,25 @@ enum class PlexDelayStackMode : std::uint8_t {
     hold,
 };
 
+enum class PlexWetFilterType : std::uint8_t {
+    bypass,
+    low_pass,
+    band_pass,
+    high_pass,
+    low_shelf,
+    high_shelf,
+    peaking,
+    notch,
+    all_pass,
+};
+
+enum class PlexFilterLfoType : std::uint8_t {
+    sine,
+    triangle,
+    square,
+    saw,
+};
+
 struct PlexDelayParameters {
     std::uint8_t active_lines = 8U;
     std::array<float, plex_delay_line_count> time_ms{
@@ -48,24 +67,44 @@ struct PlexDelayParameters {
     float mix = 0.25F;
     float level_db = 0.0F;
     float balance = 0.0F;
+    PlexWetFilterType wet_filter_type = PlexWetFilterType::bypass;
+    float wet_filter_frequency_hz = 2000.0F;
+    float wet_filter_q = 0.707F;
+    float wet_filter_gain_db = 0.0F;
+    bool filter_lfo_enabled = false;
+    PlexFilterLfoType filter_lfo_type = PlexFilterLfoType::sine;
+    float filter_lfo_rate_hz = 0.5F;
+    float filter_mod_frequency_hz = 2000.0F;
+    bool envelope_enabled = false;
+    float envelope_threshold_db = -70.0F;
+    float envelope_attack_ms = 400.0F;
+    float envelope_release_ms = 15.0F;
+    float ducker_attenuation_db = 0.0F;
+    float ducker_threshold_db = -30.0F;
+    float ducker_release_ms = 200.0F;
+    float stereo_spread = 1.0F;
 };
 
 /*
- * Project-authored eight-line feedback-matrix delay. The November 2026 Fractal
- * Audio Blocks Guide, pp. 88–90, documents an FM9 Plex Delay with 1–8 lines,
+ * Project-authored eight-line feedback-matrix delay. The June 2023 Fractal
+ * Audio Blocks Guide, pp. 77–79, documents an FM9 Plex Delay with 1–8 lines,
  * decay, diffusion, low/high cuts, pre-delay, Stack/Hold, per-line time/tempo,
  * level/pan, master scaling, a wet filter and LFO, an input envelope follower,
  * a ducker, stereo spread, common mix controls, and spillover. This implementation currently
  * covers the matrix-delay core, timing, line levels/pans, master controls,
- * decay, diffusion, cuts, pre-delay, and project-authored Stack/Hold behavior.
+ * decay, diffusion, cuts, pre-delay, project-authored Stack/Hold behavior,
+ * selected wet filter/LFO controls, envelope-controlled send, ducker, and
+ * stereo spread.
  *
  * Matrix topology, feedback/decay mapping, filter design, bounds, defaults,
  * input summing, and the 1 MiB total ring-storage cap are project choices.
  * The cap is divided among eight delay lines and one pre-delay ring, so the
- * maximum per-ring time depends on sample rate. Wet filter and LFO, the envelope
- * follower, ducker, stereo spread, granular pitch variants, presets, spillover,
- * and exact Fractal settings/DSP/sound parity are not implemented. Plex Delay
- * itself has no pitch effects; Plex Detune and Plex Shift are separate types.
+ * maximum per-ring time depends on sample rate. Input diffusion, the remaining
+ * Filter-block types, delay-line modulation, Plex Detune/Shift/Verb and Shimmer
+ * Verb algorithms, Input Select, Kill Dry, Bypass, Bypass Mode, Global Mix,
+ * spillover, and exact Fractal settings/DSP/sound parity are not implemented.
+ * Plex Delay itself has no pitch effects; Plex Detune and Plex Shift are
+ * separate types.
  * The guide
  * names FM9 without distinguishing the Mark II Turbo hardware revision; the
  * FM9 downloads page currently lists v12.0 for Original/Turbo without a
@@ -103,23 +142,46 @@ public:
     void reset() noexcept override;
 
 private:
+    struct BiquadCoefficients {
+        float b0 = 1.0F;
+        float b1 = 0.0F;
+        float b2 = 0.0F;
+        float a1 = 0.0F;
+        float a2 = 0.0F;
+    };
+    struct BiquadState {
+        float input_1 = 0.0F;
+        float input_2 = 0.0F;
+        float output_1 = 0.0F;
+        float output_2 = 0.0F;
+    };
+
     static constexpr std::size_t kRingCount = plex_delay_line_count + 1U;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumDelayMs = 1.0F;
     static constexpr float kMaximumDelayMs = 2000.0F;
     static constexpr float kMaximumSignal = 8.0F;
+    static constexpr std::size_t kFilterCoefficientUpdateFrames = 16U;
 
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
     [[nodiscard]] static bool valid_time_mode(DelayTimeMode mode) noexcept;
     [[nodiscard]] static bool valid_division(DelayDivision division) noexcept;
     [[nodiscard]] static bool valid_stack_mode(PlexDelayStackMode mode) noexcept;
+    [[nodiscard]] static bool valid_filter_type(PlexWetFilterType type) noexcept;
+    [[nodiscard]] static bool valid_lfo_type(PlexFilterLfoType type) noexcept;
     [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
     [[nodiscard]] std::size_t read_index(std::size_t delay,
                                          std::size_t ring) const noexcept;
     [[nodiscard]] float filter_feedback(float input,
                                         std::size_t line) noexcept;
+    [[nodiscard]] BiquadCoefficients make_wet_filter(float frequency_hz) const noexcept;
+    void update_wet_filter_target(float frequency_hz) noexcept;
+    [[nodiscard]] float process_wet_filter(float input,
+                                          std::size_t channel) noexcept;
+    void advance_wet_filter() noexcept;
+    [[nodiscard]] float lfo_value() const noexcept;
     [[nodiscard]] static float safe_signal(float value) noexcept;
     void update_times() noexcept;
 
@@ -142,6 +204,24 @@ private:
     std::array<float, plex_delay_line_count> low_cut_input_{};
     std::array<float, plex_delay_line_count> low_cut_output_{};
     std::array<float, plex_delay_line_count> high_cut_output_{};
+    std::array<BiquadState, 2U> wet_filter_state_{};
+    BiquadCoefficients wet_filter_coefficients_{};
+    BiquadCoefficients wet_filter_target_coefficients_{};
+    BiquadCoefficients wet_filter_coefficient_step_{};
+    std::size_t wet_filter_ramp_remaining_ = 0U;
+    std::size_t wet_filter_update_remaining_ = 0U;
+    float filter_lfo_phase_ = 0.0F;
+    float filter_lfo_phase_increment_ = 0.0F;
+    float envelope_value_ = 0.0F;
+    float envelope_threshold_linear_ = 0.0F;
+    float envelope_attack_coefficient_ = 0.0F;
+    float envelope_release_coefficient_ = 0.0F;
+    float ducker_threshold_linear_ = 0.0F;
+    float ducker_attenuation_linear_ = 1.0F;
+    float ducker_attack_coefficient_ = 0.0F;
+    float ducker_release_coefficient_ = 0.0F;
+    float ducker_envelope_ = 0.0F;
+    float ducker_gain_ = 1.0F;
 };
 
 } // namespace tabletfx

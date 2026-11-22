@@ -148,6 +148,13 @@ const DEFAULT_PARAMETERS = {
     masterPan: 1, decaySeconds: 3, diffusion: 0.5, lowCutHz: 20,
     highCutHz: 20000, preDelayMs: 0, stackMode: 0,
     inputGainDb: 0, mix: 0.25, levelDb: 0, balance: 0,
+    wetFilterType: 0, wetFilterFrequencyHz: 2000, wetFilterQ: 0.707,
+    wetFilterGainDb: 0, filterLfoEnabled: false, filterLfoType: 0,
+    filterLfoRateHz: 0.5, filterModFrequencyHz: 2000,
+    envelopeEnabled: false, envelopeThresholdDb: -70,
+    envelopeAttackMs: 400, envelopeReleaseMs: 15,
+    duckerAttenuationDb: 0, duckerThresholdDb: -30,
+    duckerReleaseMs: 200, stereoSpread: 1,
     lines: [
       { timeMs: 45, timeMode: 0, division: 9, level: 1, pan: -0.85 },
       { timeMs: 70, timeMode: 0, division: 8, level: 1, pan: -0.6 },
@@ -1545,7 +1552,10 @@ function updateRhythmTapDelayOptions() {
 function updatePlexDelayOptions() {
   const control = (name) => plexDelayGlobalControls.find(
     (item) => item.dataset.plexGlobal === name);
-  const value = (name) => Number(control(name).value);
+  const value = (name) => {
+    const item = control(name);
+    return item.type === "checkbox" ? item.checked : Number(item.value);
+  };
   const parameters = {
     activeLines: value("activeLines"),
     tempoBpm: value("tempoBpm"),
@@ -1562,6 +1572,22 @@ function updatePlexDelayOptions() {
     mix: value("mix") / 100,
     levelDb: value("levelDb"),
     balance: value("balance") / 100,
+    wetFilterType: value("wetFilterType"),
+    wetFilterFrequencyHz: value("wetFilterFrequencyHz"),
+    wetFilterQ: value("wetFilterQ"),
+    wetFilterGainDb: value("wetFilterGainDb"),
+    filterLfoEnabled: value("filterLfoEnabled"),
+    filterLfoType: value("filterLfoType"),
+    filterLfoRateHz: value("filterLfoRateHz"),
+    filterModFrequencyHz: value("filterModFrequencyHz"),
+    envelopeEnabled: value("envelopeEnabled"),
+    envelopeThresholdDb: value("envelopeThresholdDb"),
+    envelopeAttackMs: value("envelopeAttackMs"),
+    envelopeReleaseMs: value("envelopeReleaseMs"),
+    duckerAttenuationDb: value("duckerAttenuationDb"),
+    duckerThresholdDb: value("duckerThresholdDb"),
+    duckerReleaseMs: value("duckerReleaseMs"),
+    stereoSpread: value("stereoSpread") / 100,
     lines: plexDelayLines.map((line) => {
       const read = (name) => Number(line.querySelector(
         `[data-plex-line-param="${name}"]`).value);
@@ -1602,10 +1628,34 @@ function updatePlexDelayOptions() {
     levelDb: `${parameters.levelDb.toFixed(1)} dB`,
     balance: parameters.balance === 0 ? "Center" :
       `${parameters.balance < 0 ? "Left" : "Right"} ${Math.round(Math.abs(parameters.balance) * 100)}%`,
+    wetFilterFrequencyHz: `${parameters.wetFilterFrequencyHz} Hz`,
+    wetFilterQ: parameters.wetFilterQ.toFixed(2),
+    wetFilterGainDb: `${parameters.wetFilterGainDb.toFixed(1)} dB`,
+    filterLfoRateHz: `${parameters.filterLfoRateHz.toFixed(2)} Hz`,
+    filterModFrequencyHz: `${parameters.filterModFrequencyHz} Hz`,
+    envelopeThresholdDb: `${parameters.envelopeThresholdDb} dB`,
+    envelopeAttackMs: `${parameters.envelopeAttackMs} ms`,
+    envelopeReleaseMs: `${parameters.envelopeReleaseMs} ms`,
+    duckerAttenuationDb: parameters.duckerAttenuationDb === 0
+      ? "0 dB (off)" : `${parameters.duckerAttenuationDb} dB`,
+    duckerThresholdDb: `${parameters.duckerThresholdDb} dB`,
+    duckerReleaseMs: `${parameters.duckerReleaseMs} ms`,
+    stereoSpread: `${Math.round(parameters.stereoSpread * 100)}%`,
   };
   for (const [name, label] of Object.entries(labels)) {
     const output = document.querySelector(`[data-plex-output="${name}"]`);
     if (output) output.value = label;
+  }
+  for (const name of ["filterLfoEnabled", "envelopeEnabled"]) {
+    const item = control(name);
+    const output = item.parentElement.querySelector("output");
+    if (output) output.value = item.checked ? "On" : "Off";
+  }
+  for (const name of ["filterLfoType", "filterLfoRateHz", "filterModFrequencyHz"]) {
+    control(name).disabled = !parameters.filterLfoEnabled;
+  }
+  for (const name of ["envelopeThresholdDb", "envelopeAttackMs", "envelopeReleaseMs"]) {
+    control(name).disabled = !parameters.envelopeEnabled;
   }
   DEFAULT_PARAMETERS.plexDelay = parameters;
   if (workletNode) {
@@ -5397,7 +5447,8 @@ async function runRhythmTapBrowserSmokeTest(reference, captureView, captureBuffe
 async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const plexControls = [...plexDelayGlobalControls, ...plexDelayLineControls];
-  const previousControls = plexControls.map((control) => control.value);
+  const previousControls = plexControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
     index === 76 || index === 77 || index === 78);
   try {
@@ -5408,14 +5459,23 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     await audioContext.resume();
     stopSource(false);
     const setGlobal = (name, value) => {
-      plexDelayGlobalControls.find((control) =>
-        control.dataset.plexGlobal === name).value = String(value);
+      const control = plexDelayGlobalControls.find((item) =>
+        item.dataset.plexGlobal === name);
+      if (control.type === "checkbox") control.checked = Boolean(value);
+      else control.value = String(value);
     };
     for (const [name, value] of Object.entries({
       activeLines: 2, tempoBpm: 120, masterTime: 1, masterLevel: 100,
       masterPan: 100, decaySeconds: 3, diffusion: 55, lowCutHz: 20,
       highCutHz: 20000, preDelayMs: 0, stackMode: 0, inputGainDb: 0,
-      mix: 100, levelDb: 0, balance: 0,
+      mix: 100, levelDb: 0, balance: 0, stereoSpread: 120,
+      wetFilterType: 6, wetFilterFrequencyHz: 1400, wetFilterQ: 2,
+      wetFilterGainDb: 3, filterLfoEnabled: true, filterLfoType: 1,
+      filterLfoRateHz: 1.5, filterModFrequencyHz: 3500,
+      envelopeEnabled: true, envelopeThresholdDb: -60,
+      envelopeAttackMs: 25, envelopeReleaseMs: 80,
+      duckerAttenuationDb: 3, duckerThresholdDb: -24,
+      duckerReleaseMs: 150,
     })) setGlobal(name, value);
     plexDelayLines.forEach((line, index) => {
       line.querySelector('[data-plex-line-param="timeMode"]').value = "0";
@@ -5456,12 +5516,15 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
       throw new Error(`Plex Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
     }
     return { peak, activeSamples, enabledEffectIndex: 76, activeLines: 2,
-      delayMs: [40, 70], diffusionPercent: 55 };
+      delayMs: [40, 70], diffusionPercent: 55, advancedControls: true };
   } finally {
     stopSource(false);
     if (workletNode) {
       workletNode.port.postMessage({ type: "active", value: false });
-      plexControls.forEach((control, index) => { control.value = previousControls[index]; });
+      plexControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
       updatePlexDelayOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((checkbox, index) => {
