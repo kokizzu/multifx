@@ -155,7 +155,9 @@ The saved processor rows below are the prior snapshot before DLY-20 and were mea
 | Noise gate | 0.0229 | 0.0390 | 0.0409 | 0.0604 | 0.4358 | 64 |
 | Auto Swell | 0.0214 | 0.0217 | 0.0319 | 0.0394 | 0.4249 | 1,104 |
 | Rotary Speaker | 0.3942 | 0.5175 | 0.5847 | 0.7969 | 1.5863 | 1,208 |
-| Ring Modulator | 0.0259 | 0.0263 | 0.0308 | 0.0360 | 0.8880 | 72 |
+| Ring Modulator (Classic) | 0.0278 | 0.0281 | 0.0446 | 0.0465 | 0.2707 | 840 |
+| Ring Modulator (SSB Upper) | 0.6686 | 0.9432 | 1.1449 | 1.2690 | 1.4798 | 840 |
+| Ring Modulator (SSB Lower) | 0.6552 | 0.6559 | 1.0103 | 1.1887 | 1.3909 | 840 |
 | Rhythmic Slicer | 0.0371 | 0.0521 | 0.0525 | 0.0784 | 0.2891 | 136 |
 | Step Filter | 0.1065 | 0.1414 | 0.1459 | 0.3765 | 0.8213 | 1,200 |
 | Static Notch Filter | 0.0548 | 0.0825 | 0.0859 | 0.2993 | 0.4463 | 96 |

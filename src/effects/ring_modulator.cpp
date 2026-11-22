@@ -25,10 +25,16 @@ RingModulator::RingModulator(float sample_rate, std::uint16_t channels,
             "RingModulator requires 8–384 kHz and mono or stereo channels");
     }
     set_parameters(parameters);
+    prepare_hilbert();
     reset();
 }
 
 void RingModulator::set_parameters(RingModulatorParameters parameters) noexcept {
+    if (parameters.type != RingModulatorType::classic &&
+        parameters.type != RingModulatorType::ssb_upper &&
+        parameters.type != RingModulatorType::ssb_lower) {
+        parameters.type = parameters_.type;
+    }
     parameters.frequency_hz = bounded(parameters.frequency_hz,
                                       parameters_.frequency_hz,
                                       kMinimumFrequencyHz,
@@ -56,25 +62,53 @@ void RingModulator::process(std::span<float> interleaved,
         const std::size_t offset = frame * channels_;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t index = offset + channel;
-            const float input = interleaved[index];
+            float input = interleaved[index];
+            auto& history = input_history_[channel];
             if (!std::isfinite(input) || std::abs(input) > kMaximumStableInput) {
                 high_cut_state_[channel] = 0.0F;
+                history.fill(0.0F);
                 interleaved[index] = 0.0F;
                 continue;
             }
-            const float modulated = input * phase_sine_;
+
+            history[history_write_index_] = input;
+            float dry = input;
+            float modulated = input * phase_sine_;
+            if (parameters_.type != RingModulatorType::classic) {
+                const std::size_t in_phase_index =
+                    (history_write_index_ + kHilbertTaps - kHilbertDelay) %
+                    kHilbertTaps;
+                dry = history[in_phase_index];
+                float quadrature = 0.0F;
+                for (std::size_t tap = 0; tap < kHilbertTaps; ++tap) {
+                    const std::size_t history_index =
+                        (history_write_index_ + kHilbertTaps - tap) %
+                        kHilbertTaps;
+                    quadrature += hilbert_coefficients_[tap] *
+                                  history[history_index];
+                }
+                modulated = dry * phase_cosine_;
+                const float sideband = quadrature * phase_sine_;
+                modulated += parameters_.type == RingModulatorType::ssb_upper
+                                 ? -sideband
+                                 : sideband;
+            }
+
             high_cut_state_[channel] +=
                 high_cut_alpha_ * (modulated - high_cut_state_[channel]);
-            const float output = input +
-                (high_cut_state_[channel] - input) * parameters_.mix;
+            const float output = dry +
+                (high_cut_state_[channel] - dry) * parameters_.mix;
             interleaved[index] = std::isfinite(output) ? output : 0.0F;
         }
+        history_write_index_ = (history_write_index_ + 1U) % kHilbertTaps;
         advance_oscillator();
     }
 }
 
 void RingModulator::reset() noexcept {
     high_cut_state_ = {};
+    input_history_ = {};
+    history_write_index_ = 0;
     phase_sine_ = 0.0F;
     phase_cosine_ = 1.0F;
     normalization_counter_ = 0;
@@ -103,6 +137,26 @@ void RingModulator::prepare_high_cut() noexcept {
                                       sample_rate_ * 0.45F);
     const float coefficient = kTwoPi * effective_high_cut_hz_ / sample_rate_;
     high_cut_alpha_ = 1.0F - std::exp(-coefficient);
+}
+
+void RingModulator::prepare_hilbert() noexcept {
+    // Odd-offset samples form the ideal discrete Hilbert transformer. A
+    // Hamming window limits truncation ripple; the 63-tap design is a bounded,
+    // project-authored compromise rather than the proprietary Fractal DSP.
+    for (std::size_t tap = 0; tap < kHilbertTaps; ++tap) {
+        const int offset = static_cast<int>(tap) -
+                           static_cast<int>(kHilbertDelay);
+        if (offset == 0 || (std::abs(offset) % 2) == 0) {
+            hilbert_coefficients_[tap] = 0.0F;
+            continue;
+        }
+        const float position = static_cast<float>(tap) /
+                               static_cast<float>(kHilbertTaps - 1U);
+        const float window = 0.54F - 0.46F *
+            std::cos(kTwoPi * position);
+        hilbert_coefficients_[tap] =
+            (2.0F / (kPi * static_cast<float>(offset))) * window;
+    }
 }
 
 void RingModulator::advance_oscillator() noexcept {

@@ -32,6 +32,7 @@ void test_defaults_bounds_and_effective_frequency() {
     require(defaults.frequency_hz == 440.0F &&
                 defaults.frequency_multiplier == 1.0F &&
                 defaults.high_cut_hz == 20000.0F && defaults.mix == 1.0F &&
+                defaults.type == tabletfx::RingModulatorType::classic &&
                 ring.effective_frequency_hz() == 440.0F,
             "project-authored ring mod defaults changed");
     require(ring.memory_bytes() == sizeof(ring),
@@ -63,6 +64,97 @@ void test_defaults_bounds_and_effective_frequency() {
     require(low_rate.effective_frequency_hz() <= 3600.0F &&
                 low_rate.effective_high_cut_hz() <= 3600.0F,
             "low sample rate did not keep oscillator and high cut below Nyquist");
+}
+
+double tone_projection_power(const std::vector<float>& samples, float frequency_hz,
+                             float sample_rate, std::size_t first_frame) {
+    double in_phase = 0.0;
+    double quadrature = 0.0;
+    for (std::size_t frame = first_frame; frame < samples.size(); ++frame) {
+        const double phase = 2.0 * std::numbers::pi_v<double> *
+            static_cast<double>(frequency_hz) * static_cast<double>(frame) /
+            static_cast<double>(sample_rate);
+        in_phase += static_cast<double>(samples[frame]) * std::cos(phase);
+        quadrature += static_cast<double>(samples[frame]) * std::sin(phase);
+    }
+    const double count = static_cast<double>(samples.size() - first_frame);
+    return (in_phase * in_phase + quadrature * quadrature) / (count * count);
+}
+
+void test_ssb_modes_shift_into_separate_sidebands() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr float input_frequency = 4000.0F;
+    constexpr float shift_frequency = 1000.0F;
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t first_measurement_frame = 4800U;
+
+    std::vector<float> source(frames);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        source[frame] = 0.5F * std::sin(
+            2.0F * std::numbers::pi_v<float> * input_frequency *
+            static_cast<float>(frame) / sample_rate);
+    }
+
+    tabletfx::RingModulatorParameters parameters;
+    parameters.type = tabletfx::RingModulatorType::ssb_upper;
+    parameters.frequency_hz = shift_frequency;
+    parameters.high_cut_hz = 20000.0F;
+    parameters.mix = 1.0F;
+    tabletfx::RingModulator upper(sample_rate, 1, parameters);
+    auto upper_audio = source;
+    upper.process(upper_audio, 1);
+    require(upper.latency_samples() == 31U,
+            "SSB upper did not report its project FIR group delay");
+    const double upper_target = tone_projection_power(
+        upper_audio, input_frequency + shift_frequency, sample_rate,
+        first_measurement_frame);
+    const double upper_image = tone_projection_power(
+        upper_audio, input_frequency - shift_frequency, sample_rate,
+        first_measurement_frame);
+    require(upper_target > upper_image * 30.0,
+            "SSB upper did not suppress the lower image sideband");
+    require(upper_target > 0.01,
+            "SSB upper output level was unexpectedly low");
+
+    parameters.type = tabletfx::RingModulatorType::ssb_lower;
+    tabletfx::RingModulator lower(sample_rate, 1, parameters);
+    auto lower_audio = source;
+    lower.process(lower_audio, 1);
+    const double lower_target = tone_projection_power(
+        lower_audio, input_frequency - shift_frequency, sample_rate,
+        first_measurement_frame);
+    const double lower_image = tone_projection_power(
+        lower_audio, input_frequency + shift_frequency, sample_rate,
+        first_measurement_frame);
+    require(lower_target > lower_image * 30.0,
+            "SSB lower did not suppress the upper image sideband");
+    require(lower_target > 0.01,
+            "SSB lower output level was unexpectedly low");
+
+    tabletfx::RingModulatorParameters dry_parameters = parameters;
+    dry_parameters.mix = 0.0F;
+    tabletfx::RingModulator dry(sample_rate, 1, dry_parameters);
+    std::array<float, 40> impulse{};
+    impulse[0] = 1.0F;
+    dry.process(impulse, 1);
+    require(impulse[30] == 0.0F && impulse[31] == 1.0F,
+            "SSB dry path was not aligned to the FIR group delay");
+
+    lower.reset();
+    tabletfx::RingModulator lower_fresh(sample_rate, 1, parameters);
+    std::array<float, 128> after_reset{};
+    std::array<float, 128> fresh_output{};
+    for (std::size_t frame = 0; frame < after_reset.size(); ++frame) {
+        const float sample = 0.5F * std::sin(
+            2.0F * std::numbers::pi_v<float> * input_frequency *
+            static_cast<float>(frame) / sample_rate);
+        after_reset[frame] = sample;
+        fresh_output[frame] = sample;
+    }
+    lower.process(after_reset, 1);
+    lower_fresh.process(fresh_output, 1);
+    require(after_reset == fresh_output,
+            "SSB reset did not restore deterministic filter and carrier state");
 }
 
 void test_classic_modulation_mix_and_shared_stereo_phase() {
@@ -105,6 +197,43 @@ void test_classic_modulation_mix_and_shared_stereo_phase() {
         require(std::abs(stereo_input[frame * 2U] -
                          2.0F * stereo_input[frame * 2U + 1U]) < 1.0e-6F,
                 "stereo channels did not share a carrier phase");
+    }
+}
+
+void test_ssb_stereo_matches_independent_mono_paths() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 2048U;
+    tabletfx::RingModulatorParameters parameters;
+    parameters.type = tabletfx::RingModulatorType::ssb_upper;
+    parameters.frequency_hz = 375.0F;
+    parameters.frequency_multiplier = 1.2F;
+    parameters.high_cut_hz = 18000.0F;
+    parameters.mix = 1.0F;
+
+    tabletfx::RingModulator stereo(sample_rate, 2, parameters);
+    tabletfx::RingModulator left_mono(sample_rate, 1, parameters);
+    tabletfx::RingModulator right_mono(sample_rate, 1, parameters);
+    std::vector<float> interleaved(frames * 2U);
+    std::vector<float> left(frames);
+    std::vector<float> right(frames);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float position = static_cast<float>(frame) / sample_rate;
+        left[frame] = 0.35F * std::sin(
+            2.0F * std::numbers::pi_v<float> * 2700.0F * position + 0.2F);
+        right[frame] = 0.2F * std::sin(
+            2.0F * std::numbers::pi_v<float> * 5100.0F * position - 0.7F);
+        interleaved[frame * 2U] = left[frame];
+        interleaved[frame * 2U + 1U] = right[frame];
+    }
+
+    stereo.process(interleaved, 2);
+    left_mono.process(left, 1);
+    right_mono.process(right, 1);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        require(std::abs(interleaved[frame * 2U] - left[frame]) < 1.0e-7F,
+                "SSB left channel differs from an independent mono path");
+        require(std::abs(interleaved[frame * 2U + 1U] - right[frame]) < 1.0e-7F,
+                "SSB right channel differs from an independent mono path");
     }
 }
 
@@ -245,6 +374,9 @@ void test_extreme_finite_input_does_not_poison_filter_state() {
 
 void test_processing_does_not_allocate() {
     tabletfx::RingModulator ring;
+    tabletfx::RingModulatorParameters parameters;
+    parameters.type = tabletfx::RingModulatorType::ssb_upper;
+    tabletfx::RingModulator sideband(48000.0F, 2, parameters);
     std::array<float, 512> block{};
     block.fill(0.25F);
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
@@ -253,6 +385,14 @@ void test_processing_does_not_allocate() {
     }
     const std::size_t after = allocation_count.load(std::memory_order_relaxed);
     require(after == before, "ring modulator allocated during process()");
+
+    const std::size_t ssb_before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        sideband.process(block, 2);
+    }
+    const std::size_t ssb_after = allocation_count.load(std::memory_order_relaxed);
+    require(ssb_after == ssb_before,
+            "SSB ring modulator allocated during process()");
     require(std::all_of(block.begin(), block.end(),
                         [](float sample) { return std::isfinite(sample); }),
             "ring modulator emitted non-finite samples");
@@ -301,6 +441,8 @@ int main() {
     try {
         test_defaults_bounds_and_effective_frequency();
         test_classic_modulation_mix_and_shared_stereo_phase();
+        test_ssb_modes_shift_into_separate_sidebands();
+        test_ssb_stereo_matches_independent_mono_paths();
         test_high_cut_reduces_high_frequency_energy();
         test_block_partition_reset_and_invalid_audio();
         test_extreme_finite_input_does_not_poison_filter_state();

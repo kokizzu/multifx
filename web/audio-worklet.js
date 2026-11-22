@@ -206,8 +206,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         const rotarySpeaker = parameters.rotarySpeaker || [6, 0, 120, 1, 0, 0.12, 0,
           0.75, 1, 0.55, 0.5, 0.72, 800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0];
         module._tf_chain_set_rotary_speaker(this.chain, ...rotarySpeaker);
-       const ringModulator = parameters.ringModulator || [440, 1, 20000, 1];
-       module._tf_chain_set_ring_modulator(this.chain, ...ringModulator);
+       const ringModulator = Array.from(
+         parameters.ringModulator || [0, 440, 1, 20000, 1],
+       );
+       const [ringModType, ringModFrequencyHz, ringModMultiplier,
+         ringModHighCutHz, ringModMix] = ringModulator.length === 4
+         ? [0, ...ringModulator]
+         : ringModulator;
+       module._tf_chain_set_ring_modulator(
+         this.chain, Math.max(0, Math.min(2, Math.trunc(ringModType))),
+         ringModFrequencyHz, ringModMultiplier, ringModHighCutHz, ringModMix,
+       );
         const rhythmicSlicer = parameters.rhythmicSlicer || [
           1, 120, 8, 8, 1, 0.15, 1, 1, 0,
           1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
@@ -770,7 +779,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "rotary-speaker" && this.ready) {
       this.module._tf_chain_set_rotary_speaker(this.chain, ...message.value);
     } else if (message.type === "ring-modulator" && this.ready) {
-      this.module._tf_chain_set_ring_modulator(this.chain, ...message.value);
+      const values = Array.from(message.value);
+      const [type, frequencyHz, frequencyMultiplier, highCutHz, mix] =
+        values.length === 4 ? [0, ...values] : values;
+      this.module._tf_chain_set_ring_modulator(
+        this.chain, Math.max(0, Math.min(2, Math.trunc(type))),
+        frequencyHz, frequencyMultiplier, highCutHz, mix,
+      );
       } else if (message.type === "rhythmic-slicer" && this.ready) {
         this.module._tf_chain_set_rhythmic_slicer(this.chain, ...message.value);
       } else if (message.type === "step-filter" && this.ready) {

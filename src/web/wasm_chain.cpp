@@ -1972,11 +1972,15 @@ public:
         rotary->set_parameters(parameters);
     }
 
-    void configure_ring_modulator(float frequency_hz, float frequency_multiplier,
-                                  float high_cut_hz, float mix) noexcept {
+    void configure_ring_modulator(std::uint32_t type, float frequency_hz,
+                                  float frequency_multiplier, float high_cut_hz,
+                                  float mix) noexcept {
         auto* ring_modulator =
             static_cast<tabletfx::RingModulator*>(effects_[34].effect.get());
         tabletfx::RingModulatorParameters parameters;
+        if (type <= static_cast<std::uint32_t>(tabletfx::RingModulatorType::ssb_lower)) {
+            parameters.type = static_cast<tabletfx::RingModulatorType>(type);
+        }
         parameters.frequency_hz = frequency_hz;
         parameters.frequency_multiplier = frequency_multiplier;
         parameters.high_cut_hz = high_cut_hz;
@@ -2620,11 +2624,11 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rotary_speaker(
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_ring_modulator(
-    void* opaque, float frequency_hz, float frequency_multiplier,
-    float high_cut_hz, float mix) noexcept {
+    void* opaque, std::uint32_t type, float frequency_hz,
+    float frequency_multiplier, float high_cut_hz, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ring_modulator(
-            frequency_hz, frequency_multiplier, high_cut_hz, mix);
+            type, frequency_hz, frequency_multiplier, high_cut_hz, mix);
     }
 }
 

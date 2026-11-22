@@ -397,6 +397,40 @@ def check_ring_modulator(executable: Path) -> None:
                zip(values, source_float, strict=True)) < 0.05:
             raise AssertionError("Ring Mod controls did not modulate the test tone")
 
+        ssb_outputs = {}
+        for mode in ("ssb-upper", "ssb-lower"):
+            ssb_output = root / f"ring-mod-{mode}.wav"
+            ssb_result = subprocess.run(
+                [str(executable), "render", str(source), str(ssb_output),
+                 "--ring-mod-type", mode, "--ring-mod-frequency-hz", "700",
+                 "--ring-mod-multiplier", "1.5", "--ring-mod-high-cut-hz", "3000",
+                 "--ring-mod-mix", "0.75"],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in ssb_result.stdout:
+                raise AssertionError(
+                    f"Ring Mod {mode} did not enable one processor: {ssb_result.stdout}")
+            rendered = struct.unpack(
+                "<" + "f" * len(source_samples), ssb_output.read_bytes()[44:])
+            if not all(math.isfinite(value) for value in rendered):
+                raise AssertionError(f"Ring Mod {mode} produced non-finite output")
+            if max(abs(actual - original) for actual, original in
+                   zip(rendered, source_float, strict=True)) < 0.05:
+                raise AssertionError(f"Ring Mod {mode} did not modulate the test tone")
+            ssb_outputs[mode] = rendered
+
+        if max(abs(upper - lower) for upper, lower in
+               zip(ssb_outputs["ssb-upper"], ssb_outputs["ssb-lower"], strict=True)) < 0.05:
+            raise AssertionError("Ring Mod SSB Upper and SSB Lower produced the same output")
+
+        invalid_type = subprocess.run(
+            [str(executable), "render", str(source), str(root / "ring-mod-invalid.wav"),
+             "--ring-mod-type", "tracking"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid_type.returncode == 0 or "Ring Modulator type must be" not in invalid_type.stderr:
+            raise AssertionError("Ring Mod accepted an unknown type")
+
 
 def check_rhythmic_slicer(executable: Path) -> None:
     sample_rate = 8000

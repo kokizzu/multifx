@@ -584,6 +584,24 @@ Options parse_options(int argc, char** argv, int first) {
             options.ring_modulator_enabled = true;
             continue;
         }
+        if (key == "--ring-mod-type") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "classic") {
+                options.ring_modulator.type = tabletfx::RingModulatorType::classic;
+            } else if (value == "ssb-upper") {
+                options.ring_modulator.type = tabletfx::RingModulatorType::ssb_upper;
+            } else if (value == "ssb-lower") {
+                options.ring_modulator.type = tabletfx::RingModulatorType::ssb_lower;
+            } else {
+                throw std::invalid_argument(
+                    "Ring Modulator type must be classic, ssb-upper, or ssb-lower");
+            }
+            options.ring_modulator_enabled = true;
+            continue;
+        }
         if (key == "--bit-crusher") {
             options.bit_crusher_enabled = true;
             continue;
@@ -4145,6 +4163,26 @@ void run_bench() {
         return std::make_unique<tabletfx::RingModulator>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("ring-modulator-ssb-upper", [=] {
+        tabletfx::RingModulatorParameters parameters;
+        parameters.type = tabletfx::RingModulatorType::ssb_upper;
+        parameters.frequency_hz = 713.0F;
+        parameters.frequency_multiplier = 1.75F;
+        parameters.high_cut_hz = 9000.0F;
+        parameters.mix = 0.83F;
+        return std::make_unique<tabletfx::RingModulator>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("ring-modulator-ssb-lower", [=] {
+        tabletfx::RingModulatorParameters parameters;
+        parameters.type = tabletfx::RingModulatorType::ssb_lower;
+        parameters.frequency_hz = 713.0F;
+        parameters.frequency_multiplier = 1.75F;
+        parameters.high_cut_hz = 9000.0F;
+        parameters.mix = 0.83F;
+        return std::make_unique<tabletfx::RingModulator>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("bit-crusher", [=] {
         tabletfx::BitCrusherParameters parameters;
         parameters.bit_depth = 8;
@@ -4721,7 +4759,8 @@ void print_usage() {
                    " [--rotary-mic-distance 0..1] [--rotary-stereo-spread -2..2]"
                    " [--rotary-mix 0..1] [--rotary-level 0..2] [--rotary-balance -1..1]"
                    " [--rotary-input-select stereo|left|right|sum]\n"
-               << "                 [--ring-mod] [--ring-mod-frequency-hz 2..2000]"
+                << "                 [--ring-mod] [--ring-mod-type classic|ssb-upper|ssb-lower]"
+                   " [--ring-mod-frequency-hz 2..2000]"
                   " [--ring-mod-multiplier 0.25..4] [--ring-mod-high-cut-hz 20..20000]"
                   " [--ring-mod-mix 0..1]\n"
                  << "                 [--bit-crusher] [--bit-crusher-bit-depth 2..24]"

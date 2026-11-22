@@ -195,7 +195,7 @@ const DEFAULT_PARAMETERS = {
   autoSwell: [-36, 250, 250, 6, 6, 1],
   rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
     800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
-  ringModulator: [440, 1, 20000, 1],
+  ringModulator: [0, 440, 1, 20000, 1],
   rhythmicSlicer: [1, 120, 8, 8, 1, 0.15, 1, 1, 0,
     1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
   stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
@@ -1205,6 +1205,7 @@ const rotaryLevelValue = document.querySelector("#rotary-level-value");
 const rotaryBalance = document.querySelector("#rotary-balance");
 const rotaryBalanceValue = document.querySelector("#rotary-balance-value");
 const rotaryInputSelect = document.querySelector("#rotary-input-select");
+const ringModType = document.querySelector("#ring-mod-type");
 const ringModFrequency = document.querySelector("#ring-mod-frequency-hz");
 const ringModFrequencyValue = document.querySelector("#ring-mod-frequency-hz-value");
 const ringModMultiplier = document.querySelector("#ring-mod-multiplier");
@@ -4165,15 +4166,16 @@ function updateRotarySpeaker() {
 
 function updateRingModulator() {
   const values = [
+    Number(ringModType.value),
     Number(ringModFrequency.value),
     Number(ringModMultiplier.value),
     Number(ringModHighCut.value),
     Number(ringModMix.value) / 100,
   ];
-  ringModFrequencyValue.value = `${values[0].toFixed(0)} Hz`;
-  ringModMultiplierValue.value = `${values[1].toFixed(2)}×`;
-  ringModHighCutValue.value = `${values[2].toFixed(0)} Hz`;
-  ringModMixValue.value = `${Math.round(values[3] * 100)}%`;
+  ringModFrequencyValue.value = `${values[1].toFixed(0)} Hz`;
+  ringModMultiplierValue.value = `${values[2].toFixed(2)}×`;
+  ringModHighCutValue.value = `${values[3].toFixed(0)} Hz`;
+  ringModMixValue.value = `${Math.round(values[4] * 100)}%`;
   DEFAULT_PARAMETERS.ringModulator = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "ring-modulator", value: values });
@@ -4539,6 +4541,7 @@ for (const input of [rotaryRate, rotaryTempoBpm, rotaryBeatsPerRotation,
 for (const input of [rotaryTempoSync, rotarySpeed, rotaryInputSelect]) {
   input.addEventListener("change", updateRotarySpeaker);
 }
+ringModType.addEventListener("change", updateRingModulator);
 for (const input of [ringModFrequency, ringModMultiplier, ringModHighCut, ringModMix]) {
   input.addEventListener("input", updateRingModulator);
   input.addEventListener("change", updateRingModulator);
@@ -5781,6 +5784,135 @@ async function runCelestialReverbBrowserSmokeTest(reference, captureView, captur
       checkboxes.forEach((checkbox, index) => {
         checkbox.checked = previousEffectState[index];
         workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runRingModulatorBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = [
+    ringModType.value,
+    ringModFrequency.value,
+    ringModMultiplier.value,
+    ringModHighCut.value,
+    ringModMix.value,
+  ];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Ring Modulator smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    ringModFrequency.value = "713";
+    ringModMultiplier.value = "1.75";
+    ringModHighCut.value = "9000";
+    ringModMix.value = "100";
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    const capture = async (type, ringEnabled = true) => {
+      checkboxes.forEach((checkbox, index) => {
+        const enabled = (ringEnabled && index === 34) || index === 79 || index === 80;
+        checkbox.checked = enabled;
+        workletNode.port.postMessage({ type: "enable", index, value: enabled });
+      });
+      ringModType.value = String(type);
+      ringModType.dispatchEvent(new Event("change", { bubbles: true }));
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Ring Modulator playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return Float32Array.from(new Float32Array(captureBuffer));
+    };
+    const dry = await capture(0, false);
+    const outputs = [
+      await capture(0),
+      await capture(1),
+      await capture(2),
+    ];
+    const summaries = outputs.map((samples, index) => {
+      let peak = 0;
+      let squares = 0;
+      let activeSamples = 0;
+      for (const sample of samples) {
+        const magnitude = Math.abs(sample);
+        peak = Math.max(peak, magnitude);
+        squares += sample * sample;
+        if (magnitude > 1e-6) activeSamples += 1;
+      }
+      const rms = Math.sqrt(squares / Math.max(1, samples.length));
+      if (peak < 1e-5 || activeSamples < 32) {
+        throw new Error(
+          `Ring Modulator type ${index} produced no measurable output from local guitar audio: ${JSON.stringify({ peak, rms, activeSamples })}.`);
+      }
+      return { type: index, peak, rms, activeSamples };
+    });
+    let classicMaxDifference = 0;
+    let classicDifferenceSquares = 0;
+    let classicChangedSamples = 0;
+    for (let index = 0; index < outputs[0].length; index += 1) {
+      const difference = Math.abs(outputs[0][index] - dry[index]);
+      classicMaxDifference = Math.max(classicMaxDifference, difference);
+      classicDifferenceSquares += difference * difference;
+      if (difference > 1e-6) classicChangedSamples += 1;
+    }
+    const classicRmsDifference = Math.sqrt(
+      classicDifferenceSquares / Math.max(1, outputs[0].length),
+    );
+    if (classicMaxDifference < 1e-4 || classicRmsDifference < 1e-5 ||
+        classicChangedSamples < 32) {
+      throw new Error(
+        `Ring Modulator Classic did not alter local guitar output: ${JSON.stringify({ classicMaxDifference, classicRmsDifference, classicChangedSamples })}`);
+    }
+    let ssbMaxDifference = 0;
+    let ssbDifferenceSquares = 0;
+    let ssbChangedSamples = 0;
+    for (let index = 0; index < outputs[1].length; index += 1) {
+      const difference = Math.abs(outputs[1][index] - outputs[2][index]);
+      ssbMaxDifference = Math.max(ssbMaxDifference, difference);
+      ssbDifferenceSquares += difference * difference;
+      if (difference > 1e-6) ssbChangedSamples += 1;
+    }
+    const ssbRmsDifference = Math.sqrt(
+      ssbDifferenceSquares / Math.max(1, outputs[1].length),
+    );
+    if (ssbMaxDifference < 1e-4 || ssbRmsDifference < 1e-5 || ssbChangedSamples < 32) {
+      throw new Error(
+        `Ring Modulator SSB Up and SSB Down did not produce distinct output: ${JSON.stringify({ ssbMaxDifference, ssbRmsDifference, ssbChangedSamples })}`);
+    }
+    return {
+      enabledEffectIndex: 34,
+      types: ["Classic", "SSB Up", "SSB Down"],
+      summaries,
+      classicDryRmsDifference: classicRmsDifference,
+      ssbUpDownRmsDifference: ssbRmsDifference,
+      ssbUpDownMaxDifference: ssbMaxDifference,
+      ssbUpDownChangedSamples: ssbChangedSamples,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [ringModType, ringModFrequency, ringModMultiplier, ringModHighCut, ringModMix]
+        .forEach((control, index) => { control.value = previousControls[index]; });
+      ringModType.dispatchEvent(new Event("change", { bubbles: true }));
+      [...document.querySelectorAll("[data-effect]")].forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
       });
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
@@ -7136,7 +7268,7 @@ async function runBrowserSelfTest() {
         autoSwell: [-90, 100, 150, 6, 0, 0.9],
          rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0.15, 0.75, 1, 0.55, 0.5,
            0.72, 800, 450, 0.4, 0.75, 0.25, 1, 1, 1, 0, 0],
-        ringModulator: [713, 1.75, 9000, 0.83],
+         ringModulator: [0, 713, 1.75, 9000, 0.83],
         rhythmicSlicer: [1, 120, 8, 8, 0.4, 0.15, 0.5, 1, 0,
           1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25,
           1, 0.25, 1, 0.25, 1, 0.25, 1, 0.25],
@@ -7677,6 +7809,10 @@ async function runBrowserSelfTest() {
     const celestialReverbSmoke = await runCelestialReverbBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Ring Modulator Classic and SSB modes on local guitar audio…";
+    const ringModulatorSmoke = await runRingModulatorBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking tracked Synth playback on local guitar audio…";
     const fractalThreeVoiceSynthSmoke =
       await runFractalThreeVoiceSynthBrowserSmokeTest(
@@ -7808,6 +7944,7 @@ async function runBrowserSelfTest() {
       rhythmTapDelay: rhythmTapDelaySmoke,
       plexDelay: plexDelaySmoke,
       celestialReverb: celestialReverbSmoke,
+      ringModulator: ringModulatorSmoke,
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },

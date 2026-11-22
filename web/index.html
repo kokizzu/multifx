@@ -246,12 +246,13 @@
       <div class="effect-parameter-group" aria-label="Ring modulator controls">
         <h3>Ring Modulator · project-authored</h3>
         <div class="gain-controls">
+          <label class="mix-control" for="ring-mod-type"><span>Type</span><select id="ring-mod-type"><option value="0" selected>Classic</option><option value="1">SSB Up</option><option value="2">SSB Down</option></select></label>
           <label class="mix-control" for="ring-mod-frequency-hz"><span>Frequency</span><output id="ring-mod-frequency-hz-value" for="ring-mod-frequency-hz">440 Hz</output><input id="ring-mod-frequency-hz" type="range" min="2" max="2000" step="1" value="440"></label>
           <label class="mix-control" for="ring-mod-multiplier"><span>Frequency multiplier</span><output id="ring-mod-multiplier-value" for="ring-mod-multiplier">1.00×</output><input id="ring-mod-multiplier" type="range" min="0.25" max="4" step="0.01" value="1"></label>
           <label class="mix-control" for="ring-mod-high-cut-hz"><span>High cut</span><output id="ring-mod-high-cut-hz-value" for="ring-mod-high-cut-hz">20000 Hz</output><input id="ring-mod-high-cut-hz" type="range" min="20" max="20000" step="10" value="20000"></label>
           <label class="mix-control" for="ring-mod-mix"><span>Mix</span><output id="ring-mod-mix-value" for="ring-mod-mix">100%</output><input id="ring-mod-mix" type="range" min="0" max="100" step="1" value="100"></label>
         </div>
-        <p class="hint">A free-running sine carrier multiplies the audio. The row checkbox bypasses the block. This project-authored implementation is the classic mode; it does not implement SSB or pitch-tracked variants.</p>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Blocks Guide</a> lists Classic, SSB Up, and SSB Down types. This project-authored implementation uses its own 63-tap Hilbert FIR for SSB, adding 31 samples of latency to wet and dry paths (about 0.65 ms at 48 kHz); it does not reproduce Fractal DSP. Pitch Tracking and Guitar/Bass tracking remain unimplemented. The row checkbox bypasses the block.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Rhythmic Slicer controls">
         <h3>Rhythmic Slicer · project-authored</h3>
