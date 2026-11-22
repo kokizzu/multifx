@@ -419,13 +419,16 @@
       <div class="effect-parameter-group" aria-label="Filtered Delay controls">
         <h3>Filtered Delay · project-authored</h3>
         <div class="gain-controls">
+          <label class="mix-control" for="filtered-delay-time-mode"><span>Time mode</span><select id="filtered-delay-time-mode"><option value="0" selected>Milliseconds</option><option value="1">Tempo sync</option></select></label>
           <label class="mix-control" for="filtered-delay-time-ms"><span>Time</span><output id="filtered-delay-time-ms-value" for="filtered-delay-time-ms">350 ms</output><input id="filtered-delay-time-ms" type="range" min="1" max="2000" step="1" value="350"></label>
+          <label class="mix-control" for="filtered-delay-tempo-bpm"><span>Tempo</span><output id="filtered-delay-tempo-bpm-value" for="filtered-delay-tempo-bpm">120 BPM</output><input id="filtered-delay-tempo-bpm" type="range" min="20" max="300" step="1" value="120" disabled></label>
+          <label class="mix-control" for="filtered-delay-division"><span>Time division</span><select id="filtered-delay-division" disabled><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4" selected>Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option><option value="12">1/32</option><option value="13">1/64</option></select></label>
           <label class="mix-control" for="filtered-delay-feedback"><span>Feedback</span><output id="filtered-delay-feedback-value" for="filtered-delay-feedback">25%</output><input id="filtered-delay-feedback" type="range" min="0" max="95" step="1" value="25"></label>
           <label class="mix-control" for="filtered-delay-mix"><span>Mix</span><output id="filtered-delay-mix-value" for="filtered-delay-mix">25%</output><input id="filtered-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
           <label class="mix-control" for="filtered-delay-low-cut-hz"><span>Repeat low cut</span><output id="filtered-delay-low-cut-hz-value" for="filtered-delay-low-cut-hz">120 Hz</output><input id="filtered-delay-low-cut-hz" type="range" min="20" max="1000" step="1" value="120"></label>
           <label class="mix-control" for="filtered-delay-high-cut-hz"><span>Repeat high cut</span><output id="filtered-delay-high-cut-hz-value" for="filtered-delay-high-cut-hz">6000 Hz</output><input id="filtered-delay-high-cut-hz" type="range" min="2000" max="20000" step="10" value="6000"></label>
         </div>
-        <p class="hint">Low and high cuts shape the feedback repeats; the direct signal is unchanged. This static repeat filter is project-authored and does not emulate a swept or resonant delay. Bounds/defaults are project-authored; the general effect checkbox bypasses this chain stage.</p>
+        <p class="hint">Time can use milliseconds or project-authored BPM divisions through 1/64. Low and high cuts shape the feedback repeats; the direct signal is unchanged. This static repeat filter is project-authored and does not emulate a swept or resonant delay. Bounds/defaults are project-authored; the general effect checkbox bypasses this chain stage.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Sweep Delay controls">
         <h3>Sweep Delay · project-authored</h3>

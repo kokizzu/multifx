@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -64,6 +65,48 @@ void test_filtered_delay_time_and_immediate_dry_mix() {
             "Filtered Delay identity or memory accounting is incorrect");
 }
 
+void test_filtered_delay_tempo_sync_short_divisions() {
+    struct DivisionCase {
+        tabletfx::DelayDivision division;
+        std::size_t expected_frames;
+        const char* name;
+    };
+    constexpr DivisionCase cases[]{
+        {tabletfx::DelayDivision::thirty_second, 3000, "1/32"},
+        {tabletfx::DelayDivision::sixty_fourth, 1500, "1/64"},
+    };
+
+    for (const auto& item : cases) {
+        tabletfx::FilteredDelayParameters parameters;
+        parameters.time_ms = 7.0F;
+        parameters.feedback = 0.0F;
+        parameters.mix = 1.0F;
+        parameters.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+        parameters.tempo_bpm = 120.0F;
+        parameters.division = item.division;
+        tabletfx::FilteredDelay delay(48000.0F, 1, 2000.0F, parameters);
+        std::vector<float> impulse(item.expected_frames + 64);
+        impulse[0] = 0.8F;
+        delay.process(impulse, 1);
+
+        require(std::all_of(impulse.begin(),
+                            impulse.begin() + static_cast<std::ptrdiff_t>(item.expected_frames),
+                            [](float value) { return value == 0.0F; }),
+                std::string("tempo-synced Filtered Delay must wait for ") + item.name);
+        require(std::any_of(
+                    impulse.begin() + static_cast<std::ptrdiff_t>(item.expected_frames),
+                    impulse.end(), [](float value) { return std::abs(value) > 0.01F; }),
+                std::string("tempo-synced Filtered Delay must produce ") + item.name +
+                    " repeat");
+        const auto configured = delay.parameters();
+        require(configured.time_ms == 7.0F &&
+                    configured.time_mode == tabletfx::DelayTimeMode::tempo_sync &&
+                    configured.division == item.division &&
+                    configured.tempo_bpm == 120.0F,
+                "tempo mode must retain its separate millisecond time and sync controls");
+    }
+}
+
 void test_low_and_high_cuts_attenuate_the_selected_repeat_band() {
     const float low_reference = sine_rms(100.0F, false);
     const float low_filtered = sine_rms(100.0F, true);
@@ -117,6 +160,7 @@ void test_controls_are_bounded_and_reset_clears_state() {
 int main() {
     try {
         test_filtered_delay_time_and_immediate_dry_mix();
+        test_filtered_delay_tempo_sync_short_divisions();
         test_low_and_high_cuts_attenuate_the_selected_repeat_band();
         test_controls_are_bounded_and_reset_clears_state();
         std::cout << "Filtered Delay tests passed\n";

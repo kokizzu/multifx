@@ -1941,7 +1941,7 @@ def check_modulated_delay(executable: Path) -> None:
 def check_filtered_delay(executable: Path) -> None:
     sample_rate = 48000
     delay_frames = 96
-    source_samples = [0] * 384
+    source_samples = [0] * 3072
     source_samples[0] = 26214
     with tempfile.TemporaryDirectory(prefix="tabletfx-filtered-delay-cli-test-") as directory:
         root = Path(directory)
@@ -1965,6 +1965,27 @@ def check_filtered_delay(executable: Path) -> None:
             raise AssertionError("Filtered Delay must produce its first filtered repeat")
         if any(abs(rendered[index]) > 0.002 for index in range(delay_frames + 128, len(rendered))):
             raise AssertionError("zero-feedback Filtered Delay must not produce later repeats")
+
+        tempo_output = root / "filtered-tempo.wav"
+        tempo_result = subprocess.run(
+            [str(executable), "render", str(source), str(tempo_output),
+             "--filtered-delay-time-mode", "tempo-sync",
+             "--filtered-delay-tempo-bpm", "120",
+             "--filtered-delay-division", "sixty-fourth",
+             "--filtered-delay-feedback", "0", "--filtered-delay-mix", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in tempo_result.stdout:
+            raise AssertionError("tempo-synced Filtered Delay CLI did not enable one processor")
+        tempo_rendered = struct.unpack(
+            "<" + "f" * len(source_samples), tempo_output.read_bytes()[44:])
+        tempo_delay_frames = sample_rate * 60 // (120 * 16)
+        if any(abs(tempo_rendered[index]) > 0.002
+               for index in range(tempo_delay_frames)):
+            raise AssertionError("tempo-synced Filtered Delay must not leak early/dry input")
+        if not any(abs(tempo_rendered[index]) > 0.01
+                   for index in range(tempo_delay_frames, tempo_delay_frames + 24)):
+            raise AssertionError("1/64 tempo-synced Filtered Delay must produce its first repeat")
 
 
 def check_resonant_delay(executable: Path) -> None:

@@ -94,6 +94,8 @@ double PitchSequence::division_beats(
         case tabletfx::DelayDivision::dotted_sixteenth: return 0.375;
         case tabletfx::DelayDivision::sixteenth: return 0.25;
         case tabletfx::DelayDivision::sixteenth_triplet: return 1.0 / 6.0;
+        case tabletfx::DelayDivision::thirty_second: return 0.125;
+        case tabletfx::DelayDivision::sixty_fourth: return 0.0625;
     }
     return 1.0;
 }

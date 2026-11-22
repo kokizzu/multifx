@@ -298,6 +298,9 @@ struct FilteredDelayParameters {
     float mix = 0.25F;
     float low_cut_hz = 120.0F;
     float high_cut_hz = 6000.0F;
+    DelayTimeMode time_mode = DelayTimeMode::milliseconds;
+    float tempo_bpm = 120.0F;
+    DelayDivision division = DelayDivision::quarter;
 };
 
 // Project-authored static filtered-repeat delay. It reuses Delay's preallocated

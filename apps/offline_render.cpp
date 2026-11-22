@@ -494,6 +494,8 @@ tabletfx::DelayDivision parse_delay_division(std::string_view value) {
     if (value == "dotted-sixteenth") return tabletfx::DelayDivision::dotted_sixteenth;
     if (value == "sixteenth") return tabletfx::DelayDivision::sixteenth;
     if (value == "sixteenth-triplet") return tabletfx::DelayDivision::sixteenth_triplet;
+    if (value == "thirty-second") return tabletfx::DelayDivision::thirty_second;
+    if (value == "sixty-fourth") return tabletfx::DelayDivision::sixty_fourth;
     throw std::invalid_argument("Unsupported delay division: " + std::string(value));
 }
 
@@ -1817,6 +1819,24 @@ Options parse_options(int argc, char** argv, int first) {
             options.delay_tempo_enabled = true;
             continue;
         }
+        if (key == "--filtered-delay-time-mode") {
+            const std::string_view value(argv[++i]);
+            if (value == "milliseconds") {
+                options.filtered_delay.time_mode = tabletfx::DelayTimeMode::milliseconds;
+            } else if (value == "tempo-sync") {
+                options.filtered_delay.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+            } else {
+                throw std::invalid_argument(
+                    "Filtered Delay time mode must be milliseconds or tempo-sync");
+            }
+            options.filtered_delay_enabled = true;
+            continue;
+        }
+        if (key == "--filtered-delay-division") {
+            options.filtered_delay.division = parse_delay_division(argv[++i]);
+            options.filtered_delay_enabled = true;
+            continue;
+        }
         if (key == "--mono-sum") {
             const std::string_view value(argv[++i]);
             if (value == "average") options.mono_sum_policy = tabletfx::MonoSumPolicy::Average;
@@ -2902,6 +2922,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--filtered-delay-time-ms") {
             options.filtered_delay.time_ms = value;
+            options.filtered_delay_enabled = true;
+        }
+        else if (key == "--filtered-delay-tempo-bpm") {
+            options.filtered_delay.tempo_bpm = value;
             options.filtered_delay_enabled = true;
         }
         else if (key == "--filtered-delay-feedback") {
@@ -4823,6 +4847,9 @@ void print_usage() {
                      " [--modulated-delay-spread-degrees 0..180]"
                      " [--modulated-delay-trigger-threshold-db -72..0]\n"
                   << "                 [--filtered-delay] [--filtered-delay-time-ms 1..2000]"
+                     " [--filtered-delay-time-mode milliseconds|tempo-sync]"
+                     " [--filtered-delay-tempo-bpm 20..300]"
+                     " [--filtered-delay-division <delay-division>]"
                      " [--filtered-delay-feedback 0..0.95] [--filtered-delay-mix 0..1]"
                      " [--filtered-delay-low-cut-hz 20..1000]"
                      " [--filtered-delay-high-cut-hz 2000..20000]\n"

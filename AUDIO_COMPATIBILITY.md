@@ -2,6 +2,8 @@
 
 No audio hardware has been probed by this repository yet. All rows remain unverified until collected directly.
 
+**Project-authored Filtered Delay timing update (2026-11-23):** Free milliseconds remain available; tempo sync supports 20–300 BPM and whole, dotted, triplet, 1/32, and 1/64 divisions. The direct dry path and repeat-only low/high cuts are preserved. `make test` passed 84/84 CTest cases plus fixture checks; `make web-test` passed the 81-entry categorized picker, Filtered Delay UI self-check, local guitar Play capture, and 70-stage browser/native comparison (maximum absolute error 0.000013969; RMS error 0.000002686). These are code/UI checks, not device or listening evidence.
+
 | Host | Required configuration | Observed device/OS/API/route | Build/audio test | Result |
 |---|---|---|---|---|
 | Android | itel VistaTab 11, Android 14; record actual ABI, build fingerprint and physical RAM; USB full-duplex interface | Not probed | Not run | Untested |

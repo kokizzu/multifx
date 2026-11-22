@@ -22,6 +22,8 @@ enum class DelayDivision : std::uint8_t {
     dotted_sixteenth,
     sixteenth,
     sixteenth_triplet,
+    thirty_second,
+    sixty_fourth,
 };
 
 } // namespace tabletfx

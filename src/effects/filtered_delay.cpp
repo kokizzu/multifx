@@ -44,8 +44,41 @@ void FilteredDelay::configure(FilteredDelayParameters parameters) noexcept {
     parameters.high_cut_hz = std::isfinite(parameters.high_cut_hz)
         ? std::clamp(parameters.high_cut_hz, high_min, high_max)
         : std::clamp(6000.0F, high_min, high_max);
+    if (parameters.time_mode != DelayTimeMode::milliseconds &&
+        parameters.time_mode != DelayTimeMode::tempo_sync) {
+        parameters.time_mode = DelayTimeMode::milliseconds;
+    }
+    parameters.tempo_bpm = std::isfinite(parameters.tempo_bpm)
+        ? std::clamp(parameters.tempo_bpm, 20.0F, 300.0F)
+        : 120.0F;
+    switch (parameters.division) {
+    case DelayDivision::whole:
+    case DelayDivision::dotted_half:
+    case DelayDivision::half:
+    case DelayDivision::dotted_quarter:
+    case DelayDivision::quarter:
+    case DelayDivision::quarter_triplet:
+    case DelayDivision::dotted_eighth:
+    case DelayDivision::eighth:
+    case DelayDivision::eighth_triplet:
+    case DelayDivision::dotted_sixteenth:
+    case DelayDivision::sixteenth:
+    case DelayDivision::sixteenth_triplet:
+    case DelayDivision::thirty_second:
+    case DelayDivision::sixty_fourth:
+        break;
+    default:
+        parameters.division = DelayDivision::quarter;
+        break;
+    }
     parameters_ = parameters;
-    delay_.configure(parameters_.time_ms, parameters_.feedback, parameters_.mix);
+    if (parameters_.time_mode == DelayTimeMode::tempo_sync) {
+        delay_.configure_tempo(parameters_.tempo_bpm, parameters_.division,
+                               parameters_.feedback, parameters_.mix);
+    } else {
+        delay_.configure(parameters_.time_ms, parameters_.feedback,
+                         parameters_.mix);
+    }
     delay_.configure_repeat_filters(true, parameters_.low_cut_hz,
                                     parameters_.high_cut_hz);
 }

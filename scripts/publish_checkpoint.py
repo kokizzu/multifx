@@ -551,8 +551,14 @@ FILTERED_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
     "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/delay_timing.hpp",
     "src/effects.cpp",
+    "src/effects/auto_swell_delay.cpp",
     "src/effects/filtered_delay.cpp",
+    "src/effects/multi_delay.cpp",
+    "src/effects/pitch_sequence.cpp",
+    "src/effects/plex_delay.cpp",
+    "src/effects/reverse_delay.cpp",
     "tests/test_filtered_delay.cpp",
     "src/web/wasm_chain.cpp",
     "scripts/test_offline_cli.py",
@@ -568,6 +574,7 @@ FILTERED_DELAY_CHECKPOINT_PATHS = (
     "web/app.js",
     "web/audio-worklet.js",
     "web/index.html",
+    "scripts/publish_checkpoint.py",
 )
 SWEEP_DELAY_CHECKPOINT_PATHS = (
     "Makefile",

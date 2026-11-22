@@ -2159,9 +2159,26 @@ public:
     }
 
     void configure_filtered_delay(float time_ms, float feedback, float mix,
-                                  float low_cut_hz, float high_cut_hz) noexcept {
-        static_cast<tabletfx::FilteredDelay*>(effects_[41].effect.get())->configure(
-            {time_ms, feedback, mix, low_cut_hz, high_cut_hz});
+                                  float low_cut_hz, float high_cut_hz,
+                                  std::uint32_t time_mode, float tempo_bpm,
+                                  std::uint32_t division) noexcept {
+        auto* effect = static_cast<tabletfx::FilteredDelay*>(
+            effects_[41].effect.get());
+        auto parameters = effect->parameters();
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.time_mode = time_mode == 1
+            ? tabletfx::DelayTimeMode::tempo_sync
+            : tabletfx::DelayTimeMode::milliseconds;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.division = division <= static_cast<std::uint32_t>(
+            tabletfx::DelayDivision::sixty_fourth)
+            ? static_cast<tabletfx::DelayDivision>(division)
+            : tabletfx::DelayDivision::quarter;
+        effect->configure(parameters);
     }
 
     void configure_sweep_delay(float time_ms, float feedback, float mix,
@@ -2814,10 +2831,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_modulated_delay(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_filtered_delay(
     void* opaque, float time_ms, float feedback, float mix,
-    float low_cut_hz, float high_cut_hz) noexcept {
+    float low_cut_hz, float high_cut_hz, std::uint32_t time_mode,
+    float tempo_bpm, std::uint32_t division) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_filtered_delay(
-            time_ms, feedback, mix, low_cut_hz, high_cut_hz);
+            time_ms, feedback, mix, low_cut_hz, high_cut_hz, time_mode,
+            tempo_bpm, division);
     }
 }
 

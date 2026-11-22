@@ -212,7 +212,7 @@ const DEFAULT_PARAMETERS = {
   reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
-  filteredDelay: [350, 0.25, 0.25, 120, 6000],
+  filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
@@ -1390,6 +1390,10 @@ const modulatedDelayTriggerThreshold = document.querySelector("#modulated-delay-
 const modulatedDelayTriggerThresholdValue = document.querySelector("#modulated-delay-trigger-threshold-db-value");
 const filteredDelayTime = document.querySelector("#filtered-delay-time-ms");
 const filteredDelayTimeValue = document.querySelector("#filtered-delay-time-ms-value");
+const filteredDelayTimeMode = document.querySelector("#filtered-delay-time-mode");
+const filteredDelayTempoBpm = document.querySelector("#filtered-delay-tempo-bpm");
+const filteredDelayTempoBpmValue = document.querySelector("#filtered-delay-tempo-bpm-value");
+const filteredDelayDivision = document.querySelector("#filtered-delay-division");
 const filteredDelayFeedback = document.querySelector("#filtered-delay-feedback");
 const filteredDelayFeedbackValue = document.querySelector("#filtered-delay-feedback-value");
 const filteredDelayMix = document.querySelector("#filtered-delay-mix");
@@ -4444,14 +4448,26 @@ function updateModulatedDelay() {
 }
 
 function updateFilteredDelay() {
+  const timeMode = Number(filteredDelayTimeMode.value);
+  const tempoBpm = Number(filteredDelayTempoBpm.value);
+  const division = Number(filteredDelayDivision.value);
   const values = [
     Number(filteredDelayTime.value),
     Number(filteredDelayFeedback.value) / 100,
     Number(filteredDelayMix.value) / 100,
     Number(filteredDelayLowCut.value),
     Number(filteredDelayHighCut.value),
+    timeMode,
+    tempoBpm,
+    division,
   ];
-  filteredDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  filteredDelayTime.disabled = timeMode === 1;
+  filteredDelayTempoBpm.disabled = timeMode !== 1;
+  filteredDelayDivision.disabled = timeMode !== 1;
+  filteredDelayTimeValue.value = timeMode === 1
+    ? `${filteredDelayDivision.selectedOptions[0].text} · ${tempoBpm.toFixed(0)} BPM`
+    : `${values[0].toFixed(0)} ms`;
+  filteredDelayTempoBpmValue.value = `${tempoBpm.toFixed(0)} BPM`;
   filteredDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
   filteredDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
   filteredDelayLowCutValue.value = `${values[3].toFixed(0)} Hz`;
@@ -4607,6 +4623,11 @@ for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayM
 modulatedDelayWaveform.addEventListener("change", updateModulatedDelay);
 for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   filteredDelayLowCut, filteredDelayHighCut]) {
+  input.addEventListener("input", updateFilteredDelay);
+  input.addEventListener("change", updateFilteredDelay);
+}
+for (const input of [filteredDelayTimeMode, filteredDelayTempoBpm,
+  filteredDelayDivision]) {
   input.addEventListener("input", updateFilteredDelay);
   input.addEventListener("change", updateFilteredDelay);
 }
@@ -6848,6 +6869,20 @@ async function runBrowserSelfTest() {
     }
     filteredDelayHighCut.value = defaultFilteredHighCut;
     filteredDelayHighCut.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultFilteredDelayMode = filteredDelayTimeMode.value;
+    const defaultFilteredDelayDivision = filteredDelayDivision.value;
+    filteredDelayTimeMode.value = "1";
+    filteredDelayDivision.value = "12";
+    filteredDelayTimeMode.dispatchEvent(new Event("change", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.filteredDelay[5] !== 1 ||
+        DEFAULT_PARAMETERS.filteredDelay[7] !== 12 ||
+        !filteredDelayTime.disabled || filteredDelayTempoBpm.disabled ||
+        !filteredDelayTimeValue.value.startsWith("1/32")) {
+      throw new Error("Filtered Delay tempo controls must update the processor and mode display.");
+    }
+    filteredDelayTimeMode.value = defaultFilteredDelayMode;
+    filteredDelayDivision.value = defaultFilteredDelayDivision;
+    filteredDelayTimeMode.dispatchEvent(new Event("change", { bubbles: true }));
     const defaultSweepRate = sweepDelayRate.value;
     sweepDelayRate.value = "1.25";
     sweepDelayRate.dispatchEvent(new Event("input", { bubbles: true }));

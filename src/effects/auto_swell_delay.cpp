@@ -326,6 +326,8 @@ float AutoSwellDelay::beats_for_division(DelayDivision division) noexcept {
     case DelayDivision::dotted_sixteenth: return 0.375F;
     case DelayDivision::sixteenth: return 0.25F;
     case DelayDivision::sixteenth_triplet: return 1.0F / 6.0F;
+    case DelayDivision::thirty_second: return 0.125F;
+    case DelayDivision::sixty_fourth: return 0.0625F;
     }
     return 1.0F;
 }
