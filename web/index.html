@@ -66,6 +66,7 @@
             <option value="all">All categories</option>
             <option value="utility">Utility</option>
             <option value="dynamics">Dynamics</option>
+            <option value="vocal">Vocal FX</option>
             <option value="filter">Filters &amp; wah</option>
             <option value="drive">Drive &amp; fuzz</option>
             <option value="modulation">Modulation</option>
@@ -82,7 +83,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">71 of 71</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">72 of 72</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -155,8 +156,9 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="66"><span class="effect-number">67</span><span class="effect-name">Ten-Tap Delay · project-authored</span><span class="effect-default">1–10 taps · tempo · spread</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="67"><span class="effect-number">68</span><span class="effect-name">Auto-Pan · project-authored</span><span class="effect-default">0.5 Hz · 75% · sine</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="68"><span class="effect-number">69</span><span class="effect-name">Megatap Delay · project-authored</span><span class="effect-default">1–64 taps · diffusion · tap shaping</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="69" checked><span class="effect-number">70</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="70" checked><span class="effect-number">71</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="vocal"><input type="checkbox" data-effect="69"><span class="effect-number">70</span><span class="effect-name">De-Esser · project-authored</span><span class="effect-default">6.5 kHz · 12 dB maximum reduction</span><span class="effect-category-tag">Vocal FX</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="70" checked><span class="effect-number">71</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="71" checked><span class="effect-number">72</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1149,6 +1151,18 @@
             <label class="mix-control" for="megatap-delay-envelope-release-ms"><span>Envelope release</span><output for="megatap-delay-envelope-release-ms">15 ms</output><input id="megatap-delay-envelope-release-ms" type="range" min="1" max="5000" step="1" value="15"></label>
           </div>
         </details>
+      </div>
+      <div class="effect-parameter-group" aria-label="De-Esser controls">
+        <h3>De-Esser · project-authored</h3>
+        <p class="hint">The <a href="https://www.headrushfx.com/products/prime/" target="_blank" rel="noreferrer">HeadRush Prime FX overview</a> lists De-Esser under Vocal FX and labels it a HeadRush Original. The linked v5.2 guide is current on the product page, but the available source text does not expose this model's parameter names or ranges. These controls and the split-band detector are project-authored and make no HeadRush DSP, setting, or sound-parity claim.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="de-esser-frequency-hz"><span>Detector frequency</span><output for="de-esser-frequency-hz">6500 Hz</output><input id="de-esser-frequency-hz" type="range" min="1500" max="12000" step="100" value="6500"></label>
+          <label class="mix-control" for="de-esser-q"><span>Detector Q</span><output for="de-esser-q">1.50</output><input id="de-esser-q" type="range" min="0.5" max="8" step="0.1" value="1.5"></label>
+          <label class="mix-control" for="de-esser-threshold-dbfs"><span>Threshold</span><output for="de-esser-threshold-dbfs">-30 dBFS</output><input id="de-esser-threshold-dbfs" type="range" min="-72" max="-6" step="1" value="-30"></label>
+          <label class="mix-control" for="de-esser-max-reduction-db"><span>Maximum reduction</span><output for="de-esser-max-reduction-db">12 dB</output><input id="de-esser-max-reduction-db" type="range" min="0" max="18" step="0.5" value="12"></label>
+          <label class="mix-control" for="de-esser-attack-ms"><span>Attack</span><output for="de-esser-attack-ms">2 ms</output><input id="de-esser-attack-ms" type="range" min="0" max="50" step="1" value="2"></label>
+          <label class="mix-control" for="de-esser-release-ms"><span>Release</span><output for="de-esser-release-ms">80 ms</output><input id="de-esser-release-ms" type="range" min="5" max="500" step="5" value="80"></label>
+        </div>
       </div>
       <div class="effect-parameter-group" aria-label="Auto-Pan controls">
         <h3>Auto-Pan · project-authored</h3>

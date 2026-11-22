@@ -1072,6 +1072,15 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/megatap_delay.hpp",
     "src/effects/megatap_delay.cpp",
     "tests/test_megatap_delay.cpp",
+    "include/tabletfx/effects/pugilist.hpp",
+    "src/effects/pugilist.cpp",
+    "tests/test_pugilist.cpp",
+    "include/tabletfx/effects/vibe.hpp",
+    "src/effects/vibe.cpp",
+    "tests/test_vibe.cpp",
+    "include/tabletfx/effects/multi_delay.hpp",
+    "src/effects/multi_delay.cpp",
+    "tests/test_multi_delay.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1235,6 +1244,27 @@ MEGATAP_DELAY_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+DE_ESSER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/de_esser.hpp",
+    "src/effects/de_esser.cpp",
+    "tests/test_de_esser.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "README.md",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1324,6 +1354,8 @@ CHECKPOINTS = {
                  "feat: add project-authored auto-pan"),
     "megatap-delay": (MEGATAP_DELAY_CHECKPOINT_PATHS,
                       "feat: add project-authored Megatap delay"),
+    "de-esser": (DE_ESSER_CHECKPOINT_PATHS,
+                 "feat: add project-authored De-Esser"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
 }

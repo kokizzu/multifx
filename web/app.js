@@ -70,6 +70,7 @@ const EFFECT_NAMES = [
   "Ten-Tap Delay · project-authored",
   "Auto-Pan · project-authored",
   "Megatap Delay · project-authored",
+  "De-Esser · project-authored",
   "Output level",
   "Peak limiter",
 ];
@@ -108,6 +109,7 @@ const DEFAULT_PARAMETERS = {
   autoPan: [0.5, 0.75, 1, 0, 120, 5],
   megatapDelay: [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
     0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0],
+  deEsser: [6500, 1.5, -30, 12, 2, 80],
   grainDelay: [350, 0.25, 0.25, 80, 2, 0, 0],
   pitchFeedbackDelay: [350, 0.35, 0.25, 7],
   feedbackGenerator: [1, 0.35, 15, 600, 0, 1, -48],
@@ -656,6 +658,16 @@ const megatapDelayControls = [
   megatapDelayEnvelopeThreshold, megatapDelayEnvelopeAttack,
   megatapDelayEnvelopeRelease, megatapDelayInputGain, megatapDelayMix,
   megatapDelayLevel, megatapDelayInputSelect,
+];
+const deEsserFrequency = document.querySelector("#de-esser-frequency-hz");
+const deEsserQ = document.querySelector("#de-esser-q");
+const deEsserThreshold = document.querySelector("#de-esser-threshold-dbfs");
+const deEsserReduction = document.querySelector("#de-esser-max-reduction-db");
+const deEsserAttack = document.querySelector("#de-esser-attack-ms");
+const deEsserRelease = document.querySelector("#de-esser-release-ms");
+const deEsserControls = [
+  deEsserFrequency, deEsserQ, deEsserThreshold,
+  deEsserReduction, deEsserAttack, deEsserRelease,
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
@@ -1378,6 +1390,28 @@ function updateMegatapDelayOptions() {
   }
 }
 
+function updateDeEsserOptions() {
+  const values = [
+    Number(deEsserFrequency.value), Number(deEsserQ.value),
+    Number(deEsserThreshold.value), Number(deEsserReduction.value),
+    Number(deEsserAttack.value), Number(deEsserRelease.value),
+  ];
+  DEFAULT_PARAMETERS.deEsser = values;
+  const show = (control, text) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = text;
+  };
+  show(deEsserFrequency, `${values[0]} Hz`);
+  show(deEsserQ, values[1].toFixed(2));
+  show(deEsserThreshold, `${values[2]} dBFS`);
+  show(deEsserReduction, `${values[3]} dB`);
+  show(deEsserAttack, `${values[4]} ms`);
+  show(deEsserRelease, `${values[5]} ms`);
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "de-esser", value: values });
+  }
+}
+
 function sendShufflingLooperCommand(command) {
   if (!workletNode) {
     shufflingLooperStatus.value = "Start processed playback before using the looper";
@@ -1975,6 +2009,11 @@ for (const control of megatapDelayControls) {
   control.addEventListener("input", updateMegatapDelayOptions);
   control.addEventListener("change", updateMegatapDelayOptions);
 }
+for (const control of deEsserControls) {
+  control.addEventListener("input", updateDeEsserOptions);
+  control.addEventListener("change", updateDeEsserOptions);
+}
+updateDeEsserOptions();
 
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
 effectSearch.addEventListener("input", updateEffectBrowser);
@@ -4067,7 +4106,7 @@ async function runMegatapDelayBrowserSmokeTest(reference, captureView, captureBu
   const previousControls = megatapDelayControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 68 || index === 69 || index === 70);
+    index === 68 || index === 70 || index === 71);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -4145,6 +4184,72 @@ async function runMegatapDelayBrowserSmokeTest(reference, captureView, captureBu
   }
 }
 
+async function runDeEsserBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = deEsserControls.map((control) => control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 69 || index === 70 || index === 71);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("De-Esser smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [deEsserFrequency.value, deEsserQ.value, deEsserThreshold.value,
+      deEsserReduction.value, deEsserAttack.value, deEsserRelease.value] =
+      ["6500", "1.5", "-60", "18", "2", "80"];
+    updateDeEsserOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting De-Esser playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    for (const sample of actual) {
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+    }
+    if (peak < 1e-5 || activeSamples < 32) {
+      throw new Error(`De-Esser produced no measurable processed output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
+    }
+    return { peak, activeSamples, enabledEffectIndex: 69, detectorFrequencyHz: 6500 };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      deEsserControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateDeEsserOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -4157,18 +4262,20 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 71 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 71 || effectRows.length !== 71 ||
+      const expectedEffectIds = Array.from({ length: 72 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 72 || effectRows.length !== 72 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
         EFFECT_NAMES[66] !== "Ten-Tap Delay · project-authored" ||
         EFFECT_NAMES[67] !== "Auto-Pan · project-authored" ||
          EFFECT_NAMES[68] !== "Megatap Delay · project-authored" ||
-         EFFECT_NAMES[69] !== "Output level" || EFFECT_NAMES[70] !== "Peak limiter" ||
+         EFFECT_NAMES[69] !== "De-Esser · project-authored" ||
+         EFFECT_NAMES[70] !== "Output level" || EFFECT_NAMES[71] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
-         !initialEffectState[69] || !initialEffectState[70] ||
+         initialEffectState[69] || !initialEffectState[70] ||
+         !initialEffectState[71] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -4185,7 +4292,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-           throw new Error("The effect picker must list 71 ordered, categorized effects (IDs 0–70), with optional effects disabled by default.");
+           throw new Error("The effect picker must list 72 ordered, categorized effects (IDs 0–71), with optional effects disabled by default.");
      }
      const defaultFiveBandEq = [...DEFAULT_PARAMETERS.fiveBandEq];
      fiveBandEqControls[2].gain.value = "3.5";
@@ -4592,6 +4699,37 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.megatapDelay.join(",") !== megatapDelayDefaults.join(",")) {
       throw new Error(`Megatap Delay self-test must restore project-authored defaults (expected ${megatapDelayDefaults.join(",")}; got ${DEFAULT_PARAMETERS.megatapDelay.join(",")}).`);
     }
+    const deEsserDefaults = [...DEFAULT_PARAMETERS.deEsser];
+    const deEsserControlSnapshot = deEsserControls.map((control) => control.value);
+    const previousDeEsserWorklet = workletNode;
+    const deEsserMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => deEsserMessages.push(message) } };
+      [deEsserFrequency.value, deEsserQ.value, deEsserThreshold.value,
+        deEsserReduction.value, deEsserAttack.value, deEsserRelease.value] =
+        ["7500", "2.5", "-36", "9", "4", "120"];
+      deEsserRelease.dispatchEvent(new Event("change", { bubbles: true }));
+      const message = deEsserMessages.at(-1);
+      if (message?.type !== "de-esser" ||
+          message.value.join(",") !== "7500,2.5,-36,9,4,120" ||
+          deEsserFrequency.parentElement.querySelector("output").value !== "7500 Hz" ||
+          deEsserQ.parentElement.querySelector("output").value !== "2.50" ||
+          deEsserThreshold.parentElement.querySelector("output").value !== "-36 dBFS" ||
+          deEsserReduction.parentElement.querySelector("output").value !== "9 dB" ||
+          deEsserAttack.parentElement.querySelector("output").value !== "4 ms" ||
+          deEsserRelease.parentElement.querySelector("output").value !== "120 ms") {
+        throw new Error("De-Esser controls must send project settings in WASM parameter order and display their values.");
+      }
+    } finally {
+      workletNode = previousDeEsserWorklet;
+      deEsserControls.forEach((control, index) => {
+        control.value = deEsserControlSnapshot[index];
+      });
+      updateDeEsserOptions();
+    }
+    if (DEFAULT_PARAMETERS.deEsser.join(",") !== deEsserDefaults.join(",")) {
+      throw new Error("De-Esser self-test must restore project-authored defaults.");
+    }
     const defaultDuckThreshold = duckingDelayThreshold.value;
     duckingDelayThreshold.value = "-24";
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
@@ -4628,12 +4766,20 @@ async function runBrowserSelfTest() {
     }
     sweepDelayRate.value = defaultSweepRate;
     sweepDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
+    effectCategoryFilter.value = "vocal";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const vocalIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 72" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("The Vocal FX filter must list the project-authored De-Esser and preserve chain state.");
+    }
     effectCategoryFilter.value = "modulation";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67" ||
-          effectCount.value !== "12 of 71" ||
+          effectCount.value !== "12 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -4641,8 +4787,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,70" ||
-        effectCount.value !== "9 of 71" ||
+    if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,71" ||
+        effectCount.value !== "9 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -4651,7 +4797,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (driveIds.join(",") !== "9,10,11,12,13,14,46" ||
-        effectCount.value !== "7 of 71" ||
+        effectCount.value !== "7 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include Bit Crusher and preserve the current chain state.");
     }
@@ -4660,7 +4806,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-        effectCount.value !== "7 of 71" ||
+        effectCount.value !== "7 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -4668,7 +4814,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 71" ||
+    if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -4676,7 +4822,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 71" ||
+    if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -4684,7 +4830,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 71" ||
+    if (pitchIds.join(",") !== "22,50,51" || effectCount.value !== "3 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -4692,7 +4838,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 71" ||
+    if (synthIds.join(",") !== "52,53" || effectCount.value !== "2 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth and free-running note generator without changing chain state.");
     }
@@ -4700,7 +4846,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 71" ||
+    if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -4708,7 +4854,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 71" ||
+    if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -4736,7 +4882,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68" || effectCount.value !== "12 of 71" ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68" || effectCount.value !== "12 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -4744,7 +4890,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 71" ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58" || effectCount.value !== "6 of 72" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must return Room, Hall, Plate, Spring, and Shimmer Reverb without changing enabled state.");
     }
@@ -4754,12 +4900,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 71") {
+        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 72") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-        if (effectCount.value !== "71 of 71" || effectRows.some((row) => row.hidden)) {
+        if (effectCount.value !== "72 of 72" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -4947,9 +5093,9 @@ async function runBrowserSelfTest() {
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-      if (parityEnabled.length !== 71 || activeProcessorIndices.length !== 68 ||
-          activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 68) {
-       throw new Error("The all-effect chain must contain 68 optional processors between input trim and output utilities.");
+      if (parityEnabled.length !== 72 || activeProcessorIndices.length !== 69 ||
+          activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 69) {
+       throw new Error("The all-effect chain must contain 69 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -4957,6 +5103,8 @@ async function runBrowserSelfTest() {
      // Megatap's UI/WASM path is tested separately; the offline CLI reference
      // does not implement this project-authored effect.
      parityEnabled[68] = false;
+     // The project-authored De-Esser also has no offline CLI reference stage.
+     parityEnabled[69] = false;
     const testOptions = {
       enabled: parityEnabled,
       inputMuted: false,
@@ -5498,6 +5646,10 @@ async function runBrowserSelfTest() {
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking De-Esser playback on local guitar audio…";
+    const deEsserSmoke = await runDeEsserBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Shuffling Looper WASM transport and loop output…";
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -5615,6 +5767,7 @@ async function runBrowserSelfTest() {
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
+      deEsser: deEsserSmoke,
       shufflingLooper: shufflingLooperSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,

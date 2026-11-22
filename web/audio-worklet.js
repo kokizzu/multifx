@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -225,6 +225,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
           0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0];
       module._tf_chain_set_megatap_delay(this.chain, ...megatapDelay);
+      const deEsser = parameters.deEsser || [6500, 1.5, -30, 12, 2, 80];
+      module._tf_chain_set_de_esser(this.chain, ...deEsser);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -582,6 +584,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_auto_pan(this.chain, ...message.value);
     } else if (message.type === "megatap-delay" && this.ready) {
       this.module._tf_chain_set_megatap_delay(this.chain, ...message.value);
+    } else if (message.type === "de-esser" && this.ready) {
+      this.module._tf_chain_set_de_esser(this.chain, ...message.value);
     } else if (message.type === "guitar-graphic-eq" && this.ready) {
       this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "bass-graphic-eq" && this.ready) {

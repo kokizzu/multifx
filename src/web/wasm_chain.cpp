@@ -17,6 +17,7 @@
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
 #include "tabletfx/effects/megatap_delay.hpp"
+#include "tabletfx/effects/de_esser.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -94,7 +95,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-          effects_.reserve(69);
+        effects_.reserve(70);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -300,6 +301,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::MegatapDelay>(
                                 static_cast<float>(sample_rate), 5000.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::DeEsser>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -371,6 +375,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 68U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 69U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -811,6 +818,21 @@ public:
             std::min(input_select, 2U));
         parameters.envelope_enabled = envelope_enabled != 0U;
         delay->set_parameters(parameters);
+    }
+
+    void configure_de_esser(float detector_frequency_hz, float detector_q,
+                            float threshold_dbfs, float max_reduction_db,
+                            float attack_ms, float release_ms) noexcept {
+        auto* de_esser = static_cast<tabletfx::effects::DeEsser*>(
+            effects_[69].effect.get());
+        auto parameters = de_esser->parameters();
+        parameters.detector_frequency_hz = detector_frequency_hz;
+        parameters.detector_q = detector_q;
+        parameters.threshold_dbfs = threshold_dbfs;
+        parameters.max_reduction_db = max_reduction_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        de_esser->configure(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2837,6 +2859,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_megatap_delay(
             diffusion_time_ms, diffusion_lfo_rate_hz, diffusion_lfo_depth_ms,
             envelope_threshold_db, envelope_attack_ms, envelope_release_ms,
             input_gain_db, mix, level_db, input_select, envelope_enabled);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_de_esser(
+    void* opaque, float detector_frequency_hz, float detector_q,
+    float threshold_dbfs, float max_reduction_db, float attack_ms,
+    float release_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_de_esser(
+            detector_frequency_hz, detector_q, threshold_dbfs,
+            max_reduction_db, attack_ms, release_ms);
     }
 }
 

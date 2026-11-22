@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## De-Esser and 72-entry picker (2026-11-22)
+
+The project-authored split-band De-Esser uses a fixed band-pass detector per channel, attack/release envelope smoothing, and attenuation of the detected band. It has no lookahead or allocated audio buffer; no isolated callback CPU measurement has been run. The frequency, Q, threshold, maximum reduction, attack, release, DSP, and ranges are project-authored because the checked HeadRush product page does not publish its De-Esser settings.
+
+`make test` passed 76/76 CTest cases. `make web-test` passed the 72-entry Vocal FX picker and HeadlessChrome 151 local-guitar Play smoke for slot 69 at 6.5 kHz (captured peak 0.4818548; 47,999 active samples). De-Esser is disabled in the 66-stage browser/native comparison because the offline reference has no equivalent stage. There is no voice fixture, intelligibility test, human listening result, isolated CPU benchmark, or hardware test; the guitar smoke only confirms the browser control-to-WASM output path.
+
 ## Megatap Delay and 71-entry picker (2026-11-22)
 
 The project-authored Megatap Delay is a mono delay ring with mono/stereo input selection and dry-path channel preservation. Its fixed 1 MiB storage cap can hold the documented four-second tap line plus one-second predelay at 48 kHz; the available delay span falls at higher sample rates. It allocates at construction, not in `process()`. No isolated CPU benchmark or live-route measurement has been run.

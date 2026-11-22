@@ -46,6 +46,7 @@ add_library(tabletfx_core
     src/effects/ten_tap_delay.cpp
     src/effects/auto_pan.cpp
     src/effects/megatap_delay.cpp
+    src/effects/de_esser.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -276,6 +277,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_megatap_delay_tests tests/test_megatap_delay.cpp)
     target_link_libraries(tabletfx_megatap_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_megatap_delay_tests COMMAND tabletfx_megatap_delay_tests)
+
+    add_executable(tabletfx_de_esser_tests tests/test_de_esser.cpp)
+    target_link_libraries(tabletfx_de_esser_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_de_esser_tests COMMAND tabletfx_de_esser_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)
