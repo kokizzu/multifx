@@ -95,7 +95,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(73);
+        effects_.reserve(80);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -327,6 +327,9 @@ public:
                             false});
         effects_.push_back({std::make_unique<tabletfx::CelestialReverb>(
                                 static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
+                                static_cast<float>(sample_rate)),
                             false});
     }
 
@@ -1567,6 +1570,46 @@ public:
         parameters.output_level = values[13U];
         static_cast<tabletfx::effects::NoteGenerator*>(effects_[53].effect.get())
             ->configure(parameters);
+    }
+
+    void configure_fractal_three_voice_synth(
+        const float* values, std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 33U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        const auto integer = [](float value, int minimum, int maximum,
+                                int fallback) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return static_cast<int>(std::lround(std::clamp(
+                value, static_cast<float>(minimum), static_cast<float>(maximum))));
+        };
+        tabletfx::effects::FractalThreeVoiceSynthConfig config;
+        for (std::size_t voice = 0; voice < config.voices.size(); ++voice) {
+            const std::size_t offset = voice * 11U;
+            auto& parameters = config.voices[voice];
+            parameters.waveform =
+                static_cast<tabletfx::effects::FractalSynthWaveform>(
+                    selector(values[offset], 7U));
+            parameters.tracking =
+                static_cast<tabletfx::effects::FractalSynthTracking>(
+                    selector(values[offset + 1U], 3U));
+            parameters.frequency_hz = values[offset + 2U];
+            parameters.shift_semitones = integer(
+                values[offset + 3U], -24, 24, 0);
+            parameters.tune_cents = values[offset + 4U];
+            parameters.duty_cycle = values[offset + 5U];
+            parameters.pan = values[offset + 6U];
+            parameters.filter_frequency_hz = values[offset + 7U];
+            parameters.filter_q = values[offset + 8U];
+            parameters.attack_ms = values[offset + 9U];
+            parameters.level = values[offset + 10U];
+        }
+        static_cast<tabletfx::effects::FractalThreeVoiceSynth*>(
+            effects_[78].effect.get())->configure(config);
     }
 
     void configure_enhancer(const float* values,
@@ -2904,6 +2947,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_note_generator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_note_generator(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_three_voice_synth(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_three_voice_synth(values, value_count);
     }
 }
 

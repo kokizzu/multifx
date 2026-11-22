@@ -2296,6 +2296,47 @@ def check_note_generator(executable: Path) -> None:
                 f"Note Generator did not synthesize MIDI note 69 from silence: {values[:2]}")
 
 
+def check_fractal_three_voice_synth(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 4096
+    with tempfile.TemporaryDirectory(
+        prefix="tabletfx-fractal-three-voice-synth-cli-test-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "silence.wav"
+        output = root / "synth.wav"
+        write_pcm16(source, sample_rate, [0] * frame_count)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--fractal-three-voice-synth",
+                "--fractal-three-voice-synth-voice-1-waveform", "sine",
+                "--fractal-three-voice-synth-voice-1-tracking", "off",
+                "--fractal-three-voice-synth-voice-1-frequency-hz", "440",
+                "--fractal-three-voice-synth-voice-1-level", "0.5",
+                "--fractal-three-voice-synth-voice-2-waveform", "off",
+                "--fractal-three-voice-synth-voice-3-waveform", "off",
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Fractal synth CLI did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Fractal synth CLI emitted non-finite audio")
+        rms = math.sqrt(sum(value * value for value in values) / frame_count)
+        crossings = sum(
+            1 for index in range(1, frame_count)
+            if values[index - 1] <= 0.0 < values[index]
+        )
+        frequency = crossings * sample_rate / frame_count
+        if rms < 0.15 or abs(frequency - 440.0) > 20.0:
+            raise AssertionError(
+                f"Fractal synth CLI did not render the configured A4: RMS={rms}, "
+                f"frequency={frequency} Hz")
+
+
 def check_enhancer(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 512
@@ -2368,6 +2409,7 @@ def main() -> None:
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
     check_note_generator(args.executable.resolve())
+    check_fractal_three_voice_synth(args.executable.resolve())
     check_enhancer(args.executable.resolve())
     check_pitch_feedback_delay(args.executable.resolve())
     check_feedback_generator(args.executable.resolve())

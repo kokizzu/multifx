@@ -9,7 +9,7 @@ PUBLISH_CHECKPOINTS := \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
   dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay \
-	celestial-reverb
+	celestial-reverb fractal-three-voice-synth
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
@@ -29,3 +29,6 @@ publish-$(1):
 endef
 
 $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),$(eval $(call publish-checkpoint-rules,$(checkpoint))))
+.PHONY: publish-%-apply
+publish-%-apply:
+	python3 scripts/publish_checkpoint.py publish --checkpoint "$*"

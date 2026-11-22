@@ -1080,9 +1080,6 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/celestial_reverb.hpp",
     "src/effects/celestial_reverb.cpp",
     "tests/test_celestial_reverb.cpp",
-    "include/tabletfx/effects/fractal_three_voice_synth.hpp",
-    "src/effects/fractal_three_voice_synth.cpp",
-    "tests/test_fractal_three_voice_synth.cpp",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1450,6 +1447,30 @@ CELESTIAL_REVERB_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
+    "Makefile",
+    "make/publish.mk",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/fractal_three_voice_synth.hpp",
+    "src/effects/fractal_three_voice_synth.cpp",
+    "tests/test_fractal_three_voice_synth.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "README.md",
+    "scripts/publish_checkpoint.py",
+)
 
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
@@ -1564,6 +1585,10 @@ CHECKPOINTS = {
                  "feat: add categorized stereo enhancer"),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),
+    "fractal-three-voice-synth": (
+        FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
+        "feat: add project-authored three-voice tracked synth",
+    ),
 }
 
 

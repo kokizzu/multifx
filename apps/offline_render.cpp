@@ -121,6 +121,8 @@ struct Options {
     tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
     bool note_generator_enabled = false;
     tabletfx::effects::NoteGeneratorParameters note_generator{};
+    bool fractal_three_voice_synth_enabled = false;
+    tabletfx::effects::FractalThreeVoiceSynthConfig fractal_three_voice_synth{};
     bool enhancer_enabled = false;
     tabletfx::EnhancerParameters enhancer{};
     bool pitch_feedback_delay_enabled = false;
@@ -614,6 +616,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.note_generator_enabled = true;
             continue;
         }
+        if (key == "--fractal-three-voice-synth") {
+            options.fractal_three_voice_synth_enabled = true;
+            continue;
+        }
         if (key == "--enhancer") {
             options.enhancer_enabled = true;
             continue;
@@ -993,6 +999,63 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.note_generator_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--fractal-three-voice-synth-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            const std::string_view setting = key.substr(
+                std::string_view("--fractal-three-voice-synth-").size());
+            if (!setting.starts_with("voice-") || setting.size() < 8U ||
+                setting[6] < '1' || setting[6] > '3' || setting[7] != '-') {
+                throw std::invalid_argument(
+                    "Fractal synth options must use voice-1 through voice-3");
+            }
+            auto& voice = options.fractal_three_voice_synth.voices[
+                static_cast<std::size_t>(setting[6] - '1')];
+            const std::string_view field = setting.substr(8U);
+            if (field == "waveform") {
+                using Waveform = tabletfx::effects::FractalSynthWaveform;
+                if (value == "sine") voice.waveform = Waveform::Sine;
+                else if (value == "triangle") voice.waveform = Waveform::Triangle;
+                else if (value == "square") voice.waveform = Waveform::Square;
+                else if (value == "sawtooth") voice.waveform = Waveform::Sawtooth;
+                else if (value == "random") voice.waveform = Waveform::Random;
+                else if (value == "white-noise") voice.waveform = Waveform::WhiteNoise;
+                else if (value == "pink-noise") voice.waveform = Waveform::PinkNoise;
+                else if (value == "off") voice.waveform = Waveform::Off;
+                else throw std::invalid_argument(
+                    "Fractal synth waveform must be sine, triangle, square, sawtooth, "
+                    "random, white-noise, pink-noise, or off");
+            } else if (field == "tracking") {
+                using Tracking = tabletfx::effects::FractalSynthTracking;
+                if (value == "off") voice.tracking = Tracking::Off;
+                else if (value == "envelope-only") voice.tracking = Tracking::EnvelopeOnly;
+                else if (value == "pitch-envelope") {
+                    voice.tracking = Tracking::PitchAndEnvelope;
+                } else if (value == "quantize") voice.tracking = Tracking::Quantize;
+                else throw std::invalid_argument(
+                    "Fractal synth tracking must be off, envelope-only, "
+                    "pitch-envelope, or quantize");
+            } else {
+                const float number = parse_float(key, argv[i]);
+                if (field == "frequency-hz") voice.frequency_hz = number;
+                else if (field == "shift-semitones") {
+                    voice.shift_semitones = static_cast<int>(std::lround(
+                        std::clamp(number, -24.0F, 24.0F)));
+                } else if (field == "tune-cents") voice.tune_cents = number;
+                else if (field == "duty-cycle") voice.duty_cycle = number;
+                else if (field == "pan") voice.pan = number;
+                else if (field == "filter-frequency-hz") {
+                    voice.filter_frequency_hz = number;
+                } else if (field == "filter-q") voice.filter_q = number;
+                else if (field == "attack-ms") voice.attack_ms = number;
+                else if (field == "level") voice.level = number;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.fractal_three_voice_synth_enabled = true;
             continue;
         }
         if (key.starts_with("--pitch-feedback-delay-")) {
@@ -3289,6 +3352,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::effects::NoteGenerator>(
             static_cast<float>(sample_rate), options.note_generator));
     }
+    if (options.fractal_three_voice_synth_enabled) {
+        effects.push_back(
+            std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
+                static_cast<float>(sample_rate),
+                options.fractal_three_voice_synth));
+    }
     if (options.enhancer_enabled) {
         effects.push_back(std::make_unique<tabletfx::Enhancer>(
             static_cast<float>(sample_rate), channels, options.enhancer));
@@ -4127,6 +4196,17 @@ void run_bench() {
         return std::make_unique<tabletfx::effects::MonoGuitarSynth>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-three-voice-synth", [=] {
+        tabletfx::effects::FractalThreeVoiceSynthConfig parameters;
+        for (auto& voice : parameters.voices) {
+            voice.waveform = tabletfx::effects::FractalSynthWaveform::Sawtooth;
+            voice.tracking =
+                tabletfx::effects::FractalSynthTracking::PitchAndEnvelope;
+            voice.level = 0.25F;
+        }
+        return std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("grain-delay-worst-case", [=] {
         tabletfx::GrainDelayParameters parameters;
         parameters.time_ms = 2000.0F;
@@ -4513,6 +4593,18 @@ void print_usage() {
                   " [--mono-guitar-synth-gate-threshold-db -90..0]"
                   " [--mono-guitar-synth-attack-ms 0..2000] [--mono-guitar-synth-release-ms 0..5000]"
                   " [--mono-guitar-synth-portamento-ms 0..250]"
+                   " [--fractal-three-voice-synth]"
+                   " [--fractal-three-voice-synth-voice-1..3-waveform sine|triangle|square|sawtooth|random|white-noise|pink-noise|off]"
+                   " [--fractal-three-voice-synth-voice-1..3-tracking off|envelope-only|pitch-envelope|quantize]"
+                   " [--fractal-three-voice-synth-voice-1..3-frequency-hz Hz]"
+                   " [--fractal-three-voice-synth-voice-1..3-shift-semitones -24..24]"
+                   " [--fractal-three-voice-synth-voice-1..3-tune-cents -50..50]"
+                   " [--fractal-three-voice-synth-voice-1..3-duty-cycle 0.05..0.95]"
+                   " [--fractal-three-voice-synth-voice-1..3-pan -1..1]"
+                   " [--fractal-three-voice-synth-voice-1..3-filter-frequency-hz 20..0.45*sample-rate]"
+                   " [--fractal-three-voice-synth-voice-1..3-filter-q 0.25..12]"
+                   " [--fractal-three-voice-synth-voice-1..3-attack-ms 0..2000]"
+                   " [--fractal-three-voice-synth-voice-1..3-level 0..1]"
                   " [--enhancer]"
                   " [--feedback-generator] [--feedback-generator-type octave-down|unison|octave-up]"
                   " [--feedback-generator-gain 0..1] [--feedback-generator-attack-ms 0..2000]"

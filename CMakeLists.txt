@@ -18,6 +18,7 @@ add_library(tabletfx_core
     src/effects/diatonic_harmonizer.cpp
     src/effects/pitch_arpeggiator.cpp
     src/effects/mono_guitar_synth.cpp
+    src/effects/fractal_three_voice_synth.cpp
     src/effects/pitch_feedback_delay.cpp
     src/effects/feedback_generator.cpp
     src/effects/shimmer_reverb.cpp
@@ -180,6 +181,12 @@ if(BUILD_TESTING)
     add_executable(tabletfx_note_generator_tests tests/test_note_generator.cpp)
     target_link_libraries(tabletfx_note_generator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_note_generator_tests COMMAND tabletfx_note_generator_tests)
+
+    add_executable(tabletfx_fractal_three_voice_synth_tests
+        tests/test_fractal_three_voice_synth.cpp)
+    target_link_libraries(tabletfx_fractal_three_voice_synth_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_fractal_three_voice_synth_tests
+        COMMAND tabletfx_fractal_three_voice_synth_tests)
 
     add_executable(tabletfx_enhancer_tests tests/test_enhancer.cpp)
     target_link_libraries(tabletfx_enhancer_tests PRIVATE tabletfx_core)
