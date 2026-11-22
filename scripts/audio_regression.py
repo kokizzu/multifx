@@ -209,6 +209,11 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--eq-band1-frequency-hz", "120", "--eq-band1-gain-db", "1.5", "--eq-band1-q", "0.7",
         "--eq-band2-frequency-hz", "900", "--eq-band2-gain-db", "-1", "--eq-band2-q", "1",
         "--eq-band3-frequency-hz", "5000", "--eq-band3-gain-db", "0.5", "--eq-band3-q", "0.7",
+        "--five-band-eq-band1-frequency-hz", "100", "--five-band-eq-band1-gain-db", "1.5", "--five-band-eq-band1-q", "0.7",
+        "--five-band-eq-band2-frequency-hz", "350", "--five-band-eq-band2-gain-db", "-0.5", "--five-band-eq-band2-q", "1",
+        "--five-band-eq-band3-frequency-hz", "1000", "--five-band-eq-band3-gain-db", "1", "--five-band-eq-band3-q", "0.7",
+        "--five-band-eq-band4-frequency-hz", "3500", "--five-band-eq-band4-gain-db", "-0.5", "--five-band-eq-band4-q", "0.8",
+        "--five-band-eq-band5-frequency-hz", "8000", "--five-band-eq-band5-gain-db", "0.5", "--five-band-eq-band5-q", "0.7",
         "--guitar-graphic-eq", "--guitar-eq-layout", "seven",
         "--guitar-eq-band3-gain-db", "1.5", "--guitar-eq-band5-gain-db", "-1",
         "--bass-graphic-eq", "--bass-eq-layout", "seven",
@@ -339,7 +344,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 60:
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 61:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
         layout = re.search(r"input_channels=(\d+) channels=(\d+)", report)
@@ -415,7 +420,7 @@ def main() -> None:
         report = run_input(renderer, source, output_root / "guitar-techs-mono.wav",
                            convolution_ir, "mono")
         print(f"OK Guitar-TECHS DI stereo-to-mono (average): {source.relative_to(music_root)}; {report}")
-    print("All prerecorded clean guitar inputs rendered through the 60-stage chain with a deterministic local convolution IR, including the project-authored monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
+    print("All prerecorded clean guitar inputs rendered through the 61-stage chain with a deterministic local convolution IR, including the project-authored five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo.")
 
 
 if __name__ == "__main__":

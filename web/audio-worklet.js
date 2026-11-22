@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -144,6 +144,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
+       const fiveBandEq = parameters.fiveBandEq || [
+         100, 0, 0.707, 350, 0, 0.707, 1000, 0, 0.707,
+         3500, 0, 0.707, 8000, 0, 0.707,
+       ];
+       module._tf_chain_set_five_band_eq(this.chain, ...fiveBandEq);
       const delay = parameters.delay || [350, 0.25, 0.25];
       module._tf_chain_set_delay(this.chain, ...delay);
       module._tf_chain_set_delay_bbd_style(this.chain, parameters.delayBbd ? 1 : 0);
@@ -464,6 +469,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_optical_compressor(this.chain, ...message.value);
     } else if (message.type === "fet-compressor" && this.ready) {
       this.module._tf_chain_set_fet_compressor(this.chain, ...message.value);
+    } else if (message.type === "five-band-eq" && this.ready) {
+      this.module._tf_chain_set_five_band_eq(this.chain, ...message.value);
     } else if (message.type === "guitar-graphic-eq" && this.ready) {
       this.module._tf_chain_set_guitar_graphic_eq(this.chain, ...message.value);
     } else if (message.type === "bass-graphic-eq" && this.ready) {

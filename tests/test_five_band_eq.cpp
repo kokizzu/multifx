@@ -1,0 +1,165 @@
+#include "tabletfx/effects/five_band_eq.hpp"
+
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <limits>
+#include <new>
+#include <span>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace {
+
+std::atomic<std::size_t> allocation_count{0};
+
+void require(bool condition, const std::string& message) {
+    if (!condition) throw std::runtime_error(message);
+}
+
+std::vector<float> make_sine(float sample_rate, float frequency,
+                             std::size_t frames, std::uint16_t channels = 1,
+                             std::uint16_t active_channel = 0) {
+    std::vector<float> samples(frames * channels, 0.0F);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float phase = 2.0F * 3.14159265358979323846F * frequency *
+                            static_cast<float>(frame) / sample_rate;
+        samples[frame * channels + active_channel] = std::sin(phase) * 0.25F;
+    }
+    return samples;
+}
+
+float tail_rms(std::span<const float> samples, std::uint16_t channels,
+               std::uint16_t channel = 0) {
+    const std::size_t frames = samples.size() / channels;
+    double sum = 0.0;
+    for (std::size_t frame = frames / 2; frame < frames; ++frame) {
+        const double value = samples[frame * channels + channel];
+        sum += value * value;
+    }
+    return static_cast<float>(std::sqrt(sum / (frames - frames / 2)));
+}
+
+void test_neutral_is_exact_passthrough_and_identifies_effect() {
+    tabletfx::FiveBandParametricEQ eq;
+    require(eq.id() == "five-band-parametric-eq", "unexpected effect id");
+    std::vector<float> samples{0.1F, -0.2F, 0.3F, -0.4F, 1.0F, -1.0F};
+    const auto original = samples;
+    eq.process(samples, 2);
+    require(samples == original, "neutral five-band EQ must preserve samples exactly");
+}
+
+void test_each_band_boosts_its_center_frequency() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    constexpr std::array<float, 5> centers{100.0F, 350.0F, 1000.0F, 3500.0F, 8000.0F};
+    for (std::size_t active = 0; active < centers.size(); ++active) {
+        tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+        auto bands = eq.parameters();
+        bands[active].frequency_hz = centers[active];
+        bands[active].gain_db = 9.0F;
+        bands[active].q = 1.0F;
+        eq.configure(bands);
+        auto tone = make_sine(kSampleRate, centers[active], kFrames);
+        eq.process(tone, 1);
+        require(tail_rms(tone, 1) > 0.4F,
+                "peaking EQ band did not boost its center-frequency tone");
+    }
+}
+
+void test_each_band_uses_safe_project_bounds() {
+    tabletfx::FiveBandParametricEQ eq(48000.0F, 1);
+    auto bands = eq.parameters();
+    bands[0] = {9000.0F, 100.0F, 0.01F};
+    bands[1] = {50.0F, -100.0F, 20.0F};
+    bands[2] = {500.0F, 0.0F, 0.707F};
+    bands[3] = {50000.0F, 0.0F, 0.707F};
+    bands[4] = {10.0F, 0.0F, 0.707F};
+    eq.configure(bands);
+    const auto actual = eq.parameters();
+    require(actual[0].frequency_hz == 2000.0F && actual[0].gain_db == 18.0F &&
+                actual[0].q == 0.25F,
+            "band 1 settings were not clamped to project bounds");
+    require(actual[1].frequency_hz == 100.0F && actual[1].gain_db == -18.0F &&
+                actual[1].q == 10.0F,
+            "band 2 settings were not clamped to project bounds");
+    require(actual[3].frequency_hz == 10000.0F && actual[4].frequency_hz == 200.0F,
+            "band-specific frequency ranges were not applied");
+
+    bands = actual;
+    bands[2].frequency_hz = std::numeric_limits<float>::quiet_NaN();
+    bands[2].gain_db = std::numeric_limits<float>::infinity();
+    bands[2].q = -std::numeric_limits<float>::infinity();
+    eq.configure(bands);
+    const auto safe = eq.parameters();
+    require(safe[2].frequency_hz == 1000.0F && safe[2].gain_db == 0.0F &&
+                safe[2].q == 0.707F,
+            "non-finite controls did not restore documented project defaults");
+}
+
+void test_stereo_state_is_independent_and_nonfinite_input_is_contained() {
+    tabletfx::FiveBandParametricEQ eq(48000.0F, 2);
+    auto bands = eq.parameters();
+    bands[2].gain_db = 12.0F;
+    eq.configure(bands);
+    auto samples = make_sine(48000.0F, bands[2].frequency_hz, 4096, 2, 1);
+    eq.process(samples, 2);
+    for (std::size_t frame = 0; frame < samples.size() / 2; ++frame) {
+        require(samples[frame * 2] == 0.0F,
+                "right-channel signal leaked into the left EQ state");
+    }
+    require(tail_rms(samples, 2, 1) > 0.2F,
+            "right-channel EQ output is unexpectedly silent");
+
+    std::vector<float> invalid{std::numeric_limits<float>::quiet_NaN(), 0.25F,
+                               std::numeric_limits<float>::infinity(), -0.5F};
+    eq.process(invalid, 2);
+    for (float sample : invalid) {
+        require(std::isfinite(sample), "EQ did not contain a non-finite input");
+    }
+}
+
+void test_processing_allocates_nothing() {
+    tabletfx::FiveBandParametricEQ eq;
+    std::vector<float> samples(512, 0.125F);
+    const auto before = allocation_count.load(std::memory_order_relaxed);
+    eq.process(samples, 2);
+    const auto after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "FiveBandParametricEQ allocated during process()");
+}
+
+} // namespace
+
+void* operator new(std::size_t size) {
+    allocation_count.fetch_add(1, std::memory_order_relaxed);
+    if (void* memory = std::malloc(size); memory != nullptr) return memory;
+    throw std::bad_alloc();
+}
+void* operator new[](std::size_t size) {
+    allocation_count.fetch_add(1, std::memory_order_relaxed);
+    if (void* memory = std::malloc(size); memory != nullptr) return memory;
+    throw std::bad_alloc();
+}
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete[](void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }
+
+int main() {
+    try {
+        test_neutral_is_exact_passthrough_and_identifies_effect();
+        test_each_band_boosts_its_center_frequency();
+        test_each_band_uses_safe_project_bounds();
+        test_stereo_state_is_independent_and_nonfinite_input_is_contained();
+        test_processing_allocates_nothing();
+        std::cout << "FiveBandEQ tests passed.\n";
+        return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "TEST FAILURE: " << error.what() << '\n';
+        return 1;
+    }
+}

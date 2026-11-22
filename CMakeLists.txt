@@ -94,6 +94,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_three_band_eq_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_three_band_eq_tests COMMAND tabletfx_three_band_eq_tests)
 
+    add_executable(tabletfx_five_band_eq_tests tests/test_five_band_eq.cpp)
+    target_link_libraries(tabletfx_five_band_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_five_band_eq_tests COMMAND tabletfx_five_band_eq_tests)
+
     add_executable(tabletfx_filter_tests tests/test_filters.cpp)
     target_link_libraries(tabletfx_filter_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_filter_tests COMMAND tabletfx_filter_tests)

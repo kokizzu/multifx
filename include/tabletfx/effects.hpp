@@ -17,6 +17,7 @@
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/triple_double_chorus.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
+#include "tabletfx/effects/five_band_eq.hpp"
 
 #include <array>
 #include <cstddef>

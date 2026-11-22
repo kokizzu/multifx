@@ -32,7 +32,8 @@ PYTHON ?= python3
 	publish-feedback-generator-plan publish-feedback-generator \
 	publish-shimmer-reverb-plan publish-shimmer-reverb \
 	publish-convolution-reverb-plan publish-convolution-reverb \
-	publish-flagship-catalog-plan publish-flagship-catalog
+	publish-flagship-catalog-plan publish-flagship-catalog \
+	publish-five-band-eq-plan publish-five-band-eq
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -304,3 +305,9 @@ publish-flagship-catalog-plan:
 
 publish-flagship-catalog:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint flagship-catalog
+
+publish-five-band-eq-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint five-band-eq
+
+publish-five-band-eq:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint five-band-eq

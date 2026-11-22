@@ -28,6 +28,7 @@
 #include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
+#include "tabletfx/effects/five_band_eq.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
 #include "tabletfx/effects/bass_graphic_eq.hpp"
 #include "tabletfx/effects/shelf_tilt_eq.hpp"
@@ -186,6 +187,11 @@ struct Options {
     float eq_band3_frequency_hz = 5000.0F;
     float eq_band3_gain_db = 0.0F;
     float eq_band3_q = 0.707F;
+    bool five_band_eq_enabled = false;
+    std::array<tabletfx::FiveBandEQBand, 5> five_band_eq{{
+        {100.0F, 0.0F, 0.707F}, {350.0F, 0.0F, 0.707F},
+        {1000.0F, 0.0F, 0.707F}, {3500.0F, 0.0F, 0.707F},
+        {8000.0F, 0.0F, 0.707F}}};
     bool guitar_graphic_eq_enabled = false;
     tabletfx::GuitarGraphicEQLayout guitar_graphic_eq_layout =
         tabletfx::GuitarGraphicEQLayout::SevenBand;
@@ -273,6 +279,26 @@ std::array<float, Count> parse_float_array(std::string_view name,
         }
     }
     return values;
+}
+
+bool set_five_band_eq_parameter(std::string_view key, Options& options,
+                                float value) {
+    constexpr std::array<std::string_view, 3> suffixes{
+        "frequency-hz", "gain-db", "q"};
+    for (std::size_t band = 0; band < options.five_band_eq.size(); ++band) {
+        const std::string prefix = "--five-band-eq-band" +
+                                   std::to_string(band + 1U) + "-";
+        for (std::size_t parameter = 0; parameter < suffixes.size(); ++parameter) {
+            if (key != prefix + std::string(suffixes[parameter])) continue;
+            auto& selected = options.five_band_eq[band];
+            if (parameter == 0) selected.frequency_hz = value;
+            else if (parameter == 1) selected.gain_db = value;
+            else selected.q = value;
+            options.five_band_eq_enabled = true;
+            return true;
+        }
+    }
+    return false;
 }
 
 std::array<tabletfx::FourBandResonatorFilterLocation, 4>
@@ -1992,6 +2018,7 @@ Options parse_options(int argc, char** argv, int first) {
             options.eq_band3_q = value;
             options.eq_enabled = true;
         }
+        else if (set_five_band_eq_parameter(key, options, value)) {}
         else if (key == "--shelf-tilt-frequency-hz") {
             options.shelf_tilt_eq_frequency_hz = value;
             options.shelf_tilt_eq_enabled = true;
@@ -2546,6 +2573,7 @@ Options parse_options(int argc, char** argv, int first) {
         else if (set_graphic_eq_band_gain(key, "--bass-eq-band",
                                           options.bass_graphic_eq_gains,
                                           options.bass_graphic_eq_enabled, value)) {}
+        else if (set_five_band_eq_parameter(key, options, value)) {}
         else throw std::invalid_argument("Unknown option: " + std::string(key));
     }
     if (options.pitch_arpeggiator_enabled &&
@@ -2876,6 +2904,12 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                 "Convolution IR must be finite mono/stereo WAV and fit the 24000-frame target-rate limit");
         }
         effects.push_back(std::move(convolution));
+    }
+    if (options.five_band_eq_enabled) {
+        auto eq = std::make_unique<tabletfx::FiveBandParametricEQ>(
+            static_cast<float>(sample_rate), channels);
+        eq->configure(options.five_band_eq);
+        effects.push_back(std::move(eq));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -3839,6 +3873,16 @@ void run_bench() {
                           5000.0F, 4.0F, 0.707F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("five-band-parametric-eq", [=] {
+        auto effect = std::make_unique<tabletfx::FiveBandParametricEQ>(
+            static_cast<float>(sample_rate), channels);
+        auto bands = effect->parameters();
+        bands[0].gain_db = 2.0F;
+        bands[2].gain_db = -3.0F;
+        bands[4].gain_db = 1.5F;
+        effect->configure(bands);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("guitar-graphic-eq", [=] {
         auto effect = std::make_unique<tabletfx::GuitarGraphicEQ>(
             static_cast<float>(sample_rate), channels,
@@ -4065,6 +4109,7 @@ void print_usage() {
                  " [--fet-compressor-attack-ms ms] [--fet-compressor-release-ms ms]"
                  " [--fet-compressor-makeup-db dB]\n"
               << "                 [--eq-bandN-frequency-hz Hz] [--eq-bandN-gain-db dB] [--eq-bandN-q Q] (N=1..3)\n"
+               << "                 [--five-band-eq-bandN-frequency-hz Hz] [--five-band-eq-bandN-gain-db dB] [--five-band-eq-bandN-q Q] (N=1..5)\n"
               << "                 [--guitar-graphic-eq] [--guitar-eq-layout 5|7] [--guitar-eq-bandN-gain-db dB] (N=1..7)\n"
               << "                 [--bass-graphic-eq] [--bass-eq-layout 4|7] [--bass-eq-bandN-gain-db dB] (N=1..7)\n"
               << "                 [--shelf-tilt-eq] [--shelf-tilt-mode low-shelf|high-shelf|tilt]"

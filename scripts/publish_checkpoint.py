@@ -980,6 +980,28 @@ FLAGSHIP_CATALOG_CHECKPOINT_PATHS = (
     "README.md",
     "scripts/publish_checkpoint.py",
 )
+FIVE_BAND_EQ_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/five_band_eq.hpp",
+    "tests/test_five_band_eq.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/audio_regression.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "scripts/publish_checkpoint.py",
+)
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1049,6 +1071,8 @@ CHECKPOINTS = {
                           "feat: add project-authored mono guitar synth"),
     "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,
                          "docs: expand flagship effects catalog"),
+    "five-band-eq": (FIVE_BAND_EQ_CHECKPOINT_PATHS,
+                     "feat: add project-authored five-band EQ"),
 }
 
 

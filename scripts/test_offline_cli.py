@@ -2018,12 +2018,42 @@ def check_multiband_compressor(executable: Path) -> None:
             raise AssertionError("Multiband Compressor controls did not change rendered audio")
 
 
+def check_five_band_parametric_eq(executable: Path) -> None:
+    sample_rate = 48000
+    frames = sample_rate
+    source_samples = [
+        int(round(0.25 * 32767 * math.sin(2.0 * math.pi * 1000.0 * frame / sample_rate)))
+        for frame in range(frames)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-five-band-eq-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "one-kilohertz.wav"
+        output = root / "boosted.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--five-band-eq-band3-frequency-hz", "1000",
+             "--five-band-eq-band3-gain-db", "9",
+             "--five-band-eq-band3-q", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError("Five-band parametric EQ options did not enable one processor")
+        rendered = struct.unpack("<" + "f" * frames, output.read_bytes()[44:])
+        actual_rms = math.sqrt(sum(sample * sample for sample in rendered) / frames)
+        source_rms = math.sqrt(sum((sample / 32768.0) ** 2 for sample in source_samples) / frames)
+        if not math.isfinite(actual_rms) or actual_rms < source_rms * 2.3:
+            raise AssertionError(
+                f"Five-band parametric EQ did not boost its center tone: {source_rms} -> {actual_rms}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     check_render(args.executable.resolve())
     check_convolution_reverb(args.executable.resolve())
+    check_five_band_parametric_eq(args.executable.resolve())
     check_room_reverb(args.executable.resolve())
     check_hall_reverb(args.executable.resolve())
     check_plate_reverb(args.executable.resolve())
@@ -2076,7 +2106,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
