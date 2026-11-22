@@ -69,6 +69,7 @@
             <option value="filter">Filters &amp; wah</option>
             <option value="drive">Drive &amp; fuzz</option>
             <option value="modulation">Modulation</option>
+            <option value="stereo">Stereo &amp; image</option>
             <option value="eq">Equalizer</option>
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
@@ -81,7 +82,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-        <output id="effect-count" class="effect-count" aria-live="polite">63 of 63</output>
+        <output id="effect-count" class="effect-count" aria-live="polite">64 of 64</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -146,8 +147,9 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="58"><span class="effect-number">59</span><span class="effect-name">Convolution Reverb</span><span class="effect-default">Local mono/stereo WAV IR · project-authored</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="59"><span class="effect-number">60</span><span class="effect-name">Five-band parametric EQ · project-authored</span><span class="effect-default">5 peaking bands · frequency / gain / Q</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="60"><span class="effect-number">61</span><span class="effect-name">Phrase Looper · project-authored</span><span class="effect-default">Mono/stereo · one layer · 4 s at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
-        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="61" checked><span class="effect-number">62</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="62" checked><span class="effect-number">63</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+        <label class="effect-row" data-category="stereo"><input type="checkbox" data-effect="61"><span class="effect-number">62</span><span class="effect-name">Stereo Enhancer · project-authored</span><span class="effect-default">Modern width · Classic delay/pan · Stereoizer</span><span class="effect-category-tag">Stereo &amp; image</span></label>
+        <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="62" checked><span class="effect-number">63</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+        <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="63" checked><span class="effect-number">64</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -951,6 +953,23 @@
           <label class="mix-control" for="note-generator-voice-3-octave"><span>Oscillator 3 · octave · −2…+2</span><output id="note-generator-voice-3-octave-value" for="note-generator-voice-3-octave">0 octaves</output><input id="note-generator-voice-3-octave" type="range" min="-2" max="2" step="1" value="0"></label>
           <label class="mix-control" for="note-generator-voice-3-level"><span>Oscillator 3 · level · 0–100%</span><output id="note-generator-voice-3-level-value" for="note-generator-voice-3-level">25%</output><input id="note-generator-voice-3-level" type="range" min="0" max="1" step="0.01" value="0.25"></label>
           <label class="mix-control" for="note-generator-output-level"><span>Output level · 0–100%</span><output id="note-generator-output-level-value" for="note-generator-output-level">60%</output><input id="note-generator-output-level" type="range" min="0" max="1" step="0.01" value="0.6"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Stereo Enhancer controls">
+        <h3>Stereo Enhancer · project-authored spatial utility</h3>
+        <p class="hint">The three mode names follow the Fractal Blocks Guide. The DSP is independently authored and does not claim Fractal sound parity. Modern reshapes stereo side energy, Classic delays the right channel before panning, and Stereoizer adds an all-pass-derived side signal. Mono buffers remain mono. The Classic delay control spans the guide’s documented 0–20 ms; other bounds are project choices.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="enhancer-mode"><span>Mode</span><output id="enhancer-mode-value" for="enhancer-mode">Modern</output><select id="enhancer-mode"><option value="0" selected>Modern</option><option value="1">Classic</option><option value="2">Stereoizer</option></select></label>
+          <label class="mix-control" for="enhancer-width"><span>Stereo width</span><output id="enhancer-width-value" for="enhancer-width">1.00× width</output><input id="enhancer-width" type="range" min="0" max="2" step="0.01" value="1"></label>
+          <label class="mix-control" for="enhancer-depth"><span>Enhancement depth</span><output id="enhancer-depth-value" for="enhancer-depth">25% depth</output><input id="enhancer-depth" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="enhancer-low-cut-hz"><span>Band low cut</span><output id="enhancer-low-cut-hz-value" for="enhancer-low-cut-hz">120 Hz</output><input id="enhancer-low-cut-hz" type="range" min="20" max="2000" step="1" value="120"></label>
+          <label class="mix-control" for="enhancer-high-cut-hz"><span>Band high cut</span><output id="enhancer-high-cut-hz-value" for="enhancer-high-cut-hz">12000 Hz</output><input id="enhancer-high-cut-hz" type="range" min="200" max="20000" step="1" value="12000"></label>
+          <label class="mix-control" for="enhancer-classic-delay-ms"><span>Classic right delay</span><output id="enhancer-classic-delay-ms-value" for="enhancer-classic-delay-ms">7.0 ms</output><input id="enhancer-classic-delay-ms" type="range" min="0" max="20" step="0.1" value="7"></label>
+          <label class="mix-control" for="enhancer-phase-invert"><span>Classic phase invert</span><output id="enhancer-phase-invert-value" for="enhancer-phase-invert">None</output><select id="enhancer-phase-invert"><option value="0" selected>None</option><option value="1">Left</option><option value="2">Right</option><option value="3">Both</option></select></label>
+          <label class="mix-control" for="enhancer-pan-left"><span>Classic left pan</span><output id="enhancer-pan-left-value" for="enhancer-pan-left">0%</output><input id="enhancer-pan-left" type="range" min="0" max="1" step="0.01" value="0"></label>
+          <label class="mix-control" for="enhancer-pan-right"><span>Classic right pan</span><output id="enhancer-pan-right-value" for="enhancer-pan-right">100%</output><input id="enhancer-pan-right" type="range" min="0" max="1" step="0.01" value="1"></label>
+          <label class="mix-control" for="enhancer-balance"><span>Classic balance</span><output id="enhancer-balance-value" for="enhancer-balance">0.00</output><input id="enhancer-balance" type="range" min="-1" max="1" step="0.01" value="0"></label>
+          <label class="mix-control" for="enhancer-mix"><span>Mix</span><output id="enhancer-mix-value" for="enhancer-mix">100%</output><input id="enhancer-mix" type="range" min="0" max="1" step="0.01" value="1"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Phrase Looper controls">

@@ -166,6 +166,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_note_generator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_note_generator_tests COMMAND tabletfx_note_generator_tests)
 
+    add_executable(tabletfx_enhancer_tests tests/test_enhancer.cpp)
+    target_link_libraries(tabletfx_enhancer_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_enhancer_tests COMMAND tabletfx_enhancer_tests)
+
     add_executable(tabletfx_looper_tests tests/test_looper.cpp)
     target_link_libraries(tabletfx_looper_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_looper_tests COMMAND tabletfx_looper_tests)

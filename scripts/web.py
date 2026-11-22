@@ -161,6 +161,7 @@ def build_web() -> None:
         "_tf_chain_set_pitch_arpeggiator",
         "_tf_chain_set_mono_guitar_synth",
         "_tf_chain_set_note_generator",
+        "_tf_chain_set_enhancer",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
         "_tf_chain_set_feedback_generator",

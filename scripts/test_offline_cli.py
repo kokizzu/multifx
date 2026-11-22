@@ -2076,6 +2076,33 @@ def check_note_generator(executable: Path) -> None:
                 f"Note Generator did not synthesize MIDI note 69 from silence: {values[:2]}")
 
 
+def check_enhancer(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 512
+    with tempfile.TemporaryDirectory(prefix="tabletfx-enhancer-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "stereo-input.wav"
+        output = root / "stereo-output.wav"
+        samples: list[int] = []
+        for frame in range(frame_count):
+            value = int(12000 * math.sin(2.0 * math.pi * 900.0 * frame / sample_rate))
+            samples.extend((value, value))
+        write_pcm16_channels(source, sample_rate, 2, samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--enhancer"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Enhancer CLI did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * (frame_count * 2), output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Enhancer CLI emitted non-finite stereo output")
+        stereo_difference = sum(abs(values[index] - values[index + 1])
+                                for index in range(0, len(values), 2))
+        if stereo_difference <= 0.01:
+            raise AssertionError("Enhancer CLI did not produce its configured stereo image")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -2118,6 +2145,7 @@ def main() -> None:
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
     check_note_generator(args.executable.resolve())
+    check_enhancer(args.executable.resolve())
     check_pitch_feedback_delay(args.executable.resolve())
     check_feedback_generator(args.executable.resolve())
     check_grain_delay(args.executable.resolve())

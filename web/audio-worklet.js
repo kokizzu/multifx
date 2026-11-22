@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "output-level", "peak-limiter",
+    "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -224,6 +224,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [2, 0.75, 0.6, -54, 8, 180, 8]);
       this.configureNoteGenerator(parameters.noteGenerator ||
         [1, 0, 60, 0, 0.5, 0, 60, 0, 0.5, 0, 60, 0, 0.5, 0.5]);
+      this.configureEnhancer(parameters.enhancer ||
+        [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1]);
       const grainDelay = parameters.grainDelay || [350, 0.25, 0.25, 80, 2, 0, 0];
       module._tf_chain_set_grain_delay(this.chain, ...grainDelay);
       this.configurePitchFeedbackDelay(parameters.pitchFeedbackDelay ||
@@ -446,6 +448,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureEnhancer(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_enhancer(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   onMessage(message) {
     if (!message || typeof message.type !== "string") return;
     if (message.type === "active") {
@@ -587,6 +600,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureMonoGuitarSynth(message.value);
     } else if (message.type === "note-generator" && this.ready) {
       this.configureNoteGenerator(message.value);
+    } else if (message.type === "enhancer" && this.ready) {
+      this.configureEnhancer(message.value);
     } else if (message.type === "grain-delay" && this.ready) {
       this.configureGrainDelay(message.value);
     } else if (message.type === "pitch-feedback-delay" && this.ready) {

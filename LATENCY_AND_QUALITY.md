@@ -1,6 +1,10 @@
 # Latency, quality, and DSP-load protocol
 
 
+## Latest DSP verification (Stereo Enhancer and 64-entry picker, 2026-11-22)
+
+The project-authored Stereo Enhancer is integrated in the Stereo & image category. At 48 kHz stereo it allocates its delay ring at construction and process() performs no allocation. Modern and Stereoizer add no fixed latency; Classic intentionally delays the right channel by 0–20 ms while the direct path remains immediate. Mono buffers remain mono. The isolated Linux CPU cost and a human-listening/device result have not been measured. make web-test passed 68 CTest cases, offline CLI checks, and HeadlessChrome 151 Play/native comparison with Enhancer bypassed; the enabled offline CLI test confirms a changed stereo result. Browser processor memory is 12,936,760 B plus 10,364 B tuner state in the fixed 16 MiB WASM heap. Numerical parity does not establish sound quality, mono-to-stereo behavior, or Fractal parity.
+
 ## Latest DSP verification (Phrase Looper and 63-entry browser picker, 2026-11-22)
 
 On a Ryzen 9 5950X Release build, the project-authored Shimmer Reverb measured 11.7097% p50 / 18.5503% p95 / 20.0691% p99 / 23.5008% p99.9 / 27.3648% maximum of a 2.667 ms callback at 48 kHz stereo/128 frames, with 647,792 B processor-owned memory. Its direct dry path is immediate; the pitch-return ring holds 128 frames (2.667 ms at 48 kHz) before pitch-shifter processing, which adds separate wet latency. This synthetic processor-call benchmark is not a live-route or listening measurement.

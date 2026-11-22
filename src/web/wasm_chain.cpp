@@ -270,6 +270,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::Looper>(channels), false});
+        effects_.push_back({std::make_unique<tabletfx::Enhancer>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -328,6 +331,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 58U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 61U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -983,6 +989,34 @@ public:
         parameters.output_level = values[13U];
         static_cast<tabletfx::effects::NoteGenerator*>(effects_[53].effect.get())
             ->configure(parameters);
+    }
+
+    void configure_enhancer(const float* values,
+                            std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 11U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        const auto integer = [](float value, int minimum, int maximum,
+                                int fallback) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return static_cast<int>(std::lround(std::clamp(
+                value, static_cast<float>(minimum), static_cast<float>(maximum))));
+        };
+        tabletfx::EnhancerParameters parameters;
+        parameters.mode = static_cast<tabletfx::EnhancerMode>(
+            integer(values[0], 0, 2, 0));
+        parameters.width = values[1];
+        parameters.depth = values[2];
+        parameters.low_cut_hz = values[3];
+        parameters.high_cut_hz = values[4];
+        parameters.classic_delay_ms = values[5];
+        parameters.phase_invert = static_cast<tabletfx::EnhancerPhaseInvert>(
+            integer(values[6], 0, 3, 0));
+        parameters.pan_left = values[7];
+        parameters.pan_right = values[8];
+        parameters.balance = values[9];
+        parameters.mix = values[10];
+        static_cast<tabletfx::Enhancer*>(effects_[61].effect.get())
+            ->set_parameters(parameters);
     }
 
     void configure_grain_delay(float time_ms, float feedback, float mix,
@@ -2235,6 +2269,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_note_generator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_note_generator(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_enhancer(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_enhancer(values, value_count);
     }
 }
 

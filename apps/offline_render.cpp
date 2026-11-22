@@ -115,6 +115,8 @@ struct Options {
     tabletfx::effects::MonoGuitarSynthConfig mono_guitar_synth{};
     bool note_generator_enabled = false;
     tabletfx::effects::NoteGeneratorParameters note_generator{};
+    bool enhancer_enabled = false;
+    tabletfx::EnhancerParameters enhancer{};
     bool pitch_feedback_delay_enabled = false;
     tabletfx::PitchFeedbackDelayParameters pitch_feedback_delay{};
     bool feedback_generator_enabled = false;
@@ -587,6 +589,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--note-generator") {
             options.note_generator_enabled = true;
+            continue;
+        }
+        if (key == "--enhancer") {
+            options.enhancer_enabled = true;
             continue;
         }
         if (key == "--pitch-feedback-delay") {
@@ -2933,6 +2939,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::effects::NoteGenerator>(
             static_cast<float>(sample_rate), options.note_generator));
     }
+    if (options.enhancer_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Enhancer>(
+            static_cast<float>(sample_rate), channels, options.enhancer));
+    }
     if (options.grain_delay_enabled) {
         effects.push_back(std::make_unique<tabletfx::GrainDelay>(
             static_cast<float>(sample_rate), channels, options.grain_delay));
@@ -4113,6 +4123,7 @@ void print_usage() {
                   " [--mono-guitar-synth-gate-threshold-db -90..0]"
                   " [--mono-guitar-synth-attack-ms 0..2000] [--mono-guitar-synth-release-ms 0..5000]"
                   " [--mono-guitar-synth-portamento-ms 0..250]"
+                  " [--enhancer]"
                   " [--feedback-generator] [--feedback-generator-type octave-down|unison|octave-up]"
                   " [--feedback-generator-gain 0..1] [--feedback-generator-attack-ms 0..2000]"
                   " [--feedback-generator-release-ms 0..5000] [--feedback-generator-dry-kill off|on]"
