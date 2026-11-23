@@ -197,6 +197,7 @@ def build_web() -> None:
     "_tf_chain_set_am_ring_mod",
     "_tf_chain_set_tape_echo",
     "_tf_chain_set_octave_fuzz",
+        "_tf_chain_set_stereo_crossover",
         "_tf_chain_set_convolution_reverb",
         "_tf_chain_load_convolution_reverb_ir",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
@@ -302,6 +303,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "am_ring_mod.cpp"),
         str(ROOT / "src" / "effects" / "tape_echo.cpp"),
         str(ROOT / "src" / "effects" / "octave_fuzz.cpp"),
+        str(ROOT / "src" / "effects" / "stereo_crossover.cpp"),
         str(ROOT / "src" / "effects" / "porta_preamp.cpp"),
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
@@ -580,6 +582,7 @@ def browser_test() -> None:
         temp_dir = Path(temp_name)
         input_path = temp_dir / "guitar-fixture.wav"
         reference_path = temp_dir / "native-reference.wav"
+        stereo_crossover_reference_path = temp_dir / "stereo-crossover-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
         make_test_audio(input_path)
@@ -921,11 +924,41 @@ def browser_test() -> None:
               "--five-band-eq-band5-q", "0.7",
               "--five-band-eq-band5-shape", "4",
               "--five-band-eq-band5-slope-db-per-octave", "24",
+              "--stereo-crossover-frequency-hz", "500",
+              "--stereo-crossover-frequency-multiplier", "x1",
+              "--stereo-crossover-low-level-left-db", "0",
+              "--stereo-crossover-low-level-right-db", "0",
+              "--stereo-crossover-high-level-left-db", "0",
+              "--stereo-crossover-high-level-right-db", "0",
+              "--stereo-crossover-low-pan-left", "-1",
+              "--stereo-crossover-high-pan-left", "-1",
+              "--stereo-crossover-low-pan-right", "1",
+              "--stereo-crossover-high-pan-right", "1",
+              "--stereo-crossover-level-db", "0",
+              "--stereo-crossover-balance", "0",
         ]
         run(renderer_command, cwd=ROOT)
+        stereo_crossover_command = [
+            str(native_renderer), "render", str(input_path),
+            str(stereo_crossover_reference_path),
+            "--stereo-crossover-frequency-hz", "500",
+            "--stereo-crossover-frequency-multiplier", "x1",
+            "--stereo-crossover-low-level-left-db", "-60",
+            "--stereo-crossover-low-level-right-db", "-60",
+            "--stereo-crossover-high-level-left-db", "0",
+            "--stereo-crossover-high-level-right-db", "0",
+            "--stereo-crossover-low-pan-left", "-1",
+            "--stereo-crossover-high-pan-left", "-1",
+            "--stereo-crossover-low-pan-right", "1",
+            "--stereo-crossover-high-pan-right", "1",
+            "--stereo-crossover-level-db", "0",
+            "--stereo-crossover-balance", "0",
+        ]
+        run(stereo_crossover_command, cwd=ROOT)
         LocalWebHandler.test_files = {
             "/__test_input.wav": input_path,
             "/__test_expected.wav": reference_path,
+            "/__test_stereo_crossover_expected.wav": stereo_crossover_reference_path,
             "/__test_tuner.wav": tuner_path,
             "/__test_convolution_ir.wav": convolution_ir_path,
         }

@@ -9,6 +9,7 @@ const EFFECTS = [
   "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "fractal-three-voice-synth", "cloud-reverb", "three-stage-distortion", "manual-thru-zero-flanger", "octobot", "am-ring-mod", "tape-echo", "output-level", "peak-limiter",
 ];
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "octave-fuzz");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-crossover");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -349,6 +350,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureTapeEcho(parameters.tapeEcho ||
         [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0]);
       this.configureOctaveFuzz(parameters.octaveFuzz || [0.55, 0.75, 1]);
+      this.configureStereoCrossover(parameters.stereoCrossover || {
+        frequencyHz: 500, frequencyMultiplier: "x1",
+        lowLevelLeftDb: 0, lowLevelRightDb: 0,
+        highLevelLeftDb: 0, highLevelRightDb: 0,
+        lowPanLeft: -1, highPanLeft: -1,
+        lowPanRight: 1, highPanRight: 1,
+        levelDb: 0, balance: 0,
+      });
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -589,6 +598,31 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     this.module._tf_chain_set_tape_echo(this.chain, ...values);
+  }
+
+  configureStereoCrossover(parameters) {
+    if (!this.module || !this.chain || !parameters || typeof parameters !== "object") {
+      return;
+    }
+    const values = [
+      Number(parameters.frequencyHz),
+      parameters.frequencyMultiplier === "x10" ? 1 : 0,
+      Number(parameters.lowLevelLeftDb),
+      Number(parameters.lowLevelRightDb),
+      Number(parameters.highLevelLeftDb),
+      Number(parameters.highLevelRightDb),
+      Number(parameters.lowPanLeft),
+      Number(parameters.highPanLeft),
+      Number(parameters.lowPanRight),
+      Number(parameters.highPanRight),
+      Number(parameters.levelDb),
+      Number(parameters.balance),
+    ];
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_stereo_crossover(this.chain, pointer);
+    this.module._free(pointer);
   }
 
   loadConvolutionIR(message) {
@@ -963,6 +997,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureTapeEcho(message.value);
     } else if (message.type === "octave-fuzz" && this.ready) {
       this.configureOctaveFuzz(message.value);
+    } else if (message.type === "stereo-crossover" && this.ready) {
+      this.configureStereoCrossover(message.value);
     } else if (message.type === "convolution-reverb" && this.ready) {
       this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
     } else if (message.type === "convolution-ir" && this.ready) {

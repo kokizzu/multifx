@@ -400,6 +400,40 @@ def run_input(renderer: Path, source: Path, output: Path,
     return report
 
 
+def run_stereo_crossover_input(renderer: Path, source: Path, output: Path) -> str:
+    command = [
+        str(renderer), "render", str(source), str(output),
+        "--stereo-crossover-frequency-hz", "500",
+        "--stereo-crossover-frequency-multiplier", "x1",
+        "--stereo-crossover-low-level-left-db", "-60",
+        "--stereo-crossover-low-level-right-db", "-60",
+        "--stereo-crossover-high-level-left-db", "0",
+        "--stereo-crossover-high-level-right-db", "0",
+        "--stereo-crossover-low-pan-left", "-1",
+        "--stereo-crossover-high-pan-left", "-1",
+        "--stereo-crossover-low-pan-right", "1",
+        "--stereo-crossover-high-pan-right", "1",
+        "--stereo-crossover-level-db", "0",
+        "--stereo-crossover-balance", "0",
+    ]
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Isolated Stereo Crossover render failed for {source}: {result.stderr.strip()}")
+    report = result.stdout.strip()
+    match = re.search(
+        r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)",
+        report,
+    )
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 1:
+        raise RuntimeError(f"Unexpected isolated Stereo Crossover report: {report}")
+    if not all(math.isfinite(float(match.group(index))) for index in (3, 4)):
+        raise RuntimeError(f"Stereo Crossover produced non-finite peak/RMS: {report}")
+    if not output.is_file() or output.stat().st_size <= 44:
+        raise RuntimeError(f"Renderer did not write audio output for {source}: {output}")
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
@@ -469,7 +503,12 @@ def main() -> None:
             three_stage_distortion=True,
         )
         print(f"OK Three-Stage Distortion on prerecorded EGFxSet bridge pickup: {report}")
-    print("All prerecorded clean guitar inputs rendered through the 70-stage chain with a deterministic local convolution IR, including the project-authored Octave Fuzz, Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. A separate 71-stage bridge-pickup render enables the project-authored Three-Stage Distortion through the offline CLI.")
+        source = pickups["bridge"]
+        report = run_stereo_crossover_input(
+            renderer, source, output_root / "stereo-crossover-bridge.wav",
+        )
+        print(f"OK isolated Stereo Crossover high-band-only on prerecorded EGFxSet bridge pickup: {report}")
+    print("All prerecorded clean guitar inputs rendered through the 70-stage chain with a deterministic local convolution IR, including the project-authored Octave Fuzz, Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. Separate bridge-pickup renders enable the project-authored Three-Stage Distortion in a 71-stage chain and isolated high-band-only Stereo Crossover through the offline CLI.")
 
 
 if __name__ == "__main__":

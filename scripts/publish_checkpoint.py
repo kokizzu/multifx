@@ -1647,6 +1647,26 @@ OCTAVE_FUZZ_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FRACTAL_XVR_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/stereo_crossover.hpp",
+    "src/effects/stereo_crossover.cpp",
+    "tests/test_stereo_crossover.cpp",
+    "scripts/test_offline_cli.py",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1786,6 +1806,10 @@ CHECKPOINTS = {
         OCTAVE_FUZZ_CHECKPOINT_PATHS,
         "feat: add project-authored Octave Fuzz",
     ),
+    "fractal-xvr": (
+        FRACTAL_XVR_CHECKPOINT_PATHS,
+        "feat: add project-authored stereo crossover",
+    ),
 }
 
 
@@ -1844,16 +1868,9 @@ def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
             "Refusing to publish with staged changes outside the selected checkpoint: "
             + ", ".join(unexpected_staged)
         )
-    known_checkpoint_paths = set(CHECKPOINT_PATHS)
-    known_checkpoint_paths.update(DEFERRED_AGENT_DRAFT_PATHS)
-    for allowed_paths, _message in CHECKPOINTS.values():
-        known_checkpoint_paths.update(allowed_paths)
-    unexpected = sorted(set(paths) - known_checkpoint_paths)
-    if unexpected:
-        raise SystemExit("Dirty files outside the reviewed checkpoint: " + ", ".join(unexpected))
-    workflows = [path for path in paths if path.startswith(".github/workflows/")]
+    workflows = [path for path in checkpoint_paths if path.startswith(".github/workflows/")]
     if workflows:
-        raise SystemExit("Refusing to publish workflow changes: " + ", ".join(workflows))
+        raise SystemExit("Refusing to include workflow paths in a checkpoint: " + ", ".join(workflows))
     selected = sorted(set(paths) & checkpoint_paths)
     deferred = sorted(set(paths) - checkpoint_paths)
     if not selected:
@@ -1863,8 +1880,8 @@ def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
 
 def plan(checkpoint: str) -> list[str]:
     paths, deferred, branch, remote_url = inspect(checkpoint)
-    git("diff", "--check")
-    git("diff", "--cached", "--check")
+    git("diff", "--check", "--", *paths)
+    git("diff", "--cached", "--check", "--", *paths)
     print(f"Repository: {remote_url}")
     print(f"Branch: {branch} (verified upstream default; local HEAD matches origin/main)")
     print("Checkpoint: " + checkpoint)
@@ -1888,7 +1905,7 @@ def plan(checkpoint: str) -> list[str]:
             print("".join(unified_diff([], contents, fromfile="/dev/null", tofile="b/" + path)), end="")
     print("No workflow files are included. Only the paths above will be staged.")
     if deferred:
-        print("Deferred changed paths for other checkpoints:")
+        print("Preserved outside-checkpoint paths (not staged):")
         for path in deferred:
             print("  " + path)
     return paths

@@ -72,6 +72,7 @@
             <option value="drive">Drive &amp; fuzz</option>
             <option value="modulation">Modulation</option>
             <option value="stereo">Stereo &amp; image</option>
+            <option value="crossover">Crossover</option>
             <option value="eq">Equalizer</option>
             <option value="delay">Delay</option>
             <option value="pitch">Pitch</option>
@@ -174,8 +175,9 @@
              <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="83"><span class="effect-number">84</span><span class="effect-name">AM Ring Mod · project-authored</span><span class="effect-default">Rate · Depth · Mix · Level</span><span class="effect-category-tag">Modulation</span></label>
              <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="84"><span class="effect-number">85</span><span class="effect-name">Tape Echo · project-authored</span><span class="effect-default">Time · Tap Division · Feedback · Mix · Record Level · Bias · Noise · Wow/Flutter · Spillover</span><span class="effect-category-tag">Delay</span></label>
               <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="85"><span class="effect-number">86</span><span class="effect-name">Octave Fuzz · project-authored</span><span class="effect-default">Boost · Volume · Octave Switch</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-              <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="86" checked><span class="effect-number">87</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-              <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="87" checked><span class="effect-number">88</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+              <label class="effect-row" data-category="crossover"><input type="checkbox" data-effect="86"><span class="effect-number">87</span><span class="effect-name">Stereo Crossover · project-authored Fractal XVR-inspired controls</span><span class="effect-default">Two-way LR4 split · per-channel low/high level and pan</span><span class="effect-category-tag">Crossover</span></label>
+               <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="87" checked><span class="effect-number">88</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+               <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="88" checked><span class="effect-number">89</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -916,6 +918,24 @@
           <label class="mix-control" for="octave-fuzz-octave-switch"><span>Octave Switch</span><input id="octave-fuzz-octave-switch" type="checkbox" checked></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 p. 26 lists Boost, Volume, and Octave Switch for its Octave Fuzz, but publishes no numeric ranges, defaults, or DSP. These controls, ranges, and the project’s octave-plus-fuzz algorithm are independent and do not claim Fender model parity. <a href="https://www.fmicassets.com/Damroot/Original/10146/OM_2274900000_Tone-Master-Pro-Model-Guide-H_EN.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100</a>.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Stereo Crossover project-authored controls">
+        <h3>Stereo Crossover · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="stereo-crossover-frequency-hz"><span>Frequency · project range 20–2,000 Hz before multiplier</span><output for="stereo-crossover-frequency-hz">500 Hz</output><input id="stereo-crossover-frequency-hz" type="range" min="20" max="2000" step="1" value="500"></label>
+          <label class="mix-control" for="stereo-crossover-frequency-multiplier"><span>Frequency Multiplier</span><select id="stereo-crossover-frequency-multiplier"><option value="x1" selected>×1</option><option value="x10">×10</option></select></label>
+          <label class="mix-control" for="stereo-crossover-low-level-left-db"><span>Lo Level Left · project range −60…+12 dB</span><output for="stereo-crossover-low-level-left-db">0.0 dB</output><input id="stereo-crossover-low-level-left-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="stereo-crossover-low-level-right-db"><span>Lo Level Right · project range −60…+12 dB</span><output for="stereo-crossover-low-level-right-db">0.0 dB</output><input id="stereo-crossover-low-level-right-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="stereo-crossover-high-level-left-db"><span>Hi Level Left · project range −60…+12 dB</span><output for="stereo-crossover-high-level-left-db">0.0 dB</output><input id="stereo-crossover-high-level-left-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="stereo-crossover-high-level-right-db"><span>Hi Level Right · project range −60…+12 dB</span><output for="stereo-crossover-high-level-right-db">0.0 dB</output><input id="stereo-crossover-high-level-right-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="stereo-crossover-low-pan-left"><span>Lo Pan Left · project range −1…+1</span><output for="stereo-crossover-low-pan-left">−100%</output><input id="stereo-crossover-low-pan-left" type="range" min="-1" max="1" step="0.01" value="-1"></label>
+          <label class="mix-control" for="stereo-crossover-high-pan-left"><span>Hi Pan Left · project range −1…+1</span><output for="stereo-crossover-high-pan-left">−100%</output><input id="stereo-crossover-high-pan-left" type="range" min="-1" max="1" step="0.01" value="-1"></label>
+          <label class="mix-control" for="stereo-crossover-low-pan-right"><span>Lo Pan Right · project range −1…+1</span><output for="stereo-crossover-low-pan-right">100%</output><input id="stereo-crossover-low-pan-right" type="range" min="-1" max="1" step="0.01" value="1"></label>
+          <label class="mix-control" for="stereo-crossover-high-pan-right"><span>Hi Pan Right · project range −1…+1</span><output for="stereo-crossover-high-pan-right">100%</output><input id="stereo-crossover-high-pan-right" type="range" min="-1" max="1" step="0.01" value="1"></label>
+          <label class="mix-control" for="stereo-crossover-level-db"><span>Level · project range −60…+12 dB</span><output for="stereo-crossover-level-db">0.0 dB</output><input id="stereo-crossover-level-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="stereo-crossover-balance"><span>Balance · project range −1…+1</span><output for="stereo-crossover-balance">0%</output><input id="stereo-crossover-balance" type="range" min="-1" max="1" step="0.01" value="0"></label>
+        </div>
+        <p class="hint">The June 2023 Fractal Blocks Guide documents XVR as a two-way stereo fourth-order Linkwitz–Reilly split, Frequency with a ×1/×10 multiplier, separate Lo/Hi left/right levels and pans, and Mix-page Level, Balance, Bypass, and Bypass Mode. It does not publish numeric frequency bounds/defaults or DSP topology. TabletFX controls, ranges, and DSP are project-authored; no Fractal DSP/settings parity is claimed. The guide covers the FM9 family; checked firmware v12.0 (2026-07-07) names FM9 Original and FM9 Turbo, not Mark II Turbo. Exact Mark II Turbo applicability remains qualified. <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide · June 2023</a>.</p>
       </div>
       <div class="gain-controls" aria-label="Manual Through-Zero Flanger project-authored controls">
         <label class="mix-control" for="manual-tzf-minimum-time">

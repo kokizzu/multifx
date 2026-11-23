@@ -56,6 +56,7 @@
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/tape_echo.hpp"
 #include "tabletfx/effects/octave_fuzz.hpp"
+#include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -100,7 +101,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(87);
+        effects_.reserve(88);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -357,6 +358,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::OctaveFuzz>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::StereoCrossover>(
+                                static_cast<float>(sample_rate)),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -440,6 +444,9 @@ public:
             effects_[index].effect->reset();
         }
         if (index == 75U && effects_[index].enabled && !enabled) {
+            effects_[index].effect->reset();
+        }
+        if (index == 86U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
         }
         effects_[index].enabled = enabled;
@@ -1859,6 +1866,27 @@ public:
             ->configure(parameters);
     }
 
+    void configure_stereo_crossover(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::StereoCrossoverParameters parameters;
+        parameters.frequency_hz = values[0];
+        parameters.frequency_multiplier = values[1] >= 0.5F
+            ? tabletfx::CrossoverFrequencyMultiplier::x10
+            : tabletfx::CrossoverFrequencyMultiplier::x1;
+        parameters.low_level_left_db = values[2];
+        parameters.low_level_right_db = values[3];
+        parameters.high_level_left_db = values[4];
+        parameters.high_level_right_db = values[5];
+        parameters.low_pan_left = values[6];
+        parameters.high_pan_left = values[7];
+        parameters.low_pan_right = values[8];
+        parameters.high_pan_right = values[9];
+        parameters.level_db = values[10];
+        parameters.balance = values[11];
+        static_cast<tabletfx::StereoCrossover*>(effects_[86].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3224,6 +3252,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_octave_fuzz(
     std::uint32_t octave_switch) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_octave_fuzz(boost, volume, octave_switch);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_stereo_crossover(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_stereo_crossover(values);
     }
 }
 

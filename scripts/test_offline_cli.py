@@ -510,6 +510,68 @@ def check_octave_fuzz(executable: Path) -> None:
             raise AssertionError("Octave Fuzz accepted an unknown Octave Switch state")
 
 
+def check_stereo_crossover(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 4096
+    stereo_samples: list[int] = []
+    for frame in range(frame_count):
+        phase = 2.0 * math.pi * frame / sample_rate
+        left = 0.24 * math.sin(phase * 180.0) + 0.18 * math.sin(phase * 1400.0)
+        right = 0.20 * math.sin(phase * 220.0) + 0.15 * math.sin(phase * 1200.0)
+        stereo_samples.extend((round(left * 32767), round(right * 32767)))
+    with tempfile.TemporaryDirectory(
+        prefix="tabletfx-stereo-crossover-cli-test-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "stereo-guitar.wav"
+        output = root / "stereo-crossover.wav"
+        write_pcm16_channels(source, sample_rate, 2, stereo_samples)
+        result = subprocess.run(
+            [
+                str(executable), "render", str(source), str(output),
+                "--stereo-crossover",
+                "--stereo-crossover-frequency-hz", "500",
+                "--stereo-crossover-frequency-multiplier", "x10",
+                "--stereo-crossover-low-level-left-db", "-18",
+                "--stereo-crossover-low-level-right-db", "-12",
+                "--stereo-crossover-high-level-left-db", "6",
+                "--stereo-crossover-high-level-right-db", "3",
+                "--stereo-crossover-low-pan-left", "-1",
+                "--stereo-crossover-high-pan-left", "-0.5",
+                "--stereo-crossover-low-pan-right", "0.5",
+                "--stereo-crossover-high-pan-right", "1",
+                "--stereo-crossover-level-db", "-1",
+                "--stereo-crossover-balance", "0.15",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Stereo Crossover CLI did not enable one processor: {result.stdout}")
+        rendered_bytes = output.read_bytes()[44:]
+        values = struct.unpack("<" + "f" * (frame_count * 2), rendered_bytes)
+        source_values = [value / 32768.0 for value in stereo_samples]
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Stereo Crossover CLI emitted non-finite audio")
+        if max(abs(actual - original) for actual, original in
+               zip(values, source_values, strict=True)) < 0.02:
+            raise AssertionError("Stereo Crossover controls did not change the test signal")
+
+        invalid_multiplier = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--stereo-crossover-frequency-multiplier", "x100"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if (invalid_multiplier.returncode == 0 or
+                "Stereo Crossover multiplier must be x1 or x10" not in
+                invalid_multiplier.stderr):
+            raise AssertionError("Stereo Crossover accepted an unsupported frequency multiplier")
+
+
 def check_rhythmic_slicer(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [
@@ -2663,6 +2725,7 @@ def main() -> None:
     check_ring_modulator(args.executable.resolve())
     check_tape_echo(args.executable.resolve())
     check_octave_fuzz(args.executable.resolve())
+    check_stereo_crossover(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
     check_notch_filter(args.executable.resolve())

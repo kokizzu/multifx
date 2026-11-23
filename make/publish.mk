@@ -9,7 +9,7 @@ PUBLISH_CHECKPOINTS := \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
   dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay \
-	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz
+	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
@@ -34,3 +34,9 @@ publish-%-apply:
 	python3 scripts/publish_checkpoint.py publish --checkpoint "$*"
 inspect-effect-picker:
 	python3 scripts/inspect_effect_picker.py
+
+
+
+
+
+.PHONY: inspect-stereo-crossover-integration

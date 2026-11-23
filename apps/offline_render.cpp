@@ -49,6 +49,7 @@
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/wah.hpp"
+#include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/signal_controls.hpp"
 #include "tabletfx/wav.hpp"
@@ -248,6 +249,8 @@ struct Options {
     tabletfx::TapeEchoParameters tape_echo{};
     bool octave_fuzz_enabled = false;
     tabletfx::effects::OctaveFuzzParameters octave_fuzz{};
+    bool stereo_crossover_enabled = false;
+    tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
     tabletfx::BitCrusherParameters bit_crusher{};
     bool rhythmic_slicer_enabled = false;
@@ -606,6 +609,29 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--octave-fuzz") {
             options.octave_fuzz_enabled = true;
+            continue;
+        }
+        if (key == "--stereo-crossover") {
+            options.stereo_crossover_enabled = true;
+            continue;
+        }
+        if (key == "--stereo-crossover-frequency-multiplier") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument(
+                    "Missing value for --stereo-crossover-frequency-multiplier");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "x1" || value == "1") {
+                options.stereo_crossover.frequency_multiplier =
+                    tabletfx::CrossoverFrequencyMultiplier::x1;
+            } else if (value == "x10" || value == "10") {
+                options.stereo_crossover.frequency_multiplier =
+                    tabletfx::CrossoverFrequencyMultiplier::x10;
+            } else {
+                throw std::invalid_argument(
+                    "Stereo Crossover multiplier must be x1 or x10");
+            }
+            options.stereo_crossover_enabled = true;
             continue;
         }
         if (key == "--octave-fuzz-octave-switch") {
@@ -2883,6 +2909,50 @@ Options parse_options(int argc, char** argv, int first) {
             options.octave_fuzz.volume = value;
             options.octave_fuzz_enabled = true;
         }
+        else if (key == "--stereo-crossover-frequency-hz") {
+            options.stereo_crossover.frequency_hz = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-low-level-left-db") {
+            options.stereo_crossover.low_level_left_db = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-low-level-right-db") {
+            options.stereo_crossover.low_level_right_db = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-high-level-left-db") {
+            options.stereo_crossover.high_level_left_db = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-high-level-right-db") {
+            options.stereo_crossover.high_level_right_db = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-low-pan-left") {
+            options.stereo_crossover.low_pan_left = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-high-pan-left") {
+            options.stereo_crossover.high_pan_left = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-low-pan-right") {
+            options.stereo_crossover.low_pan_right = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-high-pan-right") {
+            options.stereo_crossover.high_pan_right = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-level-db") {
+            options.stereo_crossover.level_db = value;
+            options.stereo_crossover_enabled = true;
+        }
+        else if (key == "--stereo-crossover-balance") {
+            options.stereo_crossover.balance = value;
+            options.stereo_crossover_enabled = true;
+        }
         else if (key == "--bit-crusher-mix") {
             options.bit_crusher.mix = value;
             options.bit_crusher_enabled = true;
@@ -3561,6 +3631,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.octave_fuzz_enabled) {
         effects.push_back(std::make_unique<tabletfx::effects::OctaveFuzz>(
             static_cast<float>(sample_rate), channels, options.octave_fuzz));
+    }
+    if (options.stereo_crossover_enabled) {
+        effects.push_back(std::make_unique<tabletfx::StereoCrossover>(
+            static_cast<float>(sample_rate), options.stereo_crossover));
     }
     if (options.rhythmic_slicer_enabled) {
         effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(
