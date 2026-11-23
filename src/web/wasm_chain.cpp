@@ -59,6 +59,7 @@
 #include "tabletfx/effects/octave_fuzz.hpp"
 #include "tabletfx/effects/rock_box_dist.hpp"
 #include "tabletfx/effects/rock_box_boost.hpp"
+#include "tabletfx/effects/stereo_panner.hpp"
 #include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -104,7 +105,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(90);
+        effects_.reserve(93);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -371,6 +372,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::RockBoxBoost>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::StereoPanner>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -1941,6 +1945,31 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_stereo_panner(
+        float rate_hz, float width_percent, std::uint32_t waveform,
+        std::uint32_t tempo_sync, float tempo_bpm, std::uint32_t division,
+        float duty_cycle_percent, float shape_percent, float phase_degrees,
+        float pan_center_percent, float ducking_percent, float level_db,
+        float balance_percent, float smoothing_ms) noexcept {
+        tabletfx::StereoPannerParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.width_percent = width_percent;
+        parameters.waveform = static_cast<tabletfx::StereoPannerWaveform>(waveform);
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.division = static_cast<tabletfx::AutoPanDivision>(division);
+        parameters.duty_cycle_percent = duty_cycle_percent;
+        parameters.shape_percent = shape_percent;
+        parameters.phase_degrees = phase_degrees;
+        parameters.pan_center_percent = pan_center_percent;
+        parameters.ducking_percent = ducking_percent;
+        parameters.level_db = level_db;
+        parameters.balance_percent = balance_percent;
+        parameters.smoothing_ms = smoothing_ms;
+        static_cast<tabletfx::StereoPanner*>(effects_[90U].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_stereo_crossover(const float* values) noexcept {
         if (values == nullptr) return;
         tabletfx::StereoCrossoverParameters parameters;
@@ -3415,6 +3444,21 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rock_box_boost(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_rock_box_boost(
             boost_db, level_db, smoothing_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_stereo_panner(
+    void* opaque, float rate_hz, float width_percent, std::uint32_t waveform,
+    std::uint32_t tempo_sync, float tempo_bpm, std::uint32_t division,
+    float duty_cycle_percent, float shape_percent, float phase_degrees,
+    float pan_center_percent, float ducking_percent, float level_db,
+    float balance_percent, float smoothing_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_stereo_panner(
+            rate_hz, width_percent, waveform, tempo_sync, tempo_bpm, division,
+            duty_cycle_percent, shape_percent, phase_degrees,
+            pan_center_percent, ducking_percent, level_db, balance_percent,
+            smoothing_ms);
     }
 }
 

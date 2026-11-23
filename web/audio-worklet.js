@@ -13,6 +13,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-crossover");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "asheville-pattrn");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-dist");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-boost");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-panner");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -322,6 +323,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       });
       const autoPan = parameters.autoPan || [0.5, 0.75, 1, 0, 120, 5];
       module._tf_chain_set_auto_pan(this.chain, ...autoPan);
+      const stereoPanner = parameters.stereoPanner ||
+        [0.5, 100, 0, 0, 120, 5, 50, 50, 180, 0, 0, 0, 0, 10];
+      module._tf_chain_set_stereo_panner(this.chain, ...stereoPanner);
       const megatapDelay = parameters.megatapDelay ||
         [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
           0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0];
@@ -896,6 +900,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       });
     } else if (message.type === "auto-pan" && this.ready) {
       this.module._tf_chain_set_auto_pan(this.chain, ...message.value);
+    } else if (message.type === "stereo-panner" && this.ready) {
+      this.module._tf_chain_set_stereo_panner(this.chain, ...message.value);
     } else if (message.type === "megatap-delay" && this.ready) {
       this.module._tf_chain_set_megatap_delay(this.chain, ...message.value);
     } else if (message.type === "de-esser" && this.ready) {

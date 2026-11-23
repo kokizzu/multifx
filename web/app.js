@@ -91,6 +91,7 @@ const EFFECT_NAMES = [
   "Asheville Pattrn · project-authored filter bank",
   "Rock Box Dist · project-authored",
   "Rock Box Boost · project-authored",
+  "Stereo Panner · project-authored Fractal FM9-family controls",
   "Output level",
   "Peak limiter",
 ];
@@ -149,6 +150,7 @@ const DEFAULT_PARAMETERS = {
   tenTapDelay: [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   autoPan: [0.5, 0.75, 1, 0, 120, 5],
+  stereoPanner: [0.5, 100, 0, 0, 120, 5, 50, 50, 180, 0, 0, 0, 0, 10],
   megatapDelay: [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
     0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0],
   deEsser: [6500, 1.5, -30, 12, 2, 80],
@@ -958,6 +960,22 @@ const autoPanDivision = document.querySelector("#auto-pan-division");
 const autoPanControls = [
   autoPanRate, autoPanDepth, autoPanWaveform, autoPanTempoSync,
   autoPanTempo, autoPanDivision,
+];
+const stereoPannerControls = [
+  document.querySelector("#stereo-panner-rate-hz"),
+  document.querySelector("#stereo-panner-width-percent"),
+  document.querySelector("#stereo-panner-waveform"),
+  document.querySelector("#stereo-panner-tempo-sync"),
+  document.querySelector("#stereo-panner-tempo-bpm"),
+  document.querySelector("#stereo-panner-division"),
+  document.querySelector("#stereo-panner-duty-cycle"),
+  document.querySelector("#stereo-panner-shape"),
+  document.querySelector("#stereo-panner-phase-degrees"),
+  document.querySelector("#stereo-panner-pan-center-percent"),
+  document.querySelector("#stereo-panner-ducking-percent"),
+  document.querySelector("#stereo-panner-level-db"),
+  document.querySelector("#stereo-panner-balance-percent"),
+  document.querySelector("#stereo-panner-smoothing-ms"),
 ];
 const megatapDelayTime = document.querySelector("#megatap-delay-time-ms");
 const megatapDelayTapCount = document.querySelector("#megatap-delay-tap-count");
@@ -2037,6 +2055,45 @@ function updateAutoPanOptions() {
   }
 }
 
+function updateStereoPannerOptions() {
+  const values = [
+    Number(stereoPannerControls[0].value),
+    Number(stereoPannerControls[1].value),
+    Number(stereoPannerControls[2].value),
+    stereoPannerControls[3].checked ? 1 : 0,
+    Number(stereoPannerControls[4].value),
+    Number(stereoPannerControls[5].value),
+    Number(stereoPannerControls[6].value),
+    Number(stereoPannerControls[7].value),
+    Number(stereoPannerControls[8].value),
+    Number(stereoPannerControls[9].value),
+    Number(stereoPannerControls[10].value),
+    Number(stereoPannerControls[11].value),
+    Number(stereoPannerControls[12].value),
+    Number(stereoPannerControls[13].value),
+  ];
+  DEFAULT_PARAMETERS.stereoPanner = values;
+  stereoPannerControls[0].parentElement.querySelector("output").value =
+    `${values[0].toFixed(2)} Hz`;
+  for (const index of [1, 6, 7, 9, 10, 12]) {
+    stereoPannerControls[index].parentElement.querySelector("output").value =
+      `${Math.round(values[index])}%`;
+  }
+  stereoPannerControls[4].parentElement.querySelector("output").value =
+    `${values[4]} BPM`;
+  stereoPannerControls[8].parentElement.querySelector("output").value =
+    `${Math.round(values[8])}°`;
+  stereoPannerControls[11].parentElement.querySelector("output").value =
+    `${values[11].toFixed(1)} dB`;
+  stereoPannerControls[13].parentElement.querySelector("output").value =
+    `${Math.round(values[13])} ms`;
+  stereoPannerControls[4].disabled = values[3] === 0;
+  stereoPannerControls[5].disabled = values[3] === 0;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "stereo-panner", value: values });
+  }
+}
+
 function updateMegatapDelayOptions() {
   const tapCount = Number(megatapDelayTapCount.value);
   megatapDelayFeedbackTap.max = String(tapCount);
@@ -2982,6 +3039,11 @@ for (const control of autoPanControls) {
   control.addEventListener("input", updateAutoPanOptions);
   control.addEventListener("change", updateAutoPanOptions);
 }
+for (const control of stereoPannerControls) {
+  control.addEventListener("input", updateStereoPannerOptions);
+  control.addEventListener("change", updateStereoPannerOptions);
+}
+updateStereoPannerOptions();
 for (const control of megatapDelayControls) {
   control.addEventListener("input", updateMegatapDelayOptions);
   control.addEventListener("change", updateMegatapDelayOptions);
@@ -7339,6 +7401,97 @@ async function runRockBoxBoostBrowserSmokeTest(reference, captureView, captureBu
   }
 }
 
+async function runStereoPannerBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = stereoPannerControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) => index === 90);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Stereo Panner browser smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [stereoPannerControls[0].value, stereoPannerControls[1].value,
+      stereoPannerControls[2].value, stereoPannerControls[3].checked,
+      stereoPannerControls[4].value, stereoPannerControls[5].value,
+      stereoPannerControls[6].value, stereoPannerControls[7].value,
+      stereoPannerControls[8].value, stereoPannerControls[9].value,
+      stereoPannerControls[10].value, stereoPannerControls[11].value,
+      stereoPannerControls[12].value, stereoPannerControls[13].value] =
+      ["2.5", "100", "0", false, "120", "5", "50", "50", "180", "0",
+        "0", "0", "0", "0"];
+    updateStereoPannerOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Stereo Panner playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    const sourceLeft = decodedAudio.getChannelData(0);
+    const sourceRight = decodedAudio.getChannelData(1);
+    let peak = 0;
+    let activeSamples = 0;
+    let sourceDifferenceSquares = 0;
+    let stereoDifferenceSquares = 0;
+    const frames = Math.min(decodedAudio.length, Math.floor(actual.length / 2));
+    for (let frame = 0; frame < frames; frame += 1) {
+      const left = actual[frame * 2];
+      const right = actual[frame * 2 + 1];
+      peak = Math.max(peak, Math.abs(left), Math.abs(right));
+      if (Math.abs(left) > 1e-6) activeSamples += 1;
+      if (Math.abs(right) > 1e-6) activeSamples += 1;
+      const leftDifference = left - sourceLeft[frame];
+      const rightDifference = right - sourceRight[frame];
+      sourceDifferenceSquares += leftDifference * leftDifference +
+        rightDifference * rightDifference;
+      const stereoDifference = left - right;
+      stereoDifferenceSquares += stereoDifference * stereoDifference;
+    }
+    const differenceRms = Math.sqrt(sourceDifferenceSquares / Math.max(1, frames * 2));
+    const stereoDifferenceRms = Math.sqrt(stereoDifferenceSquares / Math.max(1, frames));
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-5 ||
+        stereoDifferenceRms < 1e-5) {
+      throw new Error(`Stereo Panner did not produce measurable stereo guitar output (peak ${peak}, source difference RMS ${differenceRms}, L/R difference RMS ${stereoDifferenceRms}).`);
+    }
+    return { peak, activeSamples, differenceRms, stereoDifferenceRms,
+      enabledEffectIndex: 90, rateHz: 2.5, widthPercent: 100, phaseDegrees: 180 };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      stereoPannerControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateStereoPannerOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStereoCrossoverBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = Object.values(stereoCrossoverControls)
@@ -7465,6 +7618,19 @@ async function runStereoCrossoverBrowserSmokeTest(reference, captureView, captur
   }
 }
 
+function interleaveDecodedAudio(audio) {
+  const channelCount = audio.numberOfChannels;
+  const output = new Float32Array(audio.length * channelCount);
+  const channels = Array.from({ length: channelCount }, (_, index) =>
+    audio.getChannelData(index));
+  for (let frame = 0; frame < audio.length; frame += 1) {
+    for (let channel = 0; channel < channelCount; channel += 1) {
+      output[frame * channelCount + channel] = channels[channel][frame];
+    }
+  }
+  return output;
+}
+
 async function runAshevillePattrnBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = [
@@ -7497,11 +7663,11 @@ async function runAshevillePattrnBrowserSmokeTest(reference, captureView, captur
       input.value = String(bandLevels[index]);
     });
     updateAshevillePattrn();
-    if (decodedAudio.numberOfChannels !== 1 ||
-        decodedAudio.length !== reference.samples.length) {
-      throw new Error("Asheville Pattrn smoke requires a matching mono local guitar fixture.");
+    if (decodedAudio.numberOfChannels !== reference.channels ||
+        decodedAudio.length * reference.channels !== reference.samples.length) {
+      throw new Error("Asheville Pattrn smoke requires a matching local guitar fixture.");
     }
-    const dry = Float32Array.from(decodedAudio.getChannelData(0));
+    const dry = interleaveDecodedAudio(decodedAudio);
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     const capture = async () => {
       checkboxes.forEach((checkbox, index) => {
@@ -7629,11 +7795,11 @@ async function runSweepDelayBrowserSmokeTest(reference, captureView, captureBuff
     ] = ["10", "0", "100", "250", "6000", "1.2", "0.5", "0", "90",
       "0", "1", "120", "4"];
     updateSweepDelay();
-    if (decodedAudio.numberOfChannels !== 1 ||
-        decodedAudio.length !== reference.samples.length) {
-      throw new Error("Sweep Delay smoke requires a matching mono local guitar fixture.");
+    if (decodedAudio.numberOfChannels !== reference.channels ||
+        decodedAudio.length * reference.channels !== reference.samples.length) {
+      throw new Error("Sweep Delay smoke requires a matching local guitar fixture.");
     }
-    const dry = Float32Array.from(decodedAudio.getChannelData(0));
+    const dry = interleaveDecodedAudio(decodedAudio);
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
       const enabled = index === 42;
@@ -7816,8 +7982,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 92 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 92 || effectRows.length !== 92 ||
+      const expectedEffectIds = Array.from({ length: 93 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 93 || effectRows.length !== 93 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -7851,7 +8017,10 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[89]?.startsWith("Rock Box Boost") ||
               effectRows[89]?.dataset.category !== "drive" ||
               effectRows[89]?.querySelector(".effect-category-tag")?.textContent !== "Drive & fuzz" ||
-              EFFECT_NAMES[90] !== "Output level" || EFFECT_NAMES[91] !== "Peak limiter" ||
+              !EFFECT_NAMES[90]?.startsWith("Stereo Panner") ||
+              effectRows[90]?.dataset.category !== "modulation" ||
+              effectRows[90]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+              EFFECT_NAMES[91] !== "Output level" || EFFECT_NAMES[92] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -7864,7 +8033,8 @@ async function runBrowserSelfTest() {
                  initialEffectState[84] || initialEffectState[85] ||
                   initialEffectState[86] || initialEffectState[87] ||
                    initialEffectState[88] || initialEffectState[89] ||
-                   !initialEffectState[90] || !initialEffectState[91] ||
+                   initialEffectState[90] || !initialEffectState[91] ||
+                   !initialEffectState[92] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -7881,7 +8051,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-         throw new Error("The effect picker must list 92 ordered, categorized effects (IDs 0–91), with Asheville Pattrn in Filters & wah and both Rock Box processors in Drive & fuzz; optional effects must be disabled by default.");
+         throw new Error("The effect picker must list 93 ordered, categorized effects (IDs 0–92), with Asheville Pattrn in Filters & wah, both Rock Box processors in Drive & fuzz, and Stereo Panner in Modulation; optional effects must be disabled by default.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -8385,6 +8555,42 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.autoPan.join(",") !== autoPanDefaults.join(",")) {
       throw new Error("Auto-Pan self-test must restore its project-authored defaults.");
     }
+    const stereoPannerDefaults = [...DEFAULT_PARAMETERS.stereoPanner];
+    const stereoPannerControlSnapshot = stereoPannerControls.map((control) =>
+      control.type === "checkbox" ? control.checked : control.value);
+    const previousStereoPannerWorklet = workletNode;
+    const stereoPannerMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => stereoPannerMessages.push(message) } };
+      [stereoPannerControls[0].value, stereoPannerControls[1].value,
+        stereoPannerControls[2].value, stereoPannerControls[3].checked,
+        stereoPannerControls[4].value, stereoPannerControls[5].value,
+        stereoPannerControls[6].value, stereoPannerControls[7].value,
+        stereoPannerControls[8].value, stereoPannerControls[9].value,
+        stereoPannerControls[10].value, stereoPannerControls[11].value,
+        stereoPannerControls[12].value, stereoPannerControls[13].value] =
+        ["2.5", "150", "9", true, "90", "7", "25", "75", "270", "-20",
+          "60", "-3", "40", "0"];
+      stereoPannerControls[13].dispatchEvent(new Event("change", { bubbles: true }));
+      const message = stereoPannerMessages.at(-1);
+      if (message?.type !== "stereo-panner" ||
+          message.value.join(",") !== "2.5,150,9,1,90,7,25,75,270,-20,60,-3,40,0" ||
+          stereoPannerControls[4].disabled || stereoPannerControls[5].disabled ||
+          stereoPannerControls[1].parentElement.querySelector("output").value !== "150%" ||
+          stereoPannerControls[8].parentElement.querySelector("output").value !== "270°") {
+        throw new Error("Stereo Panner controls must serialize all documented controls in WASM order.");
+      }
+    } finally {
+      workletNode = previousStereoPannerWorklet;
+      stereoPannerControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = stereoPannerControlSnapshot[index];
+        else control.value = stereoPannerControlSnapshot[index];
+      });
+      updateStereoPannerOptions();
+    }
+    if (DEFAULT_PARAMETERS.stereoPanner.join(",") !== stereoPannerDefaults.join(",")) {
+      throw new Error("Stereo Panner self-test must restore its project-authored defaults.");
+    }
     const megatapDelayDefaults = [...DEFAULT_PARAMETERS.megatapDelay];
     const megatapDelayControlSnapshot = megatapDelayControls.map((control) =>
       control.type === "checkbox" ? control.checked : control.value);
@@ -8811,7 +9017,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-           if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 92" ||
+     if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Vocal FX picker mismatch: IDs=${vocalIds.join(",")}; count=${effectCount.value}; chainStatePreserved=${JSON.stringify(enabledEffects()) === JSON.stringify(initialEffectState)}.`);
     }
@@ -8819,8 +9025,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83" ||
-                  effectCount.value !== "15 of 92" ||
+         if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83,90" ||
+                   effectCount.value !== "16 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -8828,8 +9034,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,91" ||
-                  effectCount.value !== "9 of 92" ||
+              if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,92" ||
+                   effectCount.value !== "9 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -8837,8 +9043,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85,88,89" ||
-                  effectCount.value !== "13 of 92" ||
+         if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85,88,89" ||
+                   effectCount.value !== "13 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include the distortion, boost, fuzz, crusher, and three-stage processors while preserving the current chain state.");
     }
@@ -8942,7 +9148,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 92" ||
+                if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 93" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -8951,7 +9157,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
      if (filterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-                   effectCount.value !== "8 of 92" ||
+                    effectCount.value !== "8 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -8959,7 +9165,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 92" ||
+                if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -8967,7 +9173,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 92" ||
+                if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -8975,7 +9181,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 92" ||
+                if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -8983,7 +9189,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 92" ||
+                if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
     }
@@ -8991,7 +9197,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 92" ||
+                if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -8999,7 +9205,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 92" ||
+                if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -9007,7 +9213,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const crossoverIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 92" ||
+     if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Crossover category must list the XVR-inspired stage and preserve chain state.");
     }
@@ -9016,7 +9222,7 @@ async function runBrowserSelfTest() {
     const ashevilleFilterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (ashevilleFilterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-        effectCount.value !== "8 of 92" ||
+         effectCount.value !== "8 of 93" ||
         effectRows[87]?.dataset.category !== "filter" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filters & wah must include Asheville Pattrn at ID 87 and preserve chain state.");
@@ -9056,7 +9262,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-            if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 92" ||
+             if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -9064,7 +9270,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-               if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 92" ||
+                if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 93" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
     }
@@ -9106,12 +9312,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 92") {
+              if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 93") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-          if (effectCount.value !== "92 of 92" || effectRows.some((row) => row.hidden)) {
+           if (effectCount.value !== "93 of 93" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -9323,13 +9529,15 @@ async function runBrowserSelfTest() {
       parityEnabled[88] = false;
        // Rock Box Boost also has a separate local Play smoke.
        parityEnabled[89] = false;
+    // Stereo Panner is verified by its dedicated local stereo guitar smoke.
+    parityEnabled[90] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-        if (parityEnabled.length !== 92 || activeProcessorIndices.length !== 71 ||
+         if (parityEnabled.length !== 93 || activeProcessorIndices.length !== 71 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 86) {
-          throw new Error("The all-effect chain must contain 71 optional processors between input trim and output utilities.");
+           throw new Error("The all-effect chain must contain 71 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -9959,6 +10167,10 @@ async function runBrowserSelfTest() {
     const rockBoxBoostSmoke = await runRockBoxBoostBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Stereo Panner playback on local stereo guitar audio…";
+    const stereoPannerSmoke = await runStereoPannerBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Stereo Crossover playback on local guitar audio…";
     const stereoCrossoverSmoke = await runStereoCrossoverBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -10117,6 +10329,7 @@ async function runBrowserSelfTest() {
          tapeEcho: tapeEchoSmoke,
          octaveFuzz: octaveFuzzSmoke,
       rockBoxBoost: rockBoxBoostSmoke,
+      stereoPanner: stereoPannerSmoke,
       stereoCrossover: stereoCrossoverSmoke,
       ashevillePattrn: ashevillePattrnSmoke,
       sweepDelay: sweepDelaySmoke,

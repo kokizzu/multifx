@@ -1745,6 +1745,26 @@ ROCK_BOX_BOOST_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+STEREO_PANNER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/stereo_panner.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/stereo_panner.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_stereo_panner.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -1920,6 +1940,10 @@ CHECKPOINTS = {
     "rock-box-boost": (
         ROCK_BOX_BOOST_CHECKPOINT_PATHS,
         "feat: add categorized Rock Box Boost processor",
+    ),
+    "stereo-panner": (
+        STEREO_PANNER_CHECKPOINT_PATHS,
+        "feat: add categorized Fractal-style stereo panner",
     ),
     "headrush-bbd-mode": (
         HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,

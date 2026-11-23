@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "updated": "2026-11-23",
+  "repository": "https://github.com/kokizzu/multifx",
+  "primary_branch": "main",
+  "workflow": "flagship-effects-categorized",
+  "previous_checkpoint_commit": "0a73b487d145f7c6901a46c2f900a855326652e4",
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Stereo Panner",
+    "status": "verified-implementation",
+    "picker_index": 90,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026",
+      "pages": [106, 107],
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
+    },
+    "project_controls": "Rate, Width, LFO Type, Tempo Sync/BPM/division, Duty, Shape, Phase, Pan Center, Ducking, Level, Balance, Smoothing. Bounds/defaults and DSP are project-authored.",
+    "verification": {
+      "native_ctest": "96/96",
+      "fixture_safety": "11 passed",
+      "picker_rows": 93,
+      "web_build_bytes": 759845,
+      "browser_native_comparison": "71 stages; max absolute error 0.00000780769; RMS error 0.00000153992",
+      "stereo_guitar_panner_smoke": "passed using the existing local Guitar-TECHS stereo DI fixture",
+      "wasm_memory_bytes": 67108864,
+      "stereo_chain_processor_state_bytes": 32959916,
+      "tuner_state_bytes": 10364,
+      "notes": "Panner has its own stereo browser Play smoke and is excluded from parity because the offline renderer has no panner option. No isolated CPU, hardware, or human listening evidence."
+    }
+  },
+  "next_research": [
+    {
+      "device": "Fractal FM9 Mark II Turbo",
+      "feature": "Formant dynamic vowel morph",
+      "source": "November 2026 Blocks Guide, p. 51",
+      "status": "official control roles verified; project implementation pending",
+      "known_controls": "Start/Middle/End vowel choices, Resonance, continuous Control/morph; exact bounds/defaults and DSP not published",
+      "qualification": "Do not equate with the existing static formant filter; FM9-family firmware applicability remains qualified."
+    },
+    {
+      "device": "Fractal FM9 Mark II Turbo",
+      "feature": "Enhancer modes",
+      "source": "November 2026 Blocks Guide, p. 44",
+      "status": "official mode/control roles verified; project implementation pending",
+      "known_controls": "Modern, Classic, Stereoizer; only Classic Width 0–20 ms is numerically specified",
+      "qualification": "Existing Stereo Enhancer is related coverage, not mode parity."
+    },
+    {
+      "device": "HeadRush Prime",
+      "feature": "C-Verb 10-second impulse support, Spring Guru, Kill Seq/Splicer, named synths",
+      "status": "manual gaps; do not infer undocumented controls"
+    },
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
+      "status": "names and categories verified; effect-specific controls/ranges unavailable in reviewed public sources"
+    },
+    {
+      "device": "Melofty Axom Max and XRecer XR1",
+      "feature": "remaining categorized effects, routing and global controls",
+      "status": "category/architecture leads only; exact effect tables remain inaccessible or incomplete"
+    }
+  ],
+  "constraints": [
+    "Work only on kokizzu/multifx main; do not create branches or workflows.",
+    "Preserve unrelated local work and stage only reviewed checkpoint files.",
+    "Implement one model feature at a time; commit and push each validated checkpoint.",
+    "Use exact-model official documentation; unknown is not No; do not claim DSP/settings/sound parity.",
+    "Do not download test audio; use the existing local prerecorded guitar DI fixture."
+  ]
+}

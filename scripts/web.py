@@ -310,6 +310,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "octave_fuzz.cpp"),
         str(ROOT / "src" / "effects" / "rock_box_dist.cpp"),
         str(ROOT / "src" / "effects" / "rock_box_boost.cpp"),
+        str(ROOT / "src" / "effects" / "stereo_panner.cpp"),
         str(ROOT / "src" / "effects" / "stereo_crossover.cpp"),
         str(ROOT / "src" / "effects" / "porta_preamp.cpp"),
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
@@ -320,7 +321,7 @@ def build_web() -> None:
         "-o", str(WEB_BUILD_DIR / "tabletfx_wasm.js"),
         "-sMODULARIZE=1", "-sEXPORT_ES6=1", "-sSINGLE_FILE=1",
         "-sENVIRONMENT=web,worker,worklet", "-sALLOW_MEMORY_GROWTH=0",
-        "-sINITIAL_MEMORY=25165824", "-sSTACK_SIZE=262144",
+        "-sINITIAL_MEMORY=67108864", "-sSTACK_SIZE=262144",
         "-sNO_EXIT_RUNTIME=1", "-sFILESYSTEM=0",
         "-sEXPORTED_FUNCTIONS=" + json.dumps(exports),
         "-sEXPORTED_RUNTIME_METHODS=HEAPF32",
@@ -392,9 +393,9 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
             + 0.12 * math.sin(2.0 * math.pi * 220.0 * time_seconds)
         )
         value = max(-32768, min(32767, round(signal * 32767.0)))
-        samples.extend(struct.pack("<h", value))
+        samples.extend(struct.pack("<hh", value, value))
     with wave.open(str(destination), "wb") as output:
-        output.setnchannels(1)
+        output.setnchannels(2)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
         output.writeframes(samples)
@@ -402,7 +403,7 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
 
 
 def make_prerecorded_guitar_test_audio(destination: Path) -> str | None:
-    """Prefer the locally linked solo guitar DI fixture; keep CI fallback portable."""
+    """Prefer the locally linked stereo guitar DI fixture; keep CI fallback portable."""
     source_path = (
         ROOT / "testdata" / "reference_audio" / "guitar-techs-p3-music"
         / "P3_music" / "audio" / "directinput" / "directinput_01.wav"
@@ -420,19 +421,20 @@ def make_prerecorded_guitar_test_audio(destination: Path) -> str | None:
     if len(frames) != frame_count * 6:
         return None
 
-    mono_16_bit = bytearray(frame_count * 2)
+    stereo_16_bit = bytearray(frame_count * 4)
     for frame in range(frame_count):
         offset = frame * 6
         left = int.from_bytes(frames[offset:offset + 3], "little", signed=True)
         right = int.from_bytes(frames[offset + 3:offset + 6], "little", signed=True)
-        mono = max(-32768, min(32767, round((left + right) / 512.0)))
-        struct.pack_into("<h", mono_16_bit, frame * 2, mono)
+        left_16 = max(-32768, min(32767, round(left / 256.0)))
+        right_16 = max(-32768, min(32767, round(right / 256.0)))
+        struct.pack_into("<hh", stereo_16_bit, frame * 4, left_16, right_16)
 
     with wave.open(str(destination), "wb") as output:
-        output.setnchannels(1)
+        output.setnchannels(2)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
-        output.writeframes(mono_16_bit)
+        output.writeframes(stereo_16_bit)
     return str(source_path)
 
 
@@ -466,9 +468,9 @@ def make_tuner_test_audio(destination: Path, sample_rate: int = 48000,
         value = max(-32768, min(32767, round(
             0.35 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate) * 32767.0
         )))
-        samples.extend(struct.pack("<h", value))
+        samples.extend(struct.pack("<hh", value, value))
     with wave.open(str(destination), "wb") as output:
-        output.setnchannels(1)
+        output.setnchannels(2)
         output.setsampwidth(2)
         output.setframerate(sample_rate)
         output.writeframes(samples)

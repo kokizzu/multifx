@@ -31,6 +31,7 @@ add_library(tabletfx_core
     src/effects/octave_fuzz.cpp
     src/effects/rock_box_dist.cpp
     src/effects/rock_box_boost.cpp
+    src/effects/stereo_panner.cpp
     src/effects/phaser.cpp
     src/effects/overdrive.cpp
     src/effects/mid_overdrive.cpp
@@ -252,6 +253,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_rock_box_boost_tests tests/test_rock_box_boost.cpp)
     target_link_libraries(tabletfx_rock_box_boost_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_rock_box_boost_tests COMMAND tabletfx_rock_box_boost_tests)
+
+    add_executable(tabletfx_stereo_panner_tests tests/test_stereo_panner.cpp)
+    target_link_libraries(tabletfx_stereo_panner_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_stereo_panner_tests COMMAND tabletfx_stereo_panner_tests)
 
     add_executable(tabletfx_phaser_tests tests/test_phaser.cpp)
     target_link_libraries(tabletfx_phaser_tests PRIVATE tabletfx_core)
