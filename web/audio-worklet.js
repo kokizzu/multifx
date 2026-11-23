@@ -322,7 +322,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureVolumePan(parameters.volumePan ||
         [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0]);
       this.configureStereoFilter(parameters.stereoFilter ||
-        [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1]);
+        [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0]);
       const wah = parameters.wah || [0.5, 350, 2200, 4, 0];
       module._tf_chain_set_wah(this.chain, ...wah);
       const envelopeWah = parameters.envelopeWah || [0.5, 350, 2200, 4, 0, 5, 80, 5, 0];
@@ -812,7 +812,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
   }
 
   configureStereoFilter(values) {
-    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 26) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 30) {
       return;
     }
     const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);

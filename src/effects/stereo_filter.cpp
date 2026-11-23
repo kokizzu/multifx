@@ -58,8 +58,14 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     const float saved_lfo_phase = lfo_phase_;
     const std::uint32_t saved_lfo_cycle = lfo_cycle_;
     parameters.type = sanitize_type(parameters.type);
+    const bool swept_type = parameters.type == StereoFilterType::AutoWah ||
+                            parameters.type == StereoFilterType::EnvelopeFilter;
+    const float minimum_frequency = swept_type ? 100.0F : 20.0F;
+    const float maximum_frequency = swept_type
+        ? std::min(10000.0F, nyquist_limit())
+        : nyquist_limit();
     parameters.frequency_hz = bounded(parameters.frequency_hz, 1000.0F,
-                                       20.0F, nyquist_limit());
+                                       minimum_frequency, maximum_frequency);
     parameters.order = parameters.order == 4U ? 4U : 2U;
     parameters.q = bounded(parameters.q, 0.707F, 0.1F, 12.0F);
     parameters.gain_db = bounded(parameters.gain_db, 0.0F, -24.0F, 24.0F);
@@ -89,7 +95,7 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.lfo_duty_percent = bounded(parameters.lfo_duty_percent, 50.0F,
                                           1.0F, 99.0F);
     parameters.mod_frequency_hz = bounded(parameters.mod_frequency_hz, 4000.0F,
-                                          20.0F, nyquist_limit());
+                                          minimum_frequency, maximum_frequency);
     parameters.mode = sanitize_mode(parameters.mode);
     parameters.sweep_shape = bounded(parameters.sweep_shape, 1.0F,
                                      0.25F, 4.0F);
@@ -97,6 +103,13 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
                                        20.0F, 300.0F);
     parameters.lfo_beats_per_cycle = bounded(
         parameters.lfo_beats_per_cycle, 1.0F, 0.0625F, 4.0F);
+    parameters.sensitivity_db = bounded(parameters.sensitivity_db, -36.0F,
+                                         -60.0F, 0.0F);
+    parameters.attack_time_ms = bounded(parameters.attack_time_ms, 5.0F,
+                                        1.0F, 1000.0F);
+    parameters.release_time_ms = bounded(parameters.release_time_ms, 80.0F,
+                                          1.0F, 2000.0F);
+    parameters.emphasis = bounded(parameters.emphasis, 0.0F, 0.0F, 1.0F);
     if (parameters.lfo_quantize_steps == 1U) {
         parameters.lfo_quantize_steps = 2U;
     } else if (parameters.lfo_quantize_steps > 32U) {
@@ -104,6 +117,11 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     }
 
     parameters_ = parameters;
+    attack_alpha_ = std::exp(-1.0F /
+        (parameters_.attack_time_ms * 0.001F * sample_rate_));
+    release_alpha_ = std::exp(-1.0F /
+        (parameters_.release_time_ms * 0.001F * sample_rate_));
+    emphasis_alpha_ = std::exp(-kTwoPi * 1800.0F / sample_rate_);
     delay_frames_ = std::clamp<std::size_t>(
         static_cast<std::size_t>(std::lround(
             static_cast<double>(parameters_.delay_time_ms) * sample_rate_ /
@@ -133,13 +151,61 @@ void StereoFilter::process(std::span<float> interleaved,
     if (channels == 0U || channels > 2U) return;
     const std::size_t frames = interleaved.size() / channels;
     const bool is_auto_wah = parameters_.type == StereoFilterType::AutoWah;
+    const bool is_envelope_filter =
+        parameters_.type == StereoFilterType::EnvelopeFilter;
     const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
+                         !is_envelope_filter &&
                          parameters_.type != StereoFilterType::FeedForwardComb &&
                          parameters_.type != StereoFilterType::FeedbackComb &&
                          parameters_.type != StereoFilterType::Allpass &&
                          parameters_.type != StereoFilterType::Null;
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
+        float frame_inputs[2] = {0.0F, 0.0F};
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            frame_inputs[channel] = safe_sample(
+                interleaved[frame * channels + channel]);
+        }
+
+        if (is_envelope_filter) {
+            float detector_level = 0.0F;
+            for (std::uint16_t channel = 0; channel < channels; ++channel) {
+                const float input = frame_inputs[channel];
+                const float previous_lowpass =
+                    envelope_emphasis_lowpass_[channel];
+                const float lowpass = emphasis_alpha_ * previous_lowpass +
+                    (1.0F - emphasis_alpha_) * input;
+                envelope_emphasis_lowpass_[channel] = lowpass;
+                const float highpass = input - lowpass;
+                const float emphasized = std::abs(input) +
+                    parameters_.emphasis * 2.0F * std::abs(highpass);
+                detector_level = std::max(detector_level, emphasized);
+            }
+
+            const float alpha = detector_level > envelope_level_
+                ? attack_alpha_
+                : release_alpha_;
+            envelope_level_ = alpha * envelope_level_ +
+                (1.0F - alpha) * detector_level;
+            const float envelope_db = 20.0F * std::log10(
+                std::max(envelope_level_, 1.0e-6F));
+            const float normalized = parameters_.sensitivity_db >= -1.0e-6F
+                ? (envelope_db >= 0.0F ? 1.0F : 0.0F)
+                : std::clamp(
+                    (envelope_db - parameters_.sensitivity_db) /
+                        -parameters_.sensitivity_db,
+                    0.0F, 1.0F);
+            const float position = std::pow(normalized,
+                                             parameters_.sweep_shape);
+            if (frame % kCoefficientUpdateFrames == 0U) {
+                const float lower = std::log(parameters_.frequency_hz);
+                const float upper = std::log(parameters_.mod_frequency_hz);
+                const float frequency = std::exp(
+                    lower + (upper - lower) * position);
+                rebuild_coefficients(frequency);
+            }
+        }
+
         if (has_lfo && frame % kCoefficientUpdateFrames == 0U) {
             const float raw_position = lfo_position();
             const float position = is_auto_wah
@@ -153,8 +219,7 @@ void StereoFilter::process(std::span<float> interleaved,
 
         float filtered[2] = {0.0F, 0.0F};
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
-            const std::size_t sample_index = frame * channels + channel;
-            const float input = safe_sample(interleaved[sample_index]);
+            const float input = frame_inputs[channel];
             float output = input;
             switch (parameters_.type) {
             case StereoFilterType::FeedForwardComb:
@@ -219,6 +284,8 @@ void StereoFilter::reset() noexcept {
     write_frame_ = 0U;
     lfo_phase_ = 0.0F;
     lfo_cycle_ = 0U;
+    envelope_emphasis_lowpass_.fill(0.0F);
+    envelope_level_ = 0.0F;
 }
 
 float StereoFilter::bounded(float value, float fallback, float minimum,
@@ -245,6 +312,7 @@ StereoFilterType StereoFilter::sanitize_type(StereoFilterType type) noexcept {
     case StereoFilterType::HighShelf2:
     case StereoFilterType::Peaking2:
     case StereoFilterType::AutoWah:
+    case StereoFilterType::EnvelopeFilter:
         return type;
     }
     return StereoFilterType::Lowpass;
@@ -311,6 +379,18 @@ std::size_t StereoFilter::make_coefficients(
     coefficients.fill(BiquadCoefficients{});
     StereoFilterType effective_type = parameters_.type;
     if (parameters_.type == StereoFilterType::AutoWah) {
+        switch (parameters_.mode) {
+        case StereoFilterMode::Lowpass:
+            effective_type = StereoFilterType::Lowpass;
+            break;
+        case StereoFilterMode::Bandpass:
+            effective_type = StereoFilterType::Bandpass;
+            break;
+        case StereoFilterMode::Highpass:
+            effective_type = StereoFilterType::Highpass;
+            break;
+        }
+    } else if (parameters_.type == StereoFilterType::EnvelopeFilter) {
         switch (parameters_.mode) {
         case StereoFilterMode::Lowpass:
             effective_type = StereoFilterType::Lowpass;
@@ -425,6 +505,7 @@ std::size_t StereoFilter::make_coefficients(
     case StereoFilterType::FeedbackComb:
     case StereoFilterType::Null:
     case StereoFilterType::AutoWah:
+    case StereoFilterType::EnvelopeFilter:
         break;
     }
     return 0U;

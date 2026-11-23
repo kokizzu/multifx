@@ -324,6 +324,35 @@ void test_auto_wah_automatically_sweeps_filter_mode() {
             "Auto-Wah Sweep Shape did not change the project-authored motion");
 }
 
+void test_envelope_filter_tracks_input_level_without_lfo() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t warmup = 12000U;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::EnvelopeFilter;
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    parameters.frequency_hz = 300.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.q = 4.0F;
+    parameters.sensitivity_db = -36.0F;
+    parameters.attack_time_ms = 5.0F;
+    parameters.release_time_ms = 80.0F;
+    parameters.lfo_enabled = true;
+
+    const auto render = [&](float input_gain) {
+        tabletfx::StereoFilter effect(sample_rate, parameters);
+        auto audio = tone(sample_rate, 2500.0F, frames);
+        for (float& sample : audio) sample *= input_gain;
+        effect.process(audio, 1U);
+        return rms(audio, warmup) / input_gain;
+    };
+
+    const float soft_gain = render(0.01F);
+    const float hard_gain = render(0.8F);
+    require(hard_gain > soft_gain * 2.0F,
+            "Envelope Filter did not open farther for a stronger pick attack");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -372,6 +401,7 @@ int main() {
         test_stereo_pan_phase_balance_and_mono();
         test_lfo_and_optional_cut_filters();
         test_auto_wah_automatically_sweeps_filter_mode();
+        test_envelope_filter_tracks_input_level_without_lfo();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;

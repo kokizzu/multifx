@@ -103,7 +103,7 @@ const EFFECT_NAMES = [
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
-  stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1],
+  stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0],
   stepTremolo: [4, 0.75, 8, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 4],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
@@ -1219,6 +1219,10 @@ const stereoFilterControls = [
   document.querySelector("#stereo-filter-tempo-sync"),
   document.querySelector("#stereo-filter-tempo-bpm"),
   document.querySelector("#stereo-filter-tempo-division"),
+  document.querySelector("#stereo-filter-sensitivity-db"),
+  document.querySelector("#stereo-filter-attack-ms"),
+  document.querySelector("#stereo-filter-release-ms"),
+  document.querySelector("#stereo-filter-emphasis"),
 ];
 const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-line]")]
   .map((row) => Object.fromEntries(
@@ -2609,26 +2613,48 @@ function updateStepFilterDelayOptions() {
 
 function updateStereoFilterOptions() {
   const isAutoWah = Number(stereoFilterControls[0].value) === 15;
+  const isEnvelopeFilter = Number(stereoFilterControls[0].value) === 16;
+  const hasEnvelopeSweep = isAutoWah || isEnvelopeFilter;
   const frequencyControl = stereoFilterControls[1];
   const modFrequencyControl = stereoFilterControls[19];
   const frequencySpan = frequencyControl.parentElement.querySelector("span");
   const modFrequencySpan = modFrequencyControl.parentElement.querySelector("span");
-  frequencyControl.min = isAutoWah ? "100" : "20";
-  frequencyControl.max = isAutoWah ? "10000" : "20000";
-  modFrequencyControl.min = isAutoWah ? "100" : "20";
-  modFrequencyControl.max = isAutoWah ? "10000" : "20000";
+  stereoFilterControls[2].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[4].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[10].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[11].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[12].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[7].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[8].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[9].parentElement.hidden = hasEnvelopeSweep;
+  frequencyControl.min = hasEnvelopeSweep ? "100" : "20";
+  frequencyControl.max = hasEnvelopeSweep ? "10000" : "20000";
+  modFrequencyControl.min = hasEnvelopeSweep ? "100" : "20";
+  modFrequencyControl.max = hasEnvelopeSweep ? "10000" : "20000";
   frequencyControl.value = String(Math.max(Number(frequencyControl.min),
     Math.min(Number(frequencyControl.max), Number(frequencyControl.value))));
   modFrequencyControl.value = String(Math.max(Number(modFrequencyControl.min),
     Math.min(Number(modFrequencyControl.max), Number(modFrequencyControl.value))));
-  frequencySpan.textContent = isAutoWah ? "Start frequency" : "Frequency";
-  modFrequencySpan.textContent = isAutoWah ? "Stop frequency" : "Modulation frequency";
-  stereoFilterControls[21].parentElement.hidden = !isAutoWah;
-  stereoFilterControls[22].parentElement.hidden = !isAutoWah;
+  frequencySpan.textContent = hasEnvelopeSweep ? "Start frequency" : "Frequency";
+  modFrequencySpan.textContent = hasEnvelopeSweep ? "Stop frequency" : "Modulation frequency";
+  stereoFilterControls[3].parentElement.querySelector("span").textContent =
+    hasEnvelopeSweep ? "Resonance" : "Q";
+  stereoFilterControls[15].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[16].parentElement.hidden = isEnvelopeFilter;
+  stereoFilterControls[17].parentElement.hidden = isEnvelopeFilter;
+  stereoFilterControls[18].parentElement.hidden = isEnvelopeFilter;
+  stereoFilterControls[19].parentElement.hidden = isEnvelopeFilter;
+  stereoFilterControls[20].parentElement.hidden = isEnvelopeFilter;
+  stereoFilterControls[21].parentElement.hidden = !hasEnvelopeSweep;
+  stereoFilterControls[22].parentElement.hidden = !hasEnvelopeSweep;
   stereoFilterControls[23].parentElement.hidden = !isAutoWah;
   stereoFilterControls[24].parentElement.hidden = !isAutoWah;
   stereoFilterControls[25].parentElement.hidden = !isAutoWah;
-  stereoFilterControls[15].disabled = isAutoWah;
+  stereoFilterControls[26].parentElement.hidden = !isEnvelopeFilter;
+  stereoFilterControls[27].parentElement.hidden = !isEnvelopeFilter;
+  stereoFilterControls[28].parentElement.hidden = !isEnvelopeFilter;
+  stereoFilterControls[29].parentElement.hidden = !isEnvelopeFilter;
+  stereoFilterControls[15].disabled = hasEnvelopeSweep;
   const values = [
     Number(stereoFilterControls[0].value),
     Number(stereoFilterControls[1].value),
@@ -2645,7 +2671,7 @@ function updateStereoFilterOptions() {
     Number(stereoFilterControls[12].value),
     Number(stereoFilterControls[13].value),
     Number(stereoFilterControls[14].value),
-    Number(isAutoWah || stereoFilterControls[15].checked),
+    Number(isAutoWah || (!isEnvelopeFilter && stereoFilterControls[15].checked)),
     Number(stereoFilterControls[16].value),
     Number(stereoFilterControls[17].value),
     Number(stereoFilterControls[18].value),
@@ -2656,6 +2682,10 @@ function updateStereoFilterOptions() {
     Number(stereoFilterControls[23].checked),
     Number(stereoFilterControls[24].value),
     Number(stereoFilterControls[25].value),
+    Number(stereoFilterControls[26].value),
+    Number(stereoFilterControls[27].value),
+    Number(stereoFilterControls[28].value),
+    Number(stereoFilterControls[29].value) / 100,
   ];
   DEFAULT_PARAMETERS.stereoFilter = values;
   const displays = [
@@ -2674,7 +2704,7 @@ function updateStereoFilterOptions() {
     values[12].toFixed(2),
     `${values[13]} dB`,
     `${values[14]}%`,
-    isAutoWah ? "Automatic" : values[15] ? "On" : "Off",
+    isAutoWah ? "Automatic" : isEnvelopeFilter ? "Input envelope" : values[15] ? "On" : "Off",
     stereoFilterControls[16].selectedOptions[0]?.textContent ?? values[16],
     `${values[17]} Hz`,
     `${values[18]}%`,
@@ -2685,6 +2715,10 @@ function updateStereoFilterOptions() {
     values[23] ? "Tempo sync" : "Hz rate",
     `${values[24]} BPM`,
     stereoFilterControls[25].selectedOptions[0]?.textContent ?? values[25],
+    `${values[26]} dBFS`,
+    `${values[27]} ms`,
+    `${values[28]} ms`,
+    `${Math.round(values[29] * 100)}%`,
   ];
   stereoFilterControls.forEach((control, index) => {
     const output = control.parentElement.querySelector("output");
@@ -8713,12 +8747,32 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     stereoFilterControls[23].checked = true;
     stereoFilterControls[24].value = "120";
     stereoFilterControls[25].value = "1";
+    stereoFilterControls[26].value = "-36";
+    stereoFilterControls[27].value = "5";
+    stereoFilterControls[28].value = "80";
+    stereoFilterControls[29].value = "0";
     updateStereoFilterOptions();
-    if (DEFAULT_PARAMETERS.stereoFilter.length !== 26 ||
+    if (DEFAULT_PARAMETERS.stereoFilter.length !== 30 ||
         DEFAULT_PARAMETERS.stereoFilter[0] !== 15 ||
         DEFAULT_PARAMETERS.stereoFilter[1] !== 300 ||
         DEFAULT_PARAMETERS.stereoFilter[2] !== 4) {
-      throw new Error("Stereo Filter controls did not produce the expected 26-value API vector.");
+      throw new Error("Stereo Filter controls did not produce the expected 30-value API vector.");
+    }
+    stereoFilterControls[0].value = "16";
+    updateStereoFilterOptions();
+    const postedEnvelopeFilter = postedStereoFilterMessages.find(
+      (message) => message.type === "stereo-filter" &&
+        message.value?.length === 30 && message.value?.[0] === 16,
+    );
+    if (!postedEnvelopeFilter || !stereoFilterControls[15].disabled ||
+        stereoFilterControls[26].parentElement.hidden ||
+        !stereoFilterControls[23].parentElement.hidden ||
+        postedEnvelopeFilter.value[21] !== 1 ||
+        postedEnvelopeFilter.value[26] !== -36 ||
+        postedEnvelopeFilter.value[27] !== 5 ||
+        postedEnvelopeFilter.value[28] !== 80 ||
+        postedEnvelopeFilter.value[29] !== 0) {
+      throw new Error("Envelope Filter controls did not reach the 30-value Worklet API.");
     }
     effectCategoryFilter.value = "filter";
     updateEffectBrowser();
@@ -8740,7 +8794,8 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
       throw new Error("Stereo Filter picker row did not enable from its click handler.");
     }
     const postedConfiguration = postedStereoFilterMessages.find(
-      (message) => message.type === "stereo-filter" && message.value?.length === 26,
+      (message) => message.type === "stereo-filter" &&
+        message.value?.length === 30 && message.value?.[0] === 15,
     );
     const postedEnable = postedStereoFilterMessages.find(
       (message) => message.type === "enable" && message.index === 96 && message.value,
@@ -8750,10 +8805,10 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     }
     const expectedStereoFilter = [
       15, 300, 4, 4, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0,
-      1, 1, 2, 50, 6000, 0, 1, 2, 1, 120, 1,
+      1, 1, 2, 50, 6000, 0, 1, 2, 1, 120, 1, -36, 5, 80, 0,
     ];
     if (JSON.stringify(postedConfiguration.value) !== JSON.stringify(expectedStereoFilter)) {
-      throw new Error("Stereo Filter Worklet message does not match the 26-value Auto-Wah API order.");
+      throw new Error("Stereo Filter Worklet message does not match the 30-value Auto-Wah API order.");
     }
     workletNode.port.postMessage({ type: "reset" });
     workletNode.port.postMessage({ type: "capture-reset" });
@@ -8788,7 +8843,9 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
       throw new Error(`Stereo Filter produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
     }
-    return { category: "Filters & wah", enabledEffectIndex: 96, playOutputCaptured: true,
+    return { category: "Filters & wah",
+      type: stereoFilterControls[0].selectedOptions[0]?.textContent ?? "unknown",
+      enabledEffectIndex: 96, playOutputCaptured: true,
       peak, activeSamples, differenceRms };
   } finally {
     stopSource(false);

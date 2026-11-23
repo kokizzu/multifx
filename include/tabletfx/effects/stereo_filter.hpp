@@ -27,6 +27,7 @@ enum class StereoFilterType : std::uint8_t {
     HighShelf2,
     Peaking2,
     AutoWah,
+    EnvelopeFilter,
 };
 
 enum class StereoFilterMode : std::uint8_t {
@@ -78,6 +79,10 @@ struct StereoFilterParameters {
     bool lfo_tempo_sync = false;
     float lfo_tempo_bpm = 120.0F;
     float lfo_beats_per_cycle = 1.0F;
+    float sensitivity_db = -36.0F;
+    float attack_time_ms = 5.0F;
+    float release_time_ms = 80.0F;
+    float emphasis = 0.0F;
 };
 
 /*
@@ -175,6 +180,11 @@ private:
     std::size_t delay_frames_ = 1U;
     float lfo_phase_ = 0.0F;
     std::uint32_t lfo_cycle_ = 0U;
+    std::array<float, 2> envelope_emphasis_lowpass_{};
+    float envelope_level_ = 0.0F;
+    float attack_alpha_ = 0.0F;
+    float release_alpha_ = 0.0F;
+    float emphasis_alpha_ = 0.0F;
     float level_gain_ = 1.0F;
     float balance_left_gain_ = 1.0F;
     float balance_right_gain_ = 1.0F;
