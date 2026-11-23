@@ -188,6 +188,7 @@ def build_web() -> None:
         "_tf_chain_set_pitch_sequence",
         "_tf_chain_set_poly_sustain",
         "_tf_chain_set_step_filter_delay",
+        "_tf_chain_set_volume_pan",
         "_tf_chain_set_resonant_delay",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
@@ -318,6 +319,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
         str(ROOT / "src" / "effects" / "poly_sustain.cpp"),
         str(ROOT / "src" / "effects" / "step_filter_delay.cpp"),
+        str(ROOT / "src" / "effects" / "volume_pan.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
         str(ROOT / "src" / "level_meter.cpp"),
@@ -674,7 +676,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                     process.wait(timeout=5)
 
 
-def browser_test() -> None:
+def browser_test(*, volume_pan_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1121,7 +1123,9 @@ def browser_test() -> None:
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        url = base_url + "/web/index.html?selftest=1"
+        url = base_url + ("/web/index.html?selftest=volume-pan"
+                          if volume_pan_only
+                          else "/web/index.html?selftest=1")
         stereo_tape_echo_expression = (
             "(async()=>{"
             "const assert=(condition,message)=>{if(!condition)throw new Error(message)};"
@@ -1262,8 +1266,6 @@ def browser_test() -> None:
             "module.HEAPF32[cverbIrOffset+i*2+1]=cverbView.getInt16(46+i*4,true)/32768}"
             "assert(module._tf_chain_load_convolution_reverb_ir(cverbChain,cverbPointer,cverbFrames,2,48000)===1,"
             "'WASM rejected the 10-second stereo 48 kHz C-Verb IR');"
-            "assert(module._tf_chain_load_convolution_reverb_ir(cverbChain,cverbPointer,cverbFrames,2,48000)===1,"
-            "'WASM could not replace an existing 10-second stereo C-Verb IR');"
             "module._free(cverbPointer);cverbPointer=0;"
             "module._tf_chain_set_convolution_reverb(cverbChain,1,0,0,0,0);"
             "assert(module._tf_chain_set_enabled(cverbChain,58,1)===1,"
@@ -1283,6 +1285,14 @@ def browser_test() -> None:
             "cverbLeft=cverbOutput[1024*2];cverbRight=cverbOutput[1024*2+1];"
             "assert(Math.abs(cverbLeft-0.25)<3e-4&&Math.abs(cverbRight-0.125)<3e-4,"
             "`10-second C-Verb WASM output/latency mismatch: L ${cverbLeft}, R ${cverbRight}`);"
+            "const replacementFrames=2048;let replacementPointer=module._malloc(replacementFrames*2*4);"
+            "assert(replacementPointer,'Could not allocate short C-Verb replacement IR upload buffer');"
+            "try{const replacementOffset=replacementPointer>>>2;"
+            "module.HEAPF32.fill(0,replacementOffset,replacementOffset+replacementFrames*2);"
+            "module.HEAPF32[replacementOffset]=0.5;module.HEAPF32[replacementOffset+1]=0.25;"
+            "assert(module._tf_chain_load_convolution_reverb_ir(cverbChain,replacementPointer,replacementFrames,2,48000)===1,"
+            "'WASM could not replace the loaded 10-second C-Verb IR with a short stereo test IR');"
+            "}finally{module._free(replacementPointer)}"
             "cverbWasmBytes=module.HEAPF32.buffer.byteLength;"
             "assert(cverbWasmBytes<=64*1024*1024,"
             "`10-second stereo C-Verb exceeded the 64 MiB WASM heap: ${cverbWasmBytes}`);"
@@ -1298,7 +1308,7 @@ def browser_test() -> None:
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
-                stereo_tape_echo_expression,
+                None if volume_pan_only else stereo_tape_echo_expression,
             )
         finally:
             server.shutdown()
@@ -1315,16 +1325,21 @@ def browser_test() -> None:
                 + ("\n" + stderr if stderr else "")
             )
         report = json.loads(result.get("text", "{}"))
-        print("Browser/native chain comparison passed.")
-        print(json.dumps(report, indent=2))
-        print("Stereo Tape Echo independent-control browser/WASM check passed.")
-        print(json.dumps(result["stereoTapeEcho"], indent=2))
+        if volume_pan_only:
+            print("Focused Volume/Pan browser/WASM Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        else:
+            print("Browser/native chain comparison passed.")
+            print(json.dumps(report, indent=2))
+            print("Stereo Tape Echo and C-Verb browser/WASM checks passed.")
+            print(json.dumps(result["stereoTapeEcho"], indent=2))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
-        "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test"
+        "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
+        "test-volume-pan",
     ))
     action = parser.parse_args().action
     if action == "bootstrap-toolchain":
@@ -1335,6 +1350,8 @@ def main() -> None:
         serve_web()
     elif action == "test":
         browser_test()
+    elif action == "test-volume-pan":
+        browser_test(volume_pan_only=True)
     else:
         build_web()
 

@@ -1121,6 +1121,26 @@ STEP_FILTER_DELAY_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
     "make/publish.mk",
+    "scripts/inspect_volume_pan_path.py",
+    "scripts/publish_checkpoint.py",
+)
+VOLUME_PAN_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/volume_pan.hpp",
+    "scripts/inspect_volume_pan_path.py",
+    "src/effects/volume_pan.cpp",
+    "tests/test_volume_pan.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
 DEFERRED_AGENT_DRAFT_PATHS = (
@@ -1961,6 +1981,10 @@ CHECKPOINTS = {
     "step-filter-delay": (
         STEP_FILTER_DELAY_CHECKPOINT_PATHS,
         "feat: add categorized Step Filter Delay",
+    ),
+    "volume-pan": (
+        VOLUME_PAN_CHECKPOINT_PATHS,
+        "feat: add categorized Volume/Pan utility",
     ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),

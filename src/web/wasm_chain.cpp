@@ -105,7 +105,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(93);
+        effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -383,6 +383,7 @@ public:
         effects_.push_back({std::make_unique<tabletfx::StepFilterDelay>(
                                 static_cast<float>(sample_rate), channels, 2000.0F),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::VolumePan>(), false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1273,6 +1274,33 @@ public:
         }
         static_cast<tabletfx::StepFilterDelay*>(effects_[92].effect.get())
             ->configure(parameters);
+    }
+
+    void configure_volume_pan(const float* values,
+                              std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 11U) return;
+        const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(std::clamp(
+                std::round(value), 0.0F, static_cast<float>(maximum)));
+        };
+        tabletfx::VolumePanParameters parameters;
+        parameters.volume = values[0];
+        parameters.minimum_db = values[1];
+        parameters.maximum_db = values[2];
+        parameters.taper = static_cast<tabletfx::VolumePanTaper>(
+            enum_index(values[3], 6U));
+        parameters.balance_percent = values[4];
+        parameters.input_select = static_cast<tabletfx::VolumePanInputSelect>(
+            enum_index(values[5], 2U));
+        parameters.pan_left_percent = values[6];
+        parameters.pan_right_percent = values[7];
+        parameters.output_level_db = values[8];
+        parameters.bypassed = std::isfinite(values[9]) && values[9] >= 0.5F;
+        parameters.bypass_mode = static_cast<tabletfx::VolumePanBypassMode>(
+            enum_index(values[10], 1U));
+        static_cast<tabletfx::VolumePan*>(effects_[93].effect.get())
+            ->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -3930,6 +3958,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_step_filter_delay(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_step_filter_delay(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_volume_pan(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_volume_pan(values, value_count);
     }
 }
 

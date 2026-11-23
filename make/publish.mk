@@ -9,11 +9,20 @@ PUBLISH_CHECKPOINTS := \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
   dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay flagship-delays \
-	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost stereo-panner headrush-bbd-mode headrush-cverb-ten-second-ir poly-sustain step-filter-delay
+  celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost stereo-panner headrush-bbd-mode headrush-cverb-ten-second-ir poly-sustain step-filter-delay fractal-volume-pan
 
 .PHONY: publish-plan publish-checkpoint
+PUBLISH_CHECKPOINTS += volume-pan
+.PHONY: publish-volume-pan-plan publish-volume-pan
 .PHONY: test-convolution-reverb
 .PHONY: test-pitch-sequence test-poly-sustain
+.PHONY: test-volume-pan web-test-volume-pan
+
+.PHONY: inspect-volume-pan-path
+inspect-volume-pan-path:
+	$(PYTHON) scripts/inspect_volume_pan_path.py
+
+
 
 test-convolution-reverb:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_convolution_reverb_tests
@@ -23,6 +32,12 @@ test-pitch-sequence:
 
 test-poly-sustain:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_poly_sustain_tests
+
+test-volume-pan:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_volume_pan_tests
+
+web-test-volume-pan:
+	$(PYTHON) scripts/web.py test-volume-pan
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
 
 publish-plan:
