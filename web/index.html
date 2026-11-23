@@ -85,7 +85,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">91 of 91</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">92 of 92</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -178,8 +178,9 @@
               <label class="effect-row" data-category="crossover"><input type="checkbox" data-effect="86"><span class="effect-number">87</span><span class="effect-name">Stereo Crossover · project-authored Fractal XVR-inspired controls</span><span class="effect-default">Two-way LR4 split · per-channel low/high level and pan</span><span class="effect-category-tag">Crossover</span></label>
                 <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="87"><span class="effect-number">88</span><span class="effect-name">Asheville Pattrn · project-authored</span><span class="effect-default">8-band filter bank · 8 project patterns</span><span class="effect-category-tag">Filters &amp; wah</span></label>
                 <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="88"><span class="effect-number">89</span><span class="effect-name">Rock Box Dist · project-authored</span><span class="effect-default">Drive · Tone · Level</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-                <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="89" checked><span class="effect-number">90</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-                <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="90" checked><span class="effect-number">91</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+                <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="89"><span class="effect-number">90</span><span class="effect-name">Rock Box Boost · project-authored</span><span class="effect-default">Boost · Level</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+                <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="90" checked><span class="effect-number">91</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+                <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="91" checked><span class="effect-number">92</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -326,6 +327,15 @@
           <label class="mix-control" for="rock-box-dist-smoothing-ms"><span>Parameter smoothing · project range 0–1,000 ms</span><output id="rock-box-dist-smoothing-ms-value" for="rock-box-dist-smoothing-ms">10 ms</output><input id="rock-box-dist-smoothing-ms" type="range" min="0" max="1000" step="1" value="10"></label>
         </div>
         <p class="hint">Line 6’s Helix Stadium 1.4 notes document Drive, Tone, and Level, and describe lower Tone as darker and higher Tone as brighter. They publish no model-specific ranges, defaults, or DSP. These controls, ranges, soft-clipping stage, tone filter, defaults, and smoothing are project-authored; no Line 6 or Z.Vex model parity is claimed. <a href="https://kb.line6.com/helix-stadium-1-4-release-notes" target="_blank" rel="noreferrer">Helix Stadium 1.4 release notes</a>.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Rock Box Boost project-authored controls">
+        <h3>Rock Box Boost · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="rock-box-boost-boost-db"><span>Boost · project range 0…+24 dB</span><output id="rock-box-boost-boost-db-value" for="rock-box-boost-boost-db">0.0 dB</output><input id="rock-box-boost-boost-db" type="range" min="0" max="24" step="0.1" value="0"></label>
+          <label class="mix-control" for="rock-box-boost-level-db"><span>Level · project range −24…+12 dB</span><output id="rock-box-boost-level-db-value" for="rock-box-boost-level-db">0.0 dB</output><input id="rock-box-boost-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="rock-box-boost-smoothing-ms"><span>Parameter smoothing · project range 0–1,000 ms</span><output id="rock-box-boost-smoothing-ms-value" for="rock-box-boost-smoothing-ms">10 ms</output><input id="rock-box-boost-smoothing-ms" type="range" min="0" max="1000" step="1" value="10"></label>
+        </div>
+        <p class="hint">Line 6’s Helix Stadium 1.4 notes document Boost as the boost-circuit output level and Level as overall block output. They publish no model-specific numeric ranges, defaults, or DSP. These ranges, defaults, gain processing, and smoothing are project-authored; no Line 6 or Z.Vex model parity is claimed. <a href="https://kb.line6.com/helix-stadium-1-4-release-notes" target="_blank" rel="noreferrer">Helix Stadium 1.4 release notes</a>.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Notch Filter controls">
         <h3>Notch Filter · project-authored</h3>

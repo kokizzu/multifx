@@ -9,7 +9,7 @@ PUBLISH_CHECKPOINTS := \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
   dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay flagship-delays \
-	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist headrush-bbd-mode
+	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost headrush-bbd-mode
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))

@@ -200,6 +200,7 @@ def build_web() -> None:
     "_tf_chain_set_tape_echo",
     "_tf_chain_set_octave_fuzz",
         "_tf_chain_set_rock_box_dist",
+        "_tf_chain_set_rock_box_boost",
         "_tf_chain_set_stereo_crossover",
         "_tf_chain_set_convolution_reverb",
         "_tf_chain_load_convolution_reverb_ir",
@@ -308,6 +309,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "tape_echo.cpp"),
         str(ROOT / "src" / "effects" / "octave_fuzz.cpp"),
         str(ROOT / "src" / "effects" / "rock_box_dist.cpp"),
+        str(ROOT / "src" / "effects" / "rock_box_boost.cpp"),
         str(ROOT / "src" / "effects" / "stereo_crossover.cpp"),
         str(ROOT / "src" / "effects" / "porta_preamp.cpp"),
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
@@ -397,6 +399,41 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
         output.setframerate(sample_rate)
         output.writeframes(samples)
     return frames
+
+
+def make_prerecorded_guitar_test_audio(destination: Path) -> str | None:
+    """Prefer the locally linked solo guitar DI fixture; keep CI fallback portable."""
+    source_path = (
+        ROOT / "testdata" / "reference_audio" / "guitar-techs-p3-music"
+        / "P3_music" / "audio" / "directinput" / "directinput_01.wav"
+    )
+    if not source_path.is_file():
+        return None
+
+    sample_rate = 48000
+    frame_count = sample_rate
+    with wave.open(str(source_path), "rb") as source:
+        if (source.getnchannels() != 2 or source.getsampwidth() != 3 or
+                source.getframerate() != sample_rate):
+            return None
+        frames = source.readframes(frame_count)
+    if len(frames) != frame_count * 6:
+        return None
+
+    mono_16_bit = bytearray(frame_count * 2)
+    for frame in range(frame_count):
+        offset = frame * 6
+        left = int.from_bytes(frames[offset:offset + 3], "little", signed=True)
+        right = int.from_bytes(frames[offset + 3:offset + 6], "little", signed=True)
+        mono = max(-32768, min(32767, round((left + right) / 512.0)))
+        struct.pack_into("<h", mono_16_bit, frame * 2, mono)
+
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(mono_16_bit)
+    return str(source_path)
 
 
 def make_stereo_tape_echo_impulse(destination: Path, sample_rate: int = 8000,
@@ -640,7 +677,12 @@ def browser_test() -> None:
         plex_delay_input_select_reference_path = temp_dir / "plex-delay-input-select-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
-        make_test_audio(input_path)
+        prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
+        if prerecorded_guitar_source is None:
+            make_test_audio(input_path)
+            print("Browser guitar input: generated deterministic fallback fixture")
+        else:
+            print(f"Browser guitar input: local prerecorded DI {prerecorded_guitar_source}")
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
         make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)

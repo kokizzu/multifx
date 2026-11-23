@@ -58,6 +58,7 @@
 #include "tabletfx/effects/tape_echo.hpp"
 #include "tabletfx/effects/octave_fuzz.hpp"
 #include "tabletfx/effects/rock_box_dist.hpp"
+#include "tabletfx/effects/rock_box_boost.hpp"
 #include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -103,7 +104,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(89);
+        effects_.reserve(90);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -367,6 +368,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::RockBoxDistortion>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::RockBoxBoost>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -1927,6 +1931,16 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_rock_box_boost(float boost_db, float level_db,
+                                  float smoothing_ms) noexcept {
+        tabletfx::RockBoxBoostParameters parameters;
+        parameters.boost_db = boost_db;
+        parameters.level_db = level_db;
+        parameters.smoothing_ms = smoothing_ms;
+        static_cast<tabletfx::RockBoxBoost*>(effects_[89U].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_stereo_crossover(const float* values) noexcept {
         if (values == nullptr) return;
         tabletfx::StereoCrossoverParameters parameters;
@@ -3392,6 +3406,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rock_box_dist(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_rock_box_dist(
             drive, tone, level_db, smoothing_ms);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_rock_box_boost(
+    void* opaque, float boost_db, float level_db,
+    float smoothing_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_rock_box_boost(
+            boost_db, level_db, smoothing_ms);
     }
 }
 

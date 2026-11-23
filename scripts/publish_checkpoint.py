@@ -1726,6 +1726,25 @@ ROCK_BOX_DIST_CHECKPOINT_PATHS = (
     "make/publish.mk",
 )
 
+ROCK_BOX_BOOST_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/rock_box_boost.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/rock_box_boost.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_rock_box_boost.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -1897,6 +1916,10 @@ CHECKPOINTS = {
     "rock-box-dist": (
         ROCK_BOX_DIST_CHECKPOINT_PATHS,
         "feat: add categorized Rock Box Dist processor",
+    ),
+    "rock-box-boost": (
+        ROCK_BOX_BOOST_CHECKPOINT_PATHS,
+        "feat: add categorized Rock Box Boost processor",
     ),
     "headrush-bbd-mode": (
         HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,
