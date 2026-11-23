@@ -1678,6 +1678,12 @@ function enabledEffects() {
   return [...document.querySelectorAll("[data-effect]")].map((box) => box.checked);
 }
 
+function processorChannelCount(inputChannels, enabled, parameters = DEFAULT_PARAMETERS) {
+  const enhancerMode = Number(parameters?.enhancer?.[0] ?? 0);
+  const modernEnhancer = inputChannels === 1 && enabled?.[61] && enhancerMode === 0;
+  return modernEnhancer ? 2 : inputChannels;
+}
+
 function updateEffectBrowser() {
   const category = effectCategoryFilter.value;
   const query = effectSearch.value.trim().toLocaleLowerCase();
@@ -2531,7 +2537,12 @@ function startSilentClock(context) {
 }
 
 async function prepareProcessor(testOptions = null) {
-  if (workletNode && preparedChannels === decodedAudio.numberOfChannels) return processorReady;
+  const channels = processorChannelCount(
+    decodedAudio.numberOfChannels,
+    testOptions?.enabled || enabledEffects(),
+    testOptions?.parameters || DEFAULT_PARAMETERS,
+  );
+  if (workletNode && preparedChannels === channels) return processorReady;
   if (processorSetupTask) return processorSetupTask;
   processorSetupTask = setupProcessor(testOptions);
   try {
@@ -2587,9 +2598,35 @@ async function ensureConvolutionIRLoaded() {
   await result;
 }
 
+async function disposeProcessorNode(node) {
+  if (!node) return;
+  await new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      node.port.removeEventListener("message", onMessage);
+      resolve();
+    };
+    const onMessage = (event) => {
+      if (event.data?.type === "disposed") finish();
+    };
+    const timeout = setTimeout(finish, 1000);
+    node.port.addEventListener("message", onMessage);
+    node.port.postMessage({ type: "dispose" });
+  });
+  try { node.disconnect(); } catch { /* Already disconnected. */ }
+  try { node.port.close(); } catch { /* Already closed. */ }
+}
+
 async function setupProcessor(testOptions = null) {
   const context = await getAudioContext();
-  const channels = decodedAudio.numberOfChannels;
+  const channels = processorChannelCount(
+    decodedAudio.numberOfChannels,
+    testOptions?.enabled || enabledEffects(),
+    testOptions?.parameters || DEFAULT_PARAMETERS,
+  );
   stopSource(false);
   if (workletNode) {
     for (const request of pendingConvolutionIRLoads.values()) {
@@ -2598,8 +2635,7 @@ async function setupProcessor(testOptions = null) {
     }
     pendingConvolutionIRLoads.clear();
     convolutionIRUploadedVersion = -1;
-    try { workletNode.disconnect(); } catch { /* Already disconnected. */ }
-    workletNode.port.close();
+    await disposeProcessorNode(workletNode);
     workletNode = null;
   }
   if (!workletAdded) {
@@ -2688,6 +2724,17 @@ async function setupProcessor(testOptions = null) {
   });
   workletNode.connect(context.destination);
   return processorReady;
+}
+
+async function rebuildProcessorForChannelLayout() {
+  const resumePlayback = Boolean(activeSource);
+  if (resumePlayback) stopSource(true);
+  try {
+    await prepareProcessor();
+    if (resumePlayback) await startPlayback();
+  } catch (error) {
+    setAudioStatus(error instanceof Error ? error.message : String(error), "error");
+  }
 }
 
 async function loadFile(file, testOptions = null) {
@@ -3118,11 +3165,20 @@ for (const control of [
 for (const checkbox of document.querySelectorAll("[data-effect]")) {
   checkbox.addEventListener("change", () => {
     if (workletNode) {
-      workletNode.port.postMessage({
-        type: "enable",
-        index: Number(checkbox.dataset.effect),
-        value: checkbox.checked,
-      });
+      const index = Number(checkbox.dataset.effect);
+      const targetChannels = processorChannelCount(
+        decodedAudio?.numberOfChannels || preparedChannels,
+        enabledEffects(),
+      );
+      if (targetChannels !== preparedChannels) {
+        void rebuildProcessorForChannelLayout();
+      } else {
+        workletNode.port.postMessage({
+          type: "enable",
+          index,
+          value: checkbox.checked,
+        });
+      }
     }
   });
 }
@@ -4046,7 +4102,15 @@ function updateEnhancer() {
       labels[control];
   }
   if (workletNode) {
-    workletNode.port.postMessage({ type: "enhancer", value: values });
+    const targetChannels = processorChannelCount(
+      decodedAudio?.numberOfChannels || preparedChannels,
+      enabledEffects(),
+    );
+    if (targetChannels !== preparedChannels) {
+      void rebuildProcessorForChannelLayout();
+    } else {
+      workletNode.port.postMessage({ type: "enhancer", value: values });
+    }
   }
 }
 
@@ -7998,6 +8062,89 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
   }
 }
 
+async function runMonoModernEnhancerBrowserSmokeTest(sourceAudio, restoreOptions) {
+  const context = await getAudioContext();
+  const frames = Math.min(Math.floor(context.sampleRate * 0.25), sourceAudio.length);
+  const monoAudio = context.createBuffer(1, frames, context.sampleRate);
+  const monoSamples = monoAudio.getChannelData(0);
+  const left = sourceAudio.getChannelData(0);
+  const right = sourceAudio.numberOfChannels > 1
+    ? sourceAudio.getChannelData(1) : left;
+  for (let frame = 0; frame < frames; frame += 1) {
+    monoSamples[frame] = 0.5 * (left[frame] + right[frame]);
+  }
+
+  const captureBuffer = new SharedArrayBuffer(
+    frames * 2 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
+  const captureView = new Int32Array(captureControl);
+  const enabled = Array.from({ length: EFFECT_NAMES.length }, () => false);
+  enabled[61] = true;
+  const parameters = {
+    ...DEFAULT_PARAMETERS,
+    enhancer: [0, 1, 0.75, 120, 12000, 7, 0, 0, 1, 0, 1],
+  };
+  const monoOptions = { enabled, parameters, captureBuffer, captureControl };
+  const previousAudio = decodedAudio;
+  const previousOffset = playbackOffset;
+
+  try {
+    decodedAudio = monoAudio;
+    playbackOffset = 0;
+    await setupProcessor(monoOptions);
+    await processorReady;
+    if (preparedChannels !== 2) {
+      throw new Error("The Modern Enhancer did not create a stereo browser chain for mono audio.");
+    }
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    workletNode.port.postMessage({ type: "capture-reset" });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "active", value: true });
+    const source = context.createBufferSource();
+    source.buffer = monoAudio;
+    source.connect(workletNode);
+    activeSource = source;
+    playbackStartedAt = context.currentTime;
+    source.start(0);
+    await waitForCapture(captureView, frames * 2);
+    stopSource(false);
+
+    const output = new Float32Array(captureBuffer);
+    let stereoDifference = 0;
+    let peak = 0;
+    for (let frame = 0; frame < frames; frame += 1) {
+      const outLeft = output[frame * 2];
+      const outRight = output[frame * 2 + 1];
+      if (!Number.isFinite(outLeft) || !Number.isFinite(outRight)) {
+        throw new Error("Modern Enhancer produced non-finite stereo output from mono guitar audio.");
+      }
+      stereoDifference += Math.abs(outLeft - outRight);
+      peak = Math.max(peak, Math.abs(outLeft), Math.abs(outRight));
+    }
+    if (peak < 1.0e-5 || stereoDifference / frames < 1.0e-5) {
+      throw new Error("Modern Enhancer did not produce audible stereo output from mono guitar audio.");
+    }
+    return {
+      inputChannels: 1,
+      outputChannels: 2,
+      frames,
+      peak,
+      meanLeftRightDifference: stereoDifference / frames,
+    };
+  } finally {
+    stopSource(false);
+    decodedAudio = previousAudio;
+    playbackOffset = previousOffset;
+    if (previousAudio) {
+      await setupProcessor(restoreOptions);
+      await processorReady;
+      await ensureConvolutionIRLoaded();
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -9237,6 +9384,15 @@ async function runBrowserSelfTest() {
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
+    const modernEnhancerEnabled = Array.from({ length: EFFECT_NAMES.length }, () => false);
+    modernEnhancerEnabled[61] = true;
+    if (processorChannelCount(1, modernEnhancerEnabled, { enhancer: [0] }) !== 2 ||
+        processorChannelCount(1, modernEnhancerEnabled, { enhancer: [1] }) !== 1 ||
+        processorChannelCount(1, Array.from({ length: EFFECT_NAMES.length }, () => false),
+          { enhancer: [0] }) !== 1 ||
+        processorChannelCount(2, modernEnhancerEnabled, { enhancer: [0] }) !== 2) {
+      throw new Error("Modern Enhancer mono routing must expand only an enabled mono chain to stereo.");
+    }
     effectCategoryFilter.value = "crossover";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const crossoverIds = effectRows.filter((row) => !row.hidden)
@@ -10280,6 +10436,10 @@ async function runBrowserSelfTest() {
     if (generatedRms < 0.3 || Math.abs(generatedFrequency - 440) > 8) {
       throw new Error(`Free-running Note Generator did not produce a browser A4 tone: ${JSON.stringify({ generatedRms, generatedFrequency, positiveCrossings, sampleRate: audioContext.sampleRate })}`);
     }
+    testResult.textContent = "Checking Modern Enhancer mono-to-stereo playback on local guitar audio…";
+    const monoEnhancerSmoke = await runMonoModernEnhancerBrowserSmokeTest(
+      decodedAudio, testOptions,
+    );
     const localFileDecoded = fileName.textContent === file.name;
     const tunerFile = new File([tunerBytes], "browser-tuner-a4.wav", { type: "audio/wav" });
     const tunerTransfer = new DataTransfer();
@@ -10378,6 +10538,7 @@ async function runBrowserSelfTest() {
       tuner: tunerReading,
       tunerDetectionMs,
       tunerUi: tunerReadingOutput.textContent,
+      monoModernEnhancer: monoEnhancerSmoke,
     };
     testResult.dataset.status = "passed";
     testResult.textContent = JSON.stringify(report);

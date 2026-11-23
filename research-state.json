@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "f633cec42f256562492407d425024ecae835198b",
+  "previous_checkpoint_commit": "7a774b5513056a3d486a735ade3a8cb1375366c5",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -32,10 +32,9 @@
         "audio_regression": "passed: all five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full chain includes Formant Filter; separate isolated Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
         "notes": "No Fractal DSP/settings parity is claimed. No hardware or human listening evidence."
       }
-    }
-  ],
-  "current_checkpoint": {
-    "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
+    },
+    {
+      "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
     "status": "verified",
     "picker_index": 58,
     "category": "Reverb",
@@ -56,37 +55,56 @@
       "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
       "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
     }
+  ],
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Enhancer mono-to-stereo browser routing",
+    "status": "verified",
+    "picker_index": 61,
+    "category": "Stereo & image",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "June 2023",
+      "pages": [41],
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide cover is dated June 2023 and covers FM9-family hardware; it lists two Enhancer instances for FM9. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
+    },
+    "documented_controls": "Modern uses frequency-based left/right separation with Width, Depth, Low Cut, and Hi Cut and can convert mono to stereo with reduced phase risk when summed to mono. Classic uses a right-channel delay with Width 0–20 ms, Invert, Pan L/R, and Balance. Stereoizer uses high-order filters with Width and Depth. The guide publishes no numeric bounds/defaults beyond Classic Width.",
+    "project_controls": "Existing Enhancer picker row/index 61 and project-authored Modern/Classic/Stereoizer DSP, ranges, and defaults are retained. The in-place one-channel core processor remains pass-through. In the browser, an enabled Modern Enhancer on mono input now builds a two-channel chain and duplicates the mono input before processing; other mono chains remain mono. Worklet disposal destroys the old WASM chain before a layout rebuild.",
+    "verification": {
+      "native_ctest": "make web-test passed 96/96 CTest cases",
+      "fixture_safety": "11 audio-fixture safety checks passed using existing local prerecorded audio",
+      "picker_rows": 93,
+      "browser_native_comparison": "71 active stages passed; max absolute error 0.000007167997807755455, RMS error 0.0000013553611043218413",
+      "mono_modern_browser_playback": "actual browser worklet capture from 12,000 frames of local prerecorded Guitar-TECHS DI: mono input, stereo output, peak 0.2993818521499634, mean left/right difference 0.05708991683481145",
+      "wasm_build": "761,197 bytes; fixed 64 MiB heap",
+      "notes": "Tests verify project routing and playback only. No Fractal DSP/settings/sound parity, human listening, physical device check, installed firmware, or isolated Enhancer CPU benchmark is claimed."
+    }
   },
   "next_research": [
     {
-      "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Enhancer modes",
-      "source": "November 2026 Blocks Guide, p. 44",
-      "status": "existing project-authored Modern/Classic/Stereoizer modes and category UI verified; partial behavior only, no new processor required for the mode labels",
-      "known_controls": "Modern, Classic, Stereoizer; only Classic Width 0–20 ms is numerically specified",
-      "qualification": "Modern mode does not implement documented mono-to-stereo conversion; project controls/topology are not Fractal parity. Guide covers FM9 family, firmware v12.0 names Original/Turbo but not Mark II Turbo, and installed firmware is unknown."
-    },
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Poly Sustain/Poly Detune, Synth, Delay/Reverb/Looper algorithm details",
-      "source": "Owner's Manual Rev E / v1.4.1 and Helix Stadium model catalog, checked 2026-11-23",
-      "status": "official categories and select effect control roles audited; detailed per-model numeric ranges mostly unpublished",
-      "known_controls": "v1.4 effects include Mercator, Rock Box Dist/Boost, PortaBox 424, Essex Vibe, and Dimension W; Poly effects limited to two per preset/one per primary path",
-      "qualification": "Model catalog and live DSP manual have one Poly Detune/Pitch Sustain naming mismatch; exact device applicability should be checked before each implementation."
+      "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
+      "status": "Poly Sustain catalog entry and older Helix parameter roles verified; Stadium-specific static ranges/defaults are unpublished",
+      "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0.",
+      "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },
     {
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
-      "source": "Firmware v1.8.85 current 2026-11-18; four effects introduced v1.8.45",
-      "status": "exact names/categories and descriptive roles verified; model-specific controls/ranges unavailable",
-      "qualification": "Do not invent parameter tables from generic effect categories."
+      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; effects introduced in v1.8.45 on 2026-06-03",
+      "status": "Step Filter Delay name/category and descriptive role verified; accessible official sources do not expose its exact controls/ranges/defaults/stereo behavior",
+      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter Delay behavior. The official Model Guide PDF could not be inspected, so do not invent a parameter table."
     },
     {
       "device": "HeadRush Prime",
-      "feature": "C-Verb 10-second impulse support, Spring Guru, Kill Seq/Splicer, named synths",
-      "source": "Prime v5.2 guide and firmware notes",
-      "status": "C-Verb 10-second duration is implemented and verified in the categorized Reverb row; remaining effects include Spring Guru, Kill Seq/Splicer, and named synths",
-      "qualification": "C-Verb controls have no published numeric ranges. Project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget; no HeadRush DSP parity or glitch-free real-time claim."
+      "feature": "Spring Guru, Kill Seq/Splicer, named synths, and arpeggiator behavior",
+      "source": "Prime v5.2 firmware notes (2026-10), v4.1.0 notes covering v4.0.0, v3.2 notes, and current Prime product page",
+      "status": "categories, model names, and selected firmware additions verified; per-effect parameter tables and timing/polyphony details remain unresolved",
+      "known_controls": "Product page lists Ambi-Verb, Hybrid Synth, Electric Piano, and DB-33 Organ in Synth. v3.2 added Hybrid Synth, Electric Piano, and DB-33 Organ and moved Ambi Verb to Synth. v4.0 added Spring Guru in Reverb, Kill Seq/Splicer in Rhythmic, and arpeggiator controls for Hybrid Synth, Electric Piano, and DB-33 Organ.",
+      "qualification": "v5.2 notes list no changes to these effects. Current v5.2 guide could not be parsed; do not infer numeric controls, polyphony, rhythmic resolution, or DSP behavior. C-Verb controls have no published numeric ranges; project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget, so no HeadRush parity or glitch-free real-time claim."
     },
     {
       "device": "Melofty Axom Max",

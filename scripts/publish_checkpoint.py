@@ -1061,7 +1061,6 @@ NOTE_GENERATOR_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 ENHANCER_CHECKPOINT_PATHS = (
-    "Makefile",
     "make/publish.mk",
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -1077,6 +1076,7 @@ ENHANCER_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "research-state.json",
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
     "RESEARCH.md",

@@ -134,6 +134,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.channels = Math.max(1, Math.min(2, config.channels || 1));
     this.active = false;
     this.ready = false;
+    this.disposed = false;
     this.chain = 0;
     this.module = null;
     this.inputIndex = 0;
@@ -154,6 +155,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
 
     this.port.onmessage = (event) => this.onMessage(event.data);
     wasmModulePromise.then((module) => {
+      if (this.disposed) return;
       this.module = module;
       this.chain = module._tf_chain_create(sampleRate, this.channels, MAX_BLOCK_FRAMES);
       if (!this.chain) {
@@ -815,6 +817,18 @@ class TabletFxProcessor extends AudioWorkletProcessor {
 
   onMessage(message) {
     if (!message || typeof message.type !== "string") return;
+    if (message.type === "dispose") {
+      this.active = false;
+      this.disposed = true;
+      if (this.module && this.chain &&
+          typeof this.module._tf_chain_destroy === "function") {
+        this.module._tf_chain_destroy(this.chain);
+        this.chain = 0;
+      }
+      this.ready = false;
+      this.port.postMessage({ type: "disposed" });
+      return;
+    }
     if (message.type === "active") {
       this.active = Boolean(message.value);
     } else if (message.type === "capture-reset") {

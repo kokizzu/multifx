@@ -1260,7 +1260,7 @@
       </div>
       <div class="effect-parameter-group" aria-label="Stereo Enhancer controls">
         <h3>Stereo Enhancer · project-authored spatial utility</h3>
-        <p class="hint">The three mode names follow the Fractal Blocks Guide. The DSP is independently authored and does not claim Fractal sound parity. Modern reshapes stereo side energy, Classic delays the right channel before panning, and Stereoizer adds an all-pass-derived side signal. Mono buffers remain mono. The Classic delay control spans the guide’s documented 0–20 ms; other bounds are project choices.</p>
+        <p class="hint">Fractal describes Modern as frequency-based widening that can convert mono to stereo, Classic as a 0–20 ms right-channel delay with phase, pan, and balance controls, and Stereoizer as high-order filtering. TabletFX uses independent project-authored DSP, bounds, and defaults; it does not claim Fractal sound or settings parity. When a mono file has Modern enabled, the browser routes the chain in stereo so the effect can create separate left and right output. A directly constructed one-channel Enhancer remains pass-through because its in-place buffer cannot expand.</p>
         <div class="gain-controls">
           <label class="mix-control" for="enhancer-mode"><span>Mode</span><output id="enhancer-mode-value" for="enhancer-mode">Modern</output><select id="enhancer-mode"><option value="0" selected>Modern</option><option value="1">Classic</option><option value="2">Stereoizer</option></select></label>
           <label class="mix-control" for="enhancer-width"><span>Stereo width</span><output id="enhancer-width-value" for="enhancer-width">1.00× width</output><input id="enhancer-width" type="range" min="0" max="2" step="0.01" value="1"></label>
