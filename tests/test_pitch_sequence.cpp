@@ -210,6 +210,35 @@ void test_freeze_capture_loop_release_and_reset() {
             "reset did not clear freeze state while retaining Run");
 }
 
+void test_bypassed_history_can_seed_freeze_without_pitch_processing() {
+    PitchSequenceParameters parameters;
+    parameters.steps = 1U;
+    parameters.mode[0] = PitchSequenceStepMode::Freeze;
+    parameters.freeze_window_ms = 80.0F;
+    PitchSequence effect(8000.0F, 1U, parameters);
+    effect.reset();
+
+    std::array<float, 160> preroll{};
+    for (std::size_t frame = 0U; frame < preroll.size(); ++frame) {
+        preroll[frame] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * 220.0F *
+            static_cast<float>(frame) / 8000.0F);
+    }
+    const auto original = preroll;
+    effect.record_input_history(preroll, 1U);
+    require(preroll == original && !effect.running() &&
+                !effect.freeze_active(),
+            "pre-roll history capture changed samples or started pitch processing");
+
+    parameters.run = true;
+    effect.configure(parameters);
+    std::array<float, 1> next_sample{0.0F};
+    effect.process(next_sample, 1U);
+    require(effect.freeze_active() &&
+                effect.frozen_loop_length_frames() == 81U,
+            "freeze mode did not use the pre-roll history captured while bypassed");
+}
+
 void test_nonfinite_recovery_channel_guard_and_process_allocations() {
     PitchSequenceParameters parameters;
     parameters.steps = 1U;
@@ -317,6 +346,7 @@ int main() {
         test_pitch_steps_glide_and_sequence_boundaries();
         test_glitch_offsets_are_deterministic_and_bounded();
         test_freeze_capture_loop_release_and_reset();
+    test_bypassed_history_can_seed_freeze_without_pitch_processing();
         test_nonfinite_recovery_channel_guard_and_process_allocations();
         test_irregular_block_partition_is_sample_stable();
         std::cout << "Pitch Sequence tests passed\n";

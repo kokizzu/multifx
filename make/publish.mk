@@ -9,13 +9,20 @@ PUBLISH_CHECKPOINTS := \
  five-band-eq phrase-looper note-generator enhancer resonant-delay harmonic-tremolo \
   auto-swell-delay shuffling-looper ten-tap-delay auto-pan megatap-delay de-esser \
   dual-engine-distortion vibe multi-delay porta-preamp pitch-sequence rhythm-tap-delay plex-delay flagship-delays \
-	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost stereo-panner headrush-bbd-mode headrush-cverb-ten-second-ir
+	celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost stereo-panner headrush-bbd-mode headrush-cverb-ten-second-ir poly-sustain
 
 .PHONY: publish-plan publish-checkpoint
 .PHONY: test-convolution-reverb
+.PHONY: test-pitch-sequence test-poly-sustain
 
 test-convolution-reverb:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_convolution_reverb_tests
+
+test-pitch-sequence:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_pitch_sequence_tests
+
+test-poly-sustain:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_poly_sustain_tests
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
 
 publish-plan:

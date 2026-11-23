@@ -63,6 +63,7 @@ add_library(tabletfx_core
     src/effects/cloud_reverb.cpp
     src/effects/porta_preamp.cpp
     src/effects/pitch_sequence.cpp
+    src/effects/poly_sustain.cpp
     src/effects/vibrato.cpp
     src/effects/room_reverb.cpp
     src/effects/hall_reverb.cpp
@@ -367,6 +368,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_pitch_sequence_tests tests/test_pitch_sequence.cpp)
     target_link_libraries(tabletfx_pitch_sequence_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pitch_sequence_tests COMMAND tabletfx_pitch_sequence_tests)
+
+    add_executable(tabletfx_poly_sustain_tests tests/test_poly_sustain.cpp)
+    target_link_libraries(tabletfx_poly_sustain_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_poly_sustain_tests COMMAND tabletfx_poly_sustain_tests)
 
     add_executable(tabletfx_vibrato_tests tests/test_vibrato.cpp)
     target_link_libraries(tabletfx_vibrato_tests PRIVATE tabletfx_core)

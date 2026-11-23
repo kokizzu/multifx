@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "7a774b5513056a3d486a735ade3a8cb1375366c5",
+  "previous_checkpoint_commit": "b71a4f3d56a88a358218639230c7f8719213c2c1",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -54,40 +54,41 @@
       "isolated_benchmark": "15,461,240 B maximum stereo processor state; Ryzen 9 5950X at 48 kHz stereo/128 frames: p50 0.0382%, p95 79.4286%, p99 92.2945%, p99.9 108.1668%, max 130.4420% of 2.667 ms callback; occasional deadline overruns mean glitch-free real-time use is not established",
       "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
       "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
+      }
     }
   ],
   "current_checkpoint": {
-    "name": "Fractal FM9-family Enhancer mono-to-stereo browser routing",
+    "name": "Line 6 Helix Stadium Poly Sustain-inspired hold",
     "status": "verified",
-    "picker_index": 61,
-    "category": "Stereo & image",
+    "picker_index": 91,
+    "category": "Delay",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "June 2023",
-      "pages": [41],
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide cover is dated June 2023 and covers FM9-family hardware; it lists two Enhancer instances for FM9. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
+      "title": "Helix Stadium model catalogue, current manual, and older Helix release notes",
+      "revision": "Stadium online manual Rev E / v1.4.1 as shown on 2026-11-23; hardware release notes v1.4.2; Helix 3.0/3.10 notes are role references only",
+      "url": "https://line6.com/helix-stadium-models/",
+      "manual_url": "https://manuals.line6.com/en/helix-stadium/live",
+      "legacy_controls_url": "https://line6.com/support/page/kb/effects-controllers/helix/helix-30-release-notes-r934/",
+      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "The catalogue marks Stadium Poly Sustain mono, polyphonic, DSP-intensive, and introduced in Stadium 1.0. Older Helix notes describe control roles but do not establish Stadium numeric ranges/defaults or exact current controls. Stadium DSP guidance allows at most two Poly effects per preset and one per primary path."
     },
-    "documented_controls": "Modern uses frequency-based left/right separation with Width, Depth, Low Cut, and Hi Cut and can convert mono to stereo with reduced phase risk when summed to mono. Classic uses a right-channel delay with Width 0–20 ms, Invert, Pan L/R, and Balance. Stereoizer uses high-order filters with Width and Depth. The guide publishes no numeric bounds/defaults beyond Classic Width.",
-    "project_controls": "Existing Enhancer picker row/index 61 and project-authored Modern/Classic/Stereoizer DSP, ranges, and defaults are retained. The in-place one-channel core processor remains pass-through. In the browser, an enabled Modern Enhancer on mono input now builds a two-channel chain and duplicates the mono input before processing; other mono chains remain mono. Worklet disposal destroys the old WASM chain before a layout rebuild.",
+    "documented_controls": "Older Helix notes list Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, and Level; v3.10 adds Auto EQ and Normal/Dry Kill/Mute All operation. These are not a Stadium parameter table. Stadium-specific bounds/defaults remain unknown.",
+    "project_controls": "Project-authored 80 ms time-domain hold reuses PitchSequence capture and the polyphonic shifter. Controls: interval -12..+12 semitones, Attack 0..2,000 ms, Decay after bypass 0..10,000 ms, FX Level 0..1, project Level -24..+12 dB, and Normal/Dry Kill/Mute All. Modulation/random controls, Auto EQ, Line 6 spectral processing, settings/DSP/sound parity are not implemented or claimed.",
     "verification": {
-      "native_ctest": "make web-test passed 96/96 CTest cases",
-      "fixture_safety": "11 audio-fixture safety checks passed using existing local prerecorded audio",
-      "picker_rows": 93,
-      "browser_native_comparison": "71 active stages passed; max absolute error 0.000007167997807755455, RMS error 0.0000013553611043218413",
-      "mono_modern_browser_playback": "actual browser worklet capture from 12,000 frames of local prerecorded Guitar-TECHS DI: mono input, stereo output, peak 0.2993818521499634, mean left/right difference 0.05708991683481145",
-      "wasm_build": "761,197 bytes; fixed 64 MiB heap",
-      "notes": "Tests verify project routing and playback only. No Fractal DSP/settings/sound parity, human listening, physical device check, installed firmware, or isolated Enhancer CPU benchmark is claimed."
+      "native_ctest": "make web-test passed 97/97 CTest cases",
+      "fixture_safety": "11 existing-audio fixture safety checks passed",
+      "picker_rows": 94,
+      "browser_native_comparison": "71 active stages passed at 48 kHz stereo; max absolute error 0.0000067345867762469425, RMS error 0.0000012094738996969572",
+      "poly_sustain_playback": "make web-browser-test passed the categorized Delay picker and captured changed output from the project-authored Poly Sustain using existing local prerecorded guitar audio",
+      "wasm_build": "768,729 bytes; fixed 64 MiB heap",
+      "notes": "Project-only Poly Sustain is excluded from native parity because the offline renderer has no matching option. Human listening, physical device checks, and Line 6 DSP/settings/sound parity remain open."
     }
   },
   "next_research": [
     {
-    {
       "device": "Line 6 Helix Stadium XL",
-      "feature": "Poly Sustain/Poly Detune, Synth, Delay/Reverb/Looper algorithm details",
+      "feature": "Poly Detune plus Stadium-specific Synth, Delay, Reverb, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "Poly Sustain catalog entry and older Helix parameter roles verified; Stadium-specific static ranges/defaults are unpublished",
+      "status": "Poly Sustain has a partial project-authored implementation; Poly Detune and Stadium-specific controls/behavior remain unresolved",
       "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0.",
       "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },

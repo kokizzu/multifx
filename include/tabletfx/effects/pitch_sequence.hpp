@@ -85,6 +85,9 @@ public:
     void reset() noexcept override;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    // Records pre-roll for a later Freeze step without running the pitch shifter.
+    void record_input_history(std::span<const float> interleaved,
+                              std::uint16_t channels) noexcept;
 
     [[nodiscard]] bool running() const noexcept { return running_; }
     [[nodiscard]] std::uint8_t current_step() const noexcept {

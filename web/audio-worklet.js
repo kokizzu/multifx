@@ -14,6 +14,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "asheville-pattrn");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-dist");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-boost");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-panner");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "poly-sustain");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -379,6 +380,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureRockBoxDist(parameters.rockBoxDistortion ||
         [0.5, 0.5, 0, 10]);
       this.configureRockBoxBoost(parameters.rockBoxBoost || [0, 0, 10]);
+      this.configurePolySustain(parameters.polySustain || [0, 222, 2000, 1, 0, 0]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -747,6 +749,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configurePolySustain(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 6) {
+      return;
+    }
+    this.module._tf_chain_set_poly_sustain(
+      this.chain, Number(values[0]), Number(values[1]), Number(values[2]),
+      Number(values[3]), Number(values[4]), Number(values[5]) | 0,
+    );
+  }
+
   configureRhythmTapDelay(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
       return;
@@ -930,6 +942,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_porta_preamp(this.chain, ...message.value);
     } else if (message.type === "pitch-sequence" && this.ready) {
       this.configurePitchSequence(message.value);
+    } else if (message.type === "poly-sustain" && this.ready) {
+      this.configurePolySustain(message.value);
     } else if (message.type === "rhythm-tap-delay" && this.ready) {
       this.configureRhythmTapDelay(message.value);
     } else if (message.type === "plex-delay" && this.ready) {

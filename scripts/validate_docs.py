@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -19,6 +20,25 @@ def main() -> None:
     missing = [name for name in required if not (ROOT / name).is_file()]
     if missing:
         raise SystemExit("Missing required documents: " + ", ".join(missing))
+
+    state_text = ""
+    try:
+        state_text = (ROOT / "research-state.json").read_text(encoding="utf-8")
+        research_state = json.loads(state_text)
+    except OSError as error:
+        raise SystemExit(f"research-state.json cannot be read: {error}") from error
+    except json.JSONDecodeError as error:
+        start = max(0, error.pos - 80)
+        stop = min(len(state_text), error.pos + 80)
+        excerpt = state_text[start:error.pos] + "<<<HERE>>>" + state_text[error.pos:stop]
+        raise SystemExit(
+            f"research-state.json is not valid JSON: {error} near {excerpt!r}"
+        ) from error
+    if (not isinstance(research_state, dict) or
+            research_state.get("schema_version") != 1 or
+            not isinstance(research_state.get("current_checkpoint"), dict) or
+            not isinstance(research_state.get("next_research"), list)):
+        raise SystemExit("research-state.json is missing its required workflow state")
 
     goal = (ROOT / "GOAL.md").read_text(encoding="utf-8")
     checklist = (ROOT / "IMPLEMENTATION_CHECKLIST.md").read_text(encoding="utf-8")

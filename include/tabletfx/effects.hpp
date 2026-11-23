@@ -39,6 +39,7 @@
 #include "tabletfx/effects/mercator_distortion.hpp"
 #include "tabletfx/effects/porta_preamp.hpp"
 #include "tabletfx/effects/pitch_sequence.hpp"
+#include "tabletfx/effects/poly_sustain.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"

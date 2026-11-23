@@ -377,6 +377,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::StereoPanner>(
                                 static_cast<float>(sample_rate)),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::effects::PolySustain>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1211,6 +1214,22 @@ public:
         parameters.mix = values[42];
         parameters.level = values[43];
         static_cast<tabletfx::effects::PitchSequence*>(effects_[74].effect.get())
+            ->configure(parameters);
+    }
+
+    void configure_poly_sustain(float interval_semitones, float attack_ms,
+                                float decay_ms, float fx_level, float level_db,
+                                std::uint32_t operation) noexcept {
+        tabletfx::effects::PolySustainParameters parameters;
+        parameters.interval_semitones = interval_semitones;
+        parameters.attack_ms = attack_ms;
+        parameters.decay_ms = decay_ms;
+        parameters.fx_level = fx_level;
+        parameters.level_db = level_db;
+        parameters.operation = static_cast<
+            tabletfx::effects::PolySustainOperation>(
+                std::min(operation, 2U));
+        static_cast<tabletfx::effects::PolySustain*>(effects_[91].effect.get())
             ->configure(parameters);
     }
 
@@ -3852,6 +3871,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pitch_sequence(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pitch_sequence(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_poly_sustain(
+    void* opaque, float interval_semitones, float attack_ms, float decay_ms,
+    float fx_level, float level_db, std::uint32_t operation) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_poly_sustain(
+            interval_semitones, attack_ms, decay_ms, fx_level, level_db,
+            operation);
     }
 }
 

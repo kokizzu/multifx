@@ -391,6 +391,29 @@ void PitchSequence::reset() noexcept {
     freeze_active_ = false;
 }
 
+void PitchSequence::record_input_history(
+    const std::span<const float> interleaved,
+    const std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0U ||
+        interleaved.size() % channels_ != 0U) {
+        return;
+    }
+
+    std::array<float, 2> input{};
+    const std::size_t frames = interleaved.size() / channels_;
+    for (std::size_t frame = 0U; frame < frames; ++frame) {
+        input.fill(0.0F);
+        for (std::uint16_t channel = 0U; channel < channels_; ++channel) {
+            const float sample = interleaved[frame * channels_ + channel];
+            input[channel] = std::isfinite(sample)
+                ? std::clamp(sample, -kMaximumInputMagnitude,
+                             kMaximumInputMagnitude)
+                : 0.0F;
+        }
+        if (!freeze_active_) record_history(input);
+    }
+}
+
 void PitchSequence::process(std::span<float> interleaved,
                             std::uint16_t channels) noexcept {
     if (channels != channels_ || channels == 0U) {

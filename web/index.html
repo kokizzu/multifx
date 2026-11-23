@@ -180,8 +180,9 @@
                 <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="88"><span class="effect-number">89</span><span class="effect-name">Rock Box Dist · project-authored</span><span class="effect-default">Drive · Tone · Level</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
                 <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="89"><span class="effect-number">90</span><span class="effect-name">Rock Box Boost · project-authored</span><span class="effect-default">Boost · Level</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
                 <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="90"><span class="effect-number">91</span><span class="effect-name">Stereo Panner · project-authored Fractal FM9-family controls</span><span class="effect-default">0.5 Hz · 100% width · sine</span><span class="effect-category-tag">Modulation</span></label>
-                <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="91" checked><span class="effect-number">92</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-                <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="92" checked><span class="effect-number">93</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+                <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="91"><span class="effect-number">92</span><span class="effect-name">Poly Sustain · project-authored Helix Stadium-inspired</span><span class="effect-default">Chord hold · pitch interval · fade out</span><span class="effect-category-tag">Delay</span></label>
+                <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="92" checked><span class="effect-number">93</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+                <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="93" checked><span class="effect-number">94</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1684,6 +1685,18 @@
           <label class="mix-control" for="porta-preamp-bass-db"><span>Bass</span><output for="porta-preamp-bass-db">0.0 dB</output><input id="porta-preamp-bass-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
           <label class="mix-control" for="porta-preamp-treble-db"><span>Treble</span><output for="porta-preamp-treble-db">0.0 dB</output><input id="porta-preamp-treble-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
           <label class="mix-control" for="porta-preamp-level-db"><span>Level</span><output for="porta-preamp-level-db">0.0 dB</output><input id="porta-preamp-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Poly Sustain controls">
+        <h3>Poly Sustain · project-authored hold</h3>
+        <p class="hint"><a href="https://line6.com/helix-stadium-models/" target="_blank" rel="noreferrer">Line 6's Stadium catalog</a> lists Poly Sustain as a mono Delay model and marks it polyphonic/DSP-intensive. The public Stadium manual does not publish static control ranges. Older Helix 3.0/3.10 notes describe Interval, Attack, Decay, FX Level, and Normal/Dry Kill/Mute All operation; those details are reference material, not a verified Stadium parameter table. This project captures an 80 ms time-domain loop and uses its existing polyphonic shifter. Mod Freq/Depth, RandDpth/RandSpeed, Auto EQ, exact Stadium ranges/defaults, and Line 6 DSP/sound parity are not implemented.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="poly-sustain-interval"><span>Pitch interval</span><output for="poly-sustain-interval">0 semitones</output><input id="poly-sustain-interval" type="range" min="-12" max="12" step="1" value="0"></label>
+          <label class="mix-control" for="poly-sustain-attack-ms"><span>Attack</span><output for="poly-sustain-attack-ms">222 ms</output><input id="poly-sustain-attack-ms" type="range" min="0" max="2000" step="1" value="222"></label>
+          <label class="mix-control" for="poly-sustain-decay-ms"><span>Decay after bypass</span><output for="poly-sustain-decay-ms">2000 ms</output><input id="poly-sustain-decay-ms" type="range" min="0" max="10000" step="10" value="2000"></label>
+          <label class="mix-control" for="poly-sustain-fx-level"><span>Held signal</span><output for="poly-sustain-fx-level">100%</output><input id="poly-sustain-fx-level" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="poly-sustain-level-db"><span>Output level</span><output for="poly-sustain-level-db">0.0 dB</output><input id="poly-sustain-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="poly-sustain-operation"><span>Active operation</span><output for="poly-sustain-operation">Normal</output><select id="poly-sustain-operation"><option value="0" selected>Normal · dry + hold</option><option value="1">Dry Kill · hold only</option><option value="2">Mute All</option></select></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Pitch Sequence controls">
