@@ -301,6 +301,10 @@ const looperReverse = document.querySelector("#looper-reverse");
 const looperHalfSpeed = document.querySelector("#looper-half-speed");
 const looperOverdubLevel = document.querySelector("#looper-overdub-level");
 const looperOverdubLevelValue = document.querySelector("#looper-overdub-level-value");
+const looperAutoRecord = document.querySelector("#looper-auto-record");
+const looperAutoRecordThreshold = document.querySelector(
+  "#looper-auto-record-threshold-db",
+);
 const fourBandResonatorControls = document.querySelector("#four-band-resonator-controls");
 const fractalThreeVoiceSynthControlsContainer = document.querySelector(
   "#fractal-three-voice-synth-controls",
@@ -1644,12 +1648,16 @@ function updateEffectBrowser() {
 
 function updateLooperOptions() {
   looperOverdubLevelValue.value = `${looperOverdubLevel.value}%`;
+  looperAutoRecordThreshold.parentElement.querySelector("output").value =
+    `${Number(looperAutoRecordThreshold.value)} dBFS`;
   if (workletNode) {
     workletNode.port.postMessage({
       type: "looper-options",
       reverse: looperReverse.checked,
       halfSpeed: looperHalfSpeed.checked,
       overdubLevel: Number(looperOverdubLevel.value) / 100,
+      autoRecord: looperAutoRecord.checked,
+      autoRecordThresholdDb: Number(looperAutoRecordThreshold.value),
     });
   }
 }
@@ -2905,6 +2913,8 @@ for (const button of document.querySelectorAll("[data-shuffling-looper-command]"
 looperReverse.addEventListener("change", updateLooperOptions);
 looperHalfSpeed.addEventListener("change", updateLooperOptions);
 looperOverdubLevel.addEventListener("input", updateLooperOptions);
+looperAutoRecord.addEventListener("change", updateLooperOptions);
+looperAutoRecordThreshold.addEventListener("input", updateLooperOptions);
 for (const control of shufflingLooperControls) {
   control.addEventListener("input", updateShufflingLooperOptions);
   control.addEventListener("change", updateShufflingLooperOptions);
@@ -5303,6 +5313,98 @@ async function waitForLooperStatus(prefix) {
       throw new Error(`Timed out waiting for Phrase Looper status: ${looperStatus.value}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+async function runPhraseLooperAutoRecordBrowserSmokeTest() {
+  const previousEffectState = enabledEffects();
+  const previousOptions = {
+    reverse: looperReverse.checked,
+    halfSpeed: looperHalfSpeed.checked,
+    overdubLevel: looperOverdubLevel.value,
+    autoRecord: looperAutoRecord.checked,
+    thresholdDb: looperAutoRecordThreshold.value,
+  };
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 0 || index === 60);
+  let loopCleared = false;
+
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Phrase Looper Auto Record smoke test requires the browser audio chain and guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+
+    looperReverse.checked = false;
+    looperHalfSpeed.checked = false;
+    looperOverdubLevel.value = "100";
+    looperAutoRecordThreshold.value = "-90";
+    looperAutoRecord.checked = true;
+    updateLooperOptions();
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({
+        type: "enable",
+        index,
+        value: testEnabled[index],
+      });
+    });
+
+    const samples = decodedAudio.getChannelData(0);
+    const firstActiveFrame = samples.findIndex((sample) => Math.abs(sample) > 1e-4);
+    if (firstActiveFrame < 0) {
+      throw new Error("Phrase Looper Auto Record guitar fixture contains no threshold-crossing sample.");
+    }
+
+    const source = audioContext.createBufferSource();
+    source.buffer = decodedAudio;
+    source.loop = true;
+    source.connect(workletNode);
+    activeSource = source;
+    playbackOffset = 0;
+    playbackStartedAt = audioContext.currentTime;
+    workletNode.port.postMessage({ type: "active", value: true });
+    source.start(0, firstActiveFrame / decodedAudio.sampleRate);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    stopSource(false);
+
+    looperStatus.value = "Waiting for threshold-triggered recording";
+    sendLooperCommand(3);
+    await waitForLooperStatus("Stopped · ");
+    if (looperStatus.value.includes("no loop") ||
+        looperStatus.value.includes("command unavailable")) {
+      throw new Error(`Phrase Looper did not auto-record the local guitar signal: ${looperStatus.value}`);
+    }
+    const recordedStatus = looperStatus.value;
+
+    sendLooperCommand(6);
+    await waitForLooperStatus("Stopped · no loop");
+    loopCleared = true;
+    return { recordedStatus, clearedStatus: looperStatus.value, thresholdDb: -90 };
+  } finally {
+    stopSource(false);
+    if (workletNode && !loopCleared) sendLooperCommand(6);
+    looperReverse.checked = previousOptions.reverse;
+    looperHalfSpeed.checked = previousOptions.halfSpeed;
+    looperOverdubLevel.value = previousOptions.overdubLevel;
+    looperAutoRecord.checked = previousOptions.autoRecord;
+    looperAutoRecordThreshold.value = previousOptions.thresholdDb;
+    updateLooperOptions();
+    if (workletNode) {
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable",
+          index,
+          value: previousEffectState[index],
+        });
+      });
+    }
   }
 }
 
@@ -9394,15 +9496,7 @@ async function runBrowserSelfTest() {
         5000,
       )),
     ]);
-    looperStatus.value = "Waiting for recording command";
-    document.querySelector('[data-looper-command="0"]').click();
-    await waitForLooperStatus("Recording · no loop");
     await waitForCapture(captureView, reference.samples.length);
-    document.querySelector('[data-looper-command="3"]').click();
-    await waitForLooperStatus("Stopped · ");
-    if (looperStatus.value.includes("no loop")) {
-      throw new Error("Browser Looper recording did not retain processed input audio.");
-    }
     reverseDelayRestart.click();
     reverseDelayRun.checked = false;
     reverseDelayRun.dispatchEvent(new Event("change", { bubbles: true }));
@@ -9605,6 +9699,9 @@ async function runBrowserSelfTest() {
     const shufflingLooperSmoke = await runShufflingLooperBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Phrase Looper threshold-triggered recording…";
+    const phraseLooperAutoRecordSmoke =
+      await runPhraseLooperAutoRecordBrowserSmokeTest();
     testResult.textContent = "Checking the free-running browser note generator…";
     stopSource(false);
     for (let index = 0; index < EFFECT_NAMES.length; index += 1) {
@@ -9740,6 +9837,7 @@ async function runBrowserSelfTest() {
       ringModulator: ringModulatorSmoke,
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,
+      phraseLooperAutoRecord: phraseLooperAutoRecordSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

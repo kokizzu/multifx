@@ -29,7 +29,10 @@ enum class LooperState : std::uint8_t {
  *
  * This is an intentionally small core, not a recreation of a commercial
  * looper. It has one layer, no quantization, no loop-file or preset saving,
- * no auto-record threshold, and no overdub while reversed or half-speed.
+ * and no overdub while reversed or half-speed. Optional project-authored
+ * auto-record waits while stopped for an input-peak threshold crossing; the
+ * crossing frame is included in the replacement loop and the previous loop
+ * remains undoable.
  * Stored and overdubbed samples are sanitized and bounded to +/-16.0 to keep
  * accumulated floating-point audio finite while allowing internal headroom.
  * Reverse and half-speed affect playback only; half-speed uses linear
@@ -42,7 +45,8 @@ enum class LooperState : std::uint8_t {
  * Manufacturer comparison context checked 2026-11-22 (these limits are not
  * inherited by this class):
  * - MELOFTY Axom Max User Manual V1.7.4 documents a stereo phrase looper up
- *   to 3,600 seconds, plus reverse and half speed:
+ *   to 3,600 seconds, reverse/half-speed, and threshold-triggered Auto Record
+ *   standby; it does not publish the threshold range or default:
  *   https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf
  * - Fender's v1.7 update article says the looper was extended to three
  *   minutes, while its product page still advertises 60 seconds stereo.
@@ -74,6 +78,9 @@ public:
     static constexpr std::uint16_t kMinimumChannels = 1U;
     static constexpr std::uint16_t kMaximumChannels = 2U;
     static constexpr float kSafetyCeiling = 16.0F;
+    static constexpr float kDefaultAutoRecordThresholdDb = -36.0F;
+    static constexpr float kMinimumAutoRecordThresholdDb = -90.0F;
+    static constexpr float kMaximumAutoRecordThresholdDb = 0.0F;
 
     explicit Looper(std::uint16_t channels = 2U)
         : channels_(validate_channels(channels)),
@@ -108,17 +115,17 @@ public:
     [[nodiscard]] bool reverse() const noexcept { return reverse_; }
     [[nodiscard]] bool half_speed() const noexcept { return half_speed_; }
     [[nodiscard]] float overdub_level() const noexcept { return overdub_level_; }
+    [[nodiscard]] bool auto_record_enabled() const noexcept {
+        return auto_record_enabled_;
+    }
+    [[nodiscard]] float auto_record_threshold_db() const noexcept {
+        return auto_record_threshold_db_;
+    }
 
     // Starts a replacement recording. The prior loop remains undoable.
     [[nodiscard]] bool record() noexcept {
         if (state_ == LooperState::Recording) return false;
-        snapshot_for_edit();
-        loop_frames_ = 0U;
-        record_position_ = 0U;
-        playback_position_ = 0.0;
-        reverse_ = false;
-        half_speed_ = false;
-        state_ = LooperState::Recording;
+        begin_replacement_recording();
         return true;
     }
 
@@ -191,6 +198,7 @@ public:
         record_position_ = 0U;
         playback_position_ = 0.0;
         state_ = LooperState::Stopped;
+        auto_record_above_threshold_ = false;
         reverse_ = false;
         half_speed_ = false;
         undo_available_ = false;
@@ -204,6 +212,23 @@ public:
                              ? std::clamp(level, 0.0F, 1.0F)
                              : 1.0F;
     }
+    void set_auto_record_enabled(bool enabled) noexcept {
+        if (auto_record_enabled_ != enabled) {
+            auto_record_above_threshold_ = false;
+        }
+        auto_record_enabled_ = enabled;
+    }
+    void set_auto_record_threshold_db(float threshold_db) noexcept {
+        auto_record_threshold_db_ = std::isfinite(threshold_db)
+                                        ? std::clamp(
+                                              threshold_db,
+                                              kMinimumAutoRecordThresholdDb,
+                                              kMaximumAutoRecordThresholdDb)
+                                        : kDefaultAutoRecordThresholdDb;
+        auto_record_threshold_amplitude_ = std::pow(
+            10.0F, auto_record_threshold_db_ / 20.0F);
+        auto_record_above_threshold_ = false;
+    }
 
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override {
@@ -211,11 +236,30 @@ public:
             interleaved.size() % channels != 0U) {
             return;
         }
-        if (state_ == LooperState::Stopped) return;
+        if (state_ == LooperState::Stopped && !auto_record_enabled_) return;
 
         const std::size_t frames = interleaved.size() / channels_;
         for (std::size_t frame = 0U; frame < frames; ++frame) {
             const std::size_t sample_offset = frame * channels_;
+            bool auto_record_crossing = false;
+            if (auto_record_enabled_) {
+                float input_peak = 0.0F;
+                for (std::size_t channel = 0U; channel < channels_; ++channel) {
+                    const float sample = interleaved[sample_offset + channel];
+                    if (std::isfinite(sample)) {
+                        input_peak = std::max(input_peak, std::abs(sample));
+                    }
+                }
+                const bool above_threshold =
+                    input_peak >= auto_record_threshold_amplitude_;
+                auto_record_crossing = above_threshold &&
+                                       !auto_record_above_threshold_;
+                auto_record_above_threshold_ = above_threshold;
+            }
+            if (state_ == LooperState::Stopped) {
+                if (!auto_record_crossing) continue;
+                begin_replacement_recording();
+            }
             if (state_ == LooperState::Recording) {
                 if (loop_frames_ >= kMaximumFrames) {
                     state_ = LooperState::Playing;
@@ -281,6 +325,19 @@ private:
         redo_available_ = false;
     }
 
+    void begin_replacement_recording() noexcept {
+        std::swap(active_buffer_, history_buffer_);
+        history_frames_ = loop_frames_;
+        undo_available_ = true;
+        redo_available_ = false;
+        loop_frames_ = 0U;
+        record_position_ = 0U;
+        playback_position_ = 0.0;
+        reverse_ = false;
+        half_speed_ = false;
+        state_ = LooperState::Recording;
+    }
+
     void swap_current_and_history() noexcept {
         std::swap(active_buffer_, history_buffer_);
         std::swap(loop_frames_, history_frames_);
@@ -336,7 +393,12 @@ private:
     std::size_t record_position_ = 0U;
     double playback_position_ = 0.0;
     float overdub_level_ = 1.0F;
+    float auto_record_threshold_db_ = kDefaultAutoRecordThresholdDb;
+    float auto_record_threshold_amplitude_ =
+        std::pow(10.0F, kDefaultAutoRecordThresholdDb / 20.0F);
     LooperState state_ = LooperState::Stopped;
+    bool auto_record_enabled_ = false;
+    bool auto_record_above_threshold_ = false;
     bool reverse_ = false;
     bool half_speed_ = false;
     bool undo_available_ = false;

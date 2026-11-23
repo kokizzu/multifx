@@ -722,12 +722,15 @@ public:
         }
     }
 
-    void configure_looper(bool reverse, bool half_speed,
-                          float overdub_level) noexcept {
+    void configure_looper(bool reverse, bool half_speed, float overdub_level,
+                          bool auto_record_enabled,
+                          float auto_record_threshold_db) noexcept {
         auto* looper = static_cast<tabletfx::Looper*>(effects_[60].effect.get());
         looper->set_reverse(reverse);
         looper->set_half_speed(half_speed);
         looper->set_overdub_level(overdub_level);
+        looper->set_auto_record_enabled(auto_record_enabled);
+        looper->set_auto_record_threshold_db(auto_record_threshold_db);
     }
 
     [[nodiscard]] std::uint32_t looper_state() const noexcept {
@@ -3471,10 +3474,13 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_command(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_looper_options(
     void* opaque, std::uint32_t reverse, std::uint32_t half_speed,
-    float overdub_level) noexcept {
+    float overdub_level, std::uint32_t auto_record_enabled,
+    float auto_record_threshold_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_looper(reverse != 0U, half_speed != 0U,
-                                           overdub_level);
+                                           overdub_level,
+                                           auto_record_enabled != 0U,
+                                           auto_record_threshold_db);
     }
 }
 

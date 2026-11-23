@@ -1276,7 +1276,7 @@
       </div>
       <div class="effect-parameter-group" aria-label="Phrase Looper controls">
         <h3>Phrase Looper · project-authored one-layer utility</h3>
-        <p class="hint">Enable Phrase Looper in the Loop &amp; performance category, start processed playback, then record from the incoming chain. Capacity is 192,000 frames (4 s at 48 kHz); the fixed stereo buffers use about 2.93 MiB. Record, overdub, and clear snapshot work is handled between audio blocks. The single loop is not saved to a preset or file. One forward overdub pass is supported; reverse and half-speed affect playback only.</p>
+         <p class="hint">Enable Phrase Looper in the Loop &amp; performance category and start processed playback. Optional Auto Record waits while stopped for an input-peak crossing; the first crossing frame is captured. The <a href="https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf" target="_blank" rel="noreferrer">Axom Max V1.7.4 manual</a> documents trigger-threshold standby but gives no numeric range/default. This project uses −90 to 0 dBFS (default −36 dBFS); these settings and the detector are project-authored. A new recording replaces the prior loop with one undo level. Capacity is 192,000 frames (4 s at 48 kHz); the fixed stereo buffers use about 2.93 MiB. The single loop is not saved to a preset or file. One forward overdub pass is supported; reverse and half-speed affect playback only.</p>
         <div class="transport" aria-label="Phrase Looper transport">
           <button class="button" type="button" data-looper-command="0">Record</button>
           <button class="button" type="button" data-looper-command="1">Play</button>
@@ -1290,6 +1290,8 @@
           <label><input id="looper-reverse" type="checkbox"> Reverse playback</label>
           <label><input id="looper-half-speed" type="checkbox"> Half-speed playback</label>
           <label class="mix-control" for="looper-overdub-level"><span>Overdub input</span><output id="looper-overdub-level-value" for="looper-overdub-level">100%</output><input id="looper-overdub-level" type="range" min="0" max="100" value="100"></label>
+          <label><input id="looper-auto-record" type="checkbox"> Auto Record when stopped</label>
+          <label class="mix-control" for="looper-auto-record-threshold-db"><span>Auto Record threshold</span><output for="looper-auto-record-threshold-db">−36 dBFS</output><input id="looper-auto-record-threshold-db" type="range" min="-90" max="0" step="1" value="-36"></label>
         </div>
         <output id="looper-status" class="status" role="status">Stopped · no loop</output>
       </div>

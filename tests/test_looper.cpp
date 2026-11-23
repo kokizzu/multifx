@@ -222,6 +222,55 @@ void test_non_finite_samples_are_sanitized() {
             "stored invalid or excessive samples must remain finite and bounded");
 }
 
+void test_auto_record_triggers_at_threshold_and_captures_crossing_frame() {
+    tabletfx::Looper looper(1U);
+    looper.set_auto_record_threshold_db(-20.0F);
+    looper.set_auto_record_enabled(true);
+
+    std::array<float, 3> below{0.05F, -0.08F, 0.09F};
+    looper.process(below, 1U);
+    require(looper.state() == tabletfx::LooperState::Stopped &&
+                looper.loop_frames() == 0U,
+            "auto-record must wait while input remains below threshold");
+
+    std::array<float, 3> crossing{0.1F, -0.2F, 0.25F};
+    looper.process(crossing, 1U);
+    require(looper.state() == tabletfx::LooperState::Recording &&
+                looper.loop_frames() == crossing.size(),
+            "threshold crossing must start recording and capture that frame");
+    looper.stop();
+
+    std::array<float, 3> playback{};
+    require(looper.play(), "auto-recorded loop should be playable");
+    looper.process(playback, 1U);
+    require(playback == crossing,
+            "auto-record must capture the crossing frame without dropping samples");
+}
+
+void test_auto_record_starts_replacement_with_undoable_previous_loop() {
+    tabletfx::Looper looper(1U);
+    constexpr std::array<float, 2> original{0.2F, 0.3F};
+    record(looper, original, 1U);
+    looper.set_auto_record_threshold_db(-30.0F);
+    looper.set_auto_record_enabled(true);
+
+    std::array<float, 2> quiet{0.01F, 0.02F};
+    looper.process(quiet, 1U);
+    std::array<float, 2> new_loop{0.5F, 0.6F};
+    looper.process(new_loop, 1U);
+    require(looper.state() == tabletfx::LooperState::Recording &&
+                looper.loop_frames() == new_loop.size(),
+            "auto-record should begin a replacement after the threshold crossing");
+    looper.stop();
+    require(looper.undo() && looper.loop_frames() == original.size(),
+            "auto-record replacement should retain one undo level");
+    std::array<float, 2> restored{};
+    require(looper.play(), "undo should restore the original loop for playback");
+    looper.process(restored, 1U);
+    require(restored == original,
+            "undo after auto-record must restore the previous loop samples");
+}
+
 void test_process_does_not_allocate() {
     tabletfx::Looper looper(2U);
     constexpr std::array<float, 8> source{
@@ -271,6 +320,8 @@ int main() {
         test_overdub_undo_redo_record_replacement_and_clear();
         test_capacity_reset_and_invalid_samples();
         test_non_finite_samples_are_sanitized();
+        test_auto_record_triggers_at_threshold_and_captures_crossing_frame();
+        test_auto_record_starts_replacement_with_undoable_previous_loop();
         test_process_does_not_allocate();
         std::cout << "All looper tests passed.\n";
         return 0;

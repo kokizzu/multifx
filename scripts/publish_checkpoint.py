@@ -1012,7 +1012,6 @@ FIVE_BAND_EQ_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 PHRASE_LOOPER_CHECKPOINT_PATHS = (
-    "Makefile",
     "CMakeLists.txt",
     "include/tabletfx/effects.hpp",
     "include/tabletfx/effects/looper.hpp",
@@ -1024,6 +1023,7 @@ PHRASE_LOOPER_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
     "scripts/publish_checkpoint.py",
@@ -1779,7 +1779,7 @@ CHECKPOINTS = {
     "five-band-eq": (FIVE_BAND_EQ_CHECKPOINT_PATHS,
                      "feat: add project-authored five-band EQ"),
     "phrase-looper": (PHRASE_LOOPER_CHECKPOINT_PATHS,
-                      "feat: add categorized phrase looper"),
+                      "feat: add threshold-triggered looper recording"),
     "note-generator": (NOTE_GENERATOR_CHECKPOINT_PATHS,
                        "feat: add categorized note generator"),
     "resonant-delay": (RESONANT_DELAY_CHECKPOINT_PATHS,

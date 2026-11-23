@@ -839,7 +839,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "looper-options" && this.ready) {
       this.module._tf_chain_set_looper_options(
         this.chain, message.reverse ? 1 : 0, message.halfSpeed ? 1 : 0,
-        Number(message.overdubLevel),
+        Number(message.overdubLevel), message.autoRecord ? 1 : 0,
+        Number(message.autoRecordThresholdDb),
       );
     } else if (message.type === "shuffling-looper-command" && this.ready) {
       const accepted = this.module._tf_chain_shuffling_looper_command(
