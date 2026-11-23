@@ -12,6 +12,9 @@ constexpr float kDefaultSampleRate = 48000.0F;
 constexpr float kEnvelopeReleaseMs = 80.0F;
 constexpr float kPitchSmoothingMs = 4.0F;
 constexpr float kMaximumInputMagnitude = 1000000.0F;
+constexpr float kBassMinimumRms = 0.00025F;
+constexpr float kBassFirstMinimumCmnd = 0.18F;
+constexpr float kBassMaximumCmnd = 0.38F; // Project-authored YIN confidence limit.
 
 }  // namespace
 
@@ -23,6 +26,12 @@ FractalThreeVoiceSynth::FractalThreeVoiceSynth(
                            kMinimumSampleRate, kMaximumSampleRate)),
       tracker_(sample_rate_),
       seed_(random_seed == 0U ? 0x6d2b79f5U : random_seed) {
+    bass_detector_decimation_ = std::max<std::size_t>(
+        1U, static_cast<std::size_t>(
+                std::lround(sample_rate_ / kBassDetectorTargetRate)));
+    bass_detector_rate_ = sample_rate_ /
+        static_cast<float>(bass_detector_decimation_);
+
     DiatonicHarmonizerConfig tracker_config;
     tracker_config.mix = 0.0F;
     tracker_config.pitch_interval = 0;
@@ -70,6 +79,12 @@ bool FractalThreeVoiceSynth::valid_tracking(
            static_cast<unsigned>(FractalSynthTracking::Quantize);
 }
 
+bool FractalThreeVoiceSynth::valid_tracking_mode(
+    const FractalSynthTrackingMode mode) noexcept {
+    return mode == FractalSynthTrackingMode::Guitar ||
+           mode == FractalSynthTrackingMode::Bass;
+}
+
 float FractalThreeVoiceSynth::time_coefficient(
     const float milliseconds) const noexcept {
     if (!(milliseconds > 0.0F)) {
@@ -81,7 +96,16 @@ float FractalThreeVoiceSynth::time_coefficient(
 
 void FractalThreeVoiceSynth::configure(
     const FractalThreeVoiceSynthConfig& requested) noexcept {
+    const FractalSynthTrackingMode old_tracking_mode =
+        config_.tracking_mode;
     config_ = requested;
+    if (!valid_tracking_mode(config_.tracking_mode)) {
+        config_.tracking_mode = FractalSynthTrackingMode::Guitar;
+    }
+    if (config_.tracking_mode != old_tracking_mode) {
+        reset_bass_detector();
+    }
+    detected_input_frequency_hz_ = tracker_.detected_input_frequency_hz();
     for (std::size_t voice = 0U; voice < kVoiceCount; ++voice) {
         auto& parameters = config_.voices[voice];
         if (!valid_waveform(parameters.waveform)) {
@@ -155,6 +179,154 @@ void FractalThreeVoiceSynth::configure_filter(
     state.b2 = state.b0;
     state.a1 = static_cast<float>((-2.0 * cosine) / a0);
     state.a2 = static_cast<float>((1.0 - alpha) / a0);
+}
+
+void FractalThreeVoiceSynth::reset_bass_detector() noexcept {
+    bass_detector_frame_.fill(0.0F);
+    bass_decimation_count_ = 0U;
+    bass_detector_write_ = 0U;
+    bass_detector_count_ = 0U;
+    bass_detector_hop_count_ = 0U;
+    bass_decimation_sum_ = 0.0F;
+    bass_detected_frequency_hz_ = 0.0F;
+}
+
+void FractalThreeVoiceSynth::process_bass_detector(
+    const float mono_sample) noexcept {
+    bass_decimation_sum_ += mono_sample;
+    ++bass_decimation_count_;
+    if (bass_decimation_count_ < bass_detector_decimation_) {
+        return;
+    }
+
+    const float downsampled = bass_decimation_sum_ /
+        static_cast<float>(bass_detector_decimation_);
+    bass_decimation_sum_ = 0.0F;
+    bass_decimation_count_ = 0U;
+    bass_detector_frame_[bass_detector_write_] = std::isfinite(downsampled)
+        ? downsampled
+        : 0.0F;
+    bass_detector_write_ =
+        (bass_detector_write_ + 1U) % kBassDetectorFrame;
+    bass_detector_count_ = std::min(
+        bass_detector_count_ + 1U, kBassDetectorFrame);
+
+    if (bass_detector_count_ < kBassDetectorFrame) {
+        return;
+    }
+    ++bass_detector_hop_count_;
+    if (bass_detector_hop_count_ < kBassDetectorHop) {
+        return;
+    }
+    bass_detector_hop_count_ = 0U;
+    bass_detected_frequency_hz_ = detect_bass_pitch();
+}
+
+float FractalThreeVoiceSynth::detect_bass_pitch() const noexcept {
+    if (bass_detector_count_ < kBassDetectorFrame ||
+        !(bass_detector_rate_ > 0.0F) ||
+        !std::isfinite(bass_detector_rate_)) {
+        return 0.0F;
+    }
+
+    std::array<float, kBassDetectorFrame> centered{};
+    double mean = 0.0;
+    for (std::size_t i = 0U; i < kBassDetectorFrame; ++i) {
+        const std::size_t index =
+            (bass_detector_write_ + i) % kBassDetectorFrame;
+        centered[i] = bass_detector_frame_[index];
+        mean += centered[i];
+    }
+    mean /= static_cast<double>(kBassDetectorFrame);
+
+    double energy = 0.0;
+    for (float& sample : centered) {
+        sample -= static_cast<float>(mean);
+        energy += static_cast<double>(sample) * sample;
+    }
+    const double rms = std::sqrt(
+        energy / static_cast<double>(kBassDetectorFrame));
+    if (!(rms > kBassMinimumRms) || !std::isfinite(rms)) {
+        return 0.0F;
+    }
+
+    std::array<float, kBassDetectorFrame> difference{};
+    const std::size_t minimum_lag = std::max<std::size_t>(
+        2U, static_cast<std::size_t>(
+                bass_detector_rate_ / kMaximumBassFallbackHz));
+    const std::size_t maximum_lag = std::min<std::size_t>(
+        kBassDetectorFrame - 32U,
+        static_cast<std::size_t>(std::ceil(
+            bass_detector_rate_ / kMinimumBassTrackedHz)));
+    if (maximum_lag <= minimum_lag + 2U) {
+        return 0.0F;
+    }
+
+    for (std::size_t lag = minimum_lag; lag <= maximum_lag; ++lag) {
+        double sum = 0.0;
+        const std::size_t count = kBassDetectorFrame - lag;
+        for (std::size_t i = 0U; i < count; ++i) {
+            const double delta = static_cast<double>(centered[i]) -
+                                 centered[i + lag];
+            sum += delta * delta;
+        }
+        difference[lag] = static_cast<float>(
+            sum / static_cast<double>(count));
+    }
+
+    double cumulative = 0.0;
+    float best_cmnd = 1.0F;
+    std::size_t best_lag = 0U;
+    std::size_t selected_lag = 0U;
+    for (std::size_t lag = minimum_lag; lag <= maximum_lag; ++lag) {
+        cumulative += difference[lag];
+        if (cumulative <= 1.0e-18) {
+            continue;
+        }
+        const float cmnd = static_cast<float>(
+            static_cast<double>(difference[lag]) *
+            static_cast<double>(lag) / cumulative);
+        if (cmnd < best_cmnd) {
+            best_cmnd = cmnd;
+            best_lag = lag;
+        }
+        if (cmnd < kBassFirstMinimumCmnd && lag + 1U <= maximum_lag &&
+            difference[lag] <= difference[lag + 1U]) {
+            selected_lag = lag;
+            break;
+        }
+    }
+    if (selected_lag == 0U) {
+        selected_lag = best_lag;
+    }
+    if (selected_lag == 0U || best_cmnd > kBassMaximumCmnd) {
+        return 0.0F;
+    }
+
+    float refined_lag = static_cast<float>(selected_lag);
+    if (selected_lag > minimum_lag && selected_lag < maximum_lag) {
+        const float before = difference[selected_lag - 1U];
+        const float center = difference[selected_lag];
+        const float after = difference[selected_lag + 1U];
+        const float denominator = before - 2.0F * center + after;
+        if (std::abs(denominator) > 1.0e-9F) {
+            const float correction = 0.5F * (before - after) / denominator;
+            refined_lag += std::clamp(correction, -0.5F, 0.5F);
+        }
+    }
+    if (!(refined_lag > 0.0F) || !std::isfinite(refined_lag)) {
+        return 0.0F;
+    }
+    const float frequency = bass_detector_rate_ / refined_lag;
+    // The small tolerance accommodates finite-window pitch-estimate error at
+    // the guide's approximate F#0 lower limit; the reported value is clamped
+    // to the project-authored bound.
+    if (frequency < kMinimumBassTrackedHz * 0.98F ||
+        frequency > kMaximumBassFallbackHz) {
+        return 0.0F;
+    }
+    return std::clamp(frequency, kMinimumBassTrackedHz,
+                      kMaximumBassFallbackHz);
 }
 
 float FractalThreeVoiceSynth::random_bipolar(VoiceState& state) noexcept {
@@ -291,7 +463,11 @@ void FractalThreeVoiceSynth::update_frequency(
     float base_frequency = parameters.frequency_hz;
     if (parameters.tracking == FractalSynthTracking::PitchAndEnvelope ||
         parameters.tracking == FractalSynthTracking::Quantize) {
-        if (!(detected_frequency_hz >= kMinimumTrackedHz &&
+        const float minimum_tracked_hz =
+            config_.tracking_mode == FractalSynthTrackingMode::Bass
+                ? kMinimumBassTrackedHz
+                : kMinimumTrackedHz;
+        if (!(detected_frequency_hz >= minimum_tracked_hz &&
               detected_frequency_hz <= kMaximumTrackedHz)) {
             return;
         }
@@ -335,6 +511,8 @@ float FractalThreeVoiceSynth::voice_envelope(
 
 void FractalThreeVoiceSynth::reset() noexcept {
     tracker_.reset();
+    reset_bass_detector();
+    detected_input_frequency_hz_ = 0.0F;
     for (std::size_t voice = 0U; voice < kVoiceCount; ++voice) {
         auto& state = state_[voice];
         state.phase = 0.0;
@@ -382,9 +560,27 @@ void FractalThreeVoiceSynth::process(
         tracker_.process(&input_left, tracker_right_input,
                          &discarded_left, tracker_right_output, 1U);
         float detected = tracker_.detected_input_frequency_hz();
+        if (config_.tracking_mode == FractalSynthTrackingMode::Bass) {
+            const float detector_mono = channels == 1U
+                ? input_left
+                : (std::abs(input_left) >= std::abs(input_right)
+                       ? input_left
+                       : input_right);
+            process_bass_detector(detector_mono);
+            if (!(detected >= kMinimumTrackedHz &&
+                  detected <= kMaximumTrackedHz)) {
+                detected = bass_detected_frequency_hz_;
+            } else {
+                // Drop a stale low estimate when the existing detector has a
+                // valid guitar-range pitch, preventing it leaking across a
+                // high-to-low note transition.
+                bass_detected_frequency_hz_ = 0.0F;
+            }
+        }
         if (!std::isfinite(detected)) {
             detected = 0.0F;
         }
+        detected_input_frequency_hz_ = detected;
 
         const float input_magnitude = channels == 1U
             ? std::abs(input_left)

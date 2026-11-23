@@ -1672,7 +1672,6 @@ MERCATOR_DIST_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
-    "Makefile",
     "make/publish.mk",
     "CMakeLists.txt",
     "apps/offline_render.cpp",

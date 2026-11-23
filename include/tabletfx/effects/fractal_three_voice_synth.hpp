@@ -28,6 +28,13 @@ enum class FractalSynthTracking : std::uint8_t {
     Quantize,
 };
 
+// The Blocks Guide describes GUITAR/BASS as an input pitch-tracking range,
+// separately from each voice's OFF/ENV ONLY/PITCH+ENV/QUANTIZE tracking mode.
+enum class FractalSynthTrackingMode : std::uint8_t {
+    Guitar,
+    Bass,
+};
+
 // Project-authored bounds and defaults for a three-voice monophonic synth.
 // The June 2023 Fractal Blocks Guide documents the control names and
 // behavior but does not give most numeric limits, defaults, or DSP details.
@@ -47,14 +54,21 @@ struct FractalSynthVoiceParameters {
 
 struct FractalThreeVoiceSynthConfig {
     std::array<FractalSynthVoiceParameters, 3> voices{};
+    // Project default is Guitar to preserve the existing 55–1100 Hz detector.
+    // Bass adds a project-authored low-frequency detector to about F#0.
+    FractalSynthTrackingMode tracking_mode = FractalSynthTrackingMode::Guitar;
 };
 
 // Project-authored three-oscillator guitar synth. All three voices share one
 // monophonic input pitch detector but have independent oscillator, tracking
 // mode, pitch shift/tuning, envelope attack, filter, level and pan. It does not
 // track chords; three oscillators do not imply three-note input polyphony.
-// The reused project tracker is limited to approximately 55–1100 Hz; the
-// guide's GUITAR/BASS range selector (BASS reaches about F#0) is not implemented.
+// Guitar mode retains the reused project tracker at approximately 55–1100 Hz.
+// Bass mode adds a project-authored low-frequency detector reaching about F#0
+// (23.1 Hz); its analysis window, YIN-style estimation, and confidence bound
+// are project choices, not Fractal settings or tracking-quality parity. It uses
+// a 1024-sample window plus a 256-sample hop after decimation near 8 kHz, so
+// bass-mode onset response can take roughly 0.1–0.22 seconds before buffering.
 // Waveforms, most ranges, envelopes, filtering, panning and DSP are project
 // choices, not Fractal settings or sound parity. Global Mix/Level/Balance/Bypass
 // and spillover controls are intentionally outside this processor.
@@ -75,7 +89,7 @@ public:
         return config_;
     }
     [[nodiscard]] float detected_input_frequency_hz() const noexcept {
-        return tracker_.detected_input_frequency_hz();
+        return detected_input_frequency_hz_;
     }
     [[nodiscard]] float voice_frequency_hz(std::size_t voice) const noexcept;
     [[nodiscard]] float voice_envelope(std::size_t voice) const noexcept;
@@ -90,6 +104,11 @@ private:
     static constexpr float kMaximumSampleRate = 96000.0F;
     static constexpr float kMinimumTrackedHz = 55.0F;
     static constexpr float kMaximumTrackedHz = 1100.0F;
+    static constexpr float kMinimumBassTrackedHz = 23.125F;
+    static constexpr float kMaximumBassFallbackHz = 55.0F;
+    static constexpr float kBassDetectorTargetRate = 8000.0F;
+    static constexpr std::size_t kBassDetectorFrame = 1024U;
+    static constexpr std::size_t kBassDetectorHop = 256U;
     static constexpr float kMaximumOutputMagnitude = 1000000.0F;
 
     struct VoiceState {
@@ -117,6 +136,8 @@ private:
                                        float minimum, float maximum) noexcept;
     [[nodiscard]] static bool valid_waveform(FractalSynthWaveform waveform) noexcept;
     [[nodiscard]] static bool valid_tracking(FractalSynthTracking tracking) noexcept;
+    [[nodiscard]] static bool valid_tracking_mode(
+        FractalSynthTrackingMode mode) noexcept;
     [[nodiscard]] float time_coefficient(float milliseconds) const noexcept;
     [[nodiscard]] float random_bipolar(VoiceState& state) noexcept;
     [[nodiscard]] static float poly_blep(float phase,
@@ -125,6 +146,9 @@ private:
     [[nodiscard]] float filter_sample(std::size_t voice, float sample) noexcept;
     [[nodiscard]] float finite_output(double sample) const noexcept;
     void configure_filter(std::size_t voice) noexcept;
+    void process_bass_detector(float mono_sample) noexcept;
+    [[nodiscard]] float detect_bass_pitch() const noexcept;
+    void reset_bass_detector() noexcept;
     void update_frequency(std::size_t voice,
                           float detected_frequency_hz) noexcept;
 
@@ -133,6 +157,18 @@ private:
     FractalThreeVoiceSynthConfig config_{};
     std::array<VoiceState, kVoiceCount> state_{};
     std::uint32_t seed_;
+    // Fixed-storage project-local low-frequency detector; processing allocates
+    // nothing. Numerical detector thresholds are project-authored.
+    std::array<float, kBassDetectorFrame> bass_detector_frame_{};
+    std::size_t bass_detector_decimation_ = 1U;
+    std::size_t bass_decimation_count_ = 0U;
+    std::size_t bass_detector_write_ = 0U;
+    std::size_t bass_detector_count_ = 0U;
+    std::size_t bass_detector_hop_count_ = 0U;
+    float bass_detector_rate_ = 8000.0F;
+    float bass_decimation_sum_ = 0.0F;
+    float bass_detected_frequency_hz_ = 0.0F;
+    float detected_input_frequency_hz_ = 0.0F;
 };
 
 }  // namespace tabletfx::effects

@@ -79,7 +79,7 @@ const EFFECT_NAMES = [
   "Rhythm Tap Delay · project-authored learned rhythm",
   "Plex Matrix Delay · project-authored feedback matrix",
   "Celestial Reverb · project-authored dual-pitch feedback",
-  "Three-Voice Tracked Synth · project-authored Fractal-inspired controls",
+  "Three-Voice Tracked Synth · project-authored",
   "Cloud Reverb · project-authored modulated reverb",
   "Three-Stage Distortion · project-authored Mercator-inspired controls",
   "Manual Through-Zero Flanger · project-authored Fractal-inspired controls",
@@ -151,6 +151,7 @@ const DEFAULT_PARAMETERS = {
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
     3, 2, 440, -12, 0, 0.5, 0.35, 12000, 0.707, 20, 0.2,
+    0,
   ],
   enhancer: [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1],
   resonantDelay: [350, 0.35, 800, 2, 0.25],
@@ -660,6 +661,27 @@ function buildFourBandResonatorControls() {
 buildFourBandResonatorControls();
 
 function buildFractalThreeVoiceSynthControls() {
+  const trackingLabel = document.createElement("label");
+  trackingLabel.className = "mix-control";
+  trackingLabel.htmlFor = "fractal-three-voice-synth-input-tracking";
+  const trackingTitle = document.createElement("span");
+  trackingTitle.textContent = "Input tracking range · all voices";
+  const trackingOutput = document.createElement("output");
+  trackingOutput.id = "fractal-three-voice-synth-input-tracking-value";
+  trackingOutput.htmlFor = "fractal-three-voice-synth-input-tracking";
+  const trackingSelect = document.createElement("select");
+  trackingSelect.id = "fractal-three-voice-synth-input-tracking";
+  trackingSelect.setAttribute("aria-label", "Synth input tracking range for all voices");
+  for (const [value, text] of [[0, "Guitar"], [1, "Bass"]]) {
+    const option = document.createElement("option");
+    option.value = String(value);
+    option.textContent = text;
+    trackingSelect.append(option);
+  }
+  trackingSelect.value = String(DEFAULT_PARAMETERS.fractalThreeVoiceSynth[33]);
+  trackingLabel.append(trackingTitle, trackingOutput, trackingSelect);
+  fractalThreeVoiceSynthControlsContainer.append(trackingLabel);
+
   const waveforms = [
     [0, "Sine"], [1, "Triangle"], [2, "Square"], [3, "Sawtooth"],
     [4, "Random sample/hold"], [5, "White noise"], [6, "Pink noise"], [7, "Off"],
@@ -729,6 +751,7 @@ function buildFractalThreeVoiceSynthControls() {
     details.append(group);
     fractalThreeVoiceSynthControlsContainer.append(details);
   }
+  fractalThreeVoiceSynthControls.push(trackingSelect);
 }
 
 buildFractalThreeVoiceSynthControls();
@@ -4519,6 +4542,11 @@ function updateFractalThreeVoiceSynth() {
       const output = control.parentElement.querySelector("output");
       if (output) output.value = formatters[parameter](values[index], control);
     }
+  }
+  const trackingModeControl = fractalThreeVoiceSynthControls[33];
+  if (trackingModeControl) {
+    const output = trackingModeControl.parentElement.querySelector("output");
+    if (output) output.value = trackingModeControl.selectedOptions[0]?.textContent || "Guitar";
   }
   if (workletNode) {
     workletNode.port.postMessage({
@@ -9111,6 +9139,7 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     parameters[10] = 0.5;
     parameters[11] = 7;
     parameters[22] = 7;
+    parameters[33] = 1;
     fractalThreeVoiceSynthControls.forEach((control, index) => {
       control.value = String(parameters[index]);
     });
@@ -9160,6 +9189,7 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
       enabledEffectIndex: 78,
       waveform: "Sine",
       tracking: "Pitch + envelope",
+      inputTrackingRange: "Bass",
       generatedVoices: 1,
       rmsDifference,
       maxDifference,
@@ -9296,7 +9326,10 @@ async function runBrowserSelfTest() {
             EFFECT_NAMES[75] !== "Rhythm Tap Delay · project-authored learned rhythm" ||
             EFFECT_NAMES[76] !== "Plex Matrix Delay · project-authored feedback matrix" ||
              EFFECT_NAMES[77] !== "Celestial Reverb · project-authored dual-pitch feedback" ||
-             EFFECT_NAMES[78] !== "Three-Voice Tracked Synth · project-authored Fractal-inspired controls" ||
+              EFFECT_NAMES[78] !== "Three-Voice Tracked Synth · project-authored" ||
+              fractalThreeVoiceSynthControls.length !== 34 ||
+              fractalThreeVoiceSynthControls[33]?.id !== "fractal-three-voice-synth-input-tracking" ||
+              [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
              !EFFECT_NAMES[79]?.startsWith("Cloud Reverb") ||
           !EFFECT_NAMES[80]?.startsWith("Three-Stage Distortion") ||
           !EFFECT_NAMES[81]?.startsWith("Manual Through-Zero Flanger") ||

@@ -14,8 +14,11 @@
 #include <span>
 
 using tabletfx::effects::FractalSynthTracking;
+using tabletfx::effects::FractalSynthTrackingMode;
 using tabletfx::effects::FractalSynthVoiceParameters;
 using tabletfx::effects::FractalSynthWaveform;
+using tabletfx::effects::DiatonicHarmonizer;
+using tabletfx::effects::DiatonicHarmonizerConfig;
 using tabletfx::effects::FractalThreeVoiceSynth;
 using tabletfx::effects::FractalThreeVoiceSynthConfig;
 
@@ -169,6 +172,42 @@ void test_tracker_pitch_env_only_and_quantize() {
     assert(synth_a.voice_envelope(0U) < 0.01F);
 }
 
+void test_guitar_default_and_bass_tracking_range() {
+    auto config = single_voice(FractalSynthWaveform::Sine,
+                               FractalSynthTracking::PitchAndEnvelope);
+    config.voices[0].attack_ms = 0.0F;
+    assert(config.tracking_mode == FractalSynthTrackingMode::Guitar);
+
+    synth_a.reset();
+    synth_a.configure(config);
+    std::array<float, 24000> guitar_low_audio{};
+    fill_sine(guitar_low_audio, 30.0F, 0.5F);
+    auto tracker_input = guitar_low_audio;
+    DiatonicHarmonizer existing_guitar_tracker(kSampleRate);
+    DiatonicHarmonizerConfig tracker_config;
+    tracker_config.mix = 0.0F;
+    tracker_config.pitch_interval = 0;
+    tracker_config.delay_ms = 0.0F;
+    tracker_config.feedback = 0.0F;
+    existing_guitar_tracker.configure(tracker_config);
+    existing_guitar_tracker.set_enabled(false);
+    existing_guitar_tracker.process(tracker_input, 1U);
+    synth_a.process(guitar_low_audio, 1U);
+    assert(synth_a.detected_input_frequency_hz() ==
+           existing_guitar_tracker.detected_input_frequency_hz());
+
+    config.tracking_mode = FractalSynthTrackingMode::Bass;
+    synth_a.reset();
+    synth_a.configure(config);
+    std::array<float, 24000> bass_audio{};
+    fill_sine(bass_audio, 23.125F, 0.5F); // F#0, approximately.
+    synth_a.process(bass_audio, 1U);
+    const float detected_hz = synth_a.detected_input_frequency_hz();
+    assert(detected_hz > 22.8F);
+    assert(detected_hz < 23.5F);
+    assert(std::abs(synth_a.voice_frequency_hz(0U) - detected_hz) < 0.05F);
+}
+
 void test_filter_and_stereo_pan() {
     auto high = single_voice(FractalSynthWaveform::Sine,
                              FractalSynthTracking::Off, 2000.0F);
@@ -237,6 +276,7 @@ void test_noise_waveforms_are_finite_and_repeatable_after_reset() {
 void test_bounds_invalid_values_and_safe_layouts() {
     auto config = single_voice(FractalSynthWaveform::Sine);
     config.voices[0].tracking = static_cast<FractalSynthTracking>(99U);
+    config.tracking_mode = static_cast<FractalSynthTrackingMode>(99U);
     config.voices[0].waveform = static_cast<FractalSynthWaveform>(99U);
     config.voices[0].frequency_hz = std::numeric_limits<float>::infinity();
     config.voices[0].shift_semitones = 99;
@@ -249,6 +289,7 @@ void test_bounds_invalid_values_and_safe_layouts() {
     config.voices[0].level = 4.0F;
     synth_a.configure(config);
     const auto& bounded = synth_a.config().voices[0];
+    assert(synth_a.config().tracking_mode == FractalSynthTrackingMode::Guitar);
     assert(bounded.tracking == FractalSynthTracking::Off);
     assert(bounded.waveform == FractalSynthWaveform::Off);
     assert(bounded.frequency_hz == 440.0F);
@@ -290,6 +331,17 @@ void test_process_does_not_allocate() {
     for (const float sample : audio) {
         assert(std::isfinite(sample));
     }
+
+    config.tracking_mode = FractalSynthTrackingMode::Bass;
+    synth_a.reset();
+    synth_a.configure(config);
+    fill_sine(audio, 23.125F, 0.5F);
+    allocation_count.store(0U, std::memory_order_relaxed);
+    synth_a.process(audio, 1U);
+    assert(allocation_count.load(std::memory_order_relaxed) == 0U);
+    for (const float sample : audio) {
+        assert(std::isfinite(sample));
+    }
 }
 
 }  // namespace
@@ -318,6 +370,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     test_manual_frequency_shift_tuning_and_waveforms();
     test_tracker_pitch_env_only_and_quantize();
+    test_guitar_default_and_bass_tracking_range();
     test_filter_and_stereo_pan();
     test_noise_waveforms_are_finite_and_repeatable_after_reset();
     test_bounds_invalid_values_and_safe_layouts();

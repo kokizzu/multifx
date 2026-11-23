@@ -960,7 +960,7 @@ public:
 
     void configure_rhythm_tap_delay(const float* values,
                                     std::uint32_t value_count) noexcept {
-        constexpr std::uint32_t kParameterCount = 33U;
+        constexpr std::uint32_t kParameterCount = 34U;
         if (values == nullptr || value_count != kParameterCount) return;
         auto* delay = static_cast<tabletfx::RhythmTapDelay*>(
             effects_[75].effect.get());
@@ -1927,6 +1927,9 @@ public:
                 value, static_cast<float>(minimum), static_cast<float>(maximum))));
         };
         tabletfx::effects::FractalThreeVoiceSynthConfig config;
+        config.tracking_mode =
+            static_cast<tabletfx::effects::FractalSynthTrackingMode>(
+                selector(values[33U], 1U));
         for (std::size_t voice = 0; voice < config.voices.size(); ++voice) {
             const std::size_t offset = voice * 11U;
             auto& parameters = config.voices[voice];
