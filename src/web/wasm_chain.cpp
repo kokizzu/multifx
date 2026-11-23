@@ -380,6 +380,9 @@ public:
         effects_.push_back({std::make_unique<tabletfx::effects::PolySustain>(
                                 static_cast<float>(sample_rate), channels),
                             false});
+        effects_.push_back({std::make_unique<tabletfx::StepFilterDelay>(
+                                static_cast<float>(sample_rate), channels, 2000.0F),
+                            false});
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
@@ -1230,6 +1233,45 @@ public:
             tabletfx::effects::PolySustainOperation>(
                 std::min(operation, 2U));
         static_cast<tabletfx::effects::PolySustain*>(effects_[91].effect.get())
+            ->configure(parameters);
+    }
+
+    void configure_step_filter_delay(const float* values,
+                                     std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 33U) return;
+        const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(std::clamp(
+                std::round(value), 0.0F, static_cast<float>(maximum)));
+        };
+        tabletfx::StepFilterDelayParameters parameters;
+        parameters.delay_time_ms = values[0];
+        parameters.delay_tempo_sync = std::isfinite(values[1]) && values[1] >= 0.5F;
+        parameters.delay_division = static_cast<tabletfx::DelayDivision>(
+            enum_index(values[2], static_cast<std::uint32_t>(
+                tabletfx::DelayDivision::sixty_fourth)));
+        parameters.step_tempo_sync = std::isfinite(values[3]) && values[3] >= 0.5F;
+        parameters.tempo_bpm = values[4];
+        parameters.step_division = static_cast<tabletfx::DelayDivision>(
+            enum_index(values[5], static_cast<std::uint32_t>(
+                tabletfx::DelayDivision::sixty_fourth)));
+        parameters.step_rate_hz = values[6];
+        parameters.feedback = values[7];
+        parameters.mix = values[8];
+        parameters.filter_mode = static_cast<tabletfx::StepFilterDelayMode>(
+            enum_index(values[9], static_cast<std::uint32_t>(
+                tabletfx::StepFilterDelayMode::Notch)));
+        parameters.minimum_cutoff_hz = values[10];
+        parameters.maximum_cutoff_hz = values[11];
+        parameters.resonance_q = values[12];
+        parameters.depth = values[13];
+        parameters.shape = values[14];
+        parameters.smoothing_ms = values[15];
+        parameters.step_phase = values[16];
+        for (std::size_t index = 0; index < parameters.steps.size(); ++index) {
+            parameters.steps[index] = values[17U + index];
+        }
+        static_cast<tabletfx::StepFilterDelay*>(effects_[92].effect.get())
             ->configure(parameters);
     }
 
@@ -3881,6 +3923,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_poly_sustain(
         as_chain(opaque)->configure_poly_sustain(
             interval_semitones, attack_ms, decay_ms, fx_level, level_db,
             operation);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_step_filter_delay(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_step_filter_delay(values, value_count);
     }
 }
 

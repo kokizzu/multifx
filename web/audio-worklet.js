@@ -15,6 +15,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-dist");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-boost");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-panner");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "poly-sustain");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "step-filter-delay");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -759,6 +760,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     );
   }
 
+  configureStepFilterDelay(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_step_filter_delay(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   configureRhythmTapDelay(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
       return;
@@ -944,6 +956,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePitchSequence(message.value);
     } else if (message.type === "poly-sustain" && this.ready) {
       this.configurePolySustain(message.value);
+    } else if (message.type === "step-filter-delay" && this.ready) {
+      this.configureStepFilterDelay(message.value);
     } else if (message.type === "rhythm-tap-delay" && this.ready) {
       this.configureRhythmTapDelay(message.value);
     } else if (message.type === "plex-delay" && this.ready) {

@@ -93,6 +93,7 @@ const EFFECT_NAMES = [
   "Rock Box Boost · project-authored",
   "Stereo Panner · project-authored Fractal FM9-family controls",
   "Poly Sustain · project-authored Helix Stadium-inspired",
+  "Step Filter Delay · project-authored controls",
   "Output level",
   "Peak limiter",
 ];
@@ -177,6 +178,9 @@ const DEFAULT_PARAMETERS = {
     4, 0, 0, 4, 250, 120, 15, 7, 40, 80, 1, 1,
   ],
   polySustain: [0, 222, 2000, 1, 0, 0],
+  stepFilterDelay: [350, 0, 4, 1, 120, 10, 8, 0.35, 0.25, 0, 120, 6000, 0.707, 1, 0.15, 4, 0,
+    0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
+    0.24, 0.78, 0.12, 0.90, 0.38, 0.68, 0.04, 0.84],
   rhythmTapDelay: [
     4, 120, 0, 25, 0, 50, 1, 100, 0, 20000, 0.25, 0, 0,
     220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
@@ -1094,6 +1098,33 @@ const polySustainOperation = document.querySelector("#poly-sustain-operation");
 const polySustainControls = [
   polySustainInterval, polySustainAttack, polySustainDecay,
   polySustainFxLevel, polySustainLevel, polySustainOperation,
+];
+const stepFilterDelayTimeMode = document.querySelector("#step-filter-delay-time-mode");
+const stepFilterDelayTimeMs = document.querySelector("#step-filter-delay-time-ms");
+const stepFilterDelayDivision = document.querySelector("#step-filter-delay-division");
+const stepFilterDelayStepMode = document.querySelector("#step-filter-delay-step-mode");
+const stepFilterDelayStepDivision = document.querySelector("#step-filter-delay-step-division");
+const stepFilterDelayTempo = document.querySelector("#step-filter-delay-tempo-bpm");
+const stepFilterDelayStepRate = document.querySelector("#step-filter-delay-step-rate-hz");
+const stepFilterDelayFeedback = document.querySelector("#step-filter-delay-feedback");
+const stepFilterDelayMix = document.querySelector("#step-filter-delay-mix");
+const stepFilterDelayFilterMode = document.querySelector("#step-filter-delay-filter-mode");
+const stepFilterDelayMinimumCutoff = document.querySelector("#step-filter-delay-minimum-cutoff");
+const stepFilterDelayMaximumCutoff = document.querySelector("#step-filter-delay-maximum-cutoff");
+const stepFilterDelayResonanceQ = document.querySelector("#step-filter-delay-resonance-q");
+const stepFilterDelayDepth = document.querySelector("#step-filter-delay-depth");
+const stepFilterDelayShape = document.querySelector("#step-filter-delay-shape");
+const stepFilterDelaySmoothing = document.querySelector("#step-filter-delay-smoothing");
+const stepFilterDelayPhase = document.querySelector("#step-filter-delay-phase");
+const stepFilterDelaySteps = [...document.querySelectorAll("[data-step-filter-delay-step]")];
+const stepFilterDelayControls = [
+  stepFilterDelayTimeMode, stepFilterDelayTimeMs, stepFilterDelayDivision,
+  stepFilterDelayStepMode, stepFilterDelayStepDivision, stepFilterDelayTempo,
+  stepFilterDelayStepRate, stepFilterDelayFeedback, stepFilterDelayMix,
+  stepFilterDelayFilterMode, stepFilterDelayMinimumCutoff,
+  stepFilterDelayMaximumCutoff, stepFilterDelayResonanceQ, stepFilterDelayDepth,
+  stepFilterDelayShape, stepFilterDelaySmoothing, stepFilterDelayPhase,
+  ...stepFilterDelaySteps,
 ];
 const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-line]")]
   .map((row) => Object.fromEntries(
@@ -2361,6 +2392,64 @@ function updatePolySustainOptions() {
   }
 }
 
+function updateStepFilterDelayOptions() {
+  const values = [
+    Number(stepFilterDelayTimeMs.value),
+    Number(stepFilterDelayTimeMode.value),
+    Number(stepFilterDelayDivision.value),
+    Number(stepFilterDelayStepMode.value),
+    Number(stepFilterDelayTempo.value),
+    Number(stepFilterDelayStepDivision.value),
+    Number(stepFilterDelayStepRate.value),
+    Number(stepFilterDelayFeedback.value) / 100,
+    Number(stepFilterDelayMix.value) / 100,
+    Number(stepFilterDelayFilterMode.value),
+    Number(stepFilterDelayMinimumCutoff.value),
+    Number(stepFilterDelayMaximumCutoff.value),
+    Number(stepFilterDelayResonanceQ.value),
+    Number(stepFilterDelayDepth.value) / 100,
+    Number(stepFilterDelayShape.value) / 100,
+    Number(stepFilterDelaySmoothing.value),
+    Number(stepFilterDelayPhase.value) / 100,
+    ...stepFilterDelaySteps.map((control) => Number(control.value) / 100),
+  ];
+  DEFAULT_PARAMETERS.stepFilterDelay = values;
+  const show = (control, value) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = value;
+  };
+  const divisions = [
+    "Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
+    "Quarter triplet", "Dotted eighth", "Eighth", "Eighth triplet",
+    "Dotted sixteenth", "Sixteenth", "Sixteenth triplet", "Thirty-second",
+    "Sixty-fourth",
+  ];
+  const modes = ["Low-pass", "Band-pass", "High-pass", "Notch"];
+  show(stepFilterDelayTimeMode, values[1] ? "Tempo sync" : "Free");
+  show(stepFilterDelayTimeMs, `${values[0]} ms`);
+  show(stepFilterDelayDivision, divisions[values[2]] || "Quarter");
+  show(stepFilterDelayStepMode, values[3] ? "Tempo sync" : "Free rate");
+  show(stepFilterDelayStepDivision, divisions[values[5]] || "Sixteenth");
+  show(stepFilterDelayTempo, `${values[4]} BPM`);
+  show(stepFilterDelayStepRate, `${values[6].toFixed(2)} Hz`);
+  show(stepFilterDelayFeedback, `${Math.round(values[7] * 100)}%`);
+  show(stepFilterDelayMix, `${Math.round(values[8] * 100)}%`);
+  show(stepFilterDelayFilterMode, modes[values[9]] || "Low-pass");
+  show(stepFilterDelayMinimumCutoff, `${values[10].toLocaleString("en-US")} Hz`);
+  show(stepFilterDelayMaximumCutoff, `${values[11].toLocaleString("en-US")} Hz`);
+  show(stepFilterDelayResonanceQ, values[12].toFixed(3));
+  show(stepFilterDelayDepth, `${Math.round(values[13] * 100)}%`);
+  show(stepFilterDelayShape, `${Math.round(values[14] * 100)}%`);
+  show(stepFilterDelaySmoothing, `${values[15]} ms`);
+  show(stepFilterDelayPhase, `${Math.round(values[16] * 100)}%`);
+  stepFilterDelaySteps.forEach((control, index) => {
+    show(control, `${Math.round(values[17 + index] * 100)}%`);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "step-filter-delay", value: values });
+  }
+}
+
 function updateMultiDelayOptions() {
   const sampleRate = audioContext?.sampleRate || 48000;
   const topology = Number(multiDelayTopology.value);
@@ -3184,6 +3273,14 @@ for (const control of polySustainControls) {
   }
 }
 updatePolySustainOptions();
+for (const control of stepFilterDelayControls) {
+  control.addEventListener(control.type === "range" ? "input" : "change",
+    updateStepFilterDelayOptions);
+  if (control.type === "range") {
+    control.addEventListener("change", updateStepFilterDelayOptions);
+  }
+}
+updateStepFilterDelayOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -7715,6 +7812,104 @@ async function runPolySustainBrowserSmokeTest(reference, captureView, captureBuf
   }
 }
 
+async function runStepFilterDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = stepFilterDelayControls.map((control) => control.value);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Step Filter Delay browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    stepFilterDelayTimeMode.value = "0";
+    stepFilterDelayTimeMs.value = "20";
+    stepFilterDelayDivision.value = "4";
+    stepFilterDelayStepMode.value = "0";
+    stepFilterDelayStepDivision.value = "10";
+    stepFilterDelayTempo.value = "120";
+    stepFilterDelayStepRate.value = "8";
+    stepFilterDelayFeedback.value = "0";
+    stepFilterDelayMix.value = "100";
+    stepFilterDelayFilterMode.value = "0";
+    stepFilterDelayMinimumCutoff.value = "120";
+    stepFilterDelayMaximumCutoff.value = "6000";
+    stepFilterDelayResonanceQ.value = "0.707";
+    stepFilterDelayDepth.value = "100";
+    stepFilterDelayShape.value = "15";
+    stepFilterDelaySmoothing.value = "0";
+    stepFilterDelayPhase.value = "0";
+    stepFilterDelaySteps.forEach((control, index) => {
+      control.value = String([0, 72, 18, 88, 32, 62, 8, 96,
+        24, 78, 12, 90, 38, 68, 4, 84][index]);
+    });
+    updateStepFilterDelayOptions();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = false;
+      workletNode.port.postMessage({ type: "enable", index, value: false });
+    });
+    checkboxes[92].click();
+    if (!checkboxes[92].checked) {
+      throw new Error("Step Filter Delay picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const frames = Math.min(decodedAudio.length,
+      Math.floor(actual.length / reference.channels));
+    for (let frame = 0; frame < frames; frame += 1) {
+      for (let channel = 0; channel < reference.channels; channel += 1) {
+        const value = actual[frame * reference.channels + channel];
+        peak = Math.max(peak, Math.abs(value));
+        if (Math.abs(value) > 1e-6) activeSamples += 1;
+        const source = decodedAudio.getChannelData(
+          Math.min(channel, decodedAudio.numberOfChannels - 1),
+        )[frame];
+        const difference = value - source;
+        differenceSquares += difference * difference;
+      }
+    }
+    const differenceRms = Math.sqrt(
+      differenceSquares / Math.max(1, frames * reference.channels),
+    );
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-5) {
+      throw new Error(`Step Filter Delay produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return { enabledEffectIndex: 92, delayMs: 20, steps: stepFilterDelaySteps.length,
+      peak, activeSamples, differenceRms };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      stepFilterDelayControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateStepFilterDelayOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStereoCrossoverBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = Object.values(stereoCrossoverControls)
@@ -8288,8 +8483,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 94 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 94 || effectRows.length !== 94 ||
+      const expectedEffectIds = Array.from({ length: 95 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 95 || effectRows.length !== 95 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -8329,7 +8524,10 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[91]?.startsWith("Poly Sustain") ||
               effectRows[91]?.dataset.category !== "delay" ||
               effectRows[91]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
-              EFFECT_NAMES[92] !== "Output level" || EFFECT_NAMES[93] !== "Peak limiter" ||
+              !EFFECT_NAMES[92]?.startsWith("Step Filter Delay") ||
+              effectRows[92]?.dataset.category !== "delay" ||
+              effectRows[92]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+              EFFECT_NAMES[93] !== "Output level" || EFFECT_NAMES[94] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -8343,7 +8541,8 @@ async function runBrowserSelfTest() {
                   initialEffectState[86] || initialEffectState[87] ||
                    initialEffectState[88] || initialEffectState[89] ||
                    initialEffectState[90] || initialEffectState[91] ||
-                   !initialEffectState[92] || !initialEffectState[93] ||
+                   initialEffectState[92] ||
+                   !initialEffectState[93] || !initialEffectState[94] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -8360,7 +8559,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-         throw new Error("The effect picker must list 94 ordered, categorized effects (IDs 0–93), with Asheville Pattrn in Filters & wah, both Rock Box processors in Drive & fuzz, Stereo Panner in Modulation, and Poly Sustain in Delay; optional effects must be disabled by default.");
+          throw new Error("The effect picker must list 95 ordered, categorized effects (IDs 0–94), with Asheville Pattrn in Filters & wah, both Rock Box processors in Drive & fuzz, Stereo Panner in Modulation, and Poly Sustain and Step Filter Delay in Delay; optional effects must be disabled by default.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -9326,7 +9525,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 94" ||
+         if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Vocal FX picker mismatch: IDs=${vocalIds.join(",")}; count=${effectCount.value}; chainStatePreserved=${JSON.stringify(enabledEffects()) === JSON.stringify(initialEffectState)}.`);
     }
@@ -9335,7 +9534,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
          if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83,90" ||
-                   effectCount.value !== "16 of 94" ||
+                   effectCount.value !== "16 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -9343,8 +9542,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,93" ||
-                   effectCount.value !== "9 of 94" ||
+              if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,94" ||
+                   effectCount.value !== "9 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -9353,7 +9552,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
          if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85,88,89" ||
-                   effectCount.value !== "13 of 94" ||
+                   effectCount.value !== "13 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include the distortion, boost, fuzz, crusher, and three-stage processors while preserving the current chain state.");
     }
@@ -9457,7 +9656,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 94" ||
+                if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 95" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -9466,7 +9665,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
      if (filterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-                    effectCount.value !== "8 of 94" ||
+                    effectCount.value !== "8 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -9474,7 +9673,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 94" ||
+                if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -9482,7 +9681,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 94" ||
+                if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -9490,7 +9689,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 94" ||
+                if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -9498,7 +9697,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 94" ||
+                if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
     }
@@ -9506,7 +9705,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 94" ||
+                if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -9514,7 +9713,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 94" ||
+                if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -9531,7 +9730,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const crossoverIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 94" ||
+     if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Crossover category must list the XVR-inspired stage and preserve chain state.");
     }
@@ -9540,7 +9739,7 @@ async function runBrowserSelfTest() {
     const ashevilleFilterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (ashevilleFilterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-         effectCount.value !== "8 of 94" ||
+         effectCount.value !== "8 of 95" ||
         effectRows[87]?.dataset.category !== "filter" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filters & wah must include Asheville Pattrn at ID 87 and preserve chain state.");
@@ -9580,7 +9779,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91" || effectCount.value !== "17 of 94" ||
+             if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91,92" || effectCount.value !== "18 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -9588,7 +9787,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 94" ||
+                if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 95" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
     }
@@ -9630,12 +9829,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 94") {
+              if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 95") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-           if (effectCount.value !== "94 of 94" || effectRows.some((row) => row.hidden)) {
+           if (effectCount.value !== "95 of 95" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -9849,13 +10048,14 @@ async function runBrowserSelfTest() {
        parityEnabled[89] = false;
     // Stereo Panner is verified by its dedicated local stereo guitar smoke.
     parityEnabled[90] = false;
-    // Poly Sustain has no offline CLI reference path yet.
+    // Poly Sustain and Step Filter Delay have no offline CLI reference path yet.
     parityEnabled[91] = false;
+    parityEnabled[92] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-         if (parityEnabled.length !== 94 || activeProcessorIndices.length !== 71 ||
+         if (parityEnabled.length !== 95 || activeProcessorIndices.length !== 71 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 86) {
            throw new Error("The all-effect chain must contain 71 optional processors between input trim and output utilities.");
     }
@@ -10528,6 +10728,10 @@ async function runBrowserSelfTest() {
     testResult.textContent = "Checking Phrase Looper threshold-triggered recording…";
     const phraseLooperAutoRecordSmoke =
       await runPhraseLooperAutoRecordBrowserSmokeTest();
+    testResult.textContent = "Checking Step Filter Delay playback on local guitar audio…";
+    const stepFilterDelaySmoke = await runStepFilterDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking the free-running browser note generator…";
     stopSource(false);
     for (let index = 0; index < EFFECT_NAMES.length; index += 1) {
@@ -10670,6 +10874,7 @@ async function runBrowserSelfTest() {
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,
       phraseLooperAutoRecord: phraseLooperAutoRecordSmoke,
+      stepFilterDelay: stepFilterDelaySmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

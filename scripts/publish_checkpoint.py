@@ -1105,6 +1105,24 @@ POLY_SUSTAIN_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+STEP_FILTER_DELAY_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/step_filter_delay.hpp",
+    "src/effects/step_filter_delay.cpp",
+    "tests/test_step_filter_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/octave_fuzz.hpp",
     "src/effects/octave_fuzz.cpp",
@@ -1940,6 +1958,10 @@ CHECKPOINTS = {
                  "feat: add categorized stereo enhancer"),
     "poly-sustain": (POLY_SUSTAIN_CHECKPOINT_PATHS,
                      "feat: add categorized Poly Sustain-inspired hold"),
+    "step-filter-delay": (
+        STEP_FILTER_DELAY_CHECKPOINT_PATHS,
+        "feat: add categorized Step Filter Delay",
+    ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),
     "cloud-reverb": (CLOUD_REVERB_CHECKPOINT_PATHS,
