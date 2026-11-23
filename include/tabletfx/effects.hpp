@@ -10,6 +10,7 @@
 #include "tabletfx/effects/note_generator.hpp"
 #include "tabletfx/effects/octobot.hpp"
 #include "tabletfx/effects/octave_fuzz.hpp"
+#include "tabletfx/effects/rock_box_dist.hpp"
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/tape_echo.hpp"
 #include "tabletfx/effects/fractal_three_voice_synth.hpp"

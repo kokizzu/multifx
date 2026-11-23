@@ -57,6 +57,7 @@
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/tape_echo.hpp"
 #include "tabletfx/effects/octave_fuzz.hpp"
+#include "tabletfx/effects/rock_box_dist.hpp"
 #include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -102,7 +103,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(88);
+        effects_.reserve(89);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -363,6 +364,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ProjectAshevillePattrn>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::RockBoxDistortion>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -1907,6 +1911,17 @@ public:
             ->configure(parameters);
     }
 
+    void configure_rock_box_dist(float drive, float tone, float level_db,
+                                 float smoothing_ms) noexcept {
+        tabletfx::RockBoxDistortionParameters parameters;
+        parameters.drive = drive;
+        parameters.tone = tone;
+        parameters.level_db = level_db;
+        parameters.smoothing_ms = smoothing_ms;
+        static_cast<tabletfx::RockBoxDistortion*>(effects_[88U].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_stereo_crossover(const float* values) noexcept {
         if (values == nullptr) return;
         tabletfx::StereoCrossoverParameters parameters;
@@ -3363,6 +3378,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_octave_fuzz(
     std::uint32_t octave_switch) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_octave_fuzz(boost, volume, octave_switch);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_rock_box_dist(
+    void* opaque, float drive, float tone, float level_db,
+    float smoothing_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_rock_box_dist(
+            drive, tone, level_db, smoothing_ms);
     }
 }
 

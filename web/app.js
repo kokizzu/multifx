@@ -89,11 +89,13 @@ const EFFECT_NAMES = [
   "Octave Fuzz · project-authored Fender control roles",
   "Stereo Crossover · project-authored Fractal XVR-inspired controls",
   "Asheville Pattrn · project-authored filter bank",
+  "Rock Box Dist · project-authored",
   "Output level",
   "Peak limiter",
 ];
 const DEFAULT_PARAMETERS = {
   octaveFuzz: [0.55, 0.75, 1],
+  rockBoxDistortion: [0.5, 0.5, 0, 10],
   stereoCrossover: {
     frequencyHz: 500,
     frequencyMultiplier: "x1",
@@ -481,6 +483,12 @@ const octaveFuzzControls = [
   document.querySelector("#octave-fuzz-boost"),
   document.querySelector("#octave-fuzz-volume"),
   document.querySelector("#octave-fuzz-octave-switch"),
+];
+const rockBoxDistControls = [
+  document.querySelector("#rock-box-dist-drive"),
+  document.querySelector("#rock-box-dist-tone"),
+  document.querySelector("#rock-box-dist-level-db"),
+  document.querySelector("#rock-box-dist-smoothing-ms"),
 ];
 const stereoCrossoverControls = {
   frequencyHz: document.querySelector("#stereo-crossover-frequency-hz"),
@@ -3390,6 +3398,28 @@ for (const control of octaveFuzzControls) {
   control.addEventListener("change", updateOctaveFuzz);
 }
 updateOctaveFuzz();
+
+function updateRockBoxDist() {
+  const values = rockBoxDistControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.rockBoxDistortion = values;
+  rockBoxDistControls[0].parentElement.querySelector("output").value =
+    `${Math.round(values[0] * 100)}%`;
+  rockBoxDistControls[1].parentElement.querySelector("output").value =
+    `${Math.round(values[1] * 100)}%`;
+  rockBoxDistControls[2].parentElement.querySelector("output").value =
+    `${values[2].toFixed(1)} dB`;
+  rockBoxDistControls[3].parentElement.querySelector("output").value =
+    `${values[3].toFixed(0)} ms`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "rock-box-dist", value: values });
+  }
+}
+
+for (const control of rockBoxDistControls) {
+  control.addEventListener("input", updateRockBoxDist);
+  control.addEventListener("change", updateRockBoxDist);
+}
+updateRockBoxDist();
 
 function updateStereoCrossover() {
   const values = {
@@ -7136,6 +7166,77 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
   }
 }
 
+async function runRockBoxDistBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = rockBoxDistControls.map((control) => control.value);
+  const testEnabled = previousEffectState.map((_, index) => index === 88);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Rock Box Dist smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [rockBoxDistControls[0].value, rockBoxDistControls[1].value,
+      rockBoxDistControls[2].value, rockBoxDistControls[3].value] =
+      ["0.72", "0.32", "-3", "0"];
+    updateRockBoxDist();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Rock Box Dist playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    for (let index = 0; index < actual.length; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = Math.sqrt(differenceSquares / Math.max(1, actual.length));
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-5) {
+      throw new Error(`Rock Box Dist produced no measurable guitar output (peak ${peak}, active samples ${activeSamples}, difference RMS ${differenceRms}).`);
+    }
+    return { peak, activeSamples, differenceRms, enabledEffectIndex: 88,
+      drive: 0.72, tone: 0.32, levelDb: -3 };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      rockBoxDistControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateRockBoxDist();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStereoCrossoverBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = Object.values(stereoCrossoverControls)
@@ -7613,8 +7714,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 90 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 90 || effectRows.length !== 90 ||
+      const expectedEffectIds = Array.from({ length: 91 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 91 || effectRows.length !== 91 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -7642,7 +7743,10 @@ async function runBrowserSelfTest() {
              !EFFECT_NAMES[87]?.startsWith("Asheville Pattrn") ||
              effectRows[87]?.dataset.category !== "filter" ||
              effectRows[87]?.querySelector(".effect-category-tag")?.textContent !== "Filters & wah" ||
-             EFFECT_NAMES[88] !== "Output level" || EFFECT_NAMES[89] !== "Peak limiter" ||
+             !EFFECT_NAMES[88]?.startsWith("Rock Box Dist") ||
+             effectRows[88]?.dataset.category !== "drive" ||
+             effectRows[88]?.querySelector(".effect-category-tag")?.textContent !== "Drive & fuzz" ||
+             EFFECT_NAMES[89] !== "Output level" || EFFECT_NAMES[90] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -7654,7 +7758,8 @@ async function runBrowserSelfTest() {
                 initialEffectState[82] || initialEffectState[83] ||
                  initialEffectState[84] || initialEffectState[85] ||
                   initialEffectState[86] || initialEffectState[87] ||
-                  !initialEffectState[88] || !initialEffectState[89] ||
+                  initialEffectState[88] || !initialEffectState[89] ||
+                  !initialEffectState[90] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -7671,8 +7776,19 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 90 ordered, categorized effects (IDs 0–89), with Asheville Pattrn in Filters & wah and optional effects disabled by default.");
+        throw new Error("The effect picker must list 91 ordered, categorized effects (IDs 0–90), with Asheville Pattrn in Filters & wah, Rock Box Dist in Drive & fuzz, and optional effects disabled by default.");
      }
+      const rockBoxDistRanges = [
+        [rockBoxDistControls[0], "0", "1"],
+        [rockBoxDistControls[1], "0", "1"],
+        [rockBoxDistControls[2], "-24", "12"],
+        [rockBoxDistControls[3], "0", "1000"],
+      ];
+      if (DEFAULT_PARAMETERS.rockBoxDistortion.join(",") !== "0.5,0.5,0,10" ||
+          rockBoxDistRanges.some(([control, minimum, maximum]) =>
+            control.min !== minimum || control.max !== maximum)) {
+        throw new Error("Rock Box Dist must expose the project-authored defaults and bounded Drive, Tone, Level, and smoothing controls.");
+      }
       const ashevilleRanges = [
         [ashevillePattrnDrive, "0", "18"],
         [ashevillePattrnOutput, "-24", "12"],
@@ -8580,7 +8696,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 90" ||
+          if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Vocal FX picker mismatch: IDs=${vocalIds.join(",")}; count=${effectCount.value}; chainStatePreserved=${JSON.stringify(enabledEffects()) === JSON.stringify(initialEffectState)}.`);
     }
@@ -8589,7 +8705,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
         if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83" ||
-                  effectCount.value !== "15 of 90" ||
+                  effectCount.value !== "15 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -8597,8 +8713,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-            if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,89" ||
-                  effectCount.value !== "9 of 90" ||
+            if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,90" ||
+                  effectCount.value !== "9 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -8606,8 +8722,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85" ||
-                  effectCount.value !== "11 of 90" ||
+        if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85,88" ||
+                  effectCount.value !== "12 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include the distortion, boost, fuzz, crusher, and three-stage processors while preserving the current chain state.");
     }
@@ -8711,7 +8827,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 90" ||
+              if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 91" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -8720,7 +8836,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
      if (filterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-                  effectCount.value !== "8 of 90" ||
+                  effectCount.value !== "8 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -8728,7 +8844,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 90" ||
+              if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -8736,7 +8852,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 90" ||
+              if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -8744,7 +8860,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 90" ||
+              if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -8752,7 +8868,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 90" ||
+              if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
     }
@@ -8760,7 +8876,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 90" ||
+              if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -8768,7 +8884,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-              if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 90" ||
+              if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -8776,7 +8892,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const crossoverIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 90" ||
+    if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Crossover category must list the XVR-inspired stage and preserve chain state.");
     }
@@ -8785,7 +8901,7 @@ async function runBrowserSelfTest() {
     const ashevilleFilterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     if (ashevilleFilterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
-        effectCount.value !== "8 of 90" ||
+        effectCount.value !== "8 of 91" ||
         effectRows[87]?.dataset.category !== "filter" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("Filters & wah must include Asheville Pattrn at ID 87 and preserve chain state.");
@@ -8825,7 +8941,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-           if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 90" ||
+            if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -8833,7 +8949,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 90" ||
+              if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 91" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
     }
@@ -8875,12 +8991,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-           if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 90") {
+            if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 91") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-         if (effectCount.value !== "90 of 90" || effectRows.some((row) => row.hidden)) {
+          if (effectCount.value !== "91 of 91" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -9088,11 +9204,13 @@ async function runBrowserSelfTest() {
       parityEnabled[85] = false;
      // Asheville Pattrn has a separate isolated prerecorded-audio regression.
      parityEnabled[87] = false;
+      // Rock Box Dist has its own local Play smoke and native unit regression.
+      parityEnabled[88] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-       if (parityEnabled.length !== 90 || activeProcessorIndices.length !== 71 ||
+       if (parityEnabled.length !== 91 || activeProcessorIndices.length !== 71 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 86) {
           throw new Error("The all-effect chain must contain 71 optional processors between input trim and output utilities.");
     }
@@ -9714,6 +9832,10 @@ async function runBrowserSelfTest() {
       const octaveFuzzSmoke = await runOctaveFuzzBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
+    testResult.textContent = "Checking Rock Box Dist playback on local guitar audio…";
+    const rockBoxDistSmoke = await runRockBoxDistBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Stereo Crossover playback on local guitar audio…";
     const stereoCrossoverSmoke = await runStereoCrossoverBrowserSmokeTest(
       reference, captureView, captureBuffer,

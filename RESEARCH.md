@@ -1,5 +1,13 @@
 # Research and source audit
 
+## Line 6 Helix Stadium XL Rock Box Dist category implementation (2026-11-23)
+
+The official [Helix Stadium 1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes) document Rock Box Dist with Drive, Tone, and Level. They describe lower Tone as darker and higher Tone as brighter, but publish no numeric ranges, defaults, or DSP topology. The Line 6 model list identifies it as a Stadium Drive model based on Z.Vex Box of Rock; this does not establish circuit or sound parity.
+
+TabletFX adds a project-authored Drive & fuzz effect at picker index 88. It uses normalized Drive and Tone controls, Level −24…+12 dB, and an additional project-only smoothing control (0…1,000 ms). The processing is a driven soft clipper followed by a one-pole low-pass tone stage, with fixed-size mono/stereo state and no process-time allocation. All values, ranges, smoothing, and DSP are project choices. The WebAssembly chain and browser picker expose the same stage; the picker comparison control includes it under Drive & fuzz.
+
+`make test` passed 94/94 CTest cases and 11 fixture-safety checks; `make web-build`, `make web-browser-test`, `make inspect-effect-picker`, and `make diff-check` passed. The browser test reports a 71-stage shared native/browser comparison at 48 kHz with maximum absolute error 0.0000134999 and RMS error 0.0000027541; isolated browser Play smoke checks also complete in the test. The categorized picker has 91 rows, including Rock Box Dist at index 88. These checks do not establish Line 6/Z.Vex DSP or sound parity, isolated CPU, human listening, or device behavior.
+
 Research baseline: `GOAL.md` was supplied with a source bibliography dated 20 November 2026. Its product-reference and component tables are research leads, not evidence that this repository has integrated or revalidated those sources.
 
 ## Required audit before adoption
@@ -402,7 +410,7 @@ The official [Helix Stadium effects manual](https://manuals.line6.com/en/helix-s
 
 TabletFX's Vibe now exposes Free Hz and Tempo Note. Tempo-note mode uses a manually supplied local Project Tempo (20–300 BPM) and twelve project-authored divisions from whole note through sixteenth triplet. Its effective-rate bounds are 0.05–30 Hz. The controls do not receive shared tap tempo, song tempo, or MIDI clock; their range, division mapping, all-pass DSP and LFO behavior remain project-authored.
 
-`make test` passed 93/93 CTest cases plus 11 audio-fixture safety tests, and `make web-build` succeeded. `make web-browser-test` ran the Vibe control self-check and local-guitar Play smoke before failing later at the separate Stereo Crossover/native comparison (maximum difference 0.1370434; RMS difference 0.00442192). Therefore the browser target as a whole remains failing; no Line 6 parity, listening, hardware, or isolated CPU result is established.
+`make test` passed 93/93 CTest cases plus 11 audio-fixture safety tests, and `make web-build` succeeded. An earlier `make web-browser-test` attempt ran the Vibe control self-check and local-guitar Play smoke before failing at the separate Stereo Crossover/native comparison (maximum difference 0.1370434; RMS difference 0.00442192). That failure did not reproduce in the later full browser run documented in the Rock Box Dist entry below; the earlier cause is not established. No Line 6 parity, listening, hardware, or isolated CPU result is established.
 
 ## Fractal FM9 Plex Delay / project Plex Matrix Delay (DLY-25, 2026-11-22)
 

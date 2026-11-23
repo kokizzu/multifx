@@ -11,6 +11,7 @@ const EFFECTS = [
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "octave-fuzz");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-crossover");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "asheville-pattrn");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "rock-box-dist");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -367,6 +368,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         lowPanRight: 1, highPanRight: 1,
         levelDb: 0, balance: 0,
       });
+      this.configureRockBoxDist(parameters.rockBoxDistortion ||
+        [0.5, 0.5, 0, 10]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -601,6 +604,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
     this.module._tf_chain_set_octave_fuzz(
       this.chain, Number(values[0]), Number(values[1]), Number(values[2]) ? 1 : 0,
+    );
+  }
+
+  configureRockBoxDist(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 4) {
+      return;
+    }
+    this.module._tf_chain_set_rock_box_dist(
+      this.chain, Number(values[0]), Number(values[1]),
+      Number(values[2]), Number(values[3]),
     );
   }
 
@@ -1015,6 +1028,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureTapeEcho(message.value);
     } else if (message.type === "octave-fuzz" && this.ready) {
       this.configureOctaveFuzz(message.value);
+    } else if (message.type === "rock-box-dist" && this.ready) {
+      this.configureRockBoxDist(message.value);
     } else if (message.type === "stereo-crossover" && this.ready) {
       this.configureStereoCrossover(message.value);
     } else if (message.type === "convolution-reverb" && this.ready) {

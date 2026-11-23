@@ -1707,6 +1707,25 @@ ASHEVILLE_PATTRN_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+ROCK_BOX_DIST_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/rock_box_dist.hpp",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/rock_box_dist.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_rock_box_dist.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1857,6 +1876,10 @@ CHECKPOINTS = {
     "asheville-pattrn": (
         ASHEVILLE_PATTRN_CHECKPOINT_PATHS,
         "feat: add project-authored Asheville Pattrn",
+    ),
+    "rock-box-dist": (
+        ROCK_BOX_DIST_CHECKPOINT_PATHS,
+        "feat: add categorized Rock Box Dist processor",
     ),
 }
 
