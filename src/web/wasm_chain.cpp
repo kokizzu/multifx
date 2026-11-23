@@ -2499,7 +2499,8 @@ public:
 
     void configure_ring_modulator(std::uint32_t type, float frequency_hz,
                                   float frequency_multiplier, float high_cut_hz,
-                                  float mix) noexcept {
+                                  float mix, std::uint32_t pitch_tracking,
+                                  std::uint32_t tracking_mode) noexcept {
         auto* ring_modulator =
             static_cast<tabletfx::RingModulator*>(effects_[34].effect.get());
         tabletfx::RingModulatorParameters parameters;
@@ -2508,6 +2509,12 @@ public:
         }
         parameters.frequency_hz = frequency_hz;
         parameters.frequency_multiplier = frequency_multiplier;
+        parameters.pitch_tracking = pitch_tracking != 0U;
+        if (tracking_mode <= static_cast<std::uint32_t>(
+                                 tabletfx::RingModulatorTrackingMode::bass)) {
+            parameters.tracking_mode =
+                static_cast<tabletfx::RingModulatorTrackingMode>(tracking_mode);
+        }
         parameters.high_cut_hz = high_cut_hz;
         parameters.mix = mix;
         ring_modulator->set_parameters(parameters);
@@ -3254,10 +3261,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_rotary_speaker(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_ring_modulator(
     void* opaque, std::uint32_t type, float frequency_hz,
-    float frequency_multiplier, float high_cut_hz, float mix) noexcept {
+    float frequency_multiplier, float high_cut_hz, float mix,
+    std::uint32_t pitch_tracking, std::uint32_t tracking_mode) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ring_modulator(
-            type, frequency_hz, frequency_multiplier, high_cut_hz, mix);
+            type, frequency_hz, frequency_multiplier, high_cut_hz, mix,
+            pitch_tracking, tracking_mode);
     }
 }
 

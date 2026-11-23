@@ -237,15 +237,23 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           0.75, 1, 0.55, 0.5, 0.72, 800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0];
         module._tf_chain_set_rotary_speaker(this.chain, ...rotarySpeaker);
        const ringModulator = Array.from(
-         parameters.ringModulator || [0, 440, 1, 20000, 1],
+         parameters.ringModulator || [0, 440, 1, 20000, 1, 0, 0],
        );
+       const ringModValues = ringModulator.length === 4
+         ? [0, ...ringModulator, 0, 0]
+         : ringModulator.length === 5
+           ? [...ringModulator, 0, 0]
+           : ringModulator.length === 6
+             ? [...ringModulator, 0]
+             : ringModulator;
        const [ringModType, ringModFrequencyHz, ringModMultiplier,
-         ringModHighCutHz, ringModMix] = ringModulator.length === 4
-         ? [0, ...ringModulator]
-         : ringModulator;
+         ringModHighCutHz, ringModMix, ringModPitchTracking,
+         ringModTrackingMode] = ringModValues;
        module._tf_chain_set_ring_modulator(
          this.chain, Math.max(0, Math.min(2, Math.trunc(ringModType))),
          ringModFrequencyHz, ringModMultiplier, ringModHighCutHz, ringModMix,
+         Math.max(0, Math.min(1, Math.trunc(ringModPitchTracking))),
+         Math.max(0, Math.min(1, Math.trunc(ringModTrackingMode))),
        );
         const rhythmicSlicer = parameters.rhythmicSlicer || [
           1, 120, 8, 8, 1, 0.15, 1, 1, 0,
@@ -1066,11 +1074,20 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_rotary_speaker(this.chain, ...message.value);
     } else if (message.type === "ring-modulator" && this.ready) {
       const values = Array.from(message.value);
-      const [type, frequencyHz, frequencyMultiplier, highCutHz, mix] =
-        values.length === 4 ? [0, ...values] : values;
+      const ringModValues = values.length === 4
+        ? [0, ...values, 0, 0]
+        : values.length === 5
+          ? [...values, 0, 0]
+          : values.length === 6
+            ? [...values, 0]
+            : values;
+      const [type, frequencyHz, frequencyMultiplier, highCutHz, mix,
+        pitchTracking, trackingMode] = ringModValues;
       this.module._tf_chain_set_ring_modulator(
         this.chain, Math.max(0, Math.min(2, Math.trunc(type))),
         frequencyHz, frequencyMultiplier, highCutHz, mix,
+        Math.max(0, Math.min(1, Math.trunc(pitchTracking))),
+        Math.max(0, Math.min(1, Math.trunc(trackingMode))),
       );
       } else if (message.type === "rhythmic-slicer" && this.ready) {
         this.module._tf_chain_set_rhythmic_slicer(this.chain, ...message.value);

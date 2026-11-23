@@ -15,6 +15,7 @@ PUBLISH_CHECKPOINTS := \
 PUBLISH_CHECKPOINTS += volume-pan
 PUBLISH_CHECKPOINTS += stereo-filter
 PUBLISH_CHECKPOINTS += step-tremolo
+PUBLISH_CHECKPOINTS += fractal-ring-mod-tracking
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

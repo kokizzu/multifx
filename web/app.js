@@ -251,7 +251,7 @@ const DEFAULT_PARAMETERS = {
   autoSwell: [-36, 250, 250, 6, 6, 1],
   rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
     800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
-  ringModulator: [0, 440, 1, 20000, 1],
+  ringModulator: [0, 440, 1, 20000, 1, 0, 0],
   rhythmicSlicer: [1, 120, 8, 8, 1, 0.15, 1, 1, 0,
     1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
   stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
@@ -1508,6 +1508,8 @@ const ringModHighCut = document.querySelector("#ring-mod-high-cut-hz");
 const ringModHighCutValue = document.querySelector("#ring-mod-high-cut-hz-value");
 const ringModMix = document.querySelector("#ring-mod-mix");
 const ringModMixValue = document.querySelector("#ring-mod-mix-value");
+const ringModPitchTracking = document.querySelector("#ring-mod-pitch-tracking");
+const ringModTrackingMode = document.querySelector("#ring-mod-tracking-mode");
 const rhythmicSlicerTempoSync = document.querySelector("#rhythmic-slicer-tempo-sync");
 const rhythmicSlicerTempoBpm = document.querySelector("#rhythmic-slicer-tempo-bpm");
 const rhythmicSlicerTempoBpmValue = document.querySelector("#rhythmic-slicer-tempo-bpm-value");
@@ -5317,11 +5319,16 @@ function updateRingModulator() {
     Number(ringModMultiplier.value),
     Number(ringModHighCut.value),
     Number(ringModMix.value) / 100,
+    ringModPitchTracking.checked ? 1 : 0,
+    Number(ringModTrackingMode.value),
   ];
+  ringModFrequency.disabled = ringModPitchTracking.checked;
   ringModFrequencyValue.value = `${values[1].toFixed(0)} Hz`;
   ringModMultiplierValue.value = `${values[2].toFixed(2)}×`;
   ringModHighCutValue.value = `${values[3].toFixed(0)} Hz`;
   ringModMixValue.value = `${Math.round(values[4] * 100)}%`;
+  ringModPitchTracking.parentElement.querySelector("output").value =
+    ringModPitchTracking.checked ? "On" : "Off";
   DEFAULT_PARAMETERS.ringModulator = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "ring-modulator", value: values });
@@ -5762,6 +5769,8 @@ for (const input of [rotaryTempoSync, rotarySpeed, rotaryInputSelect]) {
   input.addEventListener("change", updateRotarySpeaker);
 }
 ringModType.addEventListener("change", updateRingModulator);
+ringModPitchTracking.addEventListener("change", updateRingModulator);
+ringModTrackingMode.addEventListener("change", updateRingModulator);
 for (const input of [ringModFrequency, ringModMultiplier, ringModHighCut, ringModMix]) {
   input.addEventListener("input", updateRingModulator);
   input.addEventListener("change", updateRingModulator);
@@ -7836,6 +7845,8 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
     ringModMultiplier.value,
     ringModHighCut.value,
     ringModMix.value,
+    ringModPitchTracking.checked,
+    ringModTrackingMode.value,
   ];
   try {
     await processorReady;
@@ -7848,8 +7859,11 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
     ringModMultiplier.value = "1.75";
     ringModHighCut.value = "9000";
     ringModMix.value = "100";
+    ringModPitchTracking.checked = false;
+    ringModTrackingMode.value = "0";
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
-    const capture = async (type, ringEnabled = true) => {
+    const capture = async (type, ringEnabled = true,
+      pitchTracking = false, trackingMode = 0) => {
       checkboxes.forEach((checkbox, index) => {
     const enabled = (ringEnabled && index === 34) || index === 82 || index === 83;
         checkbox.checked = enabled;
@@ -7857,6 +7871,10 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
       });
       ringModType.value = String(type);
       ringModType.dispatchEvent(new Event("change", { bubbles: true }));
+      ringModPitchTracking.checked = pitchTracking;
+      ringModTrackingMode.value = String(trackingMode);
+      ringModPitchTracking.dispatchEvent(new Event("change", { bubbles: true }));
+      ringModTrackingMode.dispatchEvent(new Event("change", { bubbles: true }));
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
       Atomics.store(captureView, 0, 0);
@@ -7929,6 +7947,21 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
       throw new Error(
         `Ring Modulator SSB Up and SSB Down did not produce distinct output: ${JSON.stringify({ ssbMaxDifference, ssbRmsDifference, ssbChangedSamples })}`);
     }
+    const tracked = await capture(0, true, true, 0);
+    let trackingDifferenceSquares = 0;
+    let trackingChangedSamples = 0;
+    for (let index = 0; index < outputs[0].length; index += 1) {
+      const difference = tracked[index] - outputs[0][index];
+      trackingDifferenceSquares += difference * difference;
+      if (Math.abs(difference) > 1e-6) trackingChangedSamples += 1;
+    }
+    const trackingRmsDifference = Math.sqrt(
+      trackingDifferenceSquares / Math.max(1, outputs[0].length),
+    );
+    if (trackingRmsDifference < 1e-5 || trackingChangedSamples < 32) {
+      throw new Error(
+        `Ring Modulator pitch tracking did not change local guitar output: ${JSON.stringify({ trackingRmsDifference, trackingChangedSamples })}`);
+    }
     return {
       enabledEffectIndex: 34,
       types: ["Classic", "SSB Up", "SSB Down"],
@@ -7937,6 +7970,8 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
       ssbUpDownRmsDifference: ssbRmsDifference,
       ssbUpDownMaxDifference: ssbMaxDifference,
       ssbUpDownChangedSamples: ssbChangedSamples,
+      pitchTrackingRmsDifference: trackingRmsDifference,
+      pitchTrackingChangedSamples: trackingChangedSamples,
     };
   } finally {
     stopSource(false);
@@ -7944,6 +7979,10 @@ async function runRingModulatorBrowserSmokeTest(reference, captureView, captureB
       workletNode.port.postMessage({ type: "active", value: false });
       [ringModType, ringModFrequency, ringModMultiplier, ringModHighCut, ringModMix]
         .forEach((control, index) => { control.value = previousControls[index]; });
+      ringModPitchTracking.checked = previousControls[5];
+      ringModPitchTracking.dispatchEvent(new Event("change", { bubbles: true }));
+      ringModTrackingMode.value = previousControls[6];
+      ringModTrackingMode.dispatchEvent(new Event("change", { bubbles: true }));
       ringModType.dispatchEvent(new Event("change", { bubbles: true }));
       [...document.querySelectorAll("[data-effect]")].forEach((checkbox, index) => {
         checkbox.checked = previousEffectState[index];

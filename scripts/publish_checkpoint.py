@@ -1911,6 +1911,22 @@ DELUXE_LOOPER_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
+    "AUDIO_COMPATIBILITY.md",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "include/tabletfx/effects/ring_modulator.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "src/effects/ring_modulator.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_ring_modulator.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2063,6 +2079,10 @@ CHECKPOINTS = {
     "fractal-three-voice-synth": (
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
         "feat: add project-authored three-voice tracked synth",
+    ),
+    "fractal-ring-mod-tracking": (
+        FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS,
+        "feat: add project-authored ring mod pitch tracking",
     ),
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,

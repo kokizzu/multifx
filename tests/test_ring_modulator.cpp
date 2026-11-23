@@ -66,6 +66,48 @@ void test_defaults_bounds_and_effective_frequency() {
             "low sample rate did not keep oscillator and high cut below Nyquist");
 }
 
+void test_pitch_tracking_guitar_and_bass_ranges() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 48000U;
+    const auto track_tone = [](const float input_frequency,
+                               const tabletfx::RingModulatorTrackingMode mode) {
+        tabletfx::RingModulatorParameters parameters;
+        parameters.frequency_hz = 440.0F;
+        parameters.frequency_multiplier = 2.0F;
+        parameters.pitch_tracking = true;
+        parameters.tracking_mode = mode;
+        parameters.high_cut_hz = 20000.0F;
+        parameters.mix = 1.0F;
+        tabletfx::RingModulator ring(sample_rate, 1U, parameters);
+        std::vector<float> audio(frames);
+        for (std::size_t frame = 0U; frame < frames; ++frame) {
+            audio[frame] = 0.5F * std::sin(
+                2.0F * std::numbers::pi_v<float> * input_frequency *
+                static_cast<float>(frame) / sample_rate);
+        }
+        ring.process(audio, 1U);
+        return std::array<float, 2>{ring.detected_input_frequency_hz(),
+                                    ring.effective_frequency_hz()};
+    };
+
+    const auto guitar = track_tone(
+        110.0F, tabletfx::RingModulatorTrackingMode::guitar);
+    require(std::abs(guitar[0] - 110.0F) < 1.5F &&
+                std::abs(guitar[1] - 220.0F) < 3.0F,
+            "Guitar pitch tracking or frequency multiplier was inaccurate");
+
+    const auto bass = track_tone(
+        30.0F, tabletfx::RingModulatorTrackingMode::bass);
+    require(std::abs(bass[0] - 30.0F) < 1.5F &&
+                std::abs(bass[1] - 60.0F) < 3.0F,
+            "Bass pitch tracking did not cover its project low-frequency range");
+
+    const auto low_guitar = track_tone(
+        30.0F, tabletfx::RingModulatorTrackingMode::guitar);
+    require(low_guitar[0] == 0.0F && std::abs(low_guitar[1] - 880.0F) < 0.01F,
+            "Guitar tracking should retain its lower bound and static fallback");
+}
+
 double tone_projection_power(const std::vector<float>& samples, float frequency_hz,
                              float sample_rate, std::size_t first_frame) {
     double in_phase = 0.0;
@@ -393,6 +435,20 @@ void test_processing_does_not_allocate() {
     const std::size_t ssb_after = allocation_count.load(std::memory_order_relaxed);
     require(ssb_after == ssb_before,
             "SSB ring modulator allocated during process()");
+
+    parameters.type = tabletfx::RingModulatorType::classic;
+    parameters.pitch_tracking = true;
+    parameters.tracking_mode = tabletfx::RingModulatorTrackingMode::bass;
+    tabletfx::RingModulator tracked(48000.0F, 2, parameters);
+    const std::size_t tracking_before =
+        allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        tracked.process(block, 2);
+    }
+    const std::size_t tracking_after =
+        allocation_count.load(std::memory_order_relaxed);
+    require(tracking_after == tracking_before,
+            "pitch-tracked ring modulator allocated during process()");
     require(std::all_of(block.begin(), block.end(),
                         [](float sample) { return std::isfinite(sample); }),
             "ring modulator emitted non-finite samples");
@@ -440,6 +496,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_effective_frequency();
+        test_pitch_tracking_guitar_and_bass_ranges();
         test_classic_modulation_mix_and_shared_stereo_phase();
         test_ssb_modes_shift_into_separate_sidebands();
         test_ssb_stereo_matches_independent_mono_paths();
