@@ -152,6 +152,9 @@ public:
     // Project-authored BBD-style coloration: bandwidth-limited, mildly saturated
     // repeats. This reuses the existing delay ring and adds no processor stage.
     void configure_bbd_style(bool enabled) noexcept;
+    // Project-authored BBD repeat mode. MOD uses a gentler repeat saturation
+    // curve; it is a qualitative interpretation, not HeadRush DSP or level matching.
+    void configure_bbd_mode(bool mod) noexcept;
     // Project-authored tape-style echo with bounded saturation and speed modulation.
     void configure_tape_echo(bool enabled, float saturation, float wow_depth_ms,
                              float wow_rate_hz, float flutter_depth_ms,
@@ -249,6 +252,10 @@ private:
     std::size_t bbd_ramp_remaining_ = 0;
     float bbd_filter_alpha_ = 0.5F;
     std::array<float, 2> bbd_filter_state_{};
+    float bbd_mod_mix_ = 0.0F;
+    float target_bbd_mod_mix_ = 0.0F;
+    float bbd_mod_mix_step_ = 0.0F;
+    std::size_t bbd_mode_ramp_remaining_ = 0;
     float tape_mix_ = 0.0F;
     float target_tape_mix_ = 0.0F;
     float tape_mix_step_ = 0.0F;

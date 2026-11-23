@@ -476,6 +476,53 @@ void test_tape_echo_modulation_saturation_and_no_allocation() {
             "tape saturation control must shape the first echo predictably");
 }
 
+void test_bbd_mod_mode_changes_repeat_saturation_without_allocating() {
+    constexpr std::size_t frames = 1200;
+    constexpr std::size_t delay_frames = 240;
+    tabletfx::Delay classic(48000.0F, 1, 20.0F, 5.0F, 0.82F, 1.0F);
+    tabletfx::Delay mod(48000.0F, 1, 20.0F, 5.0F, 0.82F, 1.0F);
+    classic.configure_bbd_style(true);
+    mod.configure_bbd_style(true);
+    mod.configure_bbd_mode(true);
+    classic.reset();
+    mod.reset();
+
+    std::array<float, frames> classic_audio{};
+    std::array<float, frames> mod_audio{};
+    classic_audio[0] = 0.95F;
+    mod_audio[0] = 0.95F;
+    classic.process(classic_audio, 1);
+    const std::size_t allocations_before = allocation_count.load(std::memory_order_relaxed);
+    mod.process(mod_audio, 1);
+    const std::size_t allocations_after = allocation_count.load(std::memory_order_relaxed);
+    require(allocations_after == allocations_before,
+            "BBD MOD repeat processing must not allocate");
+
+    double difference_energy = 0.0;
+    for (std::size_t i = 0; i < frames; ++i) {
+        require(std::isfinite(mod_audio[i]), "BBD MOD mode produced non-finite output");
+        const double difference = static_cast<double>(mod_audio[i] - classic_audio[i]);
+        difference_energy += difference * difference;
+    }
+    require(difference_energy > 1.0e-6,
+            "BBD MOD mode did not change the project repeat coloration");
+
+    const auto peak = [](const auto& samples, std::size_t begin,
+                         std::size_t end) noexcept {
+        float result = 0.0F;
+        for (std::size_t i = begin; i < end; ++i) {
+            result = std::max(result, std::abs(samples[i]));
+        }
+        return result;
+    };
+    const float classic_late = peak(classic_audio, delay_frames * 3U,
+                                   delay_frames * 4U);
+    const float mod_late = peak(mod_audio, delay_frames * 3U,
+                                delay_frames * 4U);
+    require(mod_late > classic_late,
+            "BBD MOD's gentler repeat saturation should retain more late-repeat level");
+}
+
 void test_tape_echo_character_changes_are_smoothed() {
     tabletfx::Delay delay(48000.0F, 1, 50.0F, 8.0F, 0.0F, 1.0F);
     std::array<float, 512> steady{};
@@ -705,6 +752,7 @@ int main() {
         test_multitap_route_and_tap_changes_are_smoothed();
         test_multitap_controls_clamp_and_retarget_safely();
         test_bbd_style_colors_echoes_without_allocating();
+        test_bbd_mod_mode_changes_repeat_saturation_without_allocating();
         test_tape_echo_modulation_saturation_and_no_allocation();
         test_tape_echo_character_changes_are_smoothed();
         test_tape_heads_select_spacing_and_mono_combinations();

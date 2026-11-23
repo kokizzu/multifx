@@ -313,6 +313,19 @@ void Delay::configure_bbd_style(bool enabled) noexcept {
     bbd_ramp_remaining_ = parameter_ramp_total_;
 }
 
+void Delay::configure_bbd_mode(bool mod) noexcept {
+    target_bbd_mod_mix_ = mod ? 1.0F : 0.0F;
+    if (parameter_ramp_total_ <= 1) {
+        bbd_mod_mix_ = target_bbd_mod_mix_;
+        bbd_mod_mix_step_ = 0.0F;
+        bbd_mode_ramp_remaining_ = 0;
+        return;
+    }
+    bbd_mod_mix_step_ = (target_bbd_mod_mix_ - bbd_mod_mix_) /
+                        static_cast<float>(parameter_ramp_total_);
+    bbd_mode_ramp_remaining_ = parameter_ramp_total_;
+}
+
 void Delay::configure_tape_echo(bool enabled, float saturation, float wow_depth_ms,
                                 float wow_rate_hz, float flutter_depth_ms,
                                 float flutter_rate_hz) noexcept {
@@ -751,8 +764,10 @@ float Delay::shape_delay_feedback(float value, std::uint16_t channel) noexcept {
             static_cast<double>(std::numeric_limits<float>::max()));
         const float filtered = static_cast<float>(bounded_filter);
         bbd_filter_state_[channel] = filtered;
+        const double saturation_amount = 0.08 -
+            0.04 * static_cast<double>(std::clamp(bbd_mod_mix_, 0.0F, 1.0F));
         const double saturated = static_cast<double>(filtered) /
-            (1.0 + 0.08 * std::abs(static_cast<double>(filtered)));
+            (1.0 + saturation_amount * std::abs(static_cast<double>(filtered)));
         const double blend = static_cast<double>(std::clamp(bbd_mix_, 0.0F, 1.0F));
         shaped = input + (saturated - input) * blend;
     } else {
@@ -817,6 +832,14 @@ void Delay::advance_ramps() noexcept {
         if (bbd_ramp_remaining_ == 0) {
             bbd_mix_ = target_bbd_mix_;
             bbd_mix_step_ = 0.0F;
+        }
+    }
+    if (bbd_mode_ramp_remaining_ > 0) {
+        bbd_mod_mix_ += bbd_mod_mix_step_;
+        --bbd_mode_ramp_remaining_;
+        if (bbd_mode_ramp_remaining_ == 0) {
+            bbd_mod_mix_ = target_bbd_mod_mix_;
+            bbd_mod_mix_step_ = 0.0F;
         }
     }
     if (tape_ramp_remaining_ > 0) {
@@ -1200,6 +1223,9 @@ void Delay::reset() noexcept {
     bbd_mix_step_ = 0.0F;
     bbd_ramp_remaining_ = 0;
     bbd_filter_state_ = {};
+    bbd_mod_mix_ = target_bbd_mod_mix_;
+    bbd_mod_mix_step_ = 0.0F;
+    bbd_mode_ramp_remaining_ = 0;
     tape_mix_ = target_tape_mix_;
     tape_mix_step_ = 0.0F;
     tape_ramp_remaining_ = 0;

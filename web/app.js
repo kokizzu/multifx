@@ -256,6 +256,7 @@ const DEFAULT_PARAMETERS = {
     8000, 0, 0.707, 0, 12],
   delay: [350, 0.25, 0.25],
   delayBbd: false,
+  delayBbdMode: false,
   delayTape: [0, 0.45, 0.35, 0.3, 0.08, 6],
   delayTempo: [0, 120, 4],
   delayPingPong: false,
@@ -4318,13 +4319,16 @@ function applyDelayPreset() {
 
 delayPreset.addEventListener("change", applyDelayPreset);
 function updateDelayCharacter() {
-  const bbd = delayCharacter.value === "bbd";
+  const bbd = delayCharacter.value === "bbd-classic" ||
+    delayCharacter.value === "bbd-mod";
+  const bbdMode = delayCharacter.value === "bbd-mod";
   const tapeEnabled = delayCharacter.value === "tape";
   const tape = [
     tapeEnabled ? 1 : 0,
     ...delayTapeInputs.map(({ input }) => Number(input.value)),
   ];
   DEFAULT_PARAMETERS.delayBbd = bbd;
+  DEFAULT_PARAMETERS.delayBbdMode = bbdMode;
   DEFAULT_PARAMETERS.delayTape = tape;
   delayTapeControls.hidden = !tapeEnabled;
   const [enabled, saturation, wowDepth, wowRate, flutterDepth, flutterRate] = tape;
@@ -4336,7 +4340,8 @@ function updateDelayCharacter() {
   if (workletNode) {
     workletNode.port.postMessage({
       type: "delay-character",
-      value: { bbd, tape: [enabled, saturation, wowDepth, wowRate, flutterDepth, flutterRate] },
+      value: { bbd, bbdMode,
+        tape: [enabled, saturation, wowDepth, wowRate, flutterDepth, flutterRate] },
     });
   }
 }
@@ -9554,15 +9559,17 @@ async function runBrowserSelfTest() {
     if (Math.abs(DEFAULT_PARAMETERS.delayTape[2] - 0.4) > 1e-6) {
       throw new Error("Changing the tape wow control did not update Worklet state.");
     }
-    delayCharacter.value = "bbd";
+    delayCharacter.value = "bbd-mod";
     updateDelayCharacter();
-    if (!DEFAULT_PARAMETERS.delayBbd || DEFAULT_PARAMETERS.delayTape[0] !== 0 ||
+    if (!DEFAULT_PARAMETERS.delayBbd || !DEFAULT_PARAMETERS.delayBbdMode ||
+        DEFAULT_PARAMETERS.delayTape[0] !== 0 ||
         !delayTapeControls.hidden) {
-      throw new Error("The BBD-style delay character did not update Worklet state.");
+      throw new Error("The BBD MOD mode did not update categorized delay state.");
     }
     delayCharacter.value = "digital";
     updateDelayCharacter();
-    if (DEFAULT_PARAMETERS.delayBbd || DEFAULT_PARAMETERS.delayTape[0] !== 0) {
+    if (DEFAULT_PARAMETERS.delayBbd || DEFAULT_PARAMETERS.delayBbdMode ||
+        DEFAULT_PARAMETERS.delayTape[0] !== 0) {
       throw new Error("Digital delay did not disable BBD and tape coloration.");
     }
     delayMs.value = "120";

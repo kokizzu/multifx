@@ -1216,6 +1216,11 @@ public:
             ->configure_bbd_style(enabled);
     }
 
+    void configure_delay_bbd_mode(bool mod) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_bbd_mode(mod);
+    }
+
     void configure_delay_tape_echo(bool enabled, float saturation,
                                    float wow_depth_ms, float wow_rate_hz,
                                    float flutter_depth_ms,
@@ -3775,6 +3780,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_bbd_style(
     void* opaque, std::uint32_t enabled) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_bbd_style(enabled != 0U);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_bbd_mode(
+    void* opaque, std::uint32_t mod) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_bbd_mode(mod != 0U);
     }
 }
 

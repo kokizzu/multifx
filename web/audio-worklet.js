@@ -251,6 +251,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const delay = parameters.delay || [350, 0.25, 0.25];
       module._tf_chain_set_delay(this.chain, ...delay);
       module._tf_chain_set_delay_bbd_style(this.chain, parameters.delayBbd ? 1 : 0);
+      module._tf_chain_set_delay_bbd_mode(this.chain, parameters.delayBbdMode ? 1 : 0);
       const tape = parameters.delayTape || [0, 0.45, 0.35, 0.3, 0.08, 6];
       module._tf_chain_set_delay_tape_echo(this.chain, ...tape);
       const delayTempo = parameters.delayTempo || [0, 120, 4];
@@ -1051,6 +1052,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_delay_bbd_style(this.chain, message.value ? 1 : 0);
     } else if (message.type === "delay-character" && this.ready) {
       this.module._tf_chain_set_delay_bbd_style(this.chain, message.value.bbd ? 1 : 0);
+      this.module._tf_chain_set_delay_bbd_mode(this.chain, message.value.bbdMode ? 1 : 0);
       this.module._tf_chain_set_delay_tape_echo(this.chain, ...message.value.tape);
     } else if (message.type === "delay-routing" && this.ready) {
       this.module._tf_chain_set_delay_ping_pong(this.chain, message.value ? 1 : 0);

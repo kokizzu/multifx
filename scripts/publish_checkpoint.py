@@ -1726,6 +1726,23 @@ ROCK_BOX_DIST_CHECKPOINT_PATHS = (
     "make/publish.mk",
 )
 
+HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "include/tabletfx/effects.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1880,6 +1897,10 @@ CHECKPOINTS = {
     "rock-box-dist": (
         ROCK_BOX_DIST_CHECKPOINT_PATHS,
         "feat: add categorized Rock Box Dist processor",
+    ),
+    "headrush-bbd-mode": (
+        HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,
+        "feat: add project-authored BBD delay modes",
     ),
 }
 
