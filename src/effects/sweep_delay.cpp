@@ -55,6 +55,47 @@ float bounded_sample(double value) noexcept {
         : 0.0F;
 }
 
+float beats_for_division(DelayDivision division) noexcept {
+    switch (division) {
+    case DelayDivision::whole: return 4.0F;
+    case DelayDivision::dotted_half: return 3.0F;
+    case DelayDivision::half: return 2.0F;
+    case DelayDivision::dotted_quarter: return 1.5F;
+    case DelayDivision::quarter: return 1.0F;
+    case DelayDivision::quarter_triplet: return 2.0F / 3.0F;
+    case DelayDivision::dotted_eighth: return 0.75F;
+    case DelayDivision::eighth: return 0.5F;
+    case DelayDivision::eighth_triplet: return 1.0F / 3.0F;
+    case DelayDivision::dotted_sixteenth: return 0.375F;
+    case DelayDivision::sixteenth: return 0.25F;
+    case DelayDivision::sixteenth_triplet: return 1.0F / 6.0F;
+    case DelayDivision::thirty_second: return 0.125F;
+    case DelayDivision::sixty_fourth: return 0.0625F;
+    }
+    return 1.0F;
+}
+
+bool valid_division(DelayDivision division) noexcept {
+    switch (division) {
+    case DelayDivision::whole:
+    case DelayDivision::dotted_half:
+    case DelayDivision::half:
+    case DelayDivision::dotted_quarter:
+    case DelayDivision::quarter:
+    case DelayDivision::quarter_triplet:
+    case DelayDivision::dotted_eighth:
+    case DelayDivision::eighth:
+    case DelayDivision::eighth_triplet:
+    case DelayDivision::dotted_sixteenth:
+    case DelayDivision::sixteenth:
+    case DelayDivision::sixteenth_triplet:
+    case DelayDivision::thirty_second:
+    case DelayDivision::sixty_fourth:
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
 SweepDelay::SweepDelay(float sample_rate, std::uint16_t channels,
@@ -75,6 +116,15 @@ std::size_t SweepDelay::memory_bytes() const noexcept {
     return sizeof(*this) + delay_.memory_bytes() - sizeof(Delay);
 }
 
+float SweepDelay::rate_hz_for(
+    const SweepDelayParameters& parameters) noexcept {
+    if (parameters.sweep_rate_mode == DelayTimeMode::milliseconds) {
+        return parameters.rate_hz;
+    }
+    return parameters.sweep_tempo_bpm /
+           (60.0F * beats_for_division(parameters.sweep_tempo_division));
+}
+
 void SweepDelay::configure(SweepDelayParameters parameters) noexcept {
     const float maximum_time = std::min(2000.0F, max_delay_ms_);
     const float maximum_cutoff = std::min(18000.0F, sample_rate_ * 0.45F);
@@ -91,6 +141,8 @@ void SweepDelay::configure(SweepDelayParameters parameters) noexcept {
                                       0.5F, 12.0F);
     parameters.rate_hz = bounded(parameters.rate_hz, 0.5F,
                                  0.05F, 10.0F);
+    parameters.sweep_tempo_bpm = bounded(parameters.sweep_tempo_bpm,
+                                         120.0F, 20.0F, 300.0F);
     parameters.phase_degrees = bounded(parameters.phase_degrees, 90.0F,
                                         0.0F, 360.0F);
     switch (parameters.waveform) {
@@ -102,7 +154,30 @@ void SweepDelay::configure(SweepDelayParameters parameters) noexcept {
         parameters.waveform = SweepDelayWaveform::sine;
         break;
     }
+    switch (parameters.filter_type) {
+    case SweepDelayFilterType::lowpass:
+    case SweepDelayFilterType::bandpass:
+    case SweepDelayFilterType::highpass:
+        break;
+    default:
+        parameters.filter_type = SweepDelayFilterType::bandpass;
+        break;
+    }
+    switch (parameters.sweep_rate_mode) {
+    case DelayTimeMode::milliseconds:
+    case DelayTimeMode::tempo_sync:
+        break;
+    default:
+        parameters.sweep_rate_mode = DelayTimeMode::milliseconds;
+        break;
+    }
+    if (!valid_division(parameters.sweep_tempo_division)) {
+        parameters.sweep_tempo_division = DelayDivision::quarter;
+    }
 
+    if (parameters.filter_type != parameters_.filter_type) {
+        filter_state_ = {};
+    }
     parameters_ = parameters;
     delay_.configure(parameters_.time_ms, parameters_.feedback, 1.0F);
     retarget_ramps();
@@ -138,7 +213,8 @@ void SweepDelay::process(std::span<float> interleaved,
             const float cutoff = current_start_hz_ +
                 (current_stop_hz_ - current_start_hz_) * sweep;
             const float filtered = filter_wet_sample(
-                wet[channel], channel, cutoff, current_resonance_q_);
+                wet[channel], channel, cutoff, current_resonance_q_,
+                parameters_.filter_type);
             const double output =
                 static_cast<double>(dry[channel]) *
                     static_cast<double>(1.0F - current_mix_) +
@@ -165,7 +241,7 @@ void SweepDelay::reset() noexcept {
     stop_step_ = 0.0F;
     current_resonance_q_ = parameters_.resonance_q;
     resonance_step_ = 0.0F;
-    current_rate_hz_ = parameters_.rate_hz;
+    current_rate_hz_ = rate_hz_for(parameters_);
     rate_step_ = 0.0F;
     current_phase_degrees_ = parameters_.phase_degrees;
     phase_step_ = 0.0F;
@@ -178,7 +254,7 @@ void SweepDelay::retarget_ramps() noexcept {
         current_start_hz_ = parameters_.start_hz;
         current_stop_hz_ = parameters_.stop_hz;
         current_resonance_q_ = parameters_.resonance_q;
-        current_rate_hz_ = parameters_.rate_hz;
+        current_rate_hz_ = rate_hz_for(parameters_);
         current_phase_degrees_ = parameters_.phase_degrees;
         mix_step_ = 0.0F;
         start_step_ = 0.0F;
@@ -196,7 +272,7 @@ void SweepDelay::retarget_ramps() noexcept {
     stop_step_ = (parameters_.stop_hz - current_stop_hz_) / count;
     resonance_step_ =
         (parameters_.resonance_q - current_resonance_q_) / count;
-    rate_step_ = (parameters_.rate_hz - current_rate_hz_) / count;
+    rate_step_ = (rate_hz_for(parameters_) - current_rate_hz_) / count;
     phase_step_ =
         (parameters_.phase_degrees - current_phase_degrees_) / count;
     ramp_remaining_ = ramp_total_;
@@ -209,7 +285,7 @@ void SweepDelay::advance_ramps() noexcept {
         current_start_hz_ = parameters_.start_hz;
         current_stop_hz_ = parameters_.stop_hz;
         current_resonance_q_ = parameters_.resonance_q;
-        current_rate_hz_ = parameters_.rate_hz;
+        current_rate_hz_ = rate_hz_for(parameters_);
         current_phase_degrees_ = parameters_.phase_degrees;
         mix_step_ = 0.0F;
         start_step_ = 0.0F;
@@ -243,7 +319,8 @@ float SweepDelay::lfo_value(float phase) const noexcept {
 
 float SweepDelay::filter_wet_sample(float input, std::uint16_t channel,
                                     float cutoff_hz,
-                                    float resonance_q) noexcept {
+                                    float resonance_q,
+                                    SweepDelayFilterType filter_type) noexcept {
     const float cutoff = std::clamp(
         cutoff_hz, 20.0F, std::min(18000.0F, sample_rate_ * 0.45F));
     const float omega = kTwoPi * cutoff / sample_rate_;
@@ -251,13 +328,35 @@ float SweepDelay::filter_wet_sample(float input, std::uint16_t channel,
     const float cosine = std::cos(omega);
     const float alpha = sine / (2.0F * resonance_q);
     const float inverse_a0 = 1.0F / (1.0F + alpha);
-    const float b0 = alpha * inverse_a0;
-    const float b2 = -b0;
+    float b0 = 0.0F;
+    float b1 = 0.0F;
+    float b2 = 0.0F;
+    switch (filter_type) {
+    case SweepDelayFilterType::lowpass: {
+        const float one_minus_cosine = 1.0F - cosine;
+        b0 = 0.5F * one_minus_cosine * inverse_a0;
+        b1 = one_minus_cosine * inverse_a0;
+        b2 = b0;
+        break;
+    }
+    case SweepDelayFilterType::bandpass:
+        b0 = alpha * inverse_a0;
+        b2 = -b0;
+        break;
+    case SweepDelayFilterType::highpass: {
+        const float one_plus_cosine = 1.0F + cosine;
+        b0 = 0.5F * one_plus_cosine * inverse_a0;
+        b1 = -one_plus_cosine * inverse_a0;
+        b2 = b0;
+        break;
+    }
+    }
     const float a1 = -2.0F * cosine * inverse_a0;
     const float a2 = (1.0F - alpha) * inverse_a0;
 
     BiquadState& state = filter_state_[channel];
     const double output = static_cast<double>(b0) * input +
+        static_cast<double>(b1) * state.input_1 +
         static_cast<double>(b2) * state.input_2 -
         static_cast<double>(a1) * state.output_1 -
         static_cast<double>(a2) * state.output_2;

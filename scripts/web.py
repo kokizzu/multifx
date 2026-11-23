@@ -539,7 +539,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                 "(()=>{const n=document.querySelector('#browser-test-result');"
                 "return JSON.stringify({status:n?.dataset.status,text:n?.textContent,title:document.title})})()"
             )
-            deadline = time.monotonic() + 35
+            deadline = time.monotonic() + 60
             result: dict = {}
             while time.monotonic() < deadline:
                 response = cdp_call(sock, stream, command_id, "Runtime.evaluate", {

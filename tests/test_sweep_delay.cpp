@@ -87,6 +87,121 @@ std::vector<float> render_stereo_sweep(tabletfx::SweepDelayWaveform waveform,
     return audio;
 }
 
+std::vector<float> render_filter_type(tabletfx::SweepDelayFilterType filter_type) {
+    constexpr float sample_rate = 8000.0F;
+    constexpr std::size_t frames = 8000;
+    tabletfx::SweepDelayParameters parameters;
+    parameters.time_ms = 1.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.start_hz = 1000.0F;
+    parameters.stop_hz = 1000.0F;
+    parameters.resonance_q = 1.0F;
+    parameters.filter_type = filter_type;
+    tabletfx::SweepDelay delay(sample_rate, 1, 100.0F, parameters);
+
+    std::vector<float> audio(frames);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        audio[frame] = 0.5F * std::sin(
+            6.2831853071795864769F * 200.0F *
+            static_cast<float>(frame) / sample_rate);
+    }
+    delay.process(audio, 1);
+    return audio;
+}
+
+double tail_rms(const std::vector<float>& audio) {
+    const std::size_t first_frame = audio.size() / 2U;
+    double energy = 0.0;
+    for (std::size_t frame = first_frame; frame < audio.size(); ++frame) {
+        energy += static_cast<double>(audio[frame]) *
+                  static_cast<double>(audio[frame]);
+    }
+    return std::sqrt(energy / static_cast<double>(audio.size() - first_frame));
+}
+
+void test_filter_type_choices_are_distinct() {
+    const auto lowpass = render_filter_type(tabletfx::SweepDelayFilterType::lowpass);
+    const auto bandpass = render_filter_type(tabletfx::SweepDelayFilterType::bandpass);
+    const auto highpass = render_filter_type(tabletfx::SweepDelayFilterType::highpass);
+    const double lowpass_rms = tail_rms(lowpass);
+    const double bandpass_rms = tail_rms(bandpass);
+    const double highpass_rms = tail_rms(highpass);
+    double lowpass_bandpass_difference = 0.0;
+    double bandpass_highpass_difference = 0.0;
+    for (std::size_t frame = lowpass.size() / 2U; frame < lowpass.size(); ++frame) {
+        lowpass_bandpass_difference += std::abs(
+            static_cast<double>(lowpass[frame]) - bandpass[frame]);
+        bandpass_highpass_difference += std::abs(
+            static_cast<double>(bandpass[frame]) - highpass[frame]);
+    }
+    require(lowpass_rms > highpass_rms * 3.0,
+            "low-pass Sweep Delay must pass low input frequencies more than high-pass");
+    require(lowpass_bandpass_difference > 1.0 &&
+                bandpass_highpass_difference > 1.0,
+            "low-pass, band-pass, and high-pass choices must produce distinct output");
+    require(std::all_of(lowpass.begin(), lowpass.end(), [](float sample) {
+                return std::isfinite(sample);
+            }) &&
+            std::all_of(bandpass.begin(), bandpass.end(), [](float sample) {
+                return std::isfinite(sample);
+            }) &&
+            std::all_of(highpass.begin(), highpass.end(), [](float sample) {
+                return std::isfinite(sample);
+            }),
+            "Sweep Delay filter type output must remain finite");
+}
+
+std::vector<float> render_rate_mode(tabletfx::DelayTimeMode rate_mode,
+                                    float rate_hz,
+                                    float tempo_bpm,
+                                    tabletfx::DelayDivision division) {
+    constexpr float sample_rate = 8000.0F;
+    constexpr std::size_t frames = 8192;
+    tabletfx::SweepDelayParameters parameters;
+    parameters.time_ms = 2.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.start_hz = 120.0F;
+    parameters.stop_hz = 3200.0F;
+    parameters.resonance_q = 1.1F;
+    parameters.rate_hz = rate_hz;
+    parameters.sweep_rate_mode = rate_mode;
+    parameters.sweep_tempo_bpm = tempo_bpm;
+    parameters.sweep_tempo_division = division;
+    tabletfx::SweepDelay delay(sample_rate, 1, 100.0F, parameters);
+
+    std::vector<float> audio(frames);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        audio[frame] = 0.5F * std::sin(
+            6.2831853071795864769F * 1000.0F *
+            static_cast<float>(frame) / sample_rate);
+    }
+    delay.process(audio, 1);
+    return audio;
+}
+
+void test_tempo_sync_matches_equivalent_free_rate() {
+    const auto free_quarter = render_rate_mode(
+        tabletfx::DelayTimeMode::milliseconds, 2.0F, 120.0F,
+        tabletfx::DelayDivision::quarter);
+    const auto synced_quarter = render_rate_mode(
+        tabletfx::DelayTimeMode::tempo_sync, 0.5F, 120.0F,
+        tabletfx::DelayDivision::quarter);
+    const auto free_half = render_rate_mode(
+        tabletfx::DelayTimeMode::milliseconds, 1.0F, 120.0F,
+        tabletfx::DelayDivision::half);
+    const auto synced_half = render_rate_mode(
+        tabletfx::DelayTimeMode::tempo_sync, 0.5F, 120.0F,
+        tabletfx::DelayDivision::half);
+    require(free_quarter == synced_quarter,
+            "120 BPM quarter-note sweep sync must equal its project rate of 2 Hz");
+    require(free_half == synced_half,
+            "120 BPM half-note sweep sync must equal its project rate of 1 Hz");
+    require(synced_quarter != synced_half,
+            "different synchronized sweep divisions must change the modulation rate");
+}
+
 void test_waveforms_and_stereo_phase_difference() {
     const auto sine = render_stereo_sweep(tabletfx::SweepDelayWaveform::sine,
                                           180.0F);
@@ -138,13 +253,21 @@ void test_controls_are_bounded_nonfinite_audio_and_reset() {
     parameters.rate_hz = std::numeric_limits<float>::infinity();
     parameters.phase_degrees = 500.0F;
     parameters.waveform = static_cast<tabletfx::SweepDelayWaveform>(255U);
+    parameters.filter_type = static_cast<tabletfx::SweepDelayFilterType>(255U);
+    parameters.sweep_rate_mode = static_cast<tabletfx::DelayTimeMode>(255U);
+    parameters.sweep_tempo_bpm = std::numeric_limits<float>::infinity();
+    parameters.sweep_tempo_division = static_cast<tabletfx::DelayDivision>(255U);
     delay.configure(parameters);
     const auto bounded = delay.parameters();
     require(bounded.time_ms == 350.0F && bounded.feedback == 0.95F &&
                 bounded.mix == 0.0F && bounded.start_hz == 20.0F &&
                 bounded.stop_hz <= 18000.0F && bounded.resonance_q == 12.0F &&
                 bounded.rate_hz == 0.5F && bounded.phase_degrees == 360.0F &&
-                bounded.waveform == tabletfx::SweepDelayWaveform::sine,
+                bounded.waveform == tabletfx::SweepDelayWaveform::sine &&
+                bounded.filter_type == tabletfx::SweepDelayFilterType::bandpass &&
+                bounded.sweep_rate_mode == tabletfx::DelayTimeMode::milliseconds &&
+                bounded.sweep_tempo_bpm == 120.0F &&
+                bounded.sweep_tempo_division == tabletfx::DelayDivision::quarter,
             "Sweep Delay must bound controls and replace non-finite values safely");
 
     auto playable = bounded;
@@ -210,6 +333,8 @@ int main() {
     try {
         test_delay_time_dry_path_and_zero_mix();
         test_waveforms_and_stereo_phase_difference();
+        test_filter_type_choices_are_distinct();
+        test_tempo_sync_matches_equivalent_free_rate();
         test_controls_are_bounded_nonfinite_audio_and_reset();
         test_process_does_not_allocate();
         std::cout << "Sweep Delay tests passed\n";

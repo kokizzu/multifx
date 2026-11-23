@@ -244,7 +244,7 @@ const DEFAULT_PARAMETERS = {
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
-  sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
+  sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   fiveBandEq: [100, 0, 0.707, 0, 12, 350, 0, 0.707, 0, 12,
@@ -1546,6 +1546,7 @@ const sweepDelayTime = document.querySelector("#sweep-delay-time-ms");
 const sweepDelayTimeValue = document.querySelector("#sweep-delay-time-ms-value");
 const sweepDelayFeedback = document.querySelector("#sweep-delay-feedback");
 const sweepDelayFeedbackValue = document.querySelector("#sweep-delay-feedback-value");
+const sweepDelayFilterType = document.querySelector("#sweep-delay-filter-type");
 const sweepDelayMix = document.querySelector("#sweep-delay-mix");
 const sweepDelayMixValue = document.querySelector("#sweep-delay-mix-value");
 const sweepDelayStart = document.querySelector("#sweep-delay-start-hz");
@@ -1557,6 +1558,10 @@ const sweepDelayResonanceValue = document.querySelector("#sweep-delay-resonance-
 const sweepDelayRate = document.querySelector("#sweep-delay-rate-hz");
 const sweepDelayRateValue = document.querySelector("#sweep-delay-rate-hz-value");
 const sweepDelayWaveform = document.querySelector("#sweep-delay-waveform");
+const sweepDelayRateMode = document.querySelector("#sweep-delay-rate-mode");
+const sweepDelayTempoBpm = document.querySelector("#sweep-delay-tempo-bpm");
+const sweepDelayTempoBpmValue = document.querySelector("#sweep-delay-tempo-bpm-value");
+const sweepDelayDivision = document.querySelector("#sweep-delay-division");
 const sweepDelayPhase = document.querySelector("#sweep-delay-phase-degrees");
 const sweepDelayPhaseValue = document.querySelector("#sweep-delay-phase-degrees-value");
 const loadRows = document.querySelector("#load-rows");
@@ -4904,6 +4909,9 @@ function updateFilteredDelay() {
 }
 
 function updateSweepDelay() {
+  const rateMode = Number(sweepDelayRateMode.value);
+  const tempoBpm = Number(sweepDelayTempoBpm.value);
+  const division = Number(sweepDelayDivision.value);
   const values = [
     Number(sweepDelayTime.value),
     Number(sweepDelayFeedback.value) / 100,
@@ -4914,14 +4922,24 @@ function updateSweepDelay() {
     Number(sweepDelayRate.value),
     Number(sweepDelayWaveform.value),
     Number(sweepDelayPhase.value),
+    Number(sweepDelayFilterType.value),
+    rateMode,
+    tempoBpm,
+    division,
   ];
+  sweepDelayRate.disabled = rateMode === 1;
+  sweepDelayTempoBpm.disabled = rateMode !== 1;
+  sweepDelayDivision.disabled = rateMode !== 1;
   sweepDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
   sweepDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
   sweepDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
   sweepDelayStartValue.value = `${values[3].toFixed(0)} Hz`;
   sweepDelayStopValue.value = `${values[4].toFixed(0)} Hz`;
   sweepDelayResonanceValue.value = values[5].toFixed(1);
-  sweepDelayRateValue.value = `${values[6].toFixed(2)} Hz`;
+  sweepDelayRateValue.value = rateMode === 1
+    ? `${sweepDelayDivision.selectedOptions[0].text} · ${tempoBpm.toFixed(0)} BPM`
+    : `${values[6].toFixed(2)} Hz`;
+  sweepDelayTempoBpmValue.value = `${tempoBpm.toFixed(0)} BPM`;
   sweepDelayPhaseValue.value = `${values[8].toFixed(0)}°`;
   DEFAULT_PARAMETERS.sweepDelay = values;
   if (workletNode) workletNode.port.postMessage({ type: "sweep-delay", value: values });
@@ -5069,6 +5087,14 @@ for (const input of [filteredDelayTimeMode, filteredDelayTempoBpm,
   input.addEventListener("change", updateFilteredDelay);
 }
 sweepDelayWaveform.addEventListener("change", updateSweepDelay);
+sweepDelayFilterType.addEventListener("change", updateSweepDelay);
+for (const input of [sweepDelayRateMode, sweepDelayDivision]) {
+  input.addEventListener("change", updateSweepDelay);
+}
+for (const input of [sweepDelayTempoBpm]) {
+  input.addEventListener("input", updateSweepDelay);
+  input.addEventListener("change", updateSweepDelay);
+}
 for (const input of [sweepDelayTime, sweepDelayFeedback, sweepDelayMix,
   sweepDelayStart, sweepDelayStop, sweepDelayResonance, sweepDelayRate,
   sweepDelayPhase]) {
@@ -7208,6 +7234,116 @@ async function runAshevillePattrnBrowserSmokeTest(reference, captureView, captur
   }
 }
 
+async function runSweepDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const controls = [
+    sweepDelayTime, sweepDelayFeedback, sweepDelayMix, sweepDelayStart,
+    sweepDelayStop, sweepDelayResonance, sweepDelayRate, sweepDelayWaveform,
+    sweepDelayPhase, sweepDelayFilterType, sweepDelayRateMode,
+    sweepDelayTempoBpm, sweepDelayDivision,
+  ];
+  const previousControls = controls.map((control) => control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.sweepDelay];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error(
+        "Sweep Delay smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    [
+      sweepDelayTime.value, sweepDelayFeedback.value, sweepDelayMix.value,
+      sweepDelayStart.value, sweepDelayStop.value, sweepDelayResonance.value,
+      sweepDelayRate.value, sweepDelayWaveform.value, sweepDelayPhase.value,
+      sweepDelayFilterType.value, sweepDelayRateMode.value,
+      sweepDelayTempoBpm.value, sweepDelayDivision.value,
+    ] = ["10", "0", "100", "250", "6000", "1.2", "0.5", "0", "90",
+      "0", "1", "120", "4"];
+    updateSweepDelay();
+    if (decodedAudio.numberOfChannels !== 1 ||
+        decodedAudio.length !== reference.samples.length) {
+      throw new Error("Sweep Delay smoke requires a matching mono local guitar fixture.");
+    }
+    const dry = Float32Array.from(decodedAudio.getChannelData(0));
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      const enabled = index === 42;
+      checkbox.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Sweep Delay playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const processed = Float32Array.from(new Float32Array(captureBuffer));
+    let peak = 0;
+    let squares = 0;
+    let differenceSquares = 0;
+    let changedSamples = 0;
+    for (let index = 0; index < processed.length; index += 1) {
+      const sample = processed[index];
+      if (!Number.isFinite(sample) || !Number.isFinite(dry[index])) {
+        throw new Error("Sweep Delay produced a non-finite local guitar sample.");
+      }
+      peak = Math.max(peak, Math.abs(sample));
+      squares += sample * sample;
+      const difference = sample - dry[index];
+      differenceSquares += difference * difference;
+      if (Math.abs(difference) > 1e-6) changedSamples += 1;
+    }
+    const rms = Math.sqrt(squares / Math.max(1, processed.length));
+    const rmsDifferenceFromDry = Math.sqrt(
+      differenceSquares / Math.max(1, processed.length),
+    );
+    if (peak < 1e-5 || rms < 1e-6 || rmsDifferenceFromDry < 1e-5 ||
+        changedSamples < 32) {
+      throw new Error("Sweep Delay did not produce changed local guitar playback: " +
+        JSON.stringify({ peak, rms, rmsDifferenceFromDry, changedSamples }));
+    }
+    return {
+      enabledEffectIndex: 42,
+      filterType: "lowpass",
+      rateMode: "tempo-sync",
+      tempoBpm: 120,
+      division: "quarter",
+      peak,
+      rms,
+      rmsDifferenceFromDry,
+      changedSamples,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      controls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateSweepDelay();
+      DEFAULT_PARAMETERS.sweepDelay = previousParameters;
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runFractalThreeVoiceSynthBrowserSmokeTest(
   reference, captureView, captureBuffer,
 ) {
@@ -8236,6 +8372,33 @@ async function runBrowserSelfTest() {
     }
     sweepDelayRate.value = defaultSweepRate;
     sweepDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultSweepFilterType = sweepDelayFilterType.value;
+    sweepDelayFilterType.value = "2";
+    sweepDelayFilterType.dispatchEvent(new Event("change", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.sweepDelay[9] !== 2) {
+      throw new Error("Sweep Delay filter type must update the processor parameters.");
+    }
+    sweepDelayFilterType.value = defaultSweepFilterType;
+    sweepDelayFilterType.dispatchEvent(new Event("change", { bubbles: true }));
+    const defaultSweepRateMode = sweepDelayRateMode.value;
+    const defaultSweepTempo = sweepDelayTempoBpm.value;
+    const defaultSweepDivision = sweepDelayDivision.value;
+    sweepDelayRateMode.value = "1";
+    sweepDelayTempoBpm.value = "100";
+    sweepDelayDivision.value = "2";
+    sweepDelayRateMode.dispatchEvent(new Event("change", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.sweepDelay[10] !== 1 ||
+        DEFAULT_PARAMETERS.sweepDelay[11] !== 100 ||
+        DEFAULT_PARAMETERS.sweepDelay[12] !== 2 ||
+        !sweepDelayRate.disabled || sweepDelayTempoBpm.disabled ||
+        sweepDelayDivision.disabled ||
+        sweepDelayRateValue.value !== "Half · 100 BPM") {
+      throw new Error("Sweep Delay tempo controls must update the processor and mode display.");
+    }
+    sweepDelayRateMode.value = defaultSweepRateMode;
+    sweepDelayTempoBpm.value = defaultSweepTempo;
+    sweepDelayDivision.value = defaultSweepDivision;
+    sweepDelayRateMode.dispatchEvent(new Event("change", { bubbles: true }));
     effectCategoryFilter.value = "vocal";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
@@ -8836,7 +8999,7 @@ async function runBrowserSelfTest() {
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
          duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
-        sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90],
+        sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
         delay: [180, 0.25, 0.2],
@@ -9381,6 +9544,10 @@ async function runBrowserSelfTest() {
     const ashevillePattrnSmoke = await runAshevillePattrnBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Sweep Delay WASM playback on local guitar audio…";
+    const sweepDelaySmoke = await runSweepDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Ring Modulator Classic and SSB modes on local guitar audio…";
     const ringModulatorSmoke = await runRingModulatorBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -9525,6 +9692,7 @@ async function runBrowserSelfTest() {
          octaveFuzz: octaveFuzzSmoke,
       stereoCrossover: stereoCrossoverSmoke,
       ashevillePattrn: ashevillePattrnSmoke,
+      sweepDelay: sweepDelaySmoke,
       ringModulator: ringModulatorSmoke,
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,

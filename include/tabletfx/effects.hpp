@@ -343,6 +343,12 @@ enum class SweepDelayWaveform : std::uint8_t {
     square,
 };
 
+enum class SweepDelayFilterType : std::uint8_t {
+    lowpass,
+    bandpass,
+    highpass,
+};
+
 struct SweepDelayParameters {
     float time_ms = 350.0F;
     float feedback = 0.25F;
@@ -353,10 +359,15 @@ struct SweepDelayParameters {
     float rate_hz = 0.5F;
     SweepDelayWaveform waveform = SweepDelayWaveform::sine;
     float phase_degrees = 90.0F;
+    SweepDelayFilterType filter_type = SweepDelayFilterType::bandpass;
+    DelayTimeMode sweep_rate_mode = DelayTimeMode::milliseconds;
+    float sweep_tempo_bpm = 120.0F;
+    DelayDivision sweep_tempo_division = DelayDivision::quarter;
 };
 
-// Project-authored delay with an LFO-swept band-pass on the wet output only.
-// It does not claim to reproduce a commercial Sweep Delay algorithm.
+// Project-authored delay with an LFO-swept low-pass, band-pass, or high-pass
+// filter on the wet output only. Its numeric controls and DSP are project
+// choices; it does not claim to reproduce a commercial Sweep Delay algorithm.
 class SweepDelay final : public Effect {
 public:
     explicit SweepDelay(float sample_rate = 48000.0F,
@@ -389,7 +400,10 @@ private:
     [[nodiscard]] float lfo_value(float phase) const noexcept;
     [[nodiscard]] float filter_wet_sample(float input, std::uint16_t channel,
                                           float cutoff_hz,
-                                          float resonance_q) noexcept;
+                                          float resonance_q,
+                                          SweepDelayFilterType filter_type) noexcept;
+    [[nodiscard]] static float rate_hz_for(
+        const SweepDelayParameters& parameters) noexcept;
 
     float sample_rate_;
     std::uint16_t channels_;

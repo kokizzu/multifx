@@ -2404,16 +2404,21 @@ def check_sweep_delay(executable: Path) -> None:
              "--sweep-delay-feedback", "0", "--sweep-delay-mix", "1",
              "--sweep-delay-start-hz", "1000", "--sweep-delay-stop-hz", "1000",
              "--sweep-delay-resonance-q", "1.2", "--sweep-delay-rate-hz", "0.5",
-             "--sweep-delay-waveform", "sine", "--sweep-delay-phase-degrees", "90"],
+             "--sweep-delay-waveform", "sine", "--sweep-delay-phase-degrees", "90",
+             "--sweep-delay-filter-type", "lowpass",
+             "--sweep-delay-rate-mode", "tempo-sync",
+             "--sweep-delay-tempo-bpm", "120", "--sweep-delay-division", "quarter"],
             capture_output=True, text=True, check=True,
         )
         if "processors=1" not in result.stdout:
             raise AssertionError("Sweep Delay CLI controls did not enable one processor")
         rendered = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        if not all(math.isfinite(sample) for sample in rendered):
+            raise AssertionError("tempo-synchronized low-pass Sweep Delay produced non-finite output")
         if any(abs(rendered[index]) > 0.002 for index in range(delay_frames)):
             raise AssertionError("fully-wet Sweep Delay must not leak dry input")
         if not any(abs(rendered[index]) > 0.01 for index in range(delay_frames, delay_frames + 48)):
-            raise AssertionError("Sweep Delay must produce its band-pass-filtered repeat")
+            raise AssertionError("Sweep Delay must produce its selected-filter repeat")
         if any(abs(rendered[index]) > 0.01 for index in range(delay_frames + 384, len(rendered))):
             raise AssertionError("zero-feedback Sweep Delay must not produce a second repeat")
 

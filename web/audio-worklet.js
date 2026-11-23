@@ -418,7 +418,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_modulated_delay(this.chain, ...modulatedDelay);
       const filteredDelay = parameters.filteredDelay || [350, 0.25, 0.25, 120, 6000, 0, 120, 4];
       module._tf_chain_set_filtered_delay(this.chain, ...filteredDelay);
-      const sweepDelay = parameters.sweepDelay || [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90];
+      const sweepDelay = parameters.sweepDelay || [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4];
       module._tf_chain_set_sweep_delay(this.chain, ...sweepDelay);
       const formantFilter = parameters.formantFilter || [0, 4, 1, 0];
       module._tf_chain_set_formant_filter(this.chain, ...formantFilter);

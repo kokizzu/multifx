@@ -2377,10 +2377,23 @@ public:
                                float start_hz, float stop_hz,
                                float resonance_q, float rate_hz,
                                std::uint32_t waveform,
-                               float phase_degrees) noexcept {
+                               float phase_degrees,
+                               std::uint32_t filter_type,
+                               std::uint32_t rate_mode,
+                               float tempo_bpm,
+                               std::uint32_t division) noexcept {
+        tabletfx::SweepDelayParameters parameters{
+            time_ms, feedback, mix, start_hz, stop_hz, resonance_q, rate_hz,
+            static_cast<tabletfx::SweepDelayWaveform>(waveform), phase_degrees};
+        parameters.filter_type =
+            static_cast<tabletfx::SweepDelayFilterType>(filter_type);
+        parameters.sweep_rate_mode =
+            static_cast<tabletfx::DelayTimeMode>(rate_mode);
+        parameters.sweep_tempo_bpm = tempo_bpm;
+        parameters.sweep_tempo_division =
+            static_cast<tabletfx::DelayDivision>(division);
         static_cast<tabletfx::SweepDelay*>(effects_[42].effect.get())->configure(
-            {time_ms, feedback, mix, start_hz, stop_hz, resonance_q, rate_hz,
-             static_cast<tabletfx::SweepDelayWaveform>(waveform), phase_degrees});
+            parameters);
     }
 
     void configure_limiter(float ceiling_db, float release_ms) noexcept {
@@ -3051,11 +3064,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_filtered_delay(
 TABLETFX_WASM_EXPORT void tf_chain_set_sweep_delay(
     void* opaque, float time_ms, float feedback, float mix,
     float start_hz, float stop_hz, float resonance_q, float rate_hz,
-    std::uint32_t waveform, float phase_degrees) noexcept {
+    std::uint32_t waveform, float phase_degrees,
+    std::uint32_t filter_type, std::uint32_t rate_mode,
+    float tempo_bpm, std::uint32_t division) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_sweep_delay(
             time_ms, feedback, mix, start_hz, stop_hz, resonance_q,
-            rate_hz, waveform, phase_degrees);
+            rate_hz, waveform, phase_degrees, filter_type, rate_mode,
+            tempo_bpm, division);
     }
 }
 

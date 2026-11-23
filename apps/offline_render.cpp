@@ -1669,6 +1669,54 @@ Options parse_options(int argc, char** argv, int first) {
             options.sweep_delay_enabled = true;
             continue;
         }
+        if (key == "--sweep-delay-filter-type") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --sweep-delay-filter-type");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "lowpass") {
+                options.sweep_delay.filter_type =
+                    tabletfx::SweepDelayFilterType::lowpass;
+            } else if (value == "bandpass") {
+                options.sweep_delay.filter_type =
+                    tabletfx::SweepDelayFilterType::bandpass;
+            } else if (value == "highpass") {
+                options.sweep_delay.filter_type =
+                    tabletfx::SweepDelayFilterType::highpass;
+            } else {
+                throw std::invalid_argument(
+                    "Sweep-delay filter type must be lowpass, bandpass, or highpass");
+            }
+            options.sweep_delay_enabled = true;
+            continue;
+        }
+        if (key == "--sweep-delay-rate-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --sweep-delay-rate-mode");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "free") {
+                options.sweep_delay.sweep_rate_mode =
+                    tabletfx::DelayTimeMode::milliseconds;
+            } else if (value == "tempo-sync") {
+                options.sweep_delay.sweep_rate_mode =
+                    tabletfx::DelayTimeMode::tempo_sync;
+            } else {
+                throw std::invalid_argument(
+                    "Sweep-delay rate mode must be free or tempo-sync");
+            }
+            options.sweep_delay_enabled = true;
+            continue;
+        }
+        if (key == "--sweep-delay-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --sweep-delay-division");
+            }
+            options.sweep_delay.sweep_tempo_division =
+                parse_delay_division(argv[++i]);
+            options.sweep_delay_enabled = true;
+            continue;
+        }
         if (key == "--reverse-delay-run") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --reverse-delay-run");
@@ -3350,6 +3398,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--sweep-delay-rate-hz") {
             options.sweep_delay.rate_hz = value;
+            options.sweep_delay_enabled = true;
+        }
+        else if (key == "--sweep-delay-tempo-bpm") {
+            options.sweep_delay.sweep_tempo_bpm = value;
             options.sweep_delay_enabled = true;
         }
         else if (key == "--sweep-delay-phase-degrees") {
@@ -5292,7 +5344,11 @@ void print_usage() {
                      " [--sweep-delay-start-hz 20..18000] [--sweep-delay-stop-hz 20..18000]"
                      " [--sweep-delay-resonance-q 0.5..12] [--sweep-delay-rate-hz 0.05..10]"
                      " [--sweep-delay-waveform sine|triangle|square]"
-                     " [--sweep-delay-phase-degrees 0..360]\n"
+                     " [--sweep-delay-phase-degrees 0..360]"
+                     " [--sweep-delay-filter-type lowpass|bandpass|highpass]"
+                     " [--sweep-delay-rate-mode free|tempo-sync]"
+                     " [--sweep-delay-tempo-bpm 20..300]"
+                     " [--sweep-delay-division <delay-division>]\n"
                   << "                 [--auto-swell-delay] [--auto-swell-delay-time-ms 1..2000]"
                      " [--auto-swell-delay-feedback 0..0.95] [--auto-swell-delay-mix 0..1]"
                      " [--auto-swell-delay-time-mode milliseconds|tempo-sync]"

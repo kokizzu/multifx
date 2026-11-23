@@ -578,7 +578,6 @@ FILTERED_DELAY_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 SWEEP_DELAY_CHECKPOINT_PATHS = (
-    "Makefile",
     "README.md",
     "CMakeLists.txt",
     "apps/offline_render.cpp",
