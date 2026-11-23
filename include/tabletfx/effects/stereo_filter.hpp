@@ -28,6 +28,7 @@ enum class StereoFilterType : std::uint8_t {
     Peaking2,
     AutoWah,
     EnvelopeFilter,
+    LadderFilter,
 };
 
 enum class StereoFilterMode : std::uint8_t {
@@ -57,6 +58,18 @@ struct StereoFilterParameters {
     float frequency_hz = 1000.0F;
     std::uint8_t order = 2;
     float q = 0.707F;
+    // The November 2026 Fractal Audio Systems Blocks Guide (Filter > Ladder)
+    // describes Resonance as cutoff emphasis toward self-oscillation, Drive as
+    // clean-to-saturated input that can tame resonance, and Bass Compensation
+    // as restoring resonance-related low end in low-pass mode. This project
+    // uses its own 0..1 scales: Resonance default 0.25, Drive default 0, and
+    // Bass Compensation default 0; those ranges/defaults are not Fractal data.
+    float ladder_resonance = 0.25F;
+    float ladder_drive = 0.0F;
+    float ladder_bass_comp = 0.0F;
+    // The Guide documents low-pass/band-pass modes and 2-Pole/4-Pole slopes,
+    // with 4-Pole as default. The local filter topology remains project-authored.
+    std::uint8_t ladder_order = 4U;
     float gain_db = 0.0F;
     float low_cut_hz = 0.0F;
     float high_cut_hz = 0.0F;
@@ -155,6 +168,8 @@ private:
         std::array<BiquadCoefficients, kMaximumPasses>& coefficients) const noexcept;
     [[nodiscard]] float process_biquad(float input, std::uint16_t channel,
                                        std::size_t pass) noexcept;
+    [[nodiscard]] float process_ladder(float input,
+                                       std::uint16_t channel) noexcept;
     [[nodiscard]] float process_comb(float input, std::uint16_t channel,
                                      bool feedback) noexcept;
     [[nodiscard]] float process_allpass(float input,
@@ -171,6 +186,8 @@ private:
     std::array<BiquadCoefficients, kMaximumPasses> coefficients_{};
     std::size_t pass_count_ = 1U;
     std::array<std::array<BiquadState, kMaximumPasses>, 2> biquad_states_{};
+    std::array<std::array<float, 4>, 2> ladder_states_{};
+    std::array<float, 2> ladder_bass_comp_states_{};
     std::array<FirstOrderState, 2> low_cut_states_{};
     std::array<FirstOrderState, 2> high_cut_states_{};
     std::vector<float> delayed_input_;
@@ -190,6 +207,9 @@ private:
     float balance_right_gain_ = 1.0F;
     float low_cut_alpha_ = 1.0F;
     float high_cut_alpha_ = 0.0F;
+    float ladder_cutoff_hz_ = 1000.0F;
+    float ladder_cutoff_alpha_ = 0.0F;
+    float ladder_bass_comp_alpha_ = 0.0F;
 };
 
 } // namespace tabletfx

@@ -103,7 +103,7 @@ const EFFECT_NAMES = [
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
-  stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0],
+  stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0, 0.25, 0, 0, 4],
   stepTremolo: [4, 0.75, 8, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 4],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
@@ -1223,6 +1223,10 @@ const stereoFilterControls = [
   document.querySelector("#stereo-filter-attack-ms"),
   document.querySelector("#stereo-filter-release-ms"),
   document.querySelector("#stereo-filter-emphasis"),
+  document.querySelector("#stereo-filter-ladder-resonance"),
+  document.querySelector("#stereo-filter-ladder-drive"),
+  document.querySelector("#stereo-filter-ladder-bass-comp"),
+  document.querySelector("#stereo-filter-ladder-order"),
 ];
 const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-line]")]
   .map((row) => Object.fromEntries(
@@ -2614,16 +2618,18 @@ function updateStepFilterDelayOptions() {
 function updateStereoFilterOptions() {
   const isAutoWah = Number(stereoFilterControls[0].value) === 15;
   const isEnvelopeFilter = Number(stereoFilterControls[0].value) === 16;
+  const isLadderFilter = Number(stereoFilterControls[0].value) === 17;
   const hasEnvelopeSweep = isAutoWah || isEnvelopeFilter;
   const frequencyControl = stereoFilterControls[1];
   const modFrequencyControl = stereoFilterControls[19];
   const frequencySpan = frequencyControl.parentElement.querySelector("span");
   const modFrequencySpan = modFrequencyControl.parentElement.querySelector("span");
-  stereoFilterControls[2].parentElement.hidden = hasEnvelopeSweep;
-  stereoFilterControls[4].parentElement.hidden = hasEnvelopeSweep;
-  stereoFilterControls[10].parentElement.hidden = hasEnvelopeSweep;
-  stereoFilterControls[11].parentElement.hidden = hasEnvelopeSweep;
-  stereoFilterControls[12].parentElement.hidden = hasEnvelopeSweep;
+  stereoFilterControls[2].parentElement.hidden = hasEnvelopeSweep || isLadderFilter;
+  stereoFilterControls[3].parentElement.hidden = isLadderFilter;
+  stereoFilterControls[4].parentElement.hidden = hasEnvelopeSweep || isLadderFilter;
+  stereoFilterControls[10].parentElement.hidden = hasEnvelopeSweep || isLadderFilter;
+  stereoFilterControls[11].parentElement.hidden = hasEnvelopeSweep || isLadderFilter;
+  stereoFilterControls[12].parentElement.hidden = hasEnvelopeSweep || isLadderFilter;
   stereoFilterControls[7].parentElement.hidden = hasEnvelopeSweep;
   stereoFilterControls[8].parentElement.hidden = hasEnvelopeSweep;
   stereoFilterControls[9].parentElement.hidden = hasEnvelopeSweep;
@@ -2645,15 +2651,25 @@ function updateStereoFilterOptions() {
   stereoFilterControls[18].parentElement.hidden = isEnvelopeFilter;
   stereoFilterControls[19].parentElement.hidden = isEnvelopeFilter;
   stereoFilterControls[20].parentElement.hidden = isEnvelopeFilter;
-  stereoFilterControls[21].parentElement.hidden = !hasEnvelopeSweep;
+  stereoFilterControls[21].parentElement.hidden = !hasEnvelopeSweep && !isLadderFilter;
   stereoFilterControls[22].parentElement.hidden = !hasEnvelopeSweep;
-  stereoFilterControls[23].parentElement.hidden = !isAutoWah;
-  stereoFilterControls[24].parentElement.hidden = !isAutoWah;
-  stereoFilterControls[25].parentElement.hidden = !isAutoWah;
+  stereoFilterControls[23].parentElement.hidden = !isAutoWah && !isLadderFilter;
+  stereoFilterControls[24].parentElement.hidden = !isAutoWah && !isLadderFilter;
+  stereoFilterControls[25].parentElement.hidden = !isAutoWah && !isLadderFilter;
   stereoFilterControls[26].parentElement.hidden = !isEnvelopeFilter;
   stereoFilterControls[27].parentElement.hidden = !isEnvelopeFilter;
   stereoFilterControls[28].parentElement.hidden = !isEnvelopeFilter;
   stereoFilterControls[29].parentElement.hidden = !isEnvelopeFilter;
+  for (let index = 30; index < stereoFilterControls.length; index += 1) {
+    stereoFilterControls[index].parentElement.hidden = !isLadderFilter;
+  }
+  const ladderHighpassOption = stereoFilterControls[21].querySelector('option[value="2"]');
+  ladderHighpassOption.disabled = isLadderFilter;
+  if (isLadderFilter && Number(stereoFilterControls[21].value) === 2) {
+    stereoFilterControls[21].value = "0";
+  }
+  stereoFilterControls[32].disabled = isLadderFilter &&
+    Number(stereoFilterControls[21].value) === 1;
   stereoFilterControls[15].disabled = hasEnvelopeSweep;
   const values = [
     Number(stereoFilterControls[0].value),
@@ -2686,6 +2702,10 @@ function updateStereoFilterOptions() {
     Number(stereoFilterControls[27].value),
     Number(stereoFilterControls[28].value),
     Number(stereoFilterControls[29].value) / 100,
+    Number(stereoFilterControls[30].value),
+    Number(stereoFilterControls[31].value),
+    Number(stereoFilterControls[32].value),
+    Number(stereoFilterControls[33].value),
   ];
   DEFAULT_PARAMETERS.stereoFilter = values;
   const displays = [
@@ -2719,6 +2739,10 @@ function updateStereoFilterOptions() {
     `${values[27]} ms`,
     `${values[28]} ms`,
     `${Math.round(values[29] * 100)}%`,
+    `${Math.round(values[30] * 100)}%`,
+    `${Math.round(values[31] * 100)}%`,
+    `${Math.round(values[32] * 100)}%`,
+    `${values[33]}-pole`,
   ];
   stereoFilterControls.forEach((control, index) => {
     const output = control.parentElement.querySelector("output");
@@ -8752,17 +8776,17 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     stereoFilterControls[28].value = "80";
     stereoFilterControls[29].value = "0";
     updateStereoFilterOptions();
-    if (DEFAULT_PARAMETERS.stereoFilter.length !== 30 ||
+    if (DEFAULT_PARAMETERS.stereoFilter.length !== 34 ||
         DEFAULT_PARAMETERS.stereoFilter[0] !== 15 ||
         DEFAULT_PARAMETERS.stereoFilter[1] !== 300 ||
         DEFAULT_PARAMETERS.stereoFilter[2] !== 4) {
-      throw new Error("Stereo Filter controls did not produce the expected 30-value API vector.");
+      throw new Error("Stereo Filter controls did not produce the expected 34-value API vector.");
     }
     stereoFilterControls[0].value = "16";
     updateStereoFilterOptions();
     const postedEnvelopeFilter = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 30 && message.value?.[0] === 16,
+        message.value?.length === 34 && message.value?.[0] === 16,
     );
     if (!postedEnvelopeFilter || !stereoFilterControls[15].disabled ||
         stereoFilterControls[26].parentElement.hidden ||
@@ -8772,7 +8796,39 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         postedEnvelopeFilter.value[27] !== 5 ||
         postedEnvelopeFilter.value[28] !== 80 ||
         postedEnvelopeFilter.value[29] !== 0) {
-      throw new Error("Envelope Filter controls did not reach the 30-value Worklet API.");
+      throw new Error("Envelope Filter controls did not reach the 34-value Worklet API.");
+    }
+    stereoFilterControls[0].value = "17";
+    stereoFilterControls[1].value = "700";
+    stereoFilterControls[15].checked = false;
+    stereoFilterControls[21].value = "0";
+    stereoFilterControls[23].checked = false;
+    stereoFilterControls[30].value = "0.65";
+    stereoFilterControls[31].value = "0.35";
+    stereoFilterControls[32].value = "0.55";
+    stereoFilterControls[33].value = "2";
+    updateStereoFilterOptions();
+    const postedLadderFilter = postedStereoFilterMessages.find(
+      (message) => message.type === "stereo-filter" &&
+        message.value?.length === 34 && message.value?.[0] === 17,
+    );
+    if (!postedLadderFilter ||
+        stereoFilterControls[2].parentElement.hidden !== true ||
+        stereoFilterControls[3].parentElement.hidden !== true ||
+        stereoFilterControls[21].parentElement.hidden ||
+        stereoFilterControls[30].parentElement.hidden ||
+        stereoFilterControls[31].parentElement.hidden ||
+        stereoFilterControls[32].parentElement.hidden ||
+        stereoFilterControls[33].parentElement.hidden ||
+        stereoFilterControls[32].disabled ||
+        postedLadderFilter.value[0] !== 17 ||
+        postedLadderFilter.value[1] !== 700 ||
+        postedLadderFilter.value[21] !== 0 ||
+        postedLadderFilter.value[30] !== 0.65 ||
+        postedLadderFilter.value[31] !== 0.35 ||
+        postedLadderFilter.value[32] !== 0.55 ||
+        postedLadderFilter.value[33] !== 2) {
+      throw new Error("Ladder Filter mode and project controls did not reach the 34-value Worklet API.");
     }
     effectCategoryFilter.value = "filter";
     updateEffectBrowser();
@@ -8795,7 +8851,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     }
     const postedConfiguration = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 30 && message.value?.[0] === 15,
+        message.value?.length === 34 && message.value?.[0] === 17,
     );
     const postedEnable = postedStereoFilterMessages.find(
       (message) => message.type === "enable" && message.index === 96 && message.value,
@@ -8804,11 +8860,12 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
       throw new Error("Stereo Filter settings or ID 96 enable message did not reach the Worklet port.");
     }
     const expectedStereoFilter = [
-      15, 300, 4, 4, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0,
-      1, 1, 2, 50, 6000, 0, 1, 2, 1, 120, 1, -36, 5, 80, 0,
+      17, 700, 4, 4, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0,
+      0, 1, 2, 50, 6000, 0, 0, 2, 0, 120, 1, -36, 5, 80, 0,
+      0.65, 0.35, 0.55, 2,
     ];
     if (JSON.stringify(postedConfiguration.value) !== JSON.stringify(expectedStereoFilter)) {
-      throw new Error("Stereo Filter Worklet message does not match the 30-value Auto-Wah API order.");
+      throw new Error("Stereo Filter Worklet message does not match the 34-value Ladder Filter API order.");
     }
     workletNode.port.postMessage({ type: "reset" });
     workletNode.port.postMessage({ type: "capture-reset" });

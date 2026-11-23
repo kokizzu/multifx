@@ -19,6 +19,7 @@ PUBLISH_CHECKPOINTS += fractal-ring-mod-tracking
 PUBLISH_CHECKPOINTS += fractal-peq-types-solo
 PUBLISH_CHECKPOINTS += fractal-filter-auto-wah
 PUBLISH_CHECKPOINTS += fractal-filter-envelope
+PUBLISH_CHECKPOINTS += fractal-filter-ladder
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

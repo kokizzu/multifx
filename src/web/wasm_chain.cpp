@@ -1417,7 +1417,7 @@ public:
 
     void configure_stereo_filter(const float* values,
                                  std::uint32_t value_count) noexcept {
-        if (values == nullptr || value_count != 30U) return;
+        if (values == nullptr || value_count != 34U) return;
         const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
             if (!std::isfinite(value)) return 0U;
             return static_cast<std::uint32_t>(std::clamp(
@@ -1425,7 +1425,7 @@ public:
         };
         tabletfx::StereoFilterParameters parameters;
         parameters.type = static_cast<tabletfx::StereoFilterType>(
-            enum_index(values[0], 16U));
+            enum_index(values[0], 17U));
         parameters.frequency_hz = values[1];
         parameters.order = static_cast<std::uint8_t>(enum_index(values[2], 4U));
         parameters.q = values[3];
@@ -1460,6 +1460,11 @@ public:
         parameters.attack_time_ms = values[27];
         parameters.release_time_ms = values[28];
         parameters.emphasis = values[29];
+        parameters.ladder_resonance = values[30];
+        parameters.ladder_drive = values[31];
+        parameters.ladder_bass_comp = values[32];
+        parameters.ladder_order = static_cast<std::uint8_t>(
+            enum_index(values[33], 4U));
         stereo_filter_->set_parameters(parameters);
     }
 

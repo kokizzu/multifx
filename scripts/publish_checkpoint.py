@@ -1971,6 +1971,21 @@ FRACTAL_FILTER_ENVELOPE_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FRACTAL_FILTER_LADDER_CHECKPOINT_PATHS = (
+    "include/tabletfx/effects/stereo_filter.hpp",
+    "src/effects/stereo_filter.cpp",
+    "tests/test_stereo_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "web/audio-worklet.js",
+    "web/app.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2139,6 +2154,10 @@ CHECKPOINTS = {
     "fractal-filter-envelope": (
         FRACTAL_FILTER_ENVELOPE_CHECKPOINT_PATHS,
         "feat: add project-authored Envelope Filter",
+    ),
+    "fractal-filter-ladder": (
+        FRACTAL_FILTER_LADDER_CHECKPOINT_PATHS,
+        "feat: add project-authored Ladder Filter",
     ),
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,

@@ -353,6 +353,173 @@ void test_envelope_filter_tracks_input_level_without_lfo() {
             "Envelope Filter did not open farther for a stronger pick attack");
 }
 
+void test_ladder_filter_controls() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 24000U;
+    constexpr std::size_t warmup = 6000U;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::LadderFilter;
+    parameters.frequency_hz = 1000.0F;
+    parameters.ladder_resonance = 0.0F;
+    parameters.ladder_drive = 0.0F;
+    parameters.ladder_bass_comp = 0.0F;
+
+    tabletfx::StereoFilter default_order(sample_rate, parameters);
+    require(default_order.parameters().ladder_order == 4U,
+            "Ladder Filter project default is not four-pole");
+
+    parameters.ladder_order = 2U;
+    parameters.ladder_resonance = -1.0F;
+    parameters.ladder_drive = 2.0F;
+    parameters.ladder_bass_comp = 4.0F;
+    parameters.mode = tabletfx::StereoFilterMode::Highpass;
+    tabletfx::StereoFilter sanitized(sample_rate, parameters);
+    const auto bounded = sanitized.parameters();
+    require(bounded.ladder_order == 2U && bounded.ladder_resonance == 0.0F &&
+                bounded.ladder_drive == 1.0F &&
+                bounded.ladder_bass_comp == 1.0F &&
+                bounded.mode == tabletfx::StereoFilterMode::Lowpass,
+            "Ladder Filter project controls or unsupported mode were not sanitized");
+
+    parameters.ladder_order = 4U;
+    parameters.ladder_resonance = 0.0F;
+    parameters.ladder_drive = 0.0F;
+    parameters.ladder_bass_comp = 0.0F;
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    tabletfx::StereoFilter lowpass_low(sample_rate, parameters);
+    auto low_tone = tone(sample_rate, 250.0F, frames);
+    lowpass_low.process(low_tone, 1U);
+    tabletfx::StereoFilter lowpass_high(sample_rate, parameters);
+    auto high_tone = tone(sample_rate, 8000.0F, frames);
+    lowpass_high.process(high_tone, 1U);
+    require(rms(low_tone, warmup) > rms(high_tone, warmup) * 5.0F,
+            "four-pole Ladder low-pass did not reject a high tone");
+
+    parameters.ladder_order = 2U;
+    tabletfx::StereoFilter two_pole(sample_rate, parameters);
+    auto two_pole_audio = tone(sample_rate, 4000.0F, frames);
+    two_pole.process(two_pole_audio, 1U);
+    parameters.ladder_order = 4U;
+    tabletfx::StereoFilter four_pole(sample_rate, parameters);
+    auto four_pole_audio = tone(sample_rate, 4000.0F, frames);
+    four_pole.process(four_pole_audio, 1U);
+    require(rms(four_pole_audio, warmup) < rms(two_pole_audio, warmup) * 0.65F,
+            "four-pole Ladder order did not steepen the low-pass response");
+
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    tabletfx::StereoFilter bandpass_low(sample_rate, parameters);
+    auto band_low = tone(sample_rate, 100.0F, frames);
+    bandpass_low.process(band_low, 1U);
+    tabletfx::StereoFilter bandpass_mid(sample_rate, parameters);
+    auto band_mid = tone(sample_rate, 1000.0F, frames);
+    bandpass_mid.process(band_mid, 1U);
+    tabletfx::StereoFilter bandpass_high(sample_rate, parameters);
+    auto band_high = tone(sample_rate, 8000.0F, frames);
+    bandpass_high.process(band_high, 1U);
+    require(rms(band_mid, warmup) > rms(band_low, warmup) * 1.5F &&
+                rms(band_mid, warmup) > rms(band_high, warmup) * 1.2F,
+            "Ladder band-pass did not emphasize its center region");
+
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    const auto render = [&](tabletfx::StereoFilterParameters selected,
+                            float frequency, float amplitude) {
+        tabletfx::StereoFilter effect(sample_rate, selected);
+        auto audio = tone(sample_rate, frequency, frames);
+        for (float& sample : audio) sample *= amplitude / 0.25F;
+        effect.process(audio, 1U);
+        return audio;
+    };
+    const auto difference = [](std::span<const float> left,
+                               std::span<const float> right) {
+        double sum = 0.0;
+        for (std::size_t index = 0U; index < left.size(); ++index) {
+            sum += std::abs(static_cast<double>(left[index]) - right[index]);
+        }
+        return sum / static_cast<double>(left.size());
+    };
+
+    auto unresonant = render(parameters, 1000.0F, 0.25F);
+    parameters.ladder_resonance = 0.8F;
+    auto resonant = render(parameters, 1000.0F, 0.25F);
+    require(difference(unresonant, resonant) > 0.01,
+            "Ladder resonance did not change the cutoff response");
+
+    parameters.ladder_resonance = 0.0F;
+    parameters.ladder_drive = 1.0F;
+    auto driven = render(parameters, 700.0F, 0.75F);
+    parameters.ladder_drive = 0.0F;
+    auto clean = render(parameters, 700.0F, 0.75F);
+    require(difference(driven, clean) > 0.005,
+            "Ladder Drive did not change the saturation response");
+
+    parameters.frequency_hz = 1000.0F;
+    parameters.ladder_resonance = 0.8F;
+    parameters.ladder_drive = 0.0F;
+    parameters.ladder_bass_comp = 0.0F;
+    auto uncompensated_bass = render(parameters, 60.0F, 0.25F);
+    parameters.ladder_bass_comp = 1.0F;
+    auto compensated_bass = render(parameters, 60.0F, 0.25F);
+    require(difference(uncompensated_bass, compensated_bass) > 0.005,
+            "Ladder Bass Compensation did not restore low-frequency output");
+
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    auto band_without_comp = render(parameters, 60.0F, 0.25F);
+    parameters.ladder_bass_comp = 0.0F;
+    auto band_with_zero_comp = render(parameters, 60.0F, 0.25F);
+    require(difference(band_without_comp, band_with_zero_comp) < 1.0e-7,
+            "Bass Compensation unexpectedly altered Ladder band-pass mode");
+
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    parameters.ladder_bass_comp = 0.0F;
+    parameters.frequency_hz = 500.0F;
+    parameters.mod_frequency_hz = 5000.0F;
+    parameters.lfo_enabled = true;
+    parameters.lfo_shape = tabletfx::StereoFilterLfoShape::Square;
+    parameters.lfo_rate_hz = 1.0F;
+    parameters.lfo_duty_percent = 50.0F;
+    parameters.lfo_quantize_steps = 2U;
+    tabletfx::StereoFilter lfo_filter(sample_rate, parameters);
+    auto lfo_audio = tone(sample_rate, 1500.0F, 96000U);
+    lfo_filter.process(lfo_audio, 1U);
+    parameters.lfo_enabled = false;
+    tabletfx::StereoFilter static_filter(sample_rate, parameters);
+    auto static_audio = tone(sample_rate, 1500.0F, 96000U);
+    static_filter.process(static_audio, 1U);
+    require(rms(lfo_audio, warmup) > rms(static_audio, warmup) * 1.5F,
+            "LFO did not sweep the Ladder cutoff");
+
+    parameters.lfo_enabled = false;
+    parameters.low_cut_hz = 400.0F;
+    parameters.high_cut_hz = 5000.0F;
+    tabletfx::StereoFilter cut_filter(sample_rate, parameters);
+    std::vector<float> cut_audio(frames, 0.1F);
+    cut_filter.process(cut_audio, 1U);
+    for (float sample : cut_audio) {
+        require(std::isfinite(sample), "Ladder cut filters produced invalid audio");
+    }
+
+    parameters.low_cut_hz = 0.0F;
+    parameters.high_cut_hz = 0.0F;
+    parameters.ladder_resonance = 1.0F;
+    tabletfx::StereoFilter realtime_filter(sample_rate, parameters);
+    std::array<float, 128> realtime_audio{};
+    realtime_audio.fill(0.1F);
+    allocation_count = 0U;
+    count_allocations = true;
+    realtime_filter.process(realtime_audio, 2U);
+    count_allocations = false;
+    require(allocation_count == 0U,
+            "Ladder Filter allocated during process()");
+    for (float sample : realtime_audio) {
+        require(std::isfinite(sample), "maximum Ladder resonance became non-finite");
+    }
+    realtime_filter.reset();
+    realtime_filter.process(realtime_audio, 2U);
+    for (float sample : realtime_audio) {
+        require(std::isfinite(sample), "Ladder reset left invalid processor state");
+    }
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -402,6 +569,7 @@ int main() {
         test_lfo_and_optional_cut_filters();
         test_auto_wah_automatically_sweeps_filter_mode();
         test_envelope_filter_tracks_input_level_without_lfo();
+        test_ladder_filter_controls();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;

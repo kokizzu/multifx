@@ -68,6 +68,13 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
                                        minimum_frequency, maximum_frequency);
     parameters.order = parameters.order == 4U ? 4U : 2U;
     parameters.q = bounded(parameters.q, 0.707F, 0.1F, 12.0F);
+    parameters.ladder_resonance = bounded(parameters.ladder_resonance, 0.25F,
+                                          0.0F, 1.0F);
+    parameters.ladder_drive = bounded(parameters.ladder_drive, 0.0F,
+                                      0.0F, 1.0F);
+    parameters.ladder_bass_comp = bounded(parameters.ladder_bass_comp, 0.0F,
+                                          0.0F, 1.0F);
+    parameters.ladder_order = parameters.ladder_order == 2U ? 2U : 4U;
     parameters.gain_db = bounded(parameters.gain_db, 0.0F, -24.0F, 24.0F);
     parameters.low_cut_hz = parameters.low_cut_hz <= 0.0F
         ? 0.0F
@@ -97,6 +104,10 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.mod_frequency_hz = bounded(parameters.mod_frequency_hz, 4000.0F,
                                           minimum_frequency, maximum_frequency);
     parameters.mode = sanitize_mode(parameters.mode);
+    if (parameters.type == StereoFilterType::LadderFilter &&
+        parameters.mode == StereoFilterMode::Highpass) {
+        parameters.mode = StereoFilterMode::Lowpass;
+    }
     parameters.sweep_shape = bounded(parameters.sweep_shape, 1.0F,
                                      0.25F, 4.0F);
     parameters.lfo_tempo_bpm = bounded(parameters.lfo_tempo_bpm, 120.0F,
@@ -137,6 +148,8 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     high_cut_alpha_ = parameters_.high_cut_hz <= 0.0F
         ? 0.0F
         : std::exp(-kTwoPi * parameters_.high_cut_hz / sample_rate_);
+    ladder_bass_comp_alpha_ = 1.0F - std::exp(
+        -kTwoPi * std::min(90.0F, sample_rate_ * 0.05F) / sample_rate_);
     if (parameters_.type != previous_type) {
         reset();
     } else {
@@ -231,6 +244,9 @@ void StereoFilter::process(std::span<float> interleaved,
             case StereoFilterType::Allpass:
                 output = process_allpass(input, channel);
                 break;
+            case StereoFilterType::LadderFilter:
+                output = process_ladder(input, channel);
+                break;
             case StereoFilterType::Null:
                 break;
             default:
@@ -277,6 +293,10 @@ void StereoFilter::reset() noexcept {
     for (auto& channel : biquad_states_) {
         channel.fill(BiquadState{});
     }
+    for (auto& channel : ladder_states_) {
+        channel.fill(0.0F);
+    }
+    ladder_bass_comp_states_.fill(0.0F);
     low_cut_states_.fill(FirstOrderState{});
     high_cut_states_.fill(FirstOrderState{});
     std::fill(delayed_input_.begin(), delayed_input_.end(), 0.0F);
@@ -313,6 +333,7 @@ StereoFilterType StereoFilter::sanitize_type(StereoFilterType type) noexcept {
     case StereoFilterType::Peaking2:
     case StereoFilterType::AutoWah:
     case StereoFilterType::EnvelopeFilter:
+    case StereoFilterType::LadderFilter:
         return type;
     }
     return StereoFilterType::Lowpass;
@@ -359,6 +380,15 @@ float StereoFilter::nyquist_limit() const noexcept {
 }
 
 void StereoFilter::rebuild_coefficients(float frequency_hz) noexcept {
+    if (parameters_.type == StereoFilterType::LadderFilter) {
+        ladder_cutoff_hz_ = bounded(frequency_hz, parameters_.frequency_hz,
+                                    20.0F, nyquist_limit());
+        ladder_cutoff_alpha_ = 1.0F - std::exp(
+            -kTwoPi * ladder_cutoff_hz_ / sample_rate_);
+        pass_count_ = 0U;
+        coefficients_.fill(BiquadCoefficients{});
+        return;
+    }
     pass_count_ = make_coefficients(frequency_hz, coefficients_);
     if (parameters_.order == 4U && pass_count_ > 0U &&
         pass_count_ <= kMaximumPasses / 2U) {
@@ -406,7 +436,8 @@ std::size_t StereoFilter::make_coefficients(
     if (effective_type == StereoFilterType::Null ||
         effective_type == StereoFilterType::FeedForwardComb ||
         effective_type == StereoFilterType::FeedbackComb ||
-        effective_type == StereoFilterType::Allpass) {
+        effective_type == StereoFilterType::Allpass ||
+        effective_type == StereoFilterType::LadderFilter) {
         return 0U;
     }
 
@@ -506,6 +537,7 @@ std::size_t StereoFilter::make_coefficients(
     case StereoFilterType::Null:
     case StereoFilterType::AutoWah:
     case StereoFilterType::EnvelopeFilter:
+    case StereoFilterType::LadderFilter:
         break;
     }
     return 0U;
@@ -521,6 +553,52 @@ float StereoFilter::process_biquad(float input, std::uint16_t channel,
     if (!std::isfinite(state.s1) || !std::isfinite(state.s2)) {
         state = BiquadState{};
         return 0.0F;
+    }
+    return safe_sample(output);
+}
+
+float StereoFilter::process_ladder(float input,
+                                  std::uint16_t channel) noexcept {
+    auto& states = ladder_states_[channel];
+    const std::size_t stage_count = parameters_.ladder_order == 2U ? 2U : 4U;
+    const std::size_t last_stage = stage_count - 1U;
+
+    // This bounded four-stage feedback cascade is a project-authored filter,
+    // not an emulation of Fractal's proprietary Ladder Filter DSP. Resonance
+    // follows the documented role; its numeric mapping here is a local choice.
+    const float resonance = 3.6F * parameters_.ladder_resonance;
+    float driven = safe_sample(input - resonance * states[last_stage]);
+    if (parameters_.ladder_drive > 0.0F) {
+        const float drive_gain = 1.0F + 6.0F * parameters_.ladder_drive;
+        driven = std::tanh(driven * drive_gain) / drive_gain;
+    }
+
+    float stage_input = driven;
+    for (std::size_t stage = 0U; stage < stage_count; ++stage) {
+        float& state = states[stage];
+        state += ladder_cutoff_alpha_ * (stage_input - state);
+        if (!std::isfinite(state)) {
+            states.fill(0.0F);
+            return 0.0F;
+        }
+        state = safe_sample(state);
+        stage_input = state;
+    }
+
+    float output = states[last_stage];
+    if (parameters_.mode == StereoFilterMode::Bandpass) {
+        // Adjacent low-pass stages form a project-defined band-pass response.
+        output = states[stage_count / 2U - 1U] - states[last_stage];
+    } else {
+        // Bass compensation is a separate low-frequency feed-forward shelf,
+        // enabled only in low-pass mode as specified by the Blocks Guide.
+        float& bass_state = ladder_bass_comp_states_[channel];
+        bass_state += ladder_bass_comp_alpha_ * (input - bass_state);
+        if (!std::isfinite(bass_state)) {
+            bass_state = 0.0F;
+        }
+        output += 0.8F * parameters_.ladder_bass_comp *
+                  parameters_.ladder_resonance * bass_state;
     }
     return safe_sample(output);
 }
