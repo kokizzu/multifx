@@ -636,6 +636,7 @@ void PlexDelay::process(std::span<float> interleaved,
                                static_cast<std::size_t>(channels);
     const std::size_t active_lines = parameters_.active_lines;
     const float mix = parameters_.mix;
+    const float dry_mix = parameters_.kill_dry ? 0.0F : 1.0F - mix;
     const float balance_left = parameters_.balance > 0.0F
         ? 1.0F - parameters_.balance : 1.0F;
     const float balance_right = parameters_.balance < 0.0F
@@ -747,14 +748,14 @@ void PlexDelay::process(std::span<float> interleaved,
 
         if (channels == 1U) {
             interleaved[offset] = safe_signal(
-                dry_left * (1.0F - mix) +
+                dry_left * dry_mix +
                 wet_mono * mix * output_level_linear_);
         } else {
             interleaved[offset] = safe_signal(
-                dry_left * (1.0F - mix) +
+                dry_left * dry_mix +
                 wet_left * mix * output_level_linear_ * balance_left);
             interleaved[offset + 1U] = safe_signal(
-                dry_right * (1.0F - mix) +
+                dry_right * dry_mix +
                 wet_right * mix * output_level_linear_ * balance_right);
         }
     }

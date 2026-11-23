@@ -1301,6 +1301,7 @@ def check_plex_delay(executable: Path) -> None:
              "--plex-delay-diffusion", "0.7",
               "--plex-delay-input-diffusion-mix", "0.65",
               "--plex-delay-input-diffusion-time-ms", "17",
+              "--plex-delay-kill-dry", "1",
              "--plex-delay-pre-delay-ms", "5",
              "--plex-delay-low-cut-hz", "80",
              "--plex-delay-high-cut-hz", "6000",

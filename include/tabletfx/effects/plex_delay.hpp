@@ -76,6 +76,7 @@ struct PlexDelayParameters {
         -0.85F, -0.6F, -0.35F, -0.1F, 0.1F, 0.35F, 0.6F, 0.85F};
     float input_gain_db = 0.0F;
     float mix = 0.25F;
+    bool kill_dry = false;
     float level_db = 0.0F;
     float balance = 0.0F;
     PlexWetFilterType wet_filter_type = PlexWetFilterType::bypass;
@@ -103,16 +104,16 @@ struct PlexDelayParameters {
  * Stack/Hold, per-line time/tempo/level/pan, master controls, a wet filter/LFO,
  * envelope follower, ducker, stereo spread, common mix controls, and spillover.
  * This implementation includes the matrix core, timing, controls, wet filter/LFO,
- * envelope send, ducker, stereo spread, input selection, and a project-authored
- * three-stage input diffuser.
+ * envelope send, ducker, stereo spread, input selection, Kill Dry, and a
+ * project-authored three-stage input diffuser.
 
  * Matrix topology, feedback/decay mapping, filter and diffuser design, bounds,
  * defaults, input selection/summing, and storage caps are project choices. The
  * matrix/pre-delay rings are capped at 1 MiB; input diffusion has a separate
  * 256 KiB fixed cap. The remaining Filter-block types, delay-line modulation,
- * Plex Detune/Shift/Verb and Shimmer Verb algorithms, Kill Dry, Bypass, Bypass
- * Mode, Global Mix, spillover, and exact Fractal settings/DSP/sound parity are
- * not implemented.
+ * Plex Detune/Shift/Verb and Shimmer Verb algorithms, Bypass, Bypass Mode,
+ * Global Mix, spillover, and exact Fractal settings/DSP/sound parity are not
+ * implemented.
  * Plex Delay itself has no pitch effects; Plex Detune and Plex Shift are
  * separate types.
  * The guide

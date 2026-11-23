@@ -891,7 +891,8 @@ public:
         float pre_delay_ms, std::uint32_t stack_mode, float input_gain_db,
         float mix, float level_db, float balance,
         std::uint32_t input_select, float input_diffusion_mix,
-        float input_diffusion_time_ms) noexcept {
+        float input_diffusion_time_ms,
+        std::uint32_t kill_dry) noexcept {
         auto* delay = static_cast<tabletfx::PlexDelay*>(
             effects_[76].effect.get());
         auto parameters = delay->parameters();
@@ -914,6 +915,7 @@ public:
         parameters.input_diffusion_time_ms = input_diffusion_time_ms;
         parameters.input_gain_db = input_gain_db;
         parameters.mix = mix;
+        parameters.kill_dry = kill_dry != 0U;
         parameters.level_db = level_db;
         parameters.balance = balance;
         delay->configure(parameters);
@@ -3561,13 +3563,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_global(
     float high_cut_hz, float pre_delay_ms, std::uint32_t stack_mode,
     float input_gain_db, float mix, float level_db, float balance,
     std::uint32_t input_select, float input_diffusion_mix,
-    float input_diffusion_time_ms) noexcept {
+    float input_diffusion_time_ms, std::uint32_t kill_dry) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_plex_delay_global(
             active_lines, tempo_bpm, master_time, master_level, master_pan,
             decay_seconds, diffusion, low_cut_hz, high_cut_hz,
             pre_delay_ms, stack_mode, input_gain_db, mix, level_db, balance,
-            input_select, input_diffusion_mix, input_diffusion_time_ms);
+            input_select, input_diffusion_mix, input_diffusion_time_ms,
+            kill_dry);
     }
 }
 

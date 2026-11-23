@@ -83,6 +83,7 @@ function configurePlexDelay(module, chain, parameters = {}) {
     parameters.balance ?? 0, parameters.inputSelect ?? 0,
     parameters.inputDiffusionMix ?? 0,
     parameters.inputDiffusionTimeMs ?? 10,
+    parameters.killDry ? 1 : 0,
   );
   module._tf_chain_set_plex_delay_advanced(
     chain, Number(parameters.wetFilterType ?? 0),

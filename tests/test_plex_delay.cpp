@@ -90,6 +90,35 @@ void test_line_timing_count_pan_and_dry_path() {
             "zero mix should preserve the dry stereo input exactly");
 }
 
+void test_kill_dry_removes_direct_signal_and_keeps_wet_output() {
+    auto normal_parameters = simple_parameters();
+    normal_parameters.active_lines = 1U;
+    normal_parameters.time_ms[0] = 1.0F;
+    normal_parameters.line_pan[0] = 0.0F;
+    normal_parameters.mix = 0.5F;
+
+    auto kill_dry_parameters = normal_parameters;
+    kill_dry_parameters.kill_dry = true;
+
+    tabletfx::PlexDelay normal(8000.0F, 100.0F, normal_parameters);
+    tabletfx::PlexDelay kill_dry(8000.0F, 100.0F, kill_dry_parameters);
+    std::array<float, 32U> normal_audio{};
+    std::array<float, 32U> kill_dry_audio{};
+    normal_audio[0] = 1.0F;
+    kill_dry_audio[0] = 1.0F;
+    normal.process(normal_audio, 1U);
+    kill_dry.process(kill_dry_audio, 1U);
+
+    const std::size_t echo_frame = kill_dry.delay_samples(0U);
+    require(std::abs(normal_audio[0] - 0.5F) < 1.0e-6F &&
+                std::abs(kill_dry_audio[0]) < 1.0e-6F,
+            "Kill Dry should remove the direct signal without muting the effect");
+    require(normal_audio[echo_frame] > 0.0F &&
+                std::abs(normal_audio[echo_frame] - kill_dry_audio[echo_frame]) <
+                    1.0e-6F,
+            "Kill Dry should preserve the wet signal at the selected Mix setting");
+}
+
 void test_input_select_routes_stereo_sources_to_wet_matrix() {
     const auto render = [](tabletfx::PlexDelayInputSelect input_select) {
         auto parameters = simple_parameters();
@@ -422,6 +451,7 @@ void test_stereo_spread_and_advanced_bounds() {
 int main() {
     try {
         test_line_timing_count_pan_and_dry_path();
+        test_kill_dry_removes_direct_signal_and_keeps_wet_output();
         test_input_select_routes_stereo_sources_to_wet_matrix();
         test_input_diffusion_smears_only_the_wet_delay_send();
         test_matrix_diffusion_routes_energy_to_other_line();

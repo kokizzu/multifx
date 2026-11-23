@@ -179,7 +179,7 @@ const DEFAULT_PARAMETERS = {
     masterPan: 1, decaySeconds: 3, diffusion: 0.5,
     inputDiffusionMix: 0, inputDiffusionTimeMs: 10, lowCutHz: 20,
     highCutHz: 20000, preDelayMs: 0, stackMode: 0,
-    inputGainDb: 0, mix: 0.25, levelDb: 0, balance: 0,
+    inputGainDb: 0, mix: 0.25, killDry: false, levelDb: 0, balance: 0,
     wetFilterType: 0, wetFilterFrequencyHz: 2000, wetFilterQ: 0.707,
     wetFilterGainDb: 0, filterLfoEnabled: false, filterLfoType: 0,
     filterLfoRateHz: 0.5, filterModFrequencyHz: 2000,
@@ -1828,6 +1828,7 @@ function updatePlexDelayOptions() {
     stackMode: value("stackMode"),
     inputGainDb: value("inputGainDb"),
     mix: value("mix") / 100,
+    killDry: value("killDry"),
     levelDb: value("levelDb"),
     balance: value("balance") / 100,
     wetFilterType: value("wetFilterType"),
@@ -1887,6 +1888,7 @@ function updatePlexDelayOptions() {
     preDelayMs: `${parameters.preDelayMs} ms`,
     inputGainDb: `${parameters.inputGainDb.toFixed(1)} dB`,
     mix: `${Math.round(parameters.mix * 100)}%`,
+    killDry: parameters.killDry ? "On" : "Off",
     levelDb: `${parameters.levelDb.toFixed(1)} dB`,
     balance: parameters.balance === 0 ? "Center" :
       `${parameters.balance < 0 ? "Left" : "Right"} ${Math.round(Math.abs(parameters.balance) * 100)}%`,
@@ -1908,7 +1910,7 @@ function updatePlexDelayOptions() {
     const output = document.querySelector(`[data-plex-output="${name}"]`);
     if (output) output.value = label;
   }
-  for (const name of ["filterLfoEnabled", "envelopeEnabled"]) {
+  for (const name of ["filterLfoEnabled", "envelopeEnabled", "killDry"]) {
     const item = control(name);
     const output = item.parentElement.querySelector("output");
     if (output) output.value = item.checked ? "On" : "Off";
@@ -6156,7 +6158,7 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
       masterPan: 100, decaySeconds: 3, diffusion: 55,
       inputDiffusionMix: 60, inputDiffusionTimeMs: 20, lowCutHz: 20,
       highCutHz: 20000, preDelayMs: 0, stackMode: 0, inputGainDb: 0,
-      mix: 100, levelDb: 0, balance: 0, stereoSpread: 120,
+      mix: 65, killDry: true, levelDb: 0, balance: 0, stereoSpread: 120,
       wetFilterType: 6, wetFilterFrequencyHz: 1400, wetFilterQ: 2,
       wetFilterGainDb: 3, filterLfoEnabled: true, filterLfoType: 1,
       filterLfoRateHz: 1.5, filterModFrequencyHz: 3500,
@@ -6206,6 +6208,7 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     return { peak, activeSamples, enabledEffectIndex: 76, activeLines: 2,
       inputSelect: "left", delayMs: [40, 70], diffusionPercent: 55,
       inputDiffusionMixPercent: 60, inputDiffusionTimeMs: 20,
+      killDry: true,
       advancedControls: true };
   } finally {
     stopSource(false);

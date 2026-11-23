@@ -1815,7 +1815,7 @@ CHECKPOINTS = {
     "rhythm-tap-delay": (RHYTHM_TAP_DELAY_CHECKPOINT_PATHS,
                          "feat: add project-authored Rhythm Tap delay"),
     "plex-delay": (PLEX_DELAY_CHECKPOINT_PATHS,
-                   "feat: add Plex Delay input selection"),
+                   "feat: add Plex Delay kill dry control"),
     "flagship-delays": (
         FLAGSHIP_DELAYS_CHECKPOINT_PATHS,
         "feat: add flagship delay controls",
