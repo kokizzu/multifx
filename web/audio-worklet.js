@@ -19,6 +19,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "step-filter-delay");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "volume-pan");
 EFFECTS.push("stereo-filter");
 EFFECTS.push("step-tremolo");
+EFFECTS.push("deluxe-looper");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -962,6 +963,30 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         Number(message.overdubLevel), message.autoRecord ? 1 : 0,
         Number(message.autoRecordThresholdDb),
       );
+    } else if (message.type === "deluxe-looper-command" && this.ready) {
+      const accepted = this.module._tf_chain_deluxe_looper_command(
+        this.chain, Number(message.command) | 0,
+      ) !== 0;
+      this.port.postMessage({
+        type: "deluxe-looper-status",
+        accepted,
+        state: this.module._tf_chain_deluxe_looper_state(this.chain),
+        frames: this.module._tf_chain_deluxe_looper_frames(this.chain),
+        sampleRate: globalThis.sampleRate || 48000,
+      });
+    } else if (message.type === "deluxe-looper-status-request" && this.ready) {
+      this.port.postMessage({
+        type: "deluxe-looper-status",
+        state: this.module._tf_chain_deluxe_looper_state(this.chain),
+        frames: this.module._tf_chain_deluxe_looper_frames(this.chain),
+        sampleRate: globalThis.sampleRate || 48000,
+      });
+    } else if (message.type === "deluxe-looper-options" && this.ready) {
+      this.module._tf_chain_set_deluxe_looper_options(
+        this.chain, message.reverse ? 1 : 0, message.halfSpeed ? 1 : 0,
+        Number(message.playbackLevel), Number(message.overdubDecayDb),
+        Number(message.lowCutHz), Number(message.highCutHz),
+      );
     } else if (message.type === "shuffling-looper-command" && this.ready) {
       const accepted = this.module._tf_chain_shuffling_looper_command(
         this.chain, Number(message.command) | 0,
@@ -1250,7 +1275,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_tuner(this.chain);
     const tunerElapsedMs = nowMs() - tunerStartMs;
     if (this.stats) this.stats[ringOffset + TUNER_TIME] = Math.round(tunerElapsedMs * 1000000);
-    for (let effect = 0; effect < EFFECTS.length - 2; effect += 1) {
+    for (let effect = 0; effect < EFFECTS.length - 3; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
       const elapsedMs = nowMs() - startMs;
@@ -1259,6 +1284,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_finish(this.chain, frames);
     this.module._tf_chain_process_effect(this.chain, 96);
     this.module._tf_chain_process_effect(this.chain, 97);
+    this.module._tf_chain_process_effect(this.chain, 98);
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;

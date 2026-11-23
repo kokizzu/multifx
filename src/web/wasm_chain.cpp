@@ -24,6 +24,7 @@
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
+#include "tabletfx/effects/deluxe_looper.hpp"
 #include "tabletfx/effects/asheville_pattrn.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
@@ -388,9 +389,11 @@ public:
             static_cast<float>(sample_rate));
         step_tremolo_ = std::make_unique<tabletfx::StepTremolo>(
             static_cast<float>(sample_rate));
+        deluxe_looper_ = std::make_unique<tabletfx::DeluxeLooper>(
+            channels, static_cast<float>(sample_rate));
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 4; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 5; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -416,6 +419,10 @@ public:
         }
         if (index == 97U) {
             step_tremolo_enabled_ = enabled;
+            return true;
+        }
+        if (index == 98U) {
+            deluxe_looper_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -522,6 +529,13 @@ public:
             }
             return;
         }
+        if (index == 98U) {
+            if (deluxe_looper_enabled_) {
+                deluxe_looper_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -588,6 +602,7 @@ public:
         output_limiter_.reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
+        deluxe_looper_->reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -812,6 +827,48 @@ public:
         case 5U: return looper->clear();
         default: return false;
         }
+    }
+
+    [[nodiscard]] bool deluxe_looper_command(std::uint32_t command) noexcept {
+        switch (command) {
+        case 0U: return deluxe_looper_->record();
+        case 1U: return deluxe_looper_->play();
+        case 2U: return deluxe_looper_->overdub();
+        case 3U:
+            deluxe_looper_->stop();
+            return true;
+        case 4U: return deluxe_looper_->undo();
+        case 5U: return deluxe_looper_->redo();
+        case 6U:
+            deluxe_looper_->clear();
+            return true;
+        case 7U: return deluxe_looper_->play_once();
+        default: return false;
+        }
+    }
+
+    void configure_deluxe_looper(bool reverse, bool half_speed,
+                                 float playback_level,
+                                 float overdub_decay_db,
+                                 float low_cut_hz,
+                                 float high_cut_hz) noexcept {
+        deluxe_looper_->set_reverse(reverse);
+        deluxe_looper_->set_half_speed(half_speed);
+        deluxe_looper_->set_playback_level(playback_level);
+        deluxe_looper_->set_overdub_decay_db(overdub_decay_db);
+        deluxe_looper_->set_low_cut_hz(low_cut_hz);
+        deluxe_looper_->set_high_cut_hz(high_cut_hz);
+    }
+
+    [[nodiscard]] std::uint32_t deluxe_looper_state() const noexcept {
+        return static_cast<std::uint32_t>(deluxe_looper_->state());
+    }
+
+    [[nodiscard]] std::uint32_t deluxe_looper_frames() const noexcept {
+        const std::size_t frames = deluxe_looper_->loop_frames();
+        return frames > std::numeric_limits<std::uint32_t>::max()
+                   ? std::numeric_limits<std::uint32_t>::max()
+                   : static_cast<std::uint32_t>(frames);
     }
 
     void configure_shuffling_looper(
@@ -2729,6 +2786,7 @@ public:
         bytes += output_limiter_.memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
+        bytes += deluxe_looper_->memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2756,6 +2814,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 98U) {
+            const std::size_t bytes = deluxe_looper_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -2777,6 +2841,7 @@ private:
     std::vector<float> output_;
     std::unique_ptr<tabletfx::StereoFilter> stereo_filter_;
     std::unique_ptr<tabletfx::StepTremolo> step_tremolo_;
+    std::unique_ptr<tabletfx::DeluxeLooper> deluxe_looper_;
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
@@ -2787,6 +2852,7 @@ private:
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
     bool step_tremolo_enabled_ = false;
+    bool deluxe_looper_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -3840,6 +3906,35 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_state(void* opaque) noexcept 
 
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_looper_frames(void* opaque) noexcept {
     return opaque == nullptr ? 0U : as_chain(opaque)->looper_frames();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_deluxe_looper_command(
+    void* opaque, std::uint32_t command) noexcept {
+    return opaque != nullptr &&
+                   as_chain(opaque)->deluxe_looper_command(command)
+               ? 1U
+               : 0U;
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_deluxe_looper_options(
+    void* opaque, std::uint32_t reverse, std::uint32_t half_speed,
+    float playback_level, float overdub_decay_db,
+    float low_cut_hz, float high_cut_hz) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_deluxe_looper(
+            reverse != 0U, half_speed != 0U, playback_level,
+            overdub_decay_db, low_cut_hz, high_cut_hz);
+    }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_deluxe_looper_state(
+    void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->deluxe_looper_state();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_deluxe_looper_frames(
+    void* opaque) noexcept {
+    return opaque == nullptr ? 0U : as_chain(opaque)->deluxe_looper_frames();
 }
 
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_command(

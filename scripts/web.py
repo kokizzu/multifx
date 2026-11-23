@@ -165,6 +165,10 @@ def build_web() -> None:
         "_tf_chain_set_note_generator",
         "_tf_chain_set_fractal_three_voice_synth",
         "_tf_chain_set_enhancer",
+        "_tf_chain_deluxe_looper_command",
+        "_tf_chain_set_deluxe_looper_options",
+        "_tf_chain_deluxe_looper_state",
+        "_tf_chain_deluxe_looper_frames",
         "_tf_chain_shuffling_looper_command",
         "_tf_chain_set_shuffling_looper_options",
         "_tf_chain_shuffling_looper_state",
@@ -332,7 +336,7 @@ def build_web() -> None:
         "-o", str(WEB_BUILD_DIR / "tabletfx_wasm.js"),
         "-sMODULARIZE=1", "-sEXPORT_ES6=1", "-sSINGLE_FILE=1",
         "-sENVIRONMENT=web,worker,worklet", "-sALLOW_MEMORY_GROWTH=0",
-        "-sINITIAL_MEMORY=67108864", "-sSTACK_SIZE=262144",
+        "-sINITIAL_MEMORY=100663296", "-sSTACK_SIZE=262144",
         "-sNO_EXIT_RUNTIME=1", "-sFILESYSTEM=0",
         "-sEXPORTED_FUNCTIONS=" + json.dumps(exports),
         "-sEXPORTED_RUNTIME_METHODS=HEAPF32",
@@ -1305,8 +1309,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "'WASM could not replace the loaded 10-second C-Verb IR with a short stereo test IR');"
             "}finally{module._free(replacementPointer)}"
             "cverbWasmBytes=module.HEAPF32.buffer.byteLength;"
-            "assert(cverbWasmBytes<=64*1024*1024,"
-            "`10-second stereo C-Verb exceeded the 64 MiB WASM heap: ${cverbWasmBytes}`);"
+            "assert(cverbWasmBytes<=96*1024*1024,"
+            "`10-second stereo C-Verb exceeded the 96 MiB WASM heap: ${cverbWasmBytes}`);"
             "}finally{if(cverbPointer)module._free(cverbPointer);module._tf_chain_destroy(cverbChain)}"
             "return JSON.stringify({passed:true,category:'Delay',effectIndex:84,leftTimeMs:10,rightTimeMs:20,"
             "leftEcho:actual[160],rightEcho:actual[321],maxError,rmsError,frames,tapSamples,"

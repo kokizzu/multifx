@@ -213,6 +213,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_looper_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_looper_tests COMMAND tabletfx_looper_tests)
 
+    add_executable(tabletfx_deluxe_looper_tests tests/test_deluxe_looper.cpp)
+    target_link_libraries(tabletfx_deluxe_looper_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_deluxe_looper_tests COMMAND tabletfx_deluxe_looper_tests)
+
     add_executable(tabletfx_pitch_feedback_delay_tests tests/test_pitch_feedback_delay.cpp)
     target_link_libraries(tabletfx_pitch_feedback_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_pitch_feedback_delay_tests COMMAND tabletfx_pitch_feedback_delay_tests)

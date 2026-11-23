@@ -1894,6 +1894,24 @@ HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+DELUXE_LOOPER_CHECKPOINT_PATHS = (
+    "make/publish.mk",
+    "AUDIO_COMPATIBILITY.md",
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/deluxe_looper.hpp",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "tests/test_deluxe_looper.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2086,6 +2104,10 @@ CHECKPOINTS = {
     "headrush-bbd-mode": (
         HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,
         "feat: add project-authored BBD delay modes",
+    ),
+    "deluxe-looper": (
+        DELUXE_LOOPER_CHECKPOINT_PATHS,
+        "feat: add project-authored Deluxe Looper",
     ),
 }
 

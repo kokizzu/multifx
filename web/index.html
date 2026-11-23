@@ -187,6 +187,7 @@
       <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="95" checked><span class="effect-number">96</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="96"><span class="effect-number">97</span><span class="effect-name">Stereo Filter · project-authored controls</span><span class="effect-default">Filter type · frequency · stereo/LFO</span><span class="effect-category-tag">Filters &amp; wah</span></label>
                 <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="97"><span class="effect-number">98</span><span class="effect-name">Step Tremolo · project-authored controls</span><span class="effect-default">1–16 steps · rate · depth · smoothing</span><span class="effect-category-tag">Modulation</span></label>
+                <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="98"><span class="effect-number">99</span><span class="effect-name">Deluxe Looper · project-authored</span><span class="effect-default">120 s mono / 60 s stereo at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1330,6 +1331,29 @@
           <label class="mix-control" for="looper-auto-record-threshold-db"><span>Auto Record threshold</span><output for="looper-auto-record-threshold-db">−36 dBFS</output><input id="looper-auto-record-threshold-db" type="range" min="-90" max="0" step="1" value="-36"></label>
         </div>
         <output id="looper-status" class="status" role="status">Stopped · no loop</output>
+      </div>
+      <div class="effect-parameter-group" aria-label="Deluxe Looper controls">
+        <h3>Deluxe Looper · project-authored</h3>
+        <p class="hint">The <a href="https://manuals.line6.com/en/helix-stadium/live/looper-block" target="_blank" rel="noreferrer">current Helix Stadium manual</a> lists Playback, Overdub (loop-level decay per pass), Low Cut, and High Cut. It gives no numeric control ranges/defaults. This project uses its own ranges and DSP. The manual lists 120 s mono / 60 s stereo at full speed (double at half speed); this project applies those limits at 48 kHz. Loop audio is temporary and is not saved with a preset or file.</p>
+        <div class="transport" aria-label="Deluxe Looper transport">
+          <button class="button" type="button" data-deluxe-looper-command="0">Record</button>
+          <button class="button" type="button" data-deluxe-looper-command="1">Play</button>
+          <button class="button" type="button" data-deluxe-looper-command="2">Overdub</button>
+          <button class="button" type="button" data-deluxe-looper-command="3">Stop</button>
+          <button class="button" type="button" data-deluxe-looper-command="7">Play x1</button>
+          <button class="button" type="button" data-deluxe-looper-command="4">Undo</button>
+          <button class="button" type="button" data-deluxe-looper-command="5">Redo</button>
+          <button class="button" type="button" data-deluxe-looper-command="6">Clear</button>
+        </div>
+        <div class="gain-controls">
+          <label><input id="deluxe-looper-reverse" type="checkbox"> Reverse playback</label>
+          <label><input id="deluxe-looper-half-speed" type="checkbox"> Half-speed playback</label>
+          <label class="mix-control" for="deluxe-looper-playback"><span>Playback</span><output for="deluxe-looper-playback">100%</output><input id="deluxe-looper-playback" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="deluxe-looper-overdub-decay"><span>Overdub decay per loop</span><output for="deluxe-looper-overdub-decay">0 dB</output><input id="deluxe-looper-overdub-decay" type="range" min="-24" max="0" step="1" value="0"></label>
+          <label class="mix-control" for="deluxe-looper-low-cut-hz"><span>Low cut</span><output for="deluxe-looper-low-cut-hz">Off</output><input id="deluxe-looper-low-cut-hz" type="range" min="0" max="20000" step="1" value="0"></label>
+          <label class="mix-control" for="deluxe-looper-high-cut-hz"><span>High cut</span><output for="deluxe-looper-high-cut-hz">Off</output><input id="deluxe-looper-high-cut-hz" type="range" min="0" max="20000" step="1" value="0"></label>
+        </div>
+        <output id="deluxe-looper-status" class="status" role="status">Stopped · no loop</output>
       </div>
       <div class="effect-parameter-group" aria-label="Shuffling Looper controls">
         <h3>Shuffling Looper · project-authored</h3>

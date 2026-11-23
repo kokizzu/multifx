@@ -51,6 +51,7 @@
 #include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/five_band_eq.hpp"
 #include "tabletfx/effects/looper.hpp"
+#include "tabletfx/effects/deluxe_looper.hpp"
 
 #include <array>
 #include <cstddef>
