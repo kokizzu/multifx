@@ -1143,6 +1143,27 @@ VOLUME_PAN_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+STEREO_FILTER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/stereo_filter.hpp",
+    "src/effects/stereo_filter.cpp",
+    "tests/test_stereo_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "scripts/web.py",
+    "scripts/inspect_effect_api.py",
+    "scripts/inspect_effects_doc_status.py",
+    "scripts/inspect_web_effect_path.py",
+    "scripts/inspect_publish_checkpoint.py",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/octave_fuzz.hpp",
     "src/effects/octave_fuzz.cpp",
@@ -1985,6 +2006,10 @@ CHECKPOINTS = {
     "volume-pan": (
         VOLUME_PAN_CHECKPOINT_PATHS,
         "feat: add categorized Volume/Pan utility",
+    ),
+    "stereo-filter": (
+        STEREO_FILTER_CHECKPOINT_PATHS,
+        "feat: add categorized Stereo Filter",
     ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),

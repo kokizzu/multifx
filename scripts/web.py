@@ -189,6 +189,7 @@ def build_web() -> None:
         "_tf_chain_set_poly_sustain",
         "_tf_chain_set_step_filter_delay",
         "_tf_chain_set_volume_pan",
+        "_tf_chain_set_stereo_filter",
         "_tf_chain_set_resonant_delay",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
@@ -315,6 +316,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "rock_box_boost.cpp"),
         str(ROOT / "src" / "effects" / "stereo_panner.cpp"),
         str(ROOT / "src" / "effects" / "stereo_crossover.cpp"),
+        str(ROOT / "src" / "effects" / "stereo_filter.cpp"),
         str(ROOT / "src" / "effects" / "porta_preamp.cpp"),
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
         str(ROOT / "src" / "effects" / "poly_sustain.cpp"),
@@ -676,7 +678,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                     process.wait(timeout=5)
 
 
-def browser_test(*, volume_pan_only: bool = False) -> None:
+def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1123,9 +1125,12 @@ def browser_test(*, volume_pan_only: bool = False) -> None:
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        url = base_url + ("/web/index.html?selftest=volume-pan"
-                          if volume_pan_only
-                          else "/web/index.html?selftest=1")
+        if stereo_filter_only:
+            url = base_url + "/web/index.html?selftest=stereo-filter"
+        elif volume_pan_only:
+            url = base_url + "/web/index.html?selftest=volume-pan"
+        else:
+            url = base_url + "/web/index.html?selftest=1"
         stereo_tape_echo_expression = (
             "(async()=>{"
             "const assert=(condition,message)=>{if(!condition)throw new Error(message)};"
@@ -1308,7 +1313,7 @@ def browser_test(*, volume_pan_only: bool = False) -> None:
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
-                None if volume_pan_only else stereo_tape_echo_expression,
+                None if volume_pan_only or stereo_filter_only else stereo_tape_echo_expression,
             )
         finally:
             server.shutdown()
@@ -1328,6 +1333,9 @@ def browser_test(*, volume_pan_only: bool = False) -> None:
         if volume_pan_only:
             print("Focused Volume/Pan browser/WASM Play smoke passed.")
             print(json.dumps(report, indent=2))
+        elif stereo_filter_only:
+            print("Focused Stereo Filter browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
             print(json.dumps(report, indent=2))
@@ -1339,7 +1347,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
-        "test-volume-pan",
+        "test-volume-pan", "test-stereo-filter",
     ))
     action = parser.parse_args().action
     if action == "bootstrap-toolchain":
@@ -1352,6 +1360,8 @@ def main() -> None:
         browser_test()
     elif action == "test-volume-pan":
         browser_test(volume_pan_only=True)
+    elif action == "test-stereo-filter":
+        browser_test(stereo_filter_only=True)
     else:
         build_web()
 

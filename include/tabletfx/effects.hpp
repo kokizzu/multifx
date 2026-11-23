@@ -41,6 +41,7 @@
 #include "tabletfx/effects/pitch_sequence.hpp"
 #include "tabletfx/effects/poly_sustain.hpp"
 #include "tabletfx/effects/step_filter_delay.hpp"
+#include "tabletfx/effects/stereo_filter.hpp"
 #include "tabletfx/effects/volume_pan.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"

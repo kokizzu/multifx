@@ -384,9 +384,11 @@ public:
                                 static_cast<float>(sample_rate), channels, 2000.0F),
                             false});
         effects_.push_back({std::make_unique<tabletfx::VolumePan>(), false});
+        stereo_filter_ = std::make_unique<tabletfx::StereoFilter>(
+            static_cast<float>(sample_rate));
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 2; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 3; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -404,6 +406,10 @@ public:
         }
         if (index == effects_.size() + 1) {
             output_limiter_enabled_ = enabled;
+            return true;
+        }
+        if (index == 96U) {
+            stereo_filter_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -492,10 +498,20 @@ public:
     }
 
     void process_effect(std::uint32_t index) noexcept {
-        if (frames_ == 0 || index >= effects_.size()) {
+        if (frames_ == 0) {
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        if (index == 96U) {
+            if (stereo_filter_enabled_) {
+                stereo_filter_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
+        if (index >= effects_.size()) {
+            return;
+        }
         if (!effects_[index].enabled && index != 38U && index != 64U) {
             effects_[index].effect->process_bypassed(
                 std::span<float>(work_.data(), samples), channels_);
@@ -557,6 +573,7 @@ public:
         }
         output_gain_.reset();
         output_limiter_.reset();
+        stereo_filter_->reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -1301,6 +1318,43 @@ public:
             enum_index(values[10], 1U));
         static_cast<tabletfx::VolumePan*>(effects_[93].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_stereo_filter(const float* values,
+                                 std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 21U) return;
+        const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(std::clamp(
+                std::round(value), 0.0F, static_cast<float>(maximum)));
+        };
+        tabletfx::StereoFilterParameters parameters;
+        parameters.type = static_cast<tabletfx::StereoFilterType>(
+            enum_index(values[0], 14U));
+        parameters.frequency_hz = values[1];
+        parameters.order = static_cast<std::uint8_t>(enum_index(values[2], 4U));
+        parameters.q = values[3];
+        parameters.gain_db = values[4];
+        parameters.low_cut_hz = values[5];
+        parameters.high_cut_hz = values[6];
+        parameters.pan_left_percent = values[7];
+        parameters.pan_right_percent = values[8];
+        parameters.phase_invert = static_cast<tabletfx::StereoFilterPhaseInvert>(
+            enum_index(values[9], 3U));
+        parameters.delay_time_ms = values[10];
+        parameters.depth = values[11];
+        parameters.feedback = values[12];
+        parameters.level_db = values[13];
+        parameters.balance_percent = values[14];
+        parameters.lfo_enabled = std::isfinite(values[15]) && values[15] >= 0.5F;
+        parameters.lfo_shape = static_cast<tabletfx::StereoFilterLfoShape>(
+            enum_index(values[16], 5U));
+        parameters.lfo_rate_hz = values[17];
+        parameters.lfo_duty_percent = values[18];
+        parameters.mod_frequency_hz = values[19];
+        parameters.lfo_quantize_steps = static_cast<std::uint8_t>(
+            enum_index(values[20], 16U));
+        stereo_filter_->set_parameters(parameters);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2615,6 +2669,7 @@ public:
         bytes += work_.capacity() * sizeof(float) + output_.capacity() * sizeof(float);
         bytes += output_gain_.memory_bytes();
         bytes += output_limiter_.memory_bytes();
+        bytes += stereo_filter_->memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2629,6 +2684,12 @@ public:
         }
         if (index == effects_.size() + 1) {
             return static_cast<std::uint32_t>(output_limiter_.memory_bytes());
+        }
+        if (index == 96U) {
+            const std::size_t bytes = stereo_filter_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
         }
         if (index >= effects_.size()) {
             return 0;
@@ -2649,6 +2710,7 @@ private:
     std::vector<float> dry_;
     std::vector<float> work_;
     std::vector<float> output_;
+    std::unique_ptr<tabletfx::StereoFilter> stereo_filter_;
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
@@ -2657,6 +2719,7 @@ private:
     tabletfx::LevelMeter output_meter_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
+    bool stereo_filter_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -3965,6 +4028,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_volume_pan(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_volume_pan(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_stereo_filter(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_stereo_filter(values, value_count);
     }
 }
 

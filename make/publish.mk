@@ -13,10 +13,19 @@ PUBLISH_CHECKPOINTS := \
 
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
+PUBLISH_CHECKPOINTS += stereo-filter
 .PHONY: publish-volume-pan-plan publish-volume-pan
+
+.PHONY: inspect-effect-api
+inspect-effect-api:
+	python3 scripts/inspect_effect_api.py
+
+.PHONY: inspect-web-effect-path
+inspect-web-effect-path:
+	python3 scripts/inspect_web_effect_path.py
 .PHONY: test-convolution-reverb
 .PHONY: test-pitch-sequence test-poly-sustain
-.PHONY: test-volume-pan web-test-volume-pan
+.PHONY: test-volume-pan test-stereo-filter web-test-volume-pan web-test-stereo-filter
 
 .PHONY: inspect-volume-pan-path
 inspect-volume-pan-path:
@@ -36,8 +45,14 @@ test-poly-sustain:
 test-volume-pan:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_volume_pan_tests
 
+test-stereo-filter:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_stereo_filter_tests
+
 web-test-volume-pan:
 	$(PYTHON) scripts/web.py test-volume-pan
+
+web-test-stereo-filter:
+	$(PYTHON) scripts/web.py test-stereo-filter
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
 
 publish-plan:
@@ -66,3 +81,6 @@ inspect-effect-picker:
 
 
 .PHONY: inspect-stereo-crossover-integration
+.PHONY: inspect-publish-checkpoint
+inspect-publish-checkpoint:
+	python3 scripts/inspect_publish_checkpoint.py

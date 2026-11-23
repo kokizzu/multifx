@@ -93,6 +93,7 @@ add_library(tabletfx_core
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/volume_pan.cpp
+    src/effects/stereo_filter.cpp
     src/effects/wah.cpp
     src/level_meter.cpp
     src/signal_controls.cpp
@@ -308,6 +309,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_volume_pan_tests tests/test_volume_pan.cpp)
     target_link_libraries(tabletfx_volume_pan_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_volume_pan_tests COMMAND tabletfx_volume_pan_tests)
+
+    add_executable(tabletfx_stereo_filter_tests tests/test_stereo_filter.cpp)
+    target_link_libraries(tabletfx_stereo_filter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_stereo_filter_tests COMMAND tabletfx_stereo_filter_tests)
 
     add_executable(tabletfx_tremolo_tests tests/test_tremolo.cpp)
     target_link_libraries(tabletfx_tremolo_tests PRIVATE tabletfx_core)

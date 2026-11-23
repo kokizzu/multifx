@@ -17,6 +17,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-panner");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "poly-sustain");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "step-filter-delay");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "volume-pan");
+EFFECTS.push("stereo-filter");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -297,6 +298,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_volume_pedal(this.chain, ...volumePedal);
       this.configureVolumePan(parameters.volumePan ||
         [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0]);
+      this.configureStereoFilter(parameters.stereoFilter ||
+        [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0]);
       const wah = parameters.wah || [0.5, 350, 2200, 4, 0];
       module._tf_chain_set_wah(this.chain, ...wah);
       const envelopeWah = parameters.envelopeWah || [0.5, 350, 2200, 4, 0, 5, 80, 5, 0];
@@ -785,6 +788,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureStereoFilter(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 21) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_stereo_filter(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   configureRhythmTapDelay(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
       return;
@@ -974,6 +988,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureStepFilterDelay(message.value);
     } else if (message.type === "volume-pan" && this.ready) {
       this.configureVolumePan(message.value);
+    } else if (message.type === "stereo-filter" && this.ready) {
+      this.configureStereoFilter(message.value);
     } else if (message.type === "rhythm-tap-delay" && this.ready) {
       this.configureRhythmTapDelay(message.value);
     } else if (message.type === "plex-delay" && this.ready) {
@@ -1214,6 +1230,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       if (this.stats) this.stats[ringOffset + effect] = Math.round(elapsedMs * 1000000);
     }
     this.module._tf_chain_finish(this.chain, frames);
+    this.module._tf_chain_process_effect(this.chain, 96);
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;
