@@ -1446,6 +1446,28 @@ PLEX_DELAY_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FLAGSHIP_DELAYS_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/ducking_delay.hpp",
+    "include/tabletfx/effects/plex_delay.hpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/ducking_delay.cpp",
+    "src/effects/plex_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_ducking_delay.cpp",
+    "tests/test_plex_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CELESTIAL_REVERB_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "README.md",
@@ -1794,6 +1816,10 @@ CHECKPOINTS = {
                          "feat: add project-authored Rhythm Tap delay"),
     "plex-delay": (PLEX_DELAY_CHECKPOINT_PATHS,
                    "feat: add Plex Delay input selection"),
+    "flagship-delays": (
+        FLAGSHIP_DELAYS_CHECKPOINT_PATHS,
+        "feat: add flagship delay controls",
+    ),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,

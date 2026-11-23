@@ -121,6 +121,47 @@ void test_input_select_routes_stereo_sources_to_wet_matrix() {
             "summed L+R should remain the default input selection");
 }
 
+void test_input_diffusion_smears_only_the_wet_delay_send() {
+    const auto render = [](float diffusion_mix) {
+        auto parameters = simple_parameters();
+        parameters.active_lines = 1U;
+        parameters.time_ms[0] = 5.0F;
+        parameters.mix = 0.5F;
+        parameters.input_diffusion_mix = diffusion_mix;
+        parameters.input_diffusion_time_ms = 20.0F;
+        tabletfx::PlexDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 512U> audio{};
+        audio[0] = 1.0F;
+        delay.process(audio, 1U);
+        return audio;
+    };
+
+    const auto direct = render(0.0F);
+    const auto diffused = render(1.0F);
+    require(std::abs(direct[0] - 0.5F) < 1.0e-6F &&
+                std::abs(diffused[0] - direct[0]) < 1.0e-6F,
+            "input diffusion must leave the immediate dry path unchanged");
+    require(std::abs(direct[40U] - diffused[40U]) > 0.05F,
+            "input diffusion should change the first wet echo");
+    const auto active_samples = [](const auto& audio) {
+        return std::count_if(audio.begin() + 40, audio.end(),
+            [](float sample) { return std::abs(sample) > 1.0e-5F; });
+    };
+    require(active_samples(diffused) > active_samples(direct),
+            "the input diffuser should spread transient energy across more wet samples");
+
+    auto bounded_parameters = simple_parameters();
+    bounded_parameters.input_diffusion_mix = 2.0F;
+    bounded_parameters.input_diffusion_time_ms = 500.0F;
+    tabletfx::PlexDelay bounded(48000.0F, 100.0F, bounded_parameters);
+    require(bounded.parameters().input_diffusion_mix == 1.0F &&
+                bounded.parameters().input_diffusion_time_ms == 50.0F &&
+                bounded.memory_bytes() <= sizeof(bounded) +
+                    tabletfx::plex_delay_storage_limit_bytes +
+                    tabletfx::plex_delay_input_diffusion_storage_limit_bytes,
+            "input diffusion controls and fixed memory must remain bounded");
+}
+
 void test_matrix_diffusion_routes_energy_to_other_line() {
     auto p = simple_parameters();
     p.time_ms[0] = 1.0F;
@@ -206,11 +247,14 @@ void test_memory_cap_finite_audio_and_no_process_allocations() {
     tabletfx::PlexDelay capped(384000.0F, 2000.0F);
     require(capped.maximum_delay_ms() < 100.0F &&
                 capped.memory_bytes() <= sizeof(capped) +
-                    tabletfx::plex_delay_storage_limit_bytes,
-            "the fixed storage cap should bound per-line time at high sample rates");
+                    tabletfx::plex_delay_storage_limit_bytes +
+                    tabletfx::plex_delay_input_diffusion_storage_limit_bytes,
+            "the fixed storage caps should bound delay lines and input diffusion at high sample rates");
 
     auto p = simple_parameters();
     p.diffusion = 1.0F;
+    p.input_diffusion_mix = 0.7F;
+    p.input_diffusion_time_ms = 22.0F;
     p.stack_mode = tabletfx::PlexDelayStackMode::stack;
     tabletfx::PlexDelay delay(48000.0F, 100.0F, p);
     std::array<float, 512U> audio{};
@@ -234,12 +278,16 @@ void test_unknown_enums_and_nonfinite_inputs_recover() {
     p.division[0] = static_cast<tabletfx::DelayDivision>(99U);
     p.stack_mode = static_cast<tabletfx::PlexDelayStackMode>(99U);
     p.input_select = static_cast<tabletfx::PlexDelayInputSelect>(99U);
+    p.input_diffusion_mix = std::numeric_limits<float>::infinity();
+    p.input_diffusion_time_ms = std::numeric_limits<float>::quiet_NaN();
     p.mix = std::numeric_limits<float>::infinity();
     tabletfx::PlexDelay delay(8000.0F, 100.0F, p);
     require(delay.parameters().time_ms[0] == 45.0F &&
                 delay.parameters().time_mode[0] == tabletfx::DelayTimeMode::milliseconds &&
                 delay.parameters().stack_mode == tabletfx::PlexDelayStackMode::off &&
                 delay.parameters().input_select == tabletfx::PlexDelayInputSelect::sum_lr &&
+                delay.parameters().input_diffusion_mix == 0.0F &&
+                delay.parameters().input_diffusion_time_ms == 10.0F &&
                 delay.parameters().mix == 0.25F,
             "invalid parameters and enum values should fall back safely");
     std::array<float, 4U> audio{
@@ -375,6 +423,7 @@ int main() {
     try {
         test_line_timing_count_pan_and_dry_path();
         test_input_select_routes_stereo_sources_to_wet_matrix();
+        test_input_diffusion_smears_only_the_wet_delay_send();
         test_matrix_diffusion_routes_energy_to_other_line();
         test_tempo_pre_delay_master_time_and_bounds();
         test_stack_hold_and_reset();

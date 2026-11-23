@@ -16,6 +16,7 @@ struct DuckingDelayParameters {
     float threshold_db = -30.0F;
     float attenuation_db = 12.0F;
     float release_ms = 250.0F;
+    bool spillover = false;
 };
 
 /*
@@ -45,6 +46,8 @@ public:
     void configure(DuckingDelayParameters parameters) noexcept;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -67,6 +70,7 @@ private:
                                               std::uint16_t channel) const noexcept;
     [[nodiscard]] float read_age(std::size_t age,
                                  std::uint16_t channel) const noexcept;
+    void process_audio(std::span<float> interleaved, bool bypassed) noexcept;
     void advance_ramps() noexcept;
 
     float sample_rate_ = 48000.0F;
@@ -74,6 +78,7 @@ private:
     float max_delay_ms_ = kMaximumTimeMs;
     std::size_t capacity_frames_ = 0;
     std::size_t write_frame_ = 0;
+    bool storage_cleared_ = true;
     std::vector<float> storage_;
     DuckingDelayParameters parameters_{};
     float threshold_amplitude_ = 0.0316228F;

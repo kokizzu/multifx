@@ -10,6 +10,9 @@ namespace {
 
 constexpr double kPi = 3.14159265358979323846;
 constexpr float kInvSqrtTwo = 0.7071067811865475244F;
+constexpr float kInputDiffusionCoefficient = 0.55F;
+constexpr std::array<float, 3U> kInputDiffusionDelayRatios{
+    0.31F, 0.47F, 0.59F};
 
 } // namespace
 
@@ -49,6 +52,25 @@ PlexDelay::PlexDelay(float sample_rate, float max_delay_ms,
     if (storage_.capacity() > maximum_storage_samples) {
         throw std::length_error(
             "Plex Delay allocator exceeded its 1 MiB storage cap");
+    }
+    const double maximum_diffusion_frames = std::ceil(
+        static_cast<double>(sample_rate_) *
+        static_cast<double>(kMaximumInputDiffusionTimeMs) *
+        static_cast<double>(kInputDiffusionDelayRatios.back()) / 1000.0);
+    input_diffusion_capacity_frames_ =
+        static_cast<std::size_t>(maximum_diffusion_frames) + 1U;
+    const std::size_t diffusion_samples = input_diffusion_capacity_frames_ *
+        kInputDiffusionStages;
+    if (diffusion_samples > plex_delay_input_diffusion_storage_limit_bytes /
+                                sizeof(float)) {
+        throw std::length_error(
+            "Plex Delay input diffuser exceeds its 256 KiB storage cap");
+    }
+    input_diffusion_storage_.assign(diffusion_samples, 0.0F);
+    if (input_diffusion_storage_.capacity() * sizeof(float) >
+        plex_delay_input_diffusion_storage_limit_bytes) {
+        throw std::length_error(
+            "Plex Delay allocator exceeded its input diffuser storage cap");
     }
     configure(parameters);
 }
@@ -185,6 +207,13 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         parameters_.decay_seconds, 0.1F, 30.0F);
     parameters.diffusion = bounded(parameters.diffusion,
         parameters_.diffusion, 0.0F, 1.0F);
+    parameters.input_diffusion_mix = bounded(
+        parameters.input_diffusion_mix, parameters_.input_diffusion_mix,
+        0.0F, 1.0F);
+    parameters.input_diffusion_time_ms = bounded(
+        parameters.input_diffusion_time_ms,
+        parameters_.input_diffusion_time_ms, 0.1F,
+        kMaximumInputDiffusionTimeMs);
     const float maximum_filter_hz = std::max(
         20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
     parameters.low_cut_hz = bounded(parameters.low_cut_hz,
@@ -258,7 +287,17 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         parameters_.ducker_release_ms, 1.0F, 5000.0F);
     parameters.stereo_spread = bounded(parameters.stereo_spread,
         parameters_.stereo_spread, -2.0F, 2.0F);
+    const bool input_diffusion_time_changed =
+        parameters.input_diffusion_time_ms !=
+            parameters_.input_diffusion_time_ms;
+    const bool input_diffusion_turned_off =
+        parameters.input_diffusion_mix == 0.0F &&
+        parameters_.input_diffusion_mix > 0.0F;
     parameters_ = parameters;
+    update_input_diffusion_times();
+    if (input_diffusion_time_changed || input_diffusion_turned_off) {
+        clear_input_diffusion();
+    }
 
     input_gain_linear_ = static_cast<float>(std::pow(
         10.0, static_cast<double>(parameters_.input_gain_db) / 20.0));
@@ -539,6 +578,52 @@ float PlexDelay::filter_feedback(float input, std::size_t line) noexcept {
     return safe_signal(high_cut_output_[line]);
 }
 
+void PlexDelay::update_input_diffusion_times() noexcept {
+    if (input_diffusion_capacity_frames_ < 2U) return;
+    for (std::size_t stage = 0; stage < kInputDiffusionStages; ++stage) {
+        const double requested_frames = std::round(
+            static_cast<double>(sample_rate_) *
+            static_cast<double>(parameters_.input_diffusion_time_ms) *
+            static_cast<double>(kInputDiffusionDelayRatios[stage]) / 1000.0);
+        const auto frames = static_cast<std::size_t>(
+            std::max(1.0, requested_frames));
+        input_diffusion_delay_frames_[stage] = std::min(
+            frames, input_diffusion_capacity_frames_ - 1U);
+    }
+}
+
+void PlexDelay::clear_input_diffusion() noexcept {
+    std::fill(input_diffusion_storage_.begin(),
+              input_diffusion_storage_.end(), 0.0F);
+    input_diffusion_write_frame_ = 0U;
+}
+
+float PlexDelay::process_input_diffusion(float input) noexcept {
+    const float mix = parameters_.input_diffusion_mix;
+    if (mix <= 0.0F || input_diffusion_capacity_frames_ < 2U) {
+        return input;
+    }
+
+    float diffused = input;
+    for (std::size_t stage = 0; stage < kInputDiffusionStages; ++stage) {
+        const std::size_t delay = input_diffusion_delay_frames_[stage];
+        const std::size_t read_frame = input_diffusion_write_frame_ >= delay
+            ? input_diffusion_write_frame_ - delay
+            : input_diffusion_write_frame_ +
+                input_diffusion_capacity_frames_ - delay;
+        const std::size_t base = stage * input_diffusion_capacity_frames_;
+        const float delayed = input_diffusion_storage_[base + read_frame];
+        const float output = safe_signal(
+            delayed - kInputDiffusionCoefficient * diffused);
+        input_diffusion_storage_[base + input_diffusion_write_frame_] =
+            safe_signal(diffused + kInputDiffusionCoefficient * output);
+        diffused = output;
+    }
+    input_diffusion_write_frame_ = (input_diffusion_write_frame_ + 1U) %
+                                   input_diffusion_capacity_frames_;
+    return safe_signal(input * (1.0F - mix) + diffused * mix);
+}
+
 float PlexDelay::safe_signal(float value) noexcept {
     if (!std::isfinite(value)) return 0.0F;
     return std::clamp(value, -kMaximumSignal, kMaximumSignal);
@@ -583,6 +668,7 @@ void PlexDelay::process(std::span<float> interleaved,
         const float input = parameters_.stack_mode == PlexDelayStackMode::hold
             ? 0.0F : safe_signal(selected_input * input_gain_linear_ *
                                  envelope_send_gain);
+        const float diffused_input = process_input_diffusion(input);
         const float ducker_envelope_coefficient =
             detector_peak > ducker_envelope_
                 ? ducker_attack_coefficient_ : ducker_release_coefficient_;
@@ -597,7 +683,8 @@ void PlexDelay::process(std::span<float> interleaved,
         ducker_gain_ = ducker_gain_coefficient * ducker_gain_ +
             (1.0F - ducker_gain_coefficient) * ducker_target;
         const float pre_delayed = pre_delay_frames_ == 0U
-            ? input : storage_[read_index(pre_delay_frames_, plex_delay_line_count)];
+            ? diffused_input
+            : storage_[read_index(pre_delay_frames_, plex_delay_line_count)];
 
         std::array<float, plex_delay_line_count> taps{};
         std::array<float, plex_delay_line_count> feedback_taps{};
@@ -641,7 +728,7 @@ void PlexDelay::process(std::span<float> interleaved,
         }
         if (pre_delay_frames_ != 0U) {
             storage_[plex_delay_line_count * capacity_frames_ + write_frame_] =
-                input;
+                diffused_input;
         }
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;
 
@@ -675,6 +762,7 @@ void PlexDelay::process(std::span<float> interleaved,
 
 void PlexDelay::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
+    clear_input_diffusion();
     low_cut_input_.fill(0.0F);
     low_cut_output_.fill(0.0F);
     high_cut_output_.fill(0.0F);

@@ -13,6 +13,8 @@ namespace tabletfx {
 
 inline constexpr std::size_t plex_delay_line_count = 8U;
 inline constexpr std::size_t plex_delay_storage_limit_bytes = 1024U * 1024U;
+inline constexpr std::size_t plex_delay_input_diffusion_storage_limit_bytes =
+    256U * 1024U;
 
 enum class PlexDelayStackMode : std::uint8_t {
     off,
@@ -61,6 +63,8 @@ struct PlexDelayParameters {
     float master_pan = 1.0F;
     float decay_seconds = 3.0F;
     float diffusion = 0.5F;
+    float input_diffusion_mix = 0.0F;
+    float input_diffusion_time_ms = 10.0F;
     float low_cut_hz = 20.0F;
     float high_cut_hz = 20000.0F;
     float pre_delay_ms = 0.0F;
@@ -93,23 +97,22 @@ struct PlexDelayParameters {
 };
 
 /*
- * Project-authored eight-line feedback-matrix delay. The June 2023 Fractal
- * Audio Blocks Guide, pp. 77–79, documents an FM9 Plex Delay with 1–8 lines,
- * decay, diffusion, low/high cuts, pre-delay, Stack/Hold, per-line time/tempo,
- * level/pan, master scaling, a wet filter and LFO, an input envelope follower,
- * a ducker, stereo spread, common mix controls, and spillover. This implementation currently
- * covers the matrix-delay core, timing, line levels/pans, master controls,
- * decay, diffusion, cuts, pre-delay, project-authored Stack/Hold behavior,
- * selected wet filter/LFO controls, envelope-controlled send, ducker, and
- * stereo spread.
- *
- * Matrix topology, feedback/decay mapping, filter design, bounds, defaults,
- * input selection/summing, and the 1 MiB total ring-storage cap are project choices.
- * The cap is divided among eight delay lines and one pre-delay ring, so the
- * maximum per-ring time depends on sample rate. Input diffusion, the remaining
- * Filter-block types, delay-line modulation, Plex Detune/Shift/Verb and Shimmer
- * Verb algorithms, Kill Dry, Bypass, Bypass Mode, Global Mix,
- * spillover, and exact Fractal settings/DSP/sound parity are not implemented.
+ * Project-authored eight-line feedback-matrix delay. The November 2026 Fractal
+ * Audio Blocks Guide, pp. 87–90, documents an FM9 Plex Delay with 1–8 lines,
+ * matrix diffusion, separate input Diffusion Mix/Time, low/high cuts, pre-delay,
+ * Stack/Hold, per-line time/tempo/level/pan, master controls, a wet filter/LFO,
+ * envelope follower, ducker, stereo spread, common mix controls, and spillover.
+ * This implementation includes the matrix core, timing, controls, wet filter/LFO,
+ * envelope send, ducker, stereo spread, input selection, and a project-authored
+ * three-stage input diffuser.
+
+ * Matrix topology, feedback/decay mapping, filter and diffuser design, bounds,
+ * defaults, input selection/summing, and storage caps are project choices. The
+ * matrix/pre-delay rings are capped at 1 MiB; input diffusion has a separate
+ * 256 KiB fixed cap. The remaining Filter-block types, delay-line modulation,
+ * Plex Detune/Shift/Verb and Shimmer Verb algorithms, Kill Dry, Bypass, Bypass
+ * Mode, Global Mix, spillover, and exact Fractal settings/DSP/sound parity are
+ * not implemented.
  * Plex Delay itself has no pitch effects; Plex Detune and Plex Shift are
  * separate types.
  * The guide
@@ -132,7 +135,8 @@ public:
         return "plex-delay";
     }
     [[nodiscard]] std::size_t memory_bytes() const noexcept override {
-        return sizeof(*this) + storage_.capacity() * sizeof(float);
+        return sizeof(*this) + storage_.capacity() * sizeof(float) +
+               input_diffusion_storage_.capacity() * sizeof(float);
     }
     [[nodiscard]] PlexDelayParameters parameters() const noexcept {
         return parameters_;
@@ -164,10 +168,12 @@ private:
     };
 
     static constexpr std::size_t kRingCount = plex_delay_line_count + 1U;
+    static constexpr std::size_t kInputDiffusionStages = 3U;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumDelayMs = 1.0F;
     static constexpr float kMaximumDelayMs = 2000.0F;
+    static constexpr float kMaximumInputDiffusionTimeMs = 50.0F;
     static constexpr float kMaximumSignal = 8.0F;
     static constexpr std::size_t kFilterCoefficientUpdateFrames = 16U;
 
@@ -183,6 +189,9 @@ private:
     [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
     [[nodiscard]] std::size_t read_index(std::size_t delay,
                                          std::size_t ring) const noexcept;
+    [[nodiscard]] float process_input_diffusion(float input) noexcept;
+    void update_input_diffusion_times() noexcept;
+    void clear_input_diffusion() noexcept;
     [[nodiscard]] float filter_feedback(float input,
                                         std::size_t line) noexcept;
     [[nodiscard]] BiquadCoefficients make_wet_filter(float frequency_hz) const noexcept;
@@ -199,6 +208,11 @@ private:
     std::size_t capacity_frames_ = 0U;
     std::size_t write_frame_ = 0U;
     std::vector<float> storage_;
+    std::size_t input_diffusion_capacity_frames_ = 0U;
+    std::size_t input_diffusion_write_frame_ = 0U;
+    std::vector<float> input_diffusion_storage_;
+    std::array<std::size_t, kInputDiffusionStages>
+        input_diffusion_delay_frames_{};
     PlexDelayParameters parameters_{};
     std::array<std::size_t, plex_delay_line_count> delay_frames_{};
     std::size_t pre_delay_frames_ = 0U;

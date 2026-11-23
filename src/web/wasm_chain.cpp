@@ -890,7 +890,8 @@ public:
         float diffusion, float low_cut_hz, float high_cut_hz,
         float pre_delay_ms, std::uint32_t stack_mode, float input_gain_db,
         float mix, float level_db, float balance,
-        std::uint32_t input_select) noexcept {
+        std::uint32_t input_select, float input_diffusion_mix,
+        float input_diffusion_time_ms) noexcept {
         auto* delay = static_cast<tabletfx::PlexDelay*>(
             effects_[76].effect.get());
         auto parameters = delay->parameters();
@@ -909,6 +910,8 @@ public:
             std::min(stack_mode, 2U));
         parameters.input_select = static_cast<tabletfx::PlexDelayInputSelect>(
             std::min(input_select, 2U));
+        parameters.input_diffusion_mix = input_diffusion_mix;
+        parameters.input_diffusion_time_ms = input_diffusion_time_ms;
         parameters.input_gain_db = input_gain_db;
         parameters.mix = mix;
         parameters.level_db = level_db;
@@ -2348,9 +2351,11 @@ public:
 
     void configure_ducking_delay(float time_ms, float feedback, float mix,
                                  float threshold_db, float attenuation_db,
-                                 float release_ms) noexcept {
+                                 float release_ms,
+                                 std::uint32_t spillover) noexcept {
         static_cast<tabletfx::DuckingDelay*>(effects_[39].effect.get())->configure(
-            {time_ms, feedback, mix, threshold_db, attenuation_db, release_ms});
+            {time_ms, feedback, mix, threshold_db, attenuation_db, release_ms,
+             spillover != 0U});
     }
 
     void configure_modulated_delay(float time_ms, float feedback, float mix,
@@ -3045,10 +3050,12 @@ TABLETFX_WASM_EXPORT void tf_chain_restart_reverse_delay(void* opaque) noexcept 
 
 TABLETFX_WASM_EXPORT void tf_chain_set_ducking_delay(
     void* opaque, float time_ms, float feedback, float mix,
-    float threshold_db, float attenuation_db, float release_ms) noexcept {
+    float threshold_db, float attenuation_db, float release_ms,
+    std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ducking_delay(
-            time_ms, feedback, mix, threshold_db, attenuation_db, release_ms);
+            time_ms, feedback, mix, threshold_db, attenuation_db, release_ms,
+            spillover);
     }
 }
 
@@ -3553,13 +3560,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_global(
     float decay_seconds, float diffusion, float low_cut_hz,
     float high_cut_hz, float pre_delay_ms, std::uint32_t stack_mode,
     float input_gain_db, float mix, float level_db, float balance,
-    std::uint32_t input_select) noexcept {
+    std::uint32_t input_select, float input_diffusion_mix,
+    float input_diffusion_time_ms) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_plex_delay_global(
             active_lines, tempo_bpm, master_time, master_level, master_pan,
             decay_seconds, diffusion, low_cut_hz, high_cut_hz,
             pre_delay_ms, stack_mode, input_gain_db, mix, level_db, balance,
-            input_select);
+            input_select, input_diffusion_mix, input_diffusion_time_ms);
     }
 }
 

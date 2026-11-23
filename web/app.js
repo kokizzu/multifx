@@ -176,7 +176,8 @@ const DEFAULT_PARAMETERS = {
   ],
   plexDelay: {
     activeLines: 8, inputSelect: 0, tempoBpm: 120, masterTime: 1, masterLevel: 1,
-    masterPan: 1, decaySeconds: 3, diffusion: 0.5, lowCutHz: 20,
+    masterPan: 1, decaySeconds: 3, diffusion: 0.5,
+    inputDiffusionMix: 0, inputDiffusionTimeMs: 10, lowCutHz: 20,
     highCutHz: 20000, preDelayMs: 0, stackMode: 0,
     inputGainDb: 0, mix: 0.25, levelDb: 0, balance: 0,
     wetFilterType: 0, wetFilterFrequencyHz: 2000, wetFilterQ: 0.707,
@@ -1519,6 +1520,7 @@ const duckingDelayAttenuation = document.querySelector("#ducking-delay-attenuati
 const duckingDelayAttenuationValue = document.querySelector("#ducking-delay-attenuation-db-value");
 const duckingDelayRelease = document.querySelector("#ducking-delay-release-ms");
 const duckingDelayReleaseValue = document.querySelector("#ducking-delay-release-ms-value");
+const duckingDelaySpillover = document.querySelector("#ducking-delay-spillover");
 const modulatedDelayTime = document.querySelector("#modulated-delay-time-ms");
 const modulatedDelayTimeValue = document.querySelector("#modulated-delay-time-ms-value");
 const modulatedDelayFeedback = document.querySelector("#modulated-delay-feedback");
@@ -1818,6 +1820,8 @@ function updatePlexDelayOptions() {
     masterPan: value("masterPan") / 100,
     decaySeconds: value("decaySeconds"),
     diffusion: value("diffusion") / 100,
+    inputDiffusionMix: value("inputDiffusionMix") / 100,
+    inputDiffusionTimeMs: value("inputDiffusionTimeMs"),
     lowCutHz: value("lowCutHz"),
     highCutHz: value("highCutHz"),
     preDelayMs: value("preDelayMs"),
@@ -1876,6 +1880,8 @@ function updatePlexDelayOptions() {
     masterPan: `${Math.round(parameters.masterPan * 100)}%`,
     decaySeconds: `${parameters.decaySeconds.toFixed(1)} s`,
     diffusion: `${Math.round(parameters.diffusion * 100)}%`,
+    inputDiffusionMix: `${Math.round(parameters.inputDiffusionMix * 100)}%`,
+    inputDiffusionTimeMs: `${parameters.inputDiffusionTimeMs.toFixed(1)} ms`,
     lowCutHz: parameters.lowCutHz === 0 ? "Off" : `${parameters.lowCutHz} Hz`,
     highCutHz: `${(parameters.highCutHz / 1000).toFixed(parameters.highCutHz % 1000 === 0 ? 0 : 1)} kHz`,
     preDelayMs: `${parameters.preDelayMs} ms`,
@@ -4867,6 +4873,7 @@ function updateDuckingDelay() {
     Number(duckingDelayThreshold.value),
     Number(duckingDelayAttenuation.value),
     Number(duckingDelayRelease.value),
+    duckingDelaySpillover.checked ? 1 : 0,
   ];
   duckingDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
   duckingDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
@@ -5090,6 +5097,7 @@ for (const input of [duckingDelayTime, duckingDelayFeedback, duckingDelayMix,
   input.addEventListener("input", updateDuckingDelay);
   input.addEventListener("change", updateDuckingDelay);
 }
+duckingDelaySpillover.addEventListener("change", updateDuckingDelay);
 for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayMix,
   modulatedDelayRate, modulatedDelayDepth, modulatedDelaySpread,
   modulatedDelayTriggerThreshold]) {
@@ -6145,7 +6153,8 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     };
     for (const [name, value] of Object.entries({
       activeLines: 2, inputSelect: 1, tempoBpm: 120, masterTime: 1, masterLevel: 100,
-      masterPan: 100, decaySeconds: 3, diffusion: 55, lowCutHz: 20,
+      masterPan: 100, decaySeconds: 3, diffusion: 55,
+      inputDiffusionMix: 60, inputDiffusionTimeMs: 20, lowCutHz: 20,
       highCutHz: 20000, preDelayMs: 0, stackMode: 0, inputGainDb: 0,
       mix: 100, levelDb: 0, balance: 0, stereoSpread: 120,
       wetFilterType: 6, wetFilterFrequencyHz: 1400, wetFilterQ: 2,
@@ -6196,6 +6205,7 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     }
     return { peak, activeSamples, enabledEffectIndex: 76, activeLines: 2,
       inputSelect: "left", delayMs: [40, 70], diffusionPercent: 55,
+      inputDiffusionMixPercent: 60, inputDiffusionTimeMs: 20,
       advancedControls: true };
   } finally {
     stopSource(false);
@@ -8353,6 +8363,14 @@ async function runBrowserSelfTest() {
     }
     duckingDelayThreshold.value = defaultDuckThreshold;
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
+    const defaultDuckSpillover = duckingDelaySpillover.checked;
+    duckingDelaySpillover.checked = true;
+    duckingDelaySpillover.dispatchEvent(new Event("change", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.duckingDelay[6] !== 1) {
+      throw new Error("Ducking Delay Spillover must reach the browser effect parameters.");
+    }
+    duckingDelaySpillover.checked = defaultDuckSpillover;
+    duckingDelaySpillover.dispatchEvent(new Event("change", { bubbles: true }));
     const defaultModulatedRate = modulatedDelayRate.value;
     modulatedDelayRate.value = "1.25";
     modulatedDelayRate.dispatchEvent(new Event("input", { bubbles: true }));
@@ -9020,7 +9038,7 @@ async function runBrowserSelfTest() {
            8000, 0.5, 0.7, 4, 24],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
-         duckingDelay: [350, 0.25, 0.25, -30, 12, 250],
+          duckingDelay: [350, 0.25, 0.25, -30, 12, 250, 0],
         sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -9159,6 +9177,7 @@ async function runBrowserSelfTest() {
     duckingDelayThreshold.value = String(duckingDelayParameters[3]);
     duckingDelayAttenuation.value = String(duckingDelayParameters[4]);
     duckingDelayRelease.value = String(duckingDelayParameters[5]);
+    duckingDelaySpillover.checked = Boolean(duckingDelayParameters[6] ?? 0);
     updateDuckingDelay();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";

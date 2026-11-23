@@ -1141,7 +1141,7 @@ def browser_test() -> None:
             "for(let frame=0;frame<plexFrames;frame++){for(let channel=0;channel<2;channel++){"
             "module.HEAPF32[plexInputOffset+frame*2+channel]="
             "plexInputView.getInt16(44+(frame*2+channel)*2,true)/32768}}"
-            "module._tf_chain_set_plex_delay_global(plexChain,1,120,1,1,1,3,0,20,20000,0,0,0,1,0,0,2);"
+            "module._tf_chain_set_plex_delay_global(plexChain,1,120,1,1,1,3,0,20,20000,0,0,0,1,0,0,2,0,10);"
             "assert(module._tf_chain_set_enabled(plexChain,76,1)===1,"
             "'WASM did not enable Plex Matrix Delay at index 76');"
             "assert(module._tf_chain_begin(plexChain,plexFrames)===plexFrames,"

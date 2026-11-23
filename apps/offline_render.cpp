@@ -917,6 +917,10 @@ Options parse_options(int argc, char** argv, int first) {
                     parameters.decay_seconds = number;
                 } else if (setting == "diffusion") {
                     parameters.diffusion = number;
+                } else if (setting == "input-diffusion-mix") {
+                    parameters.input_diffusion_mix = number;
+                } else if (setting == "input-diffusion-time-ms") {
+                    parameters.input_diffusion_time_ms = number;
                 } else if (setting == "low-cut-hz") {
                     parameters.low_cut_hz = number;
                 } else if (setting == "high-cut-hz") {
@@ -5187,7 +5191,8 @@ void print_usage() {
                   " [--grain-delay-grain-size-ms 10..250] [--grain-delay-overlap 1..4]"
                    " [--grain-delay-pitch-semitones -24..24] [--grain-delay-spray-ms 0..100]"
                    " [--plex-delay] [--plex-delay-lines 1..8] [--plex-delay-decay-seconds 0.1..30]"
-                   " [--plex-delay-diffusion 0..1] [--plex-delay-pre-delay-ms 0..2000]"
+                    " [--plex-delay-diffusion 0..1] [--plex-delay-input-diffusion-mix 0..1]"
+                    " [--plex-delay-input-diffusion-time-ms 0.1..50] [--plex-delay-pre-delay-ms 0..2000]"
                    " [--plex-delay-low-cut-hz hz] [--plex-delay-high-cut-hz hz]"
                    " [--plex-delay-mix 0..1] [--plex-delay-level-db dB]"
                     " [--plex-delay-wet-filter-type bypass|low-pass|band-pass|high-pass|low-shelf|high-shelf|peaking|notch|all-pass]"

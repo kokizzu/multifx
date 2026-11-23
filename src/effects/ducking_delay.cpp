@@ -94,9 +94,8 @@ void DuckingDelay::configure(DuckingDelayParameters parameters) noexcept {
     parameter_ramp_remaining_ = parameter_ramp_total_;
 }
 
-void DuckingDelay::process(std::span<float> interleaved,
-                           std::uint16_t channels) noexcept {
-    if (channels != channels_ || channels == 0) return;
+void DuckingDelay::process_audio(std::span<float> interleaved,
+                                 bool bypassed) noexcept {
     const std::size_t frames = interleaved.size() / channels_;
     std::array<float, 2> original{};
     std::array<float, 2> delayed{};
@@ -113,7 +112,7 @@ void DuckingDelay::process(std::span<float> interleaved,
                 current_delay_samples(), channel);
         }
 
-        const bool should_duck = parameters_.attenuation_db > 0.0F &&
+        const bool should_duck = !bypassed && parameters_.attenuation_db > 0.0F &&
                                  input_peak > threshold_amplitude_;
         const float target_gain = should_duck ? attenuation_gain_ : 1.0F;
         const float coefficient = target_gain < duck_gain_
@@ -124,11 +123,15 @@ void DuckingDelay::process(std::span<float> interleaved,
         const std::size_t write_offset = write_frame_ * channels_;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const double wet = static_cast<double>(delayed[channel]) * duck_gain_;
-            const double output = static_cast<double>(original[channel]) *
-                                      static_cast<double>(1.0F - current_mix_) +
-                                  wet * static_cast<double>(current_mix_);
+            const double output = bypassed
+                ? static_cast<double>(original[channel]) +
+                      wet * static_cast<double>(current_mix_)
+                : static_cast<double>(original[channel]) *
+                      static_cast<double>(1.0F - current_mix_) +
+                      wet * static_cast<double>(current_mix_);
             interleaved[frame * channels_ + channel] = bounded_sample(output);
-            const double recorded = static_cast<double>(original[channel]) +
+            const double recorded = (bypassed ? 0.0 :
+                                     static_cast<double>(original[channel])) +
                                     static_cast<double>(delayed[channel]) * current_feedback_;
             storage_[write_offset + channel] = bounded_sample(recorded);
         }
@@ -138,9 +141,28 @@ void DuckingDelay::process(std::span<float> interleaved,
     }
 }
 
+void DuckingDelay::process(std::span<float> interleaved,
+                           std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0) return;
+    storage_cleared_ = false;
+    process_audio(interleaved, false);
+}
+
+void DuckingDelay::process_bypassed(std::span<float> interleaved,
+                                    std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0) return;
+    if (!parameters_.spillover) {
+        if (!storage_cleared_) reset();
+        return;
+    }
+    storage_cleared_ = false;
+    process_audio(interleaved, true);
+}
+
 void DuckingDelay::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
     write_frame_ = 0;
+    storage_cleared_ = true;
     duck_gain_ = 1.0F;
     current_feedback_ = parameters_.feedback;
     current_mix_ = parameters_.mix;

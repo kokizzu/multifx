@@ -75,6 +75,55 @@ void test_ducker_is_stereo_linked_and_reset_clears_state() {
             "reset must clear delay memory and restore the ducker envelope");
 }
 
+void test_spillover_bypass_preserves_dry_and_emits_only_stored_tail() {
+    tabletfx::DuckingDelayParameters parameters;
+    parameters.time_ms = 2.0F;
+    parameters.feedback = 0.5F;
+    parameters.mix = 0.5F;
+    parameters.threshold_db = 0.0F;
+    parameters.attenuation_db = 0.0F;
+    parameters.spillover = true;
+    tabletfx::DuckingDelay delay(1000.0F, 1, 100.0F, parameters);
+
+    std::array<float, 2> source{0.8F, 0.0F};
+    delay.process(source, 1);
+    std::array<float, 2> bypassed{0.25F, 0.25F};
+    delay.process_bypassed(bypassed, 1);
+    require(std::abs(bypassed[0] - 0.65F) < 1.0e-6F &&
+                std::abs(bypassed[1] - 0.25F) < 1.0e-6F,
+            "spillover bypass must preserve immediate dry audio and add the stored wet tail");
+
+    std::array<float, 2> following{0.25F, 0.25F};
+    delay.process_bypassed(following, 1);
+    require(std::abs(following[0] - 0.45F) < 1.0e-6F &&
+                std::abs(following[1] - 0.25F) < 1.0e-6F,
+            "spillover must decay through feedback without recording new bypassed input");
+}
+
+void test_spillover_off_bypass_is_transparent_and_clears_the_tail() {
+    tabletfx::DuckingDelayParameters parameters;
+    parameters.time_ms = 2.0F;
+    parameters.feedback = 0.5F;
+    parameters.mix = 1.0F;
+    parameters.threshold_db = 0.0F;
+    parameters.attenuation_db = 0.0F;
+    tabletfx::DuckingDelay delay(1000.0F, 1, 100.0F, parameters);
+
+    std::array<float, 2> source{0.8F, 0.0F};
+    delay.process(source, 1);
+    std::array<float, 2> bypassed{0.25F, 0.5F};
+    delay.process_bypassed(bypassed, 1);
+    require(bypassed[0] == 0.25F && bypassed[1] == 0.5F,
+            "bypass without spillover must pass the dry signal unchanged");
+
+    std::array<float, 4> after_reenable{};
+    delay.process(after_reenable, 1);
+    require(std::all_of(after_reenable.begin(), after_reenable.end(), [](float sample) {
+                return sample == 0.0F;
+            }),
+            "bypass without spillover must clear pending delay state");
+}
+
 void test_controls_are_bounded_and_invalid_samples_recover() {
     tabletfx::DuckingDelay delay;
     auto parameters = delay.parameters();
@@ -115,6 +164,8 @@ int main() {
         test_delay_time_and_mix();
         test_input_ducks_repeats_then_release_restores_them();
         test_ducker_is_stereo_linked_and_reset_clears_state();
+        test_spillover_bypass_preserves_dry_and_emits_only_stored_tail();
+        test_spillover_off_bypass_is_transparent_and_clears_the_tail();
         test_controls_are_bounded_and_invalid_samples_recover();
         std::cout << "Ducking Delay tests passed\n";
     } catch (const std::exception& exception) {
