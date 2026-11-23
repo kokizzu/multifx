@@ -329,7 +329,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [0.25, 0.7, 0.6, 0.5, 0.5, 0, 0, 0];
       module._tf_chain_set_dual_engine_distortion(
         this.chain, ...dualEngineDistortion);
-      const vibe = parameters.vibe || [1.5, 0.7, 0.2, 2, 0.5, 1];
+      const vibe = parameters.vibe || [1.5, 0.7, 0.2, 2, 0.5, 1, 0, 4, 120];
       module._tf_chain_set_vibe(this.chain, ...vibe);
       configureMultiDelay(module, this.chain, parameters.multiDelay);
       const portaPreamp = parameters.portaPreamp || [6, 3, 0, 0, 0];

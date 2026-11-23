@@ -9,6 +9,25 @@
 
 namespace tabletfx {
 
+enum class VibeRateMode : std::uint8_t { Free = 0, TempoNote = 1 };
+
+// Project-authored note lengths; the Stadium documentation does not publish
+// Essex Vibe's selectable division list.
+enum class VibeNoteDivision : std::uint8_t {
+    Whole = 0,
+    DottedHalf,
+    Half,
+    DottedQuarter,
+    Quarter,
+    QuarterTriplet,
+    DottedEighth,
+    Eighth,
+    EighthTriplet,
+    DottedSixteenth,
+    Sixteenth,
+    SixteenthTriplet,
+};
+
 struct VibeParameters {
     float rate_hz = 1.5F;
     float depth = 0.7F;
@@ -16,6 +35,9 @@ struct VibeParameters {
     std::uint8_t stages = 2;
     float spread = 0.5F;
     float level = 1.0F;
+    VibeRateMode rate_mode = VibeRateMode::Free;
+    VibeNoteDivision note_division = VibeNoteDivision::Quarter;
+    float tempo_bpm = 120.0F;
 };
 
 // Project-authored Vibe modulation. It uses one or two swept first-order
@@ -23,10 +45,11 @@ struct VibeParameters {
 // and applies amplitude modulation according to Trem. Spread sets the
 // right-channel tremolo phase offset; Level is linear gain. Continuous control
 // changes ramp over a project-authored 10 ms. The controls follow the names documented
-// for Line 6 Helix Stadium Essex Vibe, but these ranges, defaults, topology,
-// and DSP are project choices and do not claim Line 6 algorithm or sound parity.
-// The Line 6 1.4 release notes do not specify numeric bounds/defaults or the
-// internal topology. Fixed-size state is used and process() does not allocate.
+// for Line 6 Helix Stadium Essex Vibe. Optional tempo-note sync follows a
+// project-supplied BPM; division choices are not claimed to match Line 6's list,
+// and the project does not receive tap tempo or MIDI clock. Ranges, defaults,
+// topology, and DSP are project choices and do not claim Line 6 parity.
+// Fixed-size state is used and process() does not allocate.
 class Vibe final : public Effect {
 public:
     explicit Vibe(float sample_rate = 48000.0F,
@@ -40,6 +63,9 @@ public:
 
     void set_parameters(VibeParameters parameters) noexcept;
     [[nodiscard]] VibeParameters parameters() const noexcept { return parameters_; }
+    [[nodiscard]] float effective_rate_hz() const noexcept {
+        return effective_rate_hz_;
+    }
 
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
@@ -55,6 +81,8 @@ private:
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumRateHz = 0.1F;
     static constexpr float kMaximumRateHz = 10.0F;
+    static constexpr float kMinimumTempoRateHz = 0.05F;
+    static constexpr float kMaximumTempoRateHz = 30.0F;
     static constexpr float kMaximumInternalSample = 1000000.0F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
@@ -69,6 +97,7 @@ private:
     std::uint16_t channels_ = 2;
     VibeParameters parameters_{};
     std::array<std::array<StageState, 2>, 2> stages_{};
+    float effective_rate_hz_ = 1.5F;
 
     float current_depth_ = 0.7F;
     float current_trem_ = 0.2F;

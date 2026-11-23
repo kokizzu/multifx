@@ -149,7 +149,7 @@ const DEFAULT_PARAMETERS = {
     0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0],
   deEsser: [6500, 1.5, -30, 12, 2, 80],
   dualEngineDistortion: [0.25, 0.7, 0.6, 0.5, 0.5, 0, 0, 0],
-  vibe: [1.5, 0.7, 0.2, 2, 0.5, 1],
+  vibe: [1.5, 0.7, 0.2, 2, 0.5, 1, 0, 4, 120],
   multiDelay: {
     topology: 0,
     lines: [
@@ -1012,7 +1012,13 @@ const vibeTrem = document.querySelector("#vibe-trem");
 const vibeStages = document.querySelector("#vibe-stages");
 const vibeSpread = document.querySelector("#vibe-spread");
 const vibeLevel = document.querySelector("#vibe-level");
-const vibeControls = [vibeRate, vibeDepth, vibeTrem, vibeStages, vibeSpread, vibeLevel];
+const vibeRateMode = document.querySelector("#vibe-rate-mode");
+const vibeRateDivision = document.querySelector("#vibe-rate-division");
+const vibeTempoBpm = document.querySelector("#vibe-tempo-bpm");
+const vibeControls = [
+  vibeRate, vibeDepth, vibeTrem, vibeStages, vibeSpread, vibeLevel,
+  vibeRateMode, vibeRateDivision, vibeTempoBpm,
+];
 const portaPreampGain1 = document.querySelector("#porta-preamp-gain1-db");
 const portaPreampGain2 = document.querySelector("#porta-preamp-gain2-db");
 const portaPreampBass = document.querySelector("#porta-preamp-bass-db");
@@ -2133,22 +2139,39 @@ function updateDualEngineDistortionOptions() {
 }
 
 function updateVibeOptions() {
+  const rateMode = Number(vibeRateMode.value);
+  const noteDivision = Number(vibeRateDivision.value);
+  const tempoBpm = Number(vibeTempoBpm.value);
+  const cycleBeats = [4, 3, 2, 1.5, 1, 2 / 3, 0.75, 0.5, 1 / 3,
+    0.375, 0.25, 1 / 6][noteDivision] ?? 1;
+  const effectiveRateHz = rateMode === 1
+    ? Math.min(30, Math.max(0.05, tempoBpm / (60 * cycleBeats)))
+    : Number(vibeRate.value);
   const values = [
     Number(vibeRate.value), Number(vibeDepth.value) / 100,
     Number(vibeTrem.value) / 100, Number(vibeStages.value),
     Number(vibeSpread.value) / 100, Number(vibeLevel.value),
+    rateMode, noteDivision, tempoBpm,
   ];
   DEFAULT_PARAMETERS.vibe = values;
   const show = (control, text) => {
     const output = control.parentElement.querySelector("output");
     if (output) output.value = text;
   };
-  show(vibeRate, `${values[0].toFixed(1)} Hz`);
+  show(vibeRate, rateMode === 1
+    ? `${vibeRateDivision.selectedOptions[0].text} · ${tempoBpm} BPM · ${effectiveRateHz.toFixed(2)} Hz`
+    : `${values[0].toFixed(1)} Hz`);
   show(vibeDepth, `${Math.round(values[1] * 100)}%`);
   show(vibeTrem, `${Math.round(values[2] * 100)}%`);
   show(vibeStages, String(values[3]));
   show(vibeSpread, `${Math.round(values[4] * 100)}%`);
   show(vibeLevel, values[5].toFixed(2));
+  show(vibeRateMode, rateMode === 1 ? "Tempo note" : "Free Hz");
+  show(vibeRateDivision, vibeRateDivision.selectedOptions[0].text);
+  show(vibeTempoBpm, `${tempoBpm} BPM`);
+  vibeRate.disabled = rateMode === 1;
+  vibeRateDivision.disabled = rateMode !== 1;
+  vibeTempoBpm.disabled = rateMode !== 1;
   if (workletNode) workletNode.port.postMessage({ type: "vibe", value: values });
 }
 
@@ -5849,8 +5872,9 @@ async function runVibeBrowserSmokeTest(reference, captureView, captureBuffer) {
     await audioContext.resume();
     stopSource(false);
     [vibeRate.value, vibeDepth.value, vibeTrem.value,
-      vibeStages.value, vibeSpread.value, vibeLevel.value] =
-      ["2.3", "82", "35", "1", "75", "0.9"];
+      vibeStages.value, vibeSpread.value, vibeLevel.value,
+      vibeRateMode.value, vibeRateDivision.value, vibeTempoBpm.value] =
+      ["2.3", "82", "35", "1", "75", "0.9", "1", "7", "90"];
     updateVibeOptions();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
@@ -5882,7 +5906,11 @@ async function runVibeBrowserSmokeTest(reference, captureView, captureBuffer) {
     if (peak < 1e-5 || activeSamples < 32) {
       throw new Error(`Vibe produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
     }
-    return { peak, activeSamples, enabledEffectIndex: 71, stages: 1 };
+    return {
+      peak, activeSamples, enabledEffectIndex: 71, stages: 1,
+      rateMode: "tempo-note", noteDivision: "eighth", tempoBpm: 90,
+      effectiveRateHz: 3,
+    };
   } finally {
     stopSource(false);
     if (workletNode) {
@@ -8250,18 +8278,22 @@ async function runBrowserSelfTest() {
     try {
       workletNode = { port: { postMessage: (message) => vibeMessages.push(message) } };
       [vibeRate.value, vibeDepth.value, vibeTrem.value,
-        vibeStages.value, vibeSpread.value, vibeLevel.value] =
-        ["2.3", "82", "35", "1", "75", "0.9"];
+        vibeStages.value, vibeSpread.value, vibeLevel.value,
+        vibeRateMode.value, vibeRateDivision.value, vibeTempoBpm.value] =
+        ["2.3", "82", "35", "1", "75", "0.9", "1", "7", "90"];
       vibeSpread.dispatchEvent(new Event("input", { bubbles: true }));
       const message = vibeMessages.at(-1);
       if (message?.type !== "vibe" ||
-          message.value.join(",") !== "2.3,0.82,0.35,1,0.75,0.9" ||
-          vibeRate.parentElement.querySelector("output").value !== "2.3 Hz" ||
+          message.value.join(",") !== "2.3,0.82,0.35,1,0.75,0.9,1,7,90" ||
+          vibeRate.parentElement.querySelector("output").value !== "Eighth · 90 BPM · 3.00 Hz" ||
           vibeDepth.parentElement.querySelector("output").value !== "82%" ||
           vibeTrem.parentElement.querySelector("output").value !== "35%" ||
           vibeStages.parentElement.querySelector("output").value !== "1" ||
           vibeSpread.parentElement.querySelector("output").value !== "75%" ||
-          vibeLevel.parentElement.querySelector("output").value !== "0.90") {
+          vibeLevel.parentElement.querySelector("output").value !== "0.90" ||
+          vibeRateMode.parentElement.querySelector("output").value !== "Tempo note" ||
+          vibeRateDivision.parentElement.querySelector("output").value !== "Eighth" ||
+          vibeTempoBpm.parentElement.querySelector("output").value !== "90 BPM") {
         throw new Error("Vibe controls must send project settings in WASM parameter order and display their values.");
       }
     } finally {

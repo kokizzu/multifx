@@ -5,6 +5,27 @@
 #include <stdexcept>
 
 namespace tabletfx {
+namespace {
+
+float beats_per_vibe_cycle(VibeNoteDivision division) noexcept {
+    switch (division) {
+    case VibeNoteDivision::Whole: return 4.0F;
+    case VibeNoteDivision::DottedHalf: return 3.0F;
+    case VibeNoteDivision::Half: return 2.0F;
+    case VibeNoteDivision::DottedQuarter: return 1.5F;
+    case VibeNoteDivision::Quarter: return 1.0F;
+    case VibeNoteDivision::QuarterTriplet: return 2.0F / 3.0F;
+    case VibeNoteDivision::DottedEighth: return 0.75F;
+    case VibeNoteDivision::Eighth: return 0.5F;
+    case VibeNoteDivision::EighthTriplet: return 1.0F / 3.0F;
+    case VibeNoteDivision::DottedSixteenth: return 0.375F;
+    case VibeNoteDivision::Sixteenth: return 0.25F;
+    case VibeNoteDivision::SixteenthTriplet: return 1.0F / 6.0F;
+    }
+    return 1.0F;
+}
+
+} // namespace
 
 Vibe::Vibe(float sample_rate, std::uint16_t channels,
            VibeParameters parameters)
@@ -29,11 +50,28 @@ void Vibe::set_parameters(VibeParameters parameters) noexcept {
     }
     parameters.spread = bounded(parameters.spread, 0.5F, 0.0F, 1.0F);
     parameters.level = bounded(parameters.level, 1.0F, 0.0F, 2.0F);
+    if (static_cast<std::uint8_t>(parameters.rate_mode) >
+        static_cast<std::uint8_t>(VibeRateMode::TempoNote)) {
+        parameters.rate_mode = VibeRateMode::Free;
+    }
+    if (static_cast<std::uint8_t>(parameters.note_division) >
+        static_cast<std::uint8_t>(VibeNoteDivision::SixteenthTriplet)) {
+        parameters.note_division = VibeNoteDivision::Quarter;
+    }
+    parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F, 20.0F, 300.0F);
     if (parameters.stages != previous_stages) {
         stages_ = {};
     }
 
     parameters_ = parameters;
+    effective_rate_hz_ = parameters_.rate_hz;
+    if (parameters_.rate_mode == VibeRateMode::TempoNote) {
+        const float beats = beats_per_vibe_cycle(parameters_.note_division);
+        const float tempo_rate = parameters_.tempo_bpm / (60.0F * beats);
+        effective_rate_hz_ = bounded(tempo_rate, 2.0F,
+                                     kMinimumTempoRateHz,
+                                     kMaximumTempoRateHz);
+    }
     target_depth_ = parameters_.depth;
     target_trem_ = parameters_.trem;
     target_level_ = parameters_.level;
@@ -42,7 +80,7 @@ void Vibe::set_parameters(VibeParameters parameters) noexcept {
     target_spread_cosine_ = std::cos(spread_radians);
     target_spread_sine_ = std::sin(spread_radians);
 
-    const float lfo_step = kTwoPi * parameters_.rate_hz / sample_rate_;
+    const float lfo_step = kTwoPi * effective_rate_hz_ / sample_rate_;
     target_sine_increment_ = std::sin(lfo_step);
     target_cosine_increment_ = std::cos(lfo_step);
     retarget(false);

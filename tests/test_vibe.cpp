@@ -51,8 +51,13 @@ void test_defaults_bounds_and_memory() {
     require(vibe.id() == "vibe", "Vibe stable ID changed");
     require(defaults.rate_hz == 1.5F && defaults.depth == 0.7F &&
                 defaults.trem == 0.2F && defaults.stages == 2 &&
-                defaults.spread == 0.5F && defaults.level == 1.0F,
+                defaults.spread == 0.5F && defaults.level == 1.0F &&
+                defaults.rate_mode == tabletfx::VibeRateMode::Free &&
+                defaults.note_division == tabletfx::VibeNoteDivision::Quarter &&
+                defaults.tempo_bpm == 120.0F,
             "project Vibe defaults changed");
+    require(vibe.effective_rate_hz() == defaults.rate_hz,
+            "free-rate mode changed the selected Vibe rate");
     require(vibe.memory_bytes() == sizeof(vibe),
             "Vibe fixed-state memory estimate is inaccurate");
 
@@ -76,12 +81,75 @@ void test_defaults_bounds_and_memory() {
     parameters.spread = std::numeric_limits<float>::infinity();
     parameters.level = std::numeric_limits<float>::quiet_NaN();
     parameters.stages = 1;
+    parameters.rate_mode = static_cast<tabletfx::VibeRateMode>(255U);
+    parameters.note_division =
+        static_cast<tabletfx::VibeNoteDivision>(255U);
+    parameters.tempo_bpm = std::numeric_limits<float>::infinity();
     vibe.set_parameters(parameters);
     const auto finite = vibe.parameters();
     require(finite.rate_hz == 1.5F && finite.depth == 0.7F &&
                 finite.trem == 0.2F && finite.stages == 1 &&
-                finite.spread == 0.5F && finite.level == 1.0F,
+                finite.spread == 0.5F && finite.level == 1.0F &&
+                finite.rate_mode == tabletfx::VibeRateMode::Free &&
+                finite.note_division == tabletfx::VibeNoteDivision::Quarter &&
+                finite.tempo_bpm == 120.0F,
             "non-finite Vibe controls did not use safe project defaults");
+}
+
+void test_tempo_note_rate_and_bounds() {
+    tabletfx::VibeParameters parameters;
+    parameters.rate_mode = tabletfx::VibeRateMode::TempoNote;
+    parameters.tempo_bpm = 120.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::Quarter;
+    tabletfx::Vibe vibe(48000.0F, 1, parameters);
+    require(std::abs(vibe.effective_rate_hz() - 2.0F) < 1.0e-6F,
+            "quarter-note Vibe rate did not follow 120 BPM");
+
+    parameters.tempo_bpm = 90.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::Eighth;
+    vibe.set_parameters(parameters);
+    require(std::abs(vibe.effective_rate_hz() - 3.0F) < 1.0e-6F,
+            "eighth-note Vibe rate did not follow 90 BPM");
+
+    parameters.tempo_bpm = 120.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::EighthTriplet;
+    vibe.set_parameters(parameters);
+    require(std::abs(vibe.effective_rate_hz() - 6.0F) < 1.0e-6F,
+            "triplet Vibe rate did not use its project note length");
+
+    parameters.tempo_bpm = 10.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::Whole;
+    vibe.set_parameters(parameters);
+    require(vibe.parameters().tempo_bpm == 20.0F &&
+                std::abs(vibe.effective_rate_hz() - (20.0F / 240.0F)) <
+                    1.0e-6F,
+            "tempo-note Vibe did not clamp its project BPM range");
+
+    parameters.tempo_bpm = 400.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::SixteenthTriplet;
+    vibe.set_parameters(parameters);
+    require(vibe.parameters().tempo_bpm == 300.0F &&
+                std::abs(vibe.effective_rate_hz() - 30.0F) < 1.0e-6F,
+            "fastest project Vibe note rate or BPM ceiling changed");
+
+    parameters.rate_mode = tabletfx::VibeRateMode::Free;
+    parameters.rate_hz = 1.5F;
+    vibe.set_parameters(parameters);
+    require(vibe.effective_rate_hz() == 1.5F,
+            "returning to free-rate mode did not restore its stored Hz value");
+
+    auto input = make_tone(330.0F, 24000);
+    auto free_output = input;
+    auto synced_output = input;
+    tabletfx::Vibe free_vibe(48000.0F, 1);
+    parameters.rate_mode = tabletfx::VibeRateMode::TempoNote;
+    parameters.tempo_bpm = 120.0F;
+    parameters.note_division = tabletfx::VibeNoteDivision::Quarter;
+    tabletfx::Vibe synced_vibe(48000.0F, 1, parameters);
+    free_vibe.process(free_output, 1);
+    synced_vibe.process(synced_output, 1);
+    require(free_output != synced_output,
+            "tempo-note rate did not affect Vibe modulation processing");
 }
 
 void test_depth_and_selectable_stages() {
@@ -282,6 +350,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_tempo_note_rate_and_bounds();
         test_depth_and_selectable_stages();
         test_trem_spread_and_mono_behavior();
         test_level_reset_and_block_partitioning();

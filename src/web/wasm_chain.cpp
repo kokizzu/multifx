@@ -1073,10 +1073,26 @@ public:
 
     void configure_vibe(float rate_hz, float depth, float trem,
                         std::uint32_t stages, float spread,
-                        float level) noexcept {
+                        float level, std::uint32_t rate_mode,
+                        std::uint32_t note_division,
+                        float tempo_bpm) noexcept {
         auto* vibe = static_cast<tabletfx::Vibe*>(effects_[71].effect.get());
-        vibe->set_parameters({rate_hz, depth, trem,
-                              static_cast<std::uint8_t>(stages), spread, level});
+        tabletfx::VibeParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.depth = depth;
+        parameters.trem = trem;
+        parameters.stages = static_cast<std::uint8_t>(stages);
+        parameters.spread = spread;
+        parameters.level = level;
+        parameters.rate_mode = rate_mode == 1U
+            ? tabletfx::VibeRateMode::TempoNote
+            : tabletfx::VibeRateMode::Free;
+        parameters.note_division = note_division <= static_cast<std::uint32_t>(
+                tabletfx::VibeNoteDivision::SixteenthTriplet)
+            ? static_cast<tabletfx::VibeNoteDivision>(note_division)
+            : tabletfx::VibeNoteDivision::Quarter;
+        parameters.tempo_bpm = tempo_bpm;
+        vibe->set_parameters(parameters);
     }
 
     void configure_multi_delay_line(
@@ -3667,10 +3683,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_dual_engine_distortion(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_vibe(
     void* opaque, float rate_hz, float depth, float trem,
-    std::uint32_t stages, float spread, float level) noexcept {
+    std::uint32_t stages, float spread, float level,
+    std::uint32_t rate_mode, std::uint32_t note_division,
+    float tempo_bpm) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_vibe(rate_hz, depth, trem,
-                                         stages, spread, level);
+                                         stages, spread, level,
+                                         rate_mode, note_division, tempo_bpm);
     }
 }
 
