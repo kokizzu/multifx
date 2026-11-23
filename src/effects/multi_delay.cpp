@@ -11,6 +11,14 @@ namespace {
 constexpr double kPiOverTwo = 1.57079632679489661923;
 constexpr float kMaximumSeriesFeedback = 0.9F;
 
+float next_random_lfo_value(std::uint32_t& state) noexcept {
+    state ^= state << 13U;
+    state ^= state >> 17U;
+    state ^= state << 5U;
+    const float unit = static_cast<float>(state >> 8U) / 16777215.0F;
+    return unit * 2.0F - 1.0F;
+}
+
 } // namespace
 
 MultiDelay::MultiDelay(float sample_rate, float max_delay_ms,
@@ -85,6 +93,23 @@ bool MultiDelay::valid_division(DelayDivision division) noexcept {
     case DelayDivision::sixteenth_triplet:
     case DelayDivision::thirty_second:
     case DelayDivision::sixty_fourth:
+        return true;
+    }
+    return false;
+}
+
+bool MultiDelay::valid_lfo_waveform(MultiDelayLfoWaveform waveform) noexcept {
+    switch (waveform) {
+    case MultiDelayLfoWaveform::sine:
+    case MultiDelayLfoWaveform::triangle:
+    case MultiDelayLfoWaveform::square:
+    case MultiDelayLfoWaveform::saw_up:
+    case MultiDelayLfoWaveform::saw_down:
+    case MultiDelayLfoWaveform::random:
+    case MultiDelayLfoWaveform::log:
+    case MultiDelayLfoWaveform::exponential:
+    case MultiDelayLfoWaveform::trapezoid:
+    case MultiDelayLfoWaveform::astable:
         return true;
     }
     return false;
@@ -194,6 +219,26 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
             parameters_.pan[line], 0.0F, 1.0F);
     }
 
+    for (std::size_t lfo = 0; lfo < multi_delay_time_lfo_count; ++lfo) {
+        auto& lfo_parameters = parameters.time_lfo[lfo];
+        const auto& previous = parameters_.time_lfo[lfo];
+        if (!valid_lfo_waveform(lfo_parameters.waveform)) {
+            lfo_parameters.waveform = previous.waveform;
+        }
+        lfo_parameters.phase_degrees = bounded(
+            lfo_parameters.phase_degrees, previous.phase_degrees,
+            kMinimumTimeLfoPhaseDegrees, kMaximumTimeLfoPhaseDegrees);
+        lfo_parameters.rate_hz = bounded(
+            lfo_parameters.rate_hz, previous.rate_hz,
+            kMinimumTimeLfoRateHz, kMaximumTimeLfoRateHz);
+        if (!valid_division(lfo_parameters.division)) {
+            lfo_parameters.division = previous.division;
+        }
+        lfo_parameters.depth_ms = bounded(
+            lfo_parameters.depth_ms, previous.depth_ms, 0.0F,
+            kMaximumTimeLfoDepthMs);
+    }
+
     const float maximum_filter_hz = std::max(
         20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
     parameters.low_cut_hz = bounded(parameters.low_cut_hz,
@@ -233,6 +278,7 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     }
     update_line_times(!was_quad_tape &&
                       parameters_.topology == MultiDelayTopology::quad_tape);
+    prepare_time_lfos();
 }
 
 void MultiDelay::update_line_times(bool initialize_tape_heads) noexcept {
@@ -289,6 +335,165 @@ float MultiDelay::read_interpolated(float delay,
     return nearer + fraction * (farther - nearer);
 }
 
+void MultiDelay::prepare_time_lfos() noexcept {
+    constexpr float two_pi = 4.0F * static_cast<float>(kPiOverTwo);
+    time_lfo_active_ = false;
+    for (std::size_t lfo = 0; lfo < multi_delay_time_lfo_count; ++lfo) {
+        const auto& parameters = parameters_.time_lfo[lfo];
+        float rate_hz = parameters.tempo_sync
+            ? parameters_.tempo_bpm /
+                  (60.0F * beats_for_division(parameters.division))
+            : parameters.rate_hz;
+        const float maximum_rate_hz = parameters.tempo_sync
+            ? kMaximumTimeLfoSyncRateHz
+            : kMaximumTimeLfoRateHz;
+        rate_hz = std::clamp(rate_hz, kMinimumTimeLfoRateHz,
+                             maximum_rate_hz);
+        const float phase_increment = rate_hz / sample_rate_;
+        time_lfo_phase_increment_[lfo] = phase_increment;
+        const float step_radians = two_pi * phase_increment;
+        time_lfo_sine_increment_[lfo] = std::sin(step_radians);
+        time_lfo_cosine_increment_[lfo] = std::cos(step_radians);
+        time_lfo_depth_frames_[lfo] =
+            parameters.depth_ms * sample_rate_ / 1000.0F;
+        time_lfo_active_ = time_lfo_active_ || parameters.depth_ms > 0.0F;
+        time_lfo_normalization_counter_[lfo] = 0U;
+
+        for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+            if (time_lfo_random_state_[lfo][line] == 0U) {
+                std::uint32_t seed = 0xA341316CU ^
+                    (static_cast<std::uint32_t>(lfo + 1U) * 0x9E3779B9U) ^
+                    (static_cast<std::uint32_t>(line + 1U) * 0x85EBCA6BU);
+                if (seed == 0U) seed = 1U;
+                time_lfo_random_state_[lfo][line] = seed;
+                time_lfo_random_value_[lfo][line] =
+                    next_random_lfo_value(time_lfo_random_state_[lfo][line]);
+            }
+            float phase_offset_degrees = 0.0F;
+            if (line == 1U) {
+                phase_offset_degrees = parameters.phase_degrees;
+            } else if (line == 2U) {
+                phase_offset_degrees = 180.0F;
+            } else if (line == 3U) {
+                phase_offset_degrees = parameters.phase_degrees + 180.0F;
+            }
+            float phase = time_lfo_base_phase_[lfo] +
+                          phase_offset_degrees / 360.0F;
+            phase -= std::floor(phase);
+            time_lfo_tap_phase_[lfo][line] = phase;
+            const float radians = two_pi * phase;
+            time_lfo_tap_sine_[lfo][line] = std::sin(radians);
+            time_lfo_tap_cosine_[lfo][line] = std::cos(radians);
+        }
+    }
+}
+
+void MultiDelay::reset_time_lfos() noexcept {
+    time_lfo_base_phase_.fill(0.0F);
+    time_lfo_normalization_counter_.fill(0U);
+    for (std::size_t lfo = 0; lfo < multi_delay_time_lfo_count; ++lfo) {
+        time_lfo_random_state_[lfo].fill(0U);
+        time_lfo_random_value_[lfo].fill(0.0F);
+    }
+    prepare_time_lfos();
+}
+
+float MultiDelay::time_lfo_waveform_value(std::size_t lfo,
+                                          std::size_t line) const noexcept {
+    if (lfo >= multi_delay_time_lfo_count ||
+        line >= multi_delay_line_count) {
+        return 0.0F;
+    }
+    const float phase = time_lfo_tap_phase_[lfo][line];
+    switch (parameters_.time_lfo[lfo].waveform) {
+    case MultiDelayLfoWaveform::sine:
+        return time_lfo_tap_sine_[lfo][line];
+    case MultiDelayLfoWaveform::triangle:
+        return phase < 0.5F ? -1.0F + 4.0F * phase
+                            : 3.0F - 4.0F * phase;
+    case MultiDelayLfoWaveform::square:
+        return phase < 0.5F ? 1.0F : -1.0F;
+    case MultiDelayLfoWaveform::saw_up:
+        return 2.0F * phase - 1.0F;
+    case MultiDelayLfoWaveform::saw_down:
+        return 1.0F - 2.0F * phase;
+    case MultiDelayLfoWaveform::random:
+        return time_lfo_random_value_[lfo][line];
+    case MultiDelayLfoWaveform::log:
+        return 2.0F * std::log1p(9.0F * phase) / 2.302585093F - 1.0F;
+    case MultiDelayLfoWaveform::exponential:
+        return 2.0F * (std::exp(5.0F * phase) - 1.0F) /
+                   147.413162F - 1.0F;
+    case MultiDelayLfoWaveform::trapezoid:
+        if (phase < 0.25F) return -1.0F + 8.0F * phase;
+        if (phase < 0.75F) return 1.0F;
+        return 7.0F - 8.0F * phase;
+    case MultiDelayLfoWaveform::astable:
+        return phase < 0.25F ? 1.0F : -1.0F;
+    }
+    return 0.0F;
+}
+
+float MultiDelay::time_lfo_offset_frames(std::size_t line) const noexcept {
+    float offset_frames = 0.0F;
+    for (std::size_t lfo = 0; lfo < multi_delay_time_lfo_count; ++lfo) {
+        offset_frames += time_lfo_depth_frames_[lfo] *
+                         time_lfo_waveform_value(lfo, line);
+    }
+    return offset_frames;
+}
+
+void MultiDelay::advance_time_lfos() noexcept {
+    for (std::size_t lfo = 0; lfo < multi_delay_time_lfo_count; ++lfo) {
+        const float increment = time_lfo_phase_increment_[lfo];
+        time_lfo_base_phase_[lfo] += increment;
+        if (time_lfo_base_phase_[lfo] >= 1.0F) {
+            time_lfo_base_phase_[lfo] -= 1.0F;
+        }
+
+        for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+            float& phase = time_lfo_tap_phase_[lfo][line];
+            phase += increment;
+            if (phase >= 1.0F) {
+                phase -= 1.0F;
+                if (parameters_.time_lfo[lfo].waveform ==
+                    MultiDelayLfoWaveform::random) {
+                    time_lfo_random_value_[lfo][line] =
+                        next_random_lfo_value(time_lfo_random_state_[lfo][line]);
+                }
+            }
+            const float old_sine = time_lfo_tap_sine_[lfo][line];
+            time_lfo_tap_sine_[lfo][line] =
+                old_sine * time_lfo_cosine_increment_[lfo] +
+                time_lfo_tap_cosine_[lfo][line] *
+                    time_lfo_sine_increment_[lfo];
+            time_lfo_tap_cosine_[lfo][line] =
+                time_lfo_tap_cosine_[lfo][line] *
+                    time_lfo_cosine_increment_[lfo] -
+                old_sine * time_lfo_sine_increment_[lfo];
+        }
+
+        if (++time_lfo_normalization_counter_[lfo] == 4096U) {
+            for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
+                const float sine = time_lfo_tap_sine_[lfo][line];
+                const float cosine = time_lfo_tap_cosine_[lfo][line];
+                const float magnitude_squared = sine * sine + cosine * cosine;
+                if (std::isfinite(magnitude_squared) &&
+                    magnitude_squared > 0.0F) {
+                    const float inverse_magnitude =
+                        1.0F / std::sqrt(magnitude_squared);
+                    time_lfo_tap_sine_[lfo][line] *= inverse_magnitude;
+                    time_lfo_tap_cosine_[lfo][line] *= inverse_magnitude;
+                } else {
+                    time_lfo_tap_sine_[lfo][line] = 0.0F;
+                    time_lfo_tap_cosine_[lfo][line] = 1.0F;
+                }
+            }
+            time_lfo_normalization_counter_[lfo] = 0U;
+        }
+    }
+}
+
 float MultiDelay::filter_line(float input, std::size_t line) noexcept {
     float value = input;
     if (low_cut_enabled_) {
@@ -333,8 +538,11 @@ void MultiDelay::process(std::span<float> interleaved,
         if (parameters_.topology == MultiDelayTopology::quad_diffusor) {
             float stage_input = effect_input;
             for (std::size_t line = 0; line < multi_delay_line_count; ++line) {
-                const float delayed_state =
-                    storage_[read_frame(delay_frames_[line], line)];
+                const float delayed_state = time_lfo_active_
+                    ? read_interpolated(
+                          static_cast<float>(delay_frames_[line]) +
+                              time_lfo_offset_frames(line), line)
+                    : storage_[read_frame(delay_frames_[line], line)];
                 const float feedback = std::clamp(
                     parameters_.master_feedback,
                     -0.9F, 0.9F);
@@ -364,9 +572,15 @@ void MultiDelay::process(std::span<float> interleaved,
                     read_delay_frames_[line] += std::clamp(
                         difference, -read_head_slew_per_sample_,
                         read_head_slew_per_sample_);
-                    delayed = read_interpolated(read_delay_frames_[line], line);
+                    const float read_delay = read_delay_frames_[line] +
+                        (time_lfo_active_ ? time_lfo_offset_frames(line) : 0.0F);
+                    delayed = read_interpolated(read_delay, line);
                 } else {
-                    delayed = storage_[read_frame(delay_frames_[line], line)];
+                    delayed = time_lfo_active_
+                        ? read_interpolated(
+                              static_cast<float>(delay_frames_[line]) +
+                                  time_lfo_offset_frames(line), line)
+                        : storage_[read_frame(delay_frames_[line], line)];
                 }
                 tap_outputs[line] = filter_line(delayed, line);
                 feedback_taps[line] =
@@ -437,6 +651,9 @@ void MultiDelay::process(std::span<float> interleaved,
                 dry_right * (1.0F - mix) +
                 wet_right * mix * output_level_linear_);
         }
+        if (time_lfo_active_) {
+            advance_time_lfos();
+        }
     }
 }
 
@@ -449,6 +666,7 @@ void MultiDelay::reset() noexcept {
         read_delay_frames_[line] = static_cast<float>(delay_frames_[line]);
     }
     write_frame_ = 0U;
+    reset_time_lfos();
 }
 
 } // namespace tabletfx

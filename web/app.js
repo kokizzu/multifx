@@ -176,6 +176,10 @@ const DEFAULT_PARAMETERS = {
     inputGainDb: 0, mix: 0.25, levelDb: 0,
     seriesFeedback: 0, seriesFeedbackSend: 3, seriesFeedbackReturn: 0,
     masterTime: 1, masterFeedback: 0.5, motorSpeed: 1,
+    timeLfo: [
+      { waveform: 0, phaseDegrees: 90, rateHz: 0.5, tempoSync: 0, division: 4, depthMs: 0 },
+      { waveform: 0, phaseDegrees: 90, rateHz: 0.5, tempoSync: 0, division: 4, depthMs: 0 },
+    ],
   },
   portaPreamp: [6, 3, 0, 0, 0],
   pitchSequence: [
@@ -1185,6 +1189,11 @@ const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-
     [...row.querySelectorAll("[data-control]")]
       .map((control) => [control.dataset.control, control]),
   ));
+const multiDelayLfoControls = [...document.querySelectorAll("[data-multi-delay-lfo]")]
+  .map((row) => Object.fromEntries(
+    [...row.querySelectorAll("[data-control]")]
+      .map((control) => [control.dataset.control, control]),
+  ));
 const multiDelayTempo = document.querySelector("#multi-delay-tempo");
 const multiDelayTopology = document.querySelector("#multi-delay-topology");
 const multiDelayLowCut = document.querySelector("#multi-delay-low-cut");
@@ -1205,6 +1214,7 @@ const multiDelayTopologyMasterHint = document.querySelector("#multi-delay-topolo
 const multiDelayTimeLimit = document.querySelector("#multi-delay-time-limit");
 const multiDelayControls = [
   ...multiDelayLineControls.flatMap((line) => Object.values(line)),
+  ...multiDelayLfoControls.flatMap((lfo) => Object.values(lfo)),
   multiDelayTopology, multiDelayTempo, multiDelayLowCut, multiDelayHighCut,
   multiDelayInputGain, multiDelayMix, multiDelayLevel,
   multiDelaySeriesFeedback, multiDelaySeriesSend, multiDelaySeriesReturn,
@@ -2651,8 +2661,17 @@ function updateMultiDelayOptions() {
     level: Number(line.level.value) / 100,
     pan: Number(line.pan.value) / 100,
   }));
+  const timeLfo = multiDelayLfoControls.map((lfo) => ({
+    waveform: Number(lfo.waveform.value),
+    phaseDegrees: Number(lfo.phaseDegrees.value),
+    rateHz: Number(lfo.rateHz.value),
+    tempoSync: Number(lfo.rateMode.value),
+    division: Number(lfo.division.value),
+    depthMs: Number(lfo.depthMs.value),
+  }));
   const value = {
     lines,
+    timeLfo,
     topology,
     tempoBpm: Number(multiDelayTempo.value),
     lowCutHz: Number(multiDelayLowCut.value),
@@ -2670,7 +2689,8 @@ function updateMultiDelayOptions() {
   DEFAULT_PARAMETERS.multiDelay = value;
   const divisions = ["Whole", "Dotted half", "Half", "Dotted quarter", "Quarter",
     "Quarter triplet", "Dotted eighth", "Eighth", "Eighth triplet",
-    "Dotted sixteenth", "Sixteenth", "Sixteenth triplet"];
+    "Dotted sixteenth", "Sixteenth", "Sixteenth triplet", "Thirty-second",
+    "Sixty-fourth"];
   const show = (control, text) => {
     const output = control.parentElement.querySelector("output");
     if (output) output.value = text;
@@ -2738,6 +2758,20 @@ function updateMultiDelayOptions() {
   show(multiDelayInputGain, `${value.inputGainDb} dB`);
   show(multiDelayMix, `${Math.round(value.mix * 100)}%`);
   show(multiDelayLevel, `${value.levelDb} dB`);
+  const waveformLabels = ["Sine", "Triangle", "Square", "Saw Up", "Saw Down",
+    "Random", "Log", "Exponential", "Trapezoid", "Astable"];
+  multiDelayLfoControls.forEach((lfo, index) => {
+    const settings = timeLfo[index];
+    const tempoSync = settings.tempoSync === 1;
+    lfo.rateHz.disabled = tempoSync;
+    lfo.division.disabled = !tempoSync;
+    show(lfo.waveform, waveformLabels[settings.waveform] || "Sine");
+    show(lfo.phaseDegrees, `${settings.phaseDegrees}°`);
+    show(lfo.rateMode, tempoSync ? "Tempo sync" : "Free rate");
+    show(lfo.rateHz, `${settings.rateHz.toFixed(2)} Hz`);
+    show(lfo.division, divisions[settings.division] || "Quarter");
+    show(lfo.depthMs, `${settings.depthMs.toFixed(1)} ms`);
+  });
   multiDelayTimeLimit.textContent =
     `Effective time ceiling at ${sampleRate} Hz: ${maximumDelayMs} ms (512 KiB fixed ring storage).`;
   if (workletNode) workletNode.port.postMessage({ type: "multi-delay", value });
@@ -6517,6 +6551,19 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
     multiDelaySeriesFeedback.value = "35";
     multiDelaySeriesSend.value = "3";
     multiDelaySeriesReturn.value = "0";
+    multiDelayLfoControls[0].waveform.value = "3";
+    multiDelayLfoControls[0].phaseDegrees.value = "90";
+    multiDelayLfoControls[0].rateMode.value = "0";
+    multiDelayLfoControls[0].rateHz.value = "0.5";
+    multiDelayLfoControls[0].division.value = "4";
+    multiDelayLfoControls[0].depthMs.value = "5";
+    multiDelayLfoControls[1].waveform.value = "1";
+    multiDelayLfoControls[1].phaseDegrees.value = "90";
+    multiDelayLfoControls[1].rateMode.value = "1";
+    multiDelayLfoControls[1].rateHz.value = "0.5";
+    multiDelayLfoControls[1].division.value = "12";
+    multiDelayLfoControls[1].depthMs.value = "2.5";
+    updateMultiDelayOptions();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
       checkbox.checked = testEnabled[index];
@@ -9826,6 +9873,8 @@ async function runBrowserSelfTest() {
     try {
       workletNode = { port: { postMessage: (message) => multiDelayMessages.push(message) } };
       const firstLine = multiDelayLineControls[0];
+      const firstLfo = multiDelayLfoControls[0];
+      const secondLfo = multiDelayLfoControls[1];
       const testTimeMs = Math.min(620, Number(firstLine.timeMs.max));
       firstLine.timeMs.value = String(testTimeMs);
       firstLine.timeMode.value = "1";
@@ -9840,13 +9889,47 @@ async function runBrowserSelfTest() {
       multiDelayInputGain.value = "3";
       multiDelayMix.value = "40";
       multiDelayLevel.value = "-3";
+      firstLfo.waveform.value = "8";
+      firstLfo.phaseDegrees.value = "135";
+      firstLfo.rateMode.value = "1";
+      firstLfo.rateHz.value = "3.25";
+      firstLfo.division.value = "13";
+      firstLfo.depthMs.value = "4.5";
+      secondLfo.waveform.value = "5";
+      secondLfo.phaseDegrees.value = "45";
+      secondLfo.rateMode.value = "0";
+      secondLfo.rateHz.value = "0.75";
+      secondLfo.division.value = "4";
+      secondLfo.depthMs.value = "0";
       multiDelayMix.dispatchEvent(new Event("input", { bubbles: true }));
       const message = multiDelayMessages.at(-1);
       const line = message?.value?.lines?.[0];
+      const timeLfo = message?.value?.timeLfo;
       if (message?.type !== "multi-delay" ||
           line?.timeMs !== testTimeMs || line.timeMode !== 1 || line.division !== 10 ||
           line.feedback !== -0.2 || line.crossFeedback !== 0.25 ||
           line.level !== 0.8 || line.pan !== 0.25 ||
+          timeLfo?.length !== 2 ||
+          timeLfo[0]?.waveform !== 8 || timeLfo[0]?.phaseDegrees !== 135 ||
+          timeLfo[0]?.rateHz !== 3.25 || timeLfo[0]?.tempoSync !== 1 ||
+          timeLfo[0]?.division !== 13 || timeLfo[0]?.depthMs !== 4.5 ||
+          timeLfo[1]?.waveform !== 5 || timeLfo[1]?.phaseDegrees !== 45 ||
+          timeLfo[1]?.rateHz !== 0.75 || timeLfo[1]?.tempoSync !== 0 ||
+          timeLfo[1]?.division !== 4 || timeLfo[1]?.depthMs !== 0 ||
+          !firstLfo.rateHz.disabled || firstLfo.division.disabled ||
+          secondLfo.rateHz.disabled || !secondLfo.division.disabled ||
+          firstLfo.waveform.parentElement.querySelector("output").value !== "Trapezoid" ||
+          firstLfo.phaseDegrees.parentElement.querySelector("output").value !== "135°" ||
+          firstLfo.rateMode.parentElement.querySelector("output").value !== "Tempo sync" ||
+          firstLfo.rateHz.parentElement.querySelector("output").value !== "3.25 Hz" ||
+          firstLfo.division.parentElement.querySelector("output").value !== "Sixty-fourth" ||
+          firstLfo.depthMs.parentElement.querySelector("output").value !== "4.5 ms" ||
+          secondLfo.waveform.parentElement.querySelector("output").value !== "Random" ||
+          secondLfo.phaseDegrees.parentElement.querySelector("output").value !== "45°" ||
+          secondLfo.rateMode.parentElement.querySelector("output").value !== "Free rate" ||
+          secondLfo.rateHz.parentElement.querySelector("output").value !== "0.75 Hz" ||
+          secondLfo.division.parentElement.querySelector("output").value !== "Quarter" ||
+          secondLfo.depthMs.parentElement.querySelector("output").value !== "0.0 ms" ||
           message.value.tempoBpm !== 96 || message.value.lowCutHz !== 100 ||
           message.value.highCutHz !== 8000 || message.value.inputGainDb !== 3 ||
           message.value.mix !== 0.4 || message.value.levelDb !== -3 ||

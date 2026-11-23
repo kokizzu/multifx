@@ -184,6 +184,7 @@ def build_web() -> None:
         "_tf_chain_set_multi_delay_line",
         "_tf_chain_set_multi_delay_global",
         "_tf_chain_set_multi_delay_topology",
+        "_tf_chain_set_multi_delay_time_lfo",
         "_tf_chain_set_porta_preamp",
         "_tf_chain_set_pitch_sequence",
         "_tf_chain_set_poly_sustain",

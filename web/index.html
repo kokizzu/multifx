@@ -1630,6 +1630,28 @@
           <label class="mix-control" for="multi-delay-motor-speed"><span>Motor Speed</span><output for="multi-delay-motor-speed">1.000×</output><input id="multi-delay-motor-speed" type="range" min="0.8" max="1.2" step="0.001" value="1"></label>
           <p class="hint">Project range 0.8–1.2×; 1.000× is documented normal speed. Changes move the project read heads to bend the pitch of stored echoes. No Fractal numeric range is documented for Quad Tape.</p>
         </div>
+        <details class="multi-delay-tap" data-multi-delay-lfo="0">
+          <summary>Time LFO 1 · project-authored</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Waveform</span><output></output><select data-control="waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Square</option><option value="3">Saw Up</option><option value="4">Saw Down</option><option value="5">Random</option><option value="6">Log</option><option value="7">Exponential</option><option value="8">Trapezoid</option><option value="9">Astable</option></select></label>
+            <label class="mix-control"><span>Phase</span><output></output><input data-control="phaseDegrees" type="range" min="0" max="180" step="1" value="90"></label>
+            <label class="mix-control"><span>Rate Mode</span><output></output><select data-control="rateMode"><option value="0" selected>Free rate</option><option value="1">Tempo sync</option></select></label>
+            <label class="mix-control"><span>Rate</span><output></output><input data-control="rateHz" type="range" min="0.05" max="20" step="0.01" value="0.5"></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4" selected>Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option><option value="12">Thirty-second</option><option value="13">Sixty-fourth</option></select></label>
+            <label class="mix-control"><span>Depth</span><output></output><input data-control="depthMs" type="range" min="0" max="20" step="0.1" value="0"></label>
+          </div>
+        </details>
+        <details class="multi-delay-tap" data-multi-delay-lfo="1">
+          <summary>Time LFO 2 · project-authored</summary>
+          <div class="gain-controls">
+            <label class="mix-control"><span>Waveform</span><output></output><select data-control="waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Square</option><option value="3">Saw Up</option><option value="4">Saw Down</option><option value="5">Random</option><option value="6">Log</option><option value="7">Exponential</option><option value="8">Trapezoid</option><option value="9">Astable</option></select></label>
+            <label class="mix-control"><span>Phase</span><output></output><input data-control="phaseDegrees" type="range" min="0" max="180" step="1" value="90"></label>
+            <label class="mix-control"><span>Rate Mode</span><output></output><select data-control="rateMode"><option value="0" selected>Free rate</option><option value="1">Tempo sync</option></select></label>
+            <label class="mix-control"><span>Rate</span><output></output><input data-control="rateHz" type="range" min="0.05" max="20" step="0.01" value="0.5"></label>
+            <label class="mix-control"><span>Division</span><output></output><select data-control="division"><option value="0">Whole</option><option value="1">Dotted half</option><option value="2">Half</option><option value="3">Dotted quarter</option><option value="4" selected>Quarter</option><option value="5">Quarter triplet</option><option value="6">Dotted eighth</option><option value="7">Eighth</option><option value="8">Eighth triplet</option><option value="9">Dotted sixteenth</option><option value="10">Sixteenth</option><option value="11">Sixteenth triplet</option><option value="12">Thirty-second</option><option value="13">Sixty-fourth</option></select></label>
+            <label class="mix-control"><span>Depth</span><output></output><input data-control="depthMs" type="range" min="0" max="20" step="0.1" value="0"></label>
+          </div>
+        </details>
         <p id="multi-delay-time-limit" class="hint">Effective time ceiling: checking browser sample rate… (512 KiB fixed ring storage)</p>
         <details class="multi-delay-tap" data-multi-delay-line="0">
           <summary>Line 1</summary>

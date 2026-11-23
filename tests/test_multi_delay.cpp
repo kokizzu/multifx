@@ -356,6 +356,178 @@ void test_quad_diffusor_allpass_chain_and_project_master_controls() {
             "project Quad Diffusor master-control bounds must be enforced");
 }
 
+void test_time_lfo_zero_depth_bounds_and_all_waveforms() {
+    const tabletfx::MultiDelayParameters defaults{};
+    require(defaults.time_lfo[0].waveform == tabletfx::MultiDelayLfoWaveform::sine &&
+                defaults.time_lfo[0].phase_degrees == 90.0F &&
+                defaults.time_lfo[0].rate_hz == 0.5F &&
+                !defaults.time_lfo[0].tempo_sync &&
+                defaults.time_lfo[0].division == tabletfx::DelayDivision::quarter &&
+                defaults.time_lfo[0].depth_ms == 0.0F,
+            "time-LFO defaults must be safe and disabled");
+
+    const auto render_zero_depth = [](bool set_zero_explicitly) {
+        auto parameters = impulse_parameters();
+        parameters.topology = tabletfx::MultiDelayTopology::quad_tap;
+        parameters.mix = 1.0F;
+        if (set_zero_explicitly) {
+            parameters.time_lfo[0].depth_ms = 0.0F;
+            parameters.time_lfo[1].depth_ms = 0.0F;
+        }
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 128> audio{};
+        audio[0] = 1.0F;
+        delay.process(audio, 1U);
+        return audio;
+    };
+    const auto defaults_output = render_zero_depth(false);
+    const auto explicit_zero_output = render_zero_depth(true);
+    require(defaults_output == explicit_zero_output &&
+                defaults_output[8] > 0.8F && defaults_output[16] > 0.8F &&
+                defaults_output[24] > 0.8F && defaults_output[32] > 0.8F,
+            "zero LFO depth must retain exact legacy tap timing and output");
+
+    auto extreme = impulse_parameters();
+    extreme.time_lfo[0].phase_degrees = 400.0F;
+    extreme.time_lfo[0].rate_hz = 100.0F;
+    extreme.time_lfo[0].depth_ms = 100.0F;
+    extreme.time_lfo[0].waveform =
+        static_cast<tabletfx::MultiDelayLfoWaveform>(255U);
+    extreme.time_lfo[0].division =
+        static_cast<tabletfx::DelayDivision>(255U);
+    tabletfx::MultiDelay bounded(8000.0F, 100.0F, extreme);
+    const auto bounded_lfo = bounded.parameters().time_lfo[0];
+    require(bounded_lfo.waveform == tabletfx::MultiDelayLfoWaveform::sine &&
+                bounded_lfo.phase_degrees == 180.0F &&
+                bounded_lfo.rate_hz == 20.0F &&
+                bounded_lfo.depth_ms == 20.0F &&
+                bounded_lfo.division == tabletfx::DelayDivision::quarter,
+            "invalid time-LFO values must fall back or clamp to project bounds");
+
+    for (std::uint32_t waveform = 0U; waveform <= 9U; ++waveform) {
+        auto parameters = impulse_parameters();
+        parameters.time_lfo[0].waveform =
+            static_cast<tabletfx::MultiDelayLfoWaveform>(waveform);
+        parameters.time_lfo[0].depth_ms = 4.0F;
+        parameters.time_lfo[0].rate_hz = 3.0F;
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 4096> audio{};
+        for (std::size_t frame = 0; frame < audio.size(); ++frame) {
+            audio[frame] = 0.5F * std::sin(
+                2.0F * 3.14159265358979323846F *
+                static_cast<float>(frame) / 24.0F);
+        }
+        delay.process(audio, 1U);
+        require(std::all_of(audio.begin(), audio.end(), [](float sample) {
+                    return std::isfinite(sample);
+                }),
+                "every documented LFO waveform must produce finite audio");
+    }
+}
+
+void test_time_lfo_phase_tempo_sync_fast_sync_and_random_reset() {
+    const auto render = [](std::size_t line, float delay_ms, float phase_degrees,
+                          bool tempo_sync, float tempo_bpm,
+                          tabletfx::DelayDivision division,
+                          float free_rate_hz, std::size_t frames) {
+        auto parameters = impulse_parameters();
+        parameters.topology = tabletfx::MultiDelayTopology::quad_tap;
+        parameters.time_ms.fill(delay_ms);
+        parameters.level.fill(0.0F);
+        parameters.level[line] = 1.0F;
+        parameters.pan.fill(0.5F);
+        parameters.master_feedback = 0.0F;
+        parameters.mix = 1.0F;
+        auto& lfo = parameters.time_lfo[0];
+        lfo.waveform = tabletfx::MultiDelayLfoWaveform::square;
+        lfo.phase_degrees = phase_degrees;
+        lfo.rate_hz = free_rate_hz;
+        lfo.tempo_sync = tempo_sync;
+        lfo.division = division;
+        lfo.depth_ms = 2.0F;
+
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        std::vector<float> audio(frames + 1U);
+        for (std::size_t frame = 0; frame < audio.size(); ++frame) {
+            audio[frame] = 0.5F * std::sin(
+                2.0F * 3.14159265358979323846F *
+                static_cast<float>(frame) / 24.0F);
+        }
+        delay.process(audio, 1U);
+        return audio;
+    };
+
+    const auto tap_two_phase_zero = render(
+        1U, 10.0F, 0.0F, false, 120.0F,
+        tabletfx::DelayDivision::quarter, 2.0F, 1100U);
+    const auto tap_two_phase_ninety = render(
+        1U, 10.0F, 90.0F, false, 120.0F,
+        tabletfx::DelayDivision::quarter, 2.0F, 1100U);
+    require(std::abs(tap_two_phase_zero[1100] -
+                     tap_two_phase_ninety[1100]) > 0.3F,
+            "tap 2 Phase must offset its delay modulation by the selected degrees");
+
+    const auto free_quarter_rate = render(
+        0U, 10.0F, 90.0F, false, 120.0F,
+        tabletfx::DelayDivision::quarter, 2.0F, 1100U);
+    const auto synced_quarter_rate = render(
+        0U, 10.0F, 90.0F, true, 120.0F,
+        tabletfx::DelayDivision::quarter, 9.0F, 1100U);
+    require(free_quarter_rate == synced_quarter_rate,
+            "120 BPM quarter-note sync must match a 2 Hz free LFO");
+
+    const auto fastest_sync = render(
+        0U, 25.0F, 90.0F, true, 300.0F,
+        tabletfx::DelayDivision::sixty_fourth, 1.0F, 310U);
+    const auto capped_free_rate = render(
+        0U, 25.0F, 90.0F, false, 120.0F,
+        tabletfx::DelayDivision::quarter, 20.0F, 310U);
+    require(std::abs(fastest_sync[310] - capped_free_rate[310]) > 0.3F,
+            "300 BPM 64th sync must run at its 80 Hz derived rate");
+
+    const auto render_random = [] {
+        auto parameters = impulse_parameters();
+        parameters.time_lfo[0].waveform =
+            tabletfx::MultiDelayLfoWaveform::random;
+        parameters.time_lfo[0].rate_hz = 4.0F;
+        parameters.time_lfo[0].depth_ms = 3.0F;
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        std::vector<float> audio(8000U);
+        for (std::size_t frame = 0; frame < audio.size(); ++frame) {
+            audio[frame] = 0.5F * std::sin(
+                2.0F * 3.14159265358979323846F *
+                static_cast<float>(frame) / 24.0F);
+        }
+        delay.process(audio, 1U);
+        return audio;
+    };
+    const auto random_first = render_random();
+    const auto random_second = render_random();
+    require(random_first == random_second,
+            "random LFO must use reproducible seeded sample-and-hold values");
+
+    auto reset_parameters = impulse_parameters();
+    reset_parameters.time_lfo[0].waveform =
+        tabletfx::MultiDelayLfoWaveform::random;
+    reset_parameters.time_lfo[0].rate_hz = 4.0F;
+    reset_parameters.time_lfo[0].depth_ms = 3.0F;
+    tabletfx::MultiDelay resettable(8000.0F, 100.0F, reset_parameters);
+    std::vector<float> before_reset(8000U);
+    std::vector<float> after_reset(8000U);
+    for (std::size_t frame = 0; frame < before_reset.size(); ++frame) {
+        const float sample = 0.5F * std::sin(
+            2.0F * 3.14159265358979323846F *
+            static_cast<float>(frame) / 24.0F);
+        before_reset[frame] = sample;
+        after_reset[frame] = sample;
+    }
+    resettable.process(before_reset, 1U);
+    resettable.reset();
+    resettable.process(after_reset, 1U);
+    require(before_reset == after_reset,
+            "reset must restore the deterministic random-LFO sequence");
+}
+
 void test_memory_cap_reset_and_process_no_allocations() {
     tabletfx::MultiDelay capped(384000.0F, 2000.0F);
     require(capped.maximum_delay_ms() < 200.0F &&
@@ -366,6 +538,9 @@ void test_memory_cap_reset_and_process_no_allocations() {
     auto parameters = impulse_parameters();
     parameters.time_ms = {1.0F, 2.0F, 3.0F, 4.0F};
     parameters.cross_feedback[0] = 0.2F;
+    parameters.time_lfo[0].waveform =
+        tabletfx::MultiDelayLfoWaveform::random;
+    parameters.time_lfo[0].depth_ms = 4.0F;
     tabletfx::MultiDelay delay(48000.0F, 100.0F, parameters);
     std::array<float, 256> audio{};
     audio[0] = 0.75F;
@@ -408,6 +583,8 @@ int main() {
         test_tempo_sync_and_project_bounds();
         test_quad_series_compounds_delays_and_routes_selected_feedback();
         test_quad_diffusor_allpass_chain_and_project_master_controls();
+        test_time_lfo_zero_depth_bounds_and_all_waveforms();
+        test_time_lfo_phase_tempo_sync_fast_sync_and_random_reset();
         test_memory_cap_reset_and_process_no_allocations();
         std::cout << "Multi-Delay tests passed\n";
     } catch (const std::exception& exception) {

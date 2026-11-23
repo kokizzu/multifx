@@ -1198,6 +1198,27 @@ public:
         delay->configure(parameters);
     }
 
+    void configure_multi_delay_time_lfo(
+        std::uint32_t lfo_index, std::uint32_t waveform,
+        float phase_degrees, float rate_hz, std::uint32_t tempo_sync,
+        std::uint32_t division, float depth_ms) noexcept {
+        if (lfo_index >= tabletfx::multi_delay_time_lfo_count) return;
+        auto* delay = static_cast<tabletfx::MultiDelay*>(effects_[72].effect.get());
+        auto parameters = delay->parameters();
+        auto& lfo = parameters.time_lfo[lfo_index];
+        lfo.waveform = waveform <= 9U
+            ? static_cast<tabletfx::MultiDelayLfoWaveform>(waveform)
+            : static_cast<tabletfx::MultiDelayLfoWaveform>(255U);
+        lfo.phase_degrees = phase_degrees;
+        lfo.rate_hz = rate_hz;
+        lfo.tempo_sync = tempo_sync != 0U;
+        lfo.division = division <= 13U
+            ? static_cast<tabletfx::DelayDivision>(division)
+            : static_cast<tabletfx::DelayDivision>(255U);
+        lfo.depth_ms = depth_ms;
+        delay->configure(parameters);
+    }
+
     void configure_porta_preamp(float gain_1_db, float gain_2_db,
                                 float bass_db, float treble_db,
                                 float level_db) noexcept {
@@ -4034,6 +4055,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_topology(
         as_chain(opaque)->configure_multi_delay_topology(
             topology, series_feedback, feedback_send, feedback_return,
             master_time, master_feedback, motor_speed);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_multi_delay_time_lfo(
+    void* opaque, std::uint32_t lfo_index, std::uint32_t waveform,
+    float phase_degrees, float rate_hz, std::uint32_t tempo_sync,
+    std::uint32_t division, float depth_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_multi_delay_time_lfo(
+            lfo_index, waveform, phase_degrees, rate_hz, tempo_sync,
+            division, depth_ms);
     }
 }
 

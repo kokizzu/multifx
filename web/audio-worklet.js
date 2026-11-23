@@ -68,6 +68,19 @@ function configureMultiDelay(module, chain, parameters = {}) {
     Number(parameters.masterFeedback ?? 1),
     Number(parameters.motorSpeed ?? 1),
   );
+  const defaultTimeLfo = {
+    waveform: 0, phaseDegrees: 90, rateHz: 0.5,
+    tempoSync: 0, division: 4, depthMs: 0,
+  };
+  const timeLfo = Array.isArray(parameters.timeLfo) ? parameters.timeLfo : [];
+  for (let index = 0; index < 2; index += 1) {
+    const lfo = timeLfo[index] || defaultTimeLfo;
+    module._tf_chain_set_multi_delay_time_lfo(
+      chain, index, Number(lfo.waveform ?? 0), Number(lfo.phaseDegrees ?? 90),
+      Number(lfo.rateHz ?? 0.5), Number(lfo.tempoSync ?? 0),
+      Number(lfo.division ?? 4), Number(lfo.depthMs ?? 0),
+    );
+  }
 }
 
 function configurePlexDelay(module, chain, parameters = {}) {
