@@ -9496,7 +9496,15 @@ async function runBrowserSelfTest() {
         5000,
       )),
     ]);
+    looperStatus.value = "Waiting for recording command";
+    document.querySelector('[data-looper-command="0"]').click();
+    await waitForLooperStatus("Recording · no loop");
     await waitForCapture(captureView, reference.samples.length);
+    document.querySelector('[data-looper-command="3"]').click();
+    await waitForLooperStatus("Stopped · ");
+    if (looperStatus.value.includes("no loop")) {
+      throw new Error("Browser Looper recording did not retain processed input audio.");
+    }
     reverseDelayRestart.click();
     reverseDelayRun.checked = false;
     reverseDelayRun.dispatchEvent(new Event("change", { bubbles: true }));
