@@ -241,7 +241,7 @@ const DEFAULT_PARAMETERS = {
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   ashevillePattrn: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0.5, 0.75, 3, 0.5, 10],
   notchFilter: [1000, 4, 1],
-  formantFilter: [0, 4, 1, 0],
+  formantFilter: [0, 4, 1, 0, 0, 0, 1, 4, 0, 0],
   harmonicResonator: [110, 1.2, 0.55, 0.5],
   bitCrusher: [16, 1, 1],
   multibandCompressor: [250, 2500, 1,
@@ -1490,12 +1490,21 @@ const notchFilterMix = document.querySelector("#notch-filter-mix");
 const notchFilterMixValue = document.querySelector("#notch-filter-mix-value");
 const formantFilterVowel = document.querySelector("#formant-filter-vowel-position");
 const formantFilterVowelValue = document.querySelector("#formant-filter-vowel-position-value");
+const formantFilterMode = document.querySelector("#formant-filter-mode");
+const formantFilterMorphControls = document.querySelector("#formant-filter-morph-controls");
+const formantFilterStartVowel = document.querySelector("#formant-filter-start-vowel");
+const formantFilterMiddleVowel = document.querySelector("#formant-filter-middle-vowel");
+const formantFilterEndVowel = document.querySelector("#formant-filter-end-vowel");
+const formantFilterControl = document.querySelector("#formant-filter-control-percent");
+const formantFilterControlValue = document.querySelector("#formant-filter-control-percent-value");
 const formantFilterQ = document.querySelector("#formant-filter-q");
 const formantFilterQValue = document.querySelector("#formant-filter-q-value");
 const formantFilterMix = document.querySelector("#formant-filter-mix");
 const formantFilterMixValue = document.querySelector("#formant-filter-mix-value");
 const formantFilterLevel = document.querySelector("#formant-filter-level-db");
 const formantFilterLevelValue = document.querySelector("#formant-filter-level-db-value");
+const formantFilterBalance = document.querySelector("#formant-filter-balance-percent");
+const formantFilterBalanceValue = document.querySelector("#formant-filter-balance-percent-value");
 const harmonicResonatorRoot = document.querySelector("#harmonic-resonator-root-frequency-hz");
 const harmonicResonatorRootValue = document.querySelector("#harmonic-resonator-root-frequency-hz-value");
 const harmonicResonatorDecay = document.querySelector("#harmonic-resonator-decay-seconds");
@@ -4887,22 +4896,39 @@ function updateNotchFilter() {
 }
 
 function updateFormantFilter() {
+  const morphMode = Number(formantFilterMode.value);
   const values = [
     Number(formantFilterVowel.value),
     Number(formantFilterQ.value),
     Number(formantFilterMix.value) / 100,
     Number(formantFilterLevel.value),
+    morphMode,
+    Number(formantFilterStartVowel.value),
+    Number(formantFilterMiddleVowel.value),
+    Number(formantFilterEndVowel.value),
+    Number(formantFilterControl.value),
+    Number(formantFilterBalance.value),
   ];
   const vowels = ["A", "E", "I", "O", "U"];
+  const morphVowels = ["AAA", "EEE", "III", "OHH", "OOO", "EHH", "AHH", "AWW", "UHH", "ERR"];
   const lower = Math.min(Math.floor(values[0]), vowels.length - 1);
   const upper = Math.min(lower + 1, vowels.length - 1);
   const fraction = values[0] - lower;
-  formantFilterVowelValue.value = lower === upper || fraction < 0.005
-    ? vowels[lower]
-    : `${vowels[lower]} → ${vowels[upper]} ${Math.round(fraction * 100)}%`;
+  const start = morphVowels[Math.round(values[5])];
+  const middle = morphVowels[Math.round(values[6])];
+  const end = morphVowels[Math.round(values[7])];
+  formantFilterVowel.closest("label").hidden = morphMode >= 0.5;
+  formantFilterMorphControls.hidden = morphMode < 0.5;
+  formantFilterVowelValue.value = morphMode >= 0.5
+    ? `${start} → ${middle} → ${end}`
+    : lower === upper || fraction < 0.005
+      ? vowels[lower]
+      : `${vowels[lower]} → ${vowels[upper]} ${Math.round(fraction * 100)}%`;
+  formantFilterControlValue.value = `${Math.round(values[8])}%`;
   formantFilterQValue.value = values[1].toFixed(2);
   formantFilterMixValue.value = `${Math.round(values[2] * 100)}%`;
   formantFilterLevelValue.value = `${values[3].toFixed(1)} dB`;
+  formantFilterBalanceValue.value = `${Math.round(values[9])}%`;
   DEFAULT_PARAMETERS.formantFilter = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "formant-filter", value: values });
@@ -5227,8 +5253,10 @@ for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
   input.addEventListener("change", updateNotchFilter);
 }
-for (const input of [formantFilterVowel, formantFilterQ, formantFilterMix,
-  formantFilterLevel]) {
+for (const input of [formantFilterVowel, formantFilterMode,
+  formantFilterStartVowel, formantFilterMiddleVowel, formantFilterEndVowel,
+  formantFilterControl, formantFilterQ, formantFilterMix, formantFilterLevel,
+  formantFilterBalance]) {
   input.addEventListener("input", updateFormantFilter);
   input.addEventListener("change", updateFormantFilter);
 }
@@ -9595,7 +9623,7 @@ async function runBrowserSelfTest() {
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
-        formantFilter: [1.5, 6, 0.72, -2],
+        formantFilter: [1.5, 6, 0.72, -2, 1, 0, 2, 4, 65, 25],
         harmonicResonator: [220, 0.8, 0.7, 0.65],
         multibandCompressor: [500, 4000, 0,
           -30, 4, 0, 1, 30, 6, 0, 0,
@@ -9687,13 +9715,22 @@ async function runBrowserSelfTest() {
     formantFilterQ.value = String(formantFilterParameters[1]);
     formantFilterMix.value = String(formantFilterParameters[2] * 100);
     formantFilterLevel.value = String(formantFilterParameters[3]);
+    formantFilterMode.value = String(formantFilterParameters[4]);
+    formantFilterStartVowel.value = String(formantFilterParameters[5]);
+    formantFilterMiddleVowel.value = String(formantFilterParameters[6]);
+    formantFilterEndVowel.value = String(formantFilterParameters[7]);
+    formantFilterControl.value = String(formantFilterParameters[8]);
+    formantFilterBalance.value = String(formantFilterParameters[9]);
     updateFormantFilter();
     if (DEFAULT_PARAMETERS.formantFilter[0] !== 1.5 ||
-        formantFilterVowelValue.value !== "E → I 50%" ||
+        DEFAULT_PARAMETERS.formantFilter[4] !== 1 ||
+        formantFilterVowelValue.value !== "AAA → III → OOO" ||
+        formantFilterControlValue.value !== "65%" ||
         DEFAULT_PARAMETERS.formantFilter[1] !== 6 ||
         DEFAULT_PARAMETERS.formantFilter[2] !== 0.72 ||
-        DEFAULT_PARAMETERS.formantFilter[3] !== -2) {
-      throw new Error("Formant Filter controls must update vowel position, Q, mix, and output level.");
+        DEFAULT_PARAMETERS.formantFilter[3] !== -2 ||
+        DEFAULT_PARAMETERS.formantFilter[9] !== 25) {
+      throw new Error("Formant Filter controls must update morph vowels, Control, Resonance, mix, level, and Balance.");
     }
     const harmonicParameters = testOptions.parameters.harmonicResonator;
     harmonicResonatorRoot.value = String(harmonicParameters[0]);

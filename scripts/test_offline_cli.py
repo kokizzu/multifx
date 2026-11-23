@@ -2484,6 +2484,7 @@ def check_formant_filter(executable: Path) -> None:
         source = root / "guitar-tone.wav"
         dry_output = root / "dry.wav"
         wet_output = root / "formant.wav"
+        morph_output = root / "formant-morph.wav"
         write_pcm16(source, sample_rate, source_samples)
         subprocess.run(
             [str(executable), "render", str(source), str(dry_output)],
@@ -2504,6 +2505,25 @@ def check_formant_filter(executable: Path) -> None:
             raise AssertionError("Formant Filter produced non-finite output")
         if max(abs(a - b) for a, b in zip(dry, wet, strict=True)) < 1.0e-3:
             raise AssertionError("Formant Filter controls did not change the rendered tone")
+
+        morph_result = subprocess.run(
+            [str(executable), "render", str(source), str(morph_output),
+             "--formant-filter", "--formant-filter-start-vowel-index", "0",
+             "--formant-filter-middle-vowel-index", "2",
+             "--formant-filter-end-vowel-index", "4",
+             "--formant-filter-control-percent", "65",
+             "--formant-filter-q", "6", "--formant-filter-mix", "0.72",
+             "--formant-filter-level-db", "-2",
+             "--formant-filter-balance-percent", "25"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in morph_result.stdout:
+            raise AssertionError("three-vowel Formant controls did not enable one processor")
+        morph = struct.unpack("<" + "f" * frame_count, morph_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in morph):
+            raise AssertionError("three-vowel Formant mode produced non-finite output")
+        if max(abs(a - b) for a, b in zip(dry, morph, strict=True)) < 1.0e-3:
+            raise AssertionError("three-vowel Formant controls did not change the rendered tone")
 
 
 def check_harmonic_resonator(executable: Path) -> None:

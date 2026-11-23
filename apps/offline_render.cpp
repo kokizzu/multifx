@@ -3175,6 +3175,36 @@ Options parse_options(int argc, char** argv, int first) {
             options.formant_filter.vowel_position = value;
             options.formant_filter_enabled = true;
         }
+        else if (key == "--formant-filter-start-vowel-index") {
+            const auto index = std::clamp(static_cast<int>(std::lround(value)), 0, 9);
+            options.formant_filter.start_vowel =
+                static_cast<tabletfx::FormantVowel>(index);
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-middle-vowel-index") {
+            const auto index = std::clamp(static_cast<int>(std::lround(value)), 0, 9);
+            options.formant_filter.middle_vowel =
+                static_cast<tabletfx::FormantVowel>(index);
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-end-vowel-index") {
+            const auto index = std::clamp(static_cast<int>(std::lround(value)), 0, 9);
+            options.formant_filter.end_vowel =
+                static_cast<tabletfx::FormantVowel>(index);
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-control-percent") {
+            options.formant_filter.control_percent = value;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-balance-percent") {
+            options.formant_filter.balance_percent = value;
+            options.formant_filter_enabled = true;
+        }
         else if (key == "--formant-filter-q") {
             options.formant_filter.resonance_q = value;
             options.formant_filter_enabled = true;
@@ -5332,7 +5362,12 @@ void print_usage() {
                    " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
                   << "                 [--formant-filter] [--formant-filter-vowel-position 0..4]"
                      " [--formant-filter-q 0.5..12] [--formant-filter-mix 0..1]"
-                     " [--formant-filter-level-db -24..12]\n"
+                     " [--formant-filter-level-db -24..12]"
+                     " [--formant-filter-start-vowel-index 0..9]"
+                     " [--formant-filter-middle-vowel-index 0..9]"
+                     " [--formant-filter-end-vowel-index 0..9]"
+                     " [--formant-filter-control-percent 0..100]"
+                     " [--formant-filter-balance-percent -100..100]\n"
                    << "                 [--harmonic-resonator]"
                       " [--harmonic-resonator-root-frequency-hz 20..1000]"
                       " [--harmonic-resonator-decay-seconds 0.05..8]"

@@ -2337,12 +2337,29 @@ public:
     }
 
     void configure_formant_filter(float vowel_position, float resonance_q,
-                                  float mix, float level_db) noexcept {
+                                  float mix, float level_db, float morph_mode,
+                                  float start_vowel, float middle_vowel,
+                                  float end_vowel, float control_percent,
+                                  float balance_percent) noexcept {
         tabletfx::FormantFilterParameters parameters;
         parameters.vowel_position = vowel_position;
         parameters.resonance_q = resonance_q;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.three_vowel_morph = morph_mode >= 0.5F;
+        const auto vowel = [](float value) noexcept {
+            if (!std::isfinite(value)) {
+                return tabletfx::FormantVowel::aaa;
+            }
+            const auto index = std::clamp(
+                static_cast<int>(std::lround(value)), 0, 9);
+            return static_cast<tabletfx::FormantVowel>(index);
+        };
+        parameters.start_vowel = vowel(start_vowel);
+        parameters.middle_vowel = vowel(middle_vowel);
+        parameters.end_vowel = vowel(end_vowel);
+        parameters.control_percent = control_percent;
+        parameters.balance_percent = balance_percent;
         static_cast<tabletfx::FormantFilter*>(effects_[43].effect.get())
             ->set_parameters(parameters);
     }
@@ -3062,10 +3079,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_notch_filter(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_formant_filter(
     void* opaque, float vowel_position, float resonance_q, float mix,
-    float level_db) noexcept {
+    float level_db, float morph_mode, float start_vowel, float middle_vowel,
+    float end_vowel, float control_percent, float balance_percent) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_formant_filter(
-            vowel_position, resonance_q, mix, level_db);
+            vowel_position, resonance_q, mix, level_db, morph_mode, start_vowel,
+            middle_vowel, end_vowel, control_percent, balance_percent);
     }
 }
 

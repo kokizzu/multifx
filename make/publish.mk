@@ -2,7 +2,7 @@ PUBLISH_CHECKPOINTS := \
 	all dly08 effect-modules picker room-reverb hall-reverb plate-reverb spring-reverb \
 	auto-swell rotary-speaker ring-mod rhythmic-slicer step-filter notch-filter \
 	reverse-delay ducking-delay modulated-delay filtered-delay sweep-delay \
-	formant-filter harmonic-resonator multiband-compressor bit-crusher \
+	formant-filter fm9-formant-morph harmonic-resonator multiband-compressor bit-crusher \
 	dimension-chorus triple-double-chorus four-band-resonator diatonic-harmonizer \
 	grain-delay pitch-arpeggiator pitch-feedback-delay feedback-generator \
 	shimmer-reverb convolution-reverb mono-guitar-synth flagship-catalog \

@@ -645,6 +645,9 @@ FORMANT_FILTER_CHECKPOINT_PATHS = (
     "RESEARCH.md",
     "scripts/publish_checkpoint.py",
 )
+FM9_FORMANT_MORPH_CHECKPOINT_PATHS = tuple(
+    path for path in FORMANT_FILTER_CHECKPOINT_PATHS if path != "Makefile"
+) + ("make/publish.mk", "research-state.json")
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -1821,6 +1824,10 @@ CHECKPOINTS = {
                     "feat: add project-authored swept delay"),
     "formant-filter": (FORMANT_FILTER_CHECKPOINT_PATHS,
                        "feat: add project-authored formant filter"),
+    "fm9-formant-morph": (
+        FM9_FORMANT_MORPH_CHECKPOINT_PATHS,
+        "feat: add project-authored three-vowel formant mode",
+    ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),
     "multiband-compressor": (MULTIBAND_COMPRESSOR_CHECKPOINT_PATHS,

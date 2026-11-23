@@ -109,6 +109,79 @@ void test_formant_profiles_change_spectral_response() {
             "moving the vowel profile did not change the filter response");
 }
 
+void test_three_vowel_morph_changes_profiles_and_clamps_controls() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t skip = 12000U;
+    auto start_audio = tone(sample_rate, 430.0F, frames);
+    auto middle_audio = start_audio;
+    auto end_audio = start_audio;
+
+    tabletfx::FormantFilterParameters parameters;
+    parameters.three_vowel_morph = true;
+    parameters.start_vowel = tabletfx::FormantVowel::aaa;
+    parameters.middle_vowel = tabletfx::FormantVowel::iii;
+    parameters.end_vowel = tabletfx::FormantVowel::ooo;
+    parameters.control_percent = 0.0F;
+    tabletfx::FormantFilter start_filter(sample_rate, parameters);
+    start_filter.process(start_audio, 1);
+
+    parameters.control_percent = 50.0F;
+    tabletfx::FormantFilter middle_filter(sample_rate, parameters);
+    middle_filter.process(middle_audio, 1);
+
+    parameters.control_percent = 100.0F;
+    tabletfx::FormantFilter end_filter(sample_rate, parameters);
+    end_filter.process(end_audio, 1);
+
+    const float start_response = rms(start_audio, skip);
+    const float middle_response = rms(middle_audio, skip);
+    const float end_response = rms(end_audio, skip);
+    require(std::isfinite(start_response) && std::isfinite(middle_response) &&
+                std::isfinite(end_response) &&
+                std::abs(start_response - middle_response) > 0.001F &&
+                std::abs(middle_response - end_response) > 0.001F,
+            "Start, Middle, and End morph positions must select distinct project profiles");
+
+    parameters.start_vowel = static_cast<tabletfx::FormantVowel>(255U);
+    parameters.middle_vowel = tabletfx::FormantVowel::err;
+    parameters.end_vowel = tabletfx::FormantVowel::ahh;
+    parameters.control_percent = 150.0F;
+    parameters.balance_percent = -150.0F;
+    tabletfx::FormantFilter clamp_filter(sample_rate, parameters);
+    const auto clamped = clamp_filter.parameters();
+    require(clamped.start_vowel == tabletfx::FormantVowel::aaa &&
+                clamped.middle_vowel == tabletfx::FormantVowel::err &&
+                clamped.end_vowel == tabletfx::FormantVowel::ahh &&
+                clamped.control_percent == 100.0F &&
+                clamped.balance_percent == -100.0F,
+            "morph selections, Control, and Balance must stay in the project range");
+}
+
+void test_stereo_balance_is_smoothed_and_mono_safe() {
+    tabletfx::FormantFilterParameters parameters;
+    parameters.mix = 0.0F;
+    parameters.balance_percent = 100.0F;
+    tabletfx::FormantFilter filter(48000.0F, parameters);
+    std::array<float, 9600> stereo{};
+    for (std::size_t i = 0; i < stereo.size(); i += 2U) {
+        stereo[i] = 0.25F;
+        stereo[i + 1U] = 0.25F;
+    }
+    filter.process(stereo, 2);
+    require(std::abs(stereo[stereo.size() - 2U]) < 1.0e-6F &&
+                std::abs(stereo.back() - 0.25F) < 1.0e-6F,
+            "full-right project balance must attenuate only the left output");
+
+    std::array<float, 64> mono{};
+    mono.fill(0.25F);
+    tabletfx::FormantFilter mono_filter(48000.0F, parameters);
+    mono_filter.process(mono, 1);
+    require(std::all_of(mono.begin(), mono.end(), [](float sample) {
+                return std::abs(sample - 0.25F) < 1.0e-6F;
+            }), "stereo balance must not alter mono audio");
+}
+
 void test_mix_level_reset_and_stereo_isolation() {
     tabletfx::FormantFilterParameters parameters;
     parameters.mix = 0.0F;
@@ -217,6 +290,8 @@ int main() {
     try {
         test_defaults_bounds_and_memory();
         test_formant_profiles_change_spectral_response();
+        test_three_vowel_morph_changes_profiles_and_clamps_controls();
+        test_stereo_balance_is_smoothed_and_mono_safe();
         test_mix_level_reset_and_stereo_isolation();
         test_smoothing_block_invariance_invalid_samples_and_layout();
         test_process_does_not_allocate();

@@ -4,65 +4,78 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "0a73b487d145f7c6901a46c2f900a855326652e4",
+  "previous_checkpoint_commit": "d76c6c54f223d28b20836d511e98db754ca28a96",
   "current_checkpoint": {
-    "name": "Fractal FM9-family Stereo Panner",
-    "status": "verified-implementation",
-    "picker_index": 90,
-    "category": "Modulation",
+    "name": "Fractal FM9-family Dynamic Formant Morph",
+    "status": "verified-awaiting-audio-regression",
+    "picker_index": 43,
+    "category": "Filters & wah",
     "official_source": {
       "title": "Fractal Audio Systems Blocks Guide",
       "revision": "November 2026",
-      "pages": [106, 107],
+      "pages": [3, 4, 51],
       "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
       "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
       "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
     },
-    "project_controls": "Rate, Width, LFO Type, Tempo Sync/BPM/division, Duty, Shape, Phase, Pan Center, Ducking, Level, Balance, Smoothing. Bounds/defaults and DSP are project-authored.",
+    "documented_controls": "Start/Middle/End vowels (AAA, EEE, III, OHH, OOO, EHH, AHH, AWW, UHH, ERR), Resonance, Control; common Mix, Level, Balance, Bypass, and Bypass Mode.",
+    "project_controls": "The existing generic A/E/I/O/U sweep is retained. Three-vowel mode has Start/Middle/End selectors, manual Control 0–100% with middle at 50%, project-authored profile frequencies/gains, Resonance Q 0.5–12, Mix 0–1, Level −24…+12 dB, Balance −100…+100%, and 10 ms smoothing. Automated LFO/expression modifier assignment and selectable Bypass Mode are not implemented.",
     "verification": {
-      "native_ctest": "96/96",
+      "native_ctest": "96/96 CTest cases passed",
       "fixture_safety": "11 passed",
       "picker_rows": 93,
-      "web_build_bytes": 759845,
-      "browser_native_comparison": "71 stages; max absolute error 0.00000780769; RMS error 0.00000153992",
-      "stereo_guitar_panner_smoke": "passed using the existing local Guitar-TECHS stereo DI fixture",
-      "wasm_memory_bytes": 67108864,
-      "stereo_chain_processor_state_bytes": 32959916,
-      "tuner_state_bytes": 10364,
-      "notes": "Panner has its own stereo browser Play smoke and is excluded from parity because the offline renderer has no panner option. No isolated CPU, hardware, or human listening evidence."
+      "browser_native_comparison": "71 active stages passed on local stereo Guitar-TECHS DI; max absolute error 0.000006942274751509103, RMS error 0.0000012286337480166103",
+      "formant_morph_playback": "browser Play captured finite changed output with local prerecorded Guitar-TECHS DI",
+      "wasm_memory": "fixed 64 MiB heap; 32,959,916 B full stereo processor state plus 10,364 B tuner state",
+      "isolated_benchmark": "648 B processor state; p50 0.0896%, p95 0.1425%, p99 0.1560%, p99.9 0.9098%, max 1.4400% of 2.667 ms callback at 48 kHz stereo/128 frames; processor-call estimate, not a live device measurement",
+      "audio_regression": "running against existing local pickup/direct-input recordings",
+      "notes": "No Fractal DSP/settings parity is claimed. No hardware or human listening evidence."
     }
   },
   "next_research": [
-    {
-      "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Formant dynamic vowel morph",
-      "source": "November 2026 Blocks Guide, p. 51",
-      "status": "official control roles verified; project implementation pending",
-      "known_controls": "Start/Middle/End vowel choices, Resonance, continuous Control/morph; exact bounds/defaults and DSP not published",
-      "qualification": "Do not equate with the existing static formant filter; FM9-family firmware applicability remains qualified."
-    },
     {
       "device": "Fractal FM9 Mark II Turbo",
       "feature": "Enhancer modes",
       "source": "November 2026 Blocks Guide, p. 44",
       "status": "official mode/control roles verified; project implementation pending",
       "known_controls": "Modern, Classic, Stereoizer; only Classic Width 0–20 ms is numerically specified",
-      "qualification": "Existing Stereo Enhancer is related coverage, not mode parity."
+      "qualification": "Existing Stereo Enhancer is related coverage, not mode parity; exact firmware applicability remains qualified."
     },
     {
-      "device": "HeadRush Prime",
-      "feature": "C-Verb 10-second impulse support, Spring Guru, Kill Seq/Splicer, named synths",
-      "status": "manual gaps; do not infer undocumented controls"
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Poly Sustain/Poly Detune, Synth, Delay/Reverb/Looper algorithm details",
+      "source": "Owner's Manual Rev E / v1.4.1 and Helix Stadium model catalog, checked 2026-11-23",
+      "status": "official categories and select effect control roles audited; detailed per-model numeric ranges mostly unpublished",
+      "known_controls": "v1.4 effects include Mercator, Rock Box Dist/Boost, PortaBox 424, Essex Vibe, and Dimension W; Poly effects limited to two per preset/one per primary path",
+      "qualification": "Model catalog and live DSP manual have one Poly Detune/Pitch Sustain naming mismatch; exact device applicability should be checked before each implementation."
     },
     {
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
-      "status": "names and categories verified; effect-specific controls/ranges unavailable in reviewed public sources"
+      "source": "Firmware v1.8.85 current 2026-11-18; four effects introduced v1.8.45",
+      "status": "exact names/categories and descriptive roles verified; model-specific controls/ranges unavailable",
+      "qualification": "Do not invent parameter tables from generic effect categories."
     },
     {
-      "device": "Melofty Axom Max and XRecer XR1",
-      "feature": "remaining categorized effects, routing and global controls",
-      "status": "category/architecture leads only; exact effect tables remain inaccessible or incomplete"
+      "device": "HeadRush Prime",
+      "feature": "C-Verb 10-second impulse support, Spring Guru, Kill Seq/Splicer, named synths",
+      "source": "Prime v5.2 guide and firmware notes",
+      "status": "category/control roles audited; C-Verb exposes Reverb File, High Pass, Low Pass, Wet, Tails; no ranges/defaults published",
+      "qualification": "Do not infer undocumented model controls; project convolution IR currently caps at 0.5 seconds."
+    },
+    {
+      "device": "Melofty Axom Max",
+      "feature": "effect families, Synth/Inst, categories, parameters and routing",
+      "source": "Exact-model English Manual V1.7.4 dated 2026-08-31; downloads list v1.9.2 as of 2026-10-27",
+      "status": "family labels and generic routing controls documented; exact per-effect names/parameter tables unavailable",
+      "qualification": "Manual says 19 modules/880+ models; indexed Quick Guide lists 20 picker labels. Preserve this unresolved count mismatch; do not use sibling-model specifications."
+    },
+    {
+      "device": "XRecer XR1",
+      "feature": "effect models/parameters, FX Loop, global EQ, scenes and looper",
+      "source": "Official FAQ checked 2026-11-23; linked manual at wiki.xrecer.com",
+      "status": "FAQ confirms categories and system constraints, but manual is JS-only and unavailable to the current reader; exact effect names/control tables unknown",
+      "qualification": "FAQ documents up to four chains, eight blocks per chain, 32 per preset, one looper/preset, up to 16 scenes, and EXP assignment; planned OS v1.1 vocal processing is not current OS 1.0.0."
     }
   ],
   "constraints": [

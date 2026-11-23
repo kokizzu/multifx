@@ -32,6 +32,35 @@ constexpr float kProfileGainDb[5][4] = {
     {4.0F, 5.0F, 6.0F, 4.0F},
 };
 
+// Separate, project-authored profiles for the ten vowel labels documented by
+// Fractal. The guide names these choices but publishes no filter frequencies,
+// gains, or DSP; these values are generic design material, not Fractal data.
+constexpr float kMorphFrequencyHz[10][4] = {
+    {800.0F, 1150.0F, 2900.0F, 3900.0F}, // AAA
+    {550.0F, 1900.0F, 2700.0F, 3700.0F}, // EEE
+    {300.0F, 2200.0F, 3000.0F, 3800.0F}, // III
+    {550.0F, 900.0F, 2500.0F, 3500.0F},  // OHH
+    {350.0F, 850.0F, 2200.0F, 3300.0F},  // OOO
+    {530.0F, 1700.0F, 2500.0F, 3500.0F}, // EHH
+    {900.0F, 1250.0F, 2700.0F, 3800.0F}, // AHH
+    {600.0F, 850.0F, 2400.0F, 3500.0F},  // AWW
+    {650.0F, 1300.0F, 2350.0F, 3300.0F}, // UHH
+    {500.0F, 1350.0F, 1850.0F, 2800.0F}, // ERR
+};
+
+constexpr float kMorphGainDb[10][4] = {
+    {8.0F, 5.0F, 7.0F, 3.0F},
+    {6.0F, 8.0F, 6.0F, 3.0F},
+    {4.0F, 9.0F, 7.0F, 3.0F},
+    {6.0F, 6.0F, 8.0F, 4.0F},
+    {4.0F, 5.0F, 6.0F, 4.0F},
+    {6.0F, 8.0F, 6.0F, 3.0F},
+    {8.0F, 5.0F, 7.0F, 3.0F},
+    {6.0F, 5.0F, 8.0F, 4.0F},
+    {4.0F, 5.0F, 6.0F, 4.0F},
+    {6.0F, 7.0F, 6.0F, 3.0F},
+};
+
 } // namespace
 
 FormantFilter::FormantFilter(float sample_rate,
@@ -48,11 +77,15 @@ FormantFilter::FormantFilter(float sample_rate,
     coefficients_ = target_coefficients_;
     mix_ = target_mix_;
     level_gain_ = target_level_gain_;
+    balance_left_gain_ = target_balance_left_gain_;
+    balance_right_gain_ = target_balance_right_gain_;
     for (auto& bank : coefficient_steps_) {
         bank.fill(BiquadCoefficients{});
     }
     mix_step_ = 0.0F;
     level_gain_step_ = 0.0F;
+    balance_left_gain_step_ = 0.0F;
+    balance_right_gain_step_ = 0.0F;
     ramp_remaining_ = 0U;
 }
 
@@ -64,23 +97,57 @@ void FormantFilter::set_parameters(FormantFilterParameters parameters) noexcept 
     parameters.mix = bounded(parameters.mix, 1.0F, 0.0F, 1.0F);
     parameters.level_db = bounded(parameters.level_db, kDefaultLevelDb,
                                   kMinimumLevelDb, kMaximumLevelDb);
+    const auto clamp_vowel = [](FormantVowel vowel) noexcept {
+        return static_cast<std::size_t>(vowel) < 10U ? vowel : FormantVowel::aaa;
+    };
+    parameters.start_vowel = clamp_vowel(parameters.start_vowel);
+    parameters.middle_vowel = clamp_vowel(parameters.middle_vowel);
+    parameters.end_vowel = clamp_vowel(parameters.end_vowel);
+    parameters.control_percent = bounded(parameters.control_percent, 0.0F,
+                                          0.0F, 100.0F);
+    parameters.balance_percent = bounded(parameters.balance_percent, 0.0F,
+                                          -100.0F, 100.0F);
     parameters_ = parameters;
 
-    const std::size_t lower = std::min(
-        static_cast<std::size_t>(parameters_.vowel_position),
-        kProfileCount - 1U);
-    const std::size_t upper = std::min(lower + 1U, kProfileCount - 1U);
-    const float fraction = parameters_.vowel_position -
-                           static_cast<float>(lower);
+    std::size_t lower = 0U;
+    std::size_t upper = 0U;
+    float fraction = 0.0F;
+    if (parameters_.three_vowel_morph) {
+        const float morph = parameters_.control_percent / 100.0F;
+        if (morph <= 0.5F) {
+            lower = static_cast<std::size_t>(parameters_.start_vowel);
+            upper = static_cast<std::size_t>(parameters_.middle_vowel);
+            fraction = morph * 2.0F;
+        } else {
+            lower = static_cast<std::size_t>(parameters_.middle_vowel);
+            upper = static_cast<std::size_t>(parameters_.end_vowel);
+            fraction = (morph - 0.5F) * 2.0F;
+        }
+    } else {
+        lower = std::min(static_cast<std::size_t>(parameters_.vowel_position),
+                         kProfileCount - 1U);
+        upper = std::min(lower + 1U, kProfileCount - 1U);
+        fraction = parameters_.vowel_position - static_cast<float>(lower);
+    }
     for (std::size_t formant = 0; formant < kFormantCount; ++formant) {
         // Interpolate center frequency on a log scale to make the continuous
         // vowel path perceptually more even than linear-Hz interpolation.
-        const float lower_log = std::log(kProfileFrequencyHz[lower][formant]);
-        const float upper_log = std::log(kProfileFrequencyHz[upper][formant]);
+        const float lower_frequency = parameters_.three_vowel_morph
+            ? kMorphFrequencyHz[lower][formant]
+            : kProfileFrequencyHz[lower][formant];
+        const float upper_frequency = parameters_.three_vowel_morph
+            ? kMorphFrequencyHz[upper][formant]
+            : kProfileFrequencyHz[upper][formant];
+        const float lower_gain = parameters_.three_vowel_morph
+            ? kMorphGainDb[lower][formant]
+            : kProfileGainDb[lower][formant];
+        const float upper_gain = parameters_.three_vowel_morph
+            ? kMorphGainDb[upper][formant]
+            : kProfileGainDb[upper][formant];
+        const float lower_log = std::log(lower_frequency);
+        const float upper_log = std::log(upper_frequency);
         const float frequency = std::exp(lower_log + (upper_log - lower_log) * fraction);
-        const float gain = kProfileGainDb[lower][formant] +
-                           (kProfileGainDb[upper][formant] -
-                            kProfileGainDb[lower][formant]) * fraction;
+        const float gain = lower_gain + (upper_gain - lower_gain) * fraction;
         const float maximum_frequency = std::min(18000.0F, sample_rate_ * 0.40F);
         const float bounded_frequency = std::clamp(frequency, 20.0F,
                                                     maximum_frequency);
@@ -94,10 +161,17 @@ void FormantFilter::set_parameters(FormantFilterParameters parameters) noexcept 
 
     target_mix_ = parameters_.mix;
     target_level_gain_ = std::pow(10.0F, parameters_.level_db / 20.0F);
+    const float balance = parameters_.balance_percent / 100.0F;
+    target_balance_left_gain_ = balance > 0.0F ? 1.0F - balance : 1.0F;
+    target_balance_right_gain_ = balance < 0.0F ? 1.0F + balance : 1.0F;
     ramp_remaining_ = ramp_total_;
     mix_step_ = (target_mix_ - mix_) / static_cast<float>(ramp_total_);
     level_gain_step_ = (target_level_gain_ - level_gain_) /
                        static_cast<float>(ramp_total_);
+    balance_left_gain_step_ = (target_balance_left_gain_ - balance_left_gain_) /
+                              static_cast<float>(ramp_total_);
+    balance_right_gain_step_ = (target_balance_right_gain_ - balance_right_gain_) /
+                               static_cast<float>(ramp_total_);
     for (std::size_t channel = 0; channel < coefficient_steps_.size(); ++channel) {
         for (std::size_t formant = 0; formant < kFormantCount; ++formant) {
             const auto& current = coefficients_[channel][formant];
@@ -142,10 +216,15 @@ void FormantFilter::process(std::span<float> interleaved,
                     state = {};
                 }
                 sample = 0.0F;
-            } else if (mix <= 0.0F && level == 1.0F) {
+            } else if (mix <= 0.0F && level == 1.0F &&
+                       balance_left_gain_ == 1.0F &&
+                       balance_right_gain_ == 1.0F) {
                 sample = original;
             } else {
-                sample = ((input * (1.0F - mix)) + (wet * mix)) * level;
+                const float balance = channels == 2U
+                    ? (channel == 0U ? balance_left_gain_ : balance_right_gain_)
+                    : 1.0F;
+                sample = ((input * (1.0F - mix)) + (wet * mix)) * level * balance;
             }
         }
         advance_parameters();
@@ -159,11 +238,15 @@ void FormantFilter::reset() noexcept {
     coefficients_ = target_coefficients_;
     mix_ = target_mix_;
     level_gain_ = target_level_gain_;
+    balance_left_gain_ = target_balance_left_gain_;
+    balance_right_gain_ = target_balance_right_gain_;
     for (auto& bank : coefficient_steps_) {
         bank.fill(BiquadCoefficients{});
     }
     mix_step_ = 0.0F;
     level_gain_step_ = 0.0F;
+    balance_left_gain_step_ = 0.0F;
+    balance_right_gain_step_ = 0.0F;
     ramp_remaining_ = 0U;
 }
 
@@ -217,16 +300,22 @@ void FormantFilter::advance_parameters() noexcept {
         coefficients_ = target_coefficients_;
         mix_ = target_mix_;
         level_gain_ = target_level_gain_;
+        balance_left_gain_ = target_balance_left_gain_;
+        balance_right_gain_ = target_balance_right_gain_;
         for (auto& bank : coefficient_steps_) {
             bank.fill(BiquadCoefficients{});
         }
         mix_step_ = 0.0F;
         level_gain_step_ = 0.0F;
+        balance_left_gain_step_ = 0.0F;
+        balance_right_gain_step_ = 0.0F;
         return;
     }
 
     mix_ += mix_step_;
     level_gain_ += level_gain_step_;
+    balance_left_gain_ += balance_left_gain_step_;
+    balance_right_gain_ += balance_right_gain_step_;
     for (std::size_t channel = 0; channel < coefficients_.size(); ++channel) {
         for (std::size_t formant = 0; formant < kFormantCount; ++formant) {
             auto& current = coefficients_[channel][formant];
