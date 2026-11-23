@@ -1094,9 +1094,6 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/celestial_reverb.hpp",
     "src/effects/celestial_reverb.cpp",
     "tests/test_celestial_reverb.cpp",
-    "include/tabletfx/effects/am_ring_mod.hpp",
-    "src/effects/am_ring_mod.cpp",
-    "tests/test_am_ring_mod.cpp",
     "include/tabletfx/effects/pitch_ring_mod.hpp",
     "src/effects/pitch_ring_mod.cpp",
     "tests/test_pitch_ring_mod.cpp",
@@ -1584,6 +1581,27 @@ OCTOBOT_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+AM_RING_MOD_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/am_ring_mod.hpp",
+    "src/effects/am_ring_mod.cpp",
+    "tests/test_am_ring_mod.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "scripts/audio_regression.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
@@ -1711,6 +1729,10 @@ CHECKPOINTS = {
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,
         "feat: add project-authored Octobot effect",
+    ),
+    "am-ring-mod": (
+        AM_RING_MOD_CHECKPOINT_PATHS,
+        "feat: add project-authored AM ring modulation",
     ),
 }
 

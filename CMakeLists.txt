@@ -67,6 +67,7 @@ add_library(tabletfx_core
     src/effects/auto_swell.cpp
     src/effects/rotary_speaker.cpp
     src/effects/ring_modulator.cpp
+    src/effects/am_ring_mod.cpp
     src/effects/rhythmic_slicer.cpp
     src/effects/step_filter.cpp
     src/effects/notch_filter.cpp
@@ -399,6 +400,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_ring_modulator_tests tests/test_ring_modulator.cpp)
     target_link_libraries(tabletfx_ring_modulator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_ring_modulator_tests COMMAND tabletfx_ring_modulator_tests)
+
+    add_executable(tabletfx_am_ring_mod_tests tests/test_am_ring_mod.cpp)
+    target_link_libraries(tabletfx_am_ring_mod_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_am_ring_mod_tests COMMAND tabletfx_am_ring_mod_tests)
 
     add_executable(tabletfx_rhythmic_slicer_tests tests/test_rhythmic_slicer.cpp)
     target_link_libraries(tabletfx_rhythmic_slicer_tests PRIVATE tabletfx_core)

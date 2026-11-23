@@ -9,6 +9,7 @@
 #include "tabletfx/effects/mono_guitar_synth.hpp"
 #include "tabletfx/effects/note_generator.hpp"
 #include "tabletfx/effects/octobot.hpp"
+#include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/fractal_three_voice_synth.hpp"
 #include "tabletfx/effects/enhancer.hpp"
 #include "tabletfx/effects/resonant_delay.hpp"

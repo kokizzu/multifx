@@ -53,6 +53,7 @@
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/manual_thru_zero_flanger.hpp"
 #include "tabletfx/effects/octobot.hpp"
+#include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -343,6 +344,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::effects::Octobot>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::effects::AmRingMod>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -1802,6 +1806,17 @@ public:
             ->configure(parameters);
     }
 
+    void configure_am_ring_mod(float rate_hz, float depth, float mix,
+                               float level_db) noexcept {
+        tabletfx::effects::AmRingModParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.depth = depth;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        static_cast<tabletfx::effects::AmRingMod*>(effects_[83].effect.get())
+            ->set_parameters(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3139,6 +3154,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_octobot(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_octobot(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_am_ring_mod(
+    void* opaque, float rate_hz, float depth, float mix,
+    float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_am_ring_mod(rate_hz, depth, mix, level_db);
     }
 }
 

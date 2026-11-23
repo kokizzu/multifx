@@ -18,6 +18,7 @@
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
+#include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
@@ -241,6 +242,8 @@ struct Options {
     tabletfx::RotarySpeakerParameters rotary_speaker{};
     bool ring_modulator_enabled = false;
     tabletfx::RingModulatorParameters ring_modulator{};
+    bool am_ring_mod_enabled = false;
+    tabletfx::effects::AmRingModParameters am_ring_mod{};
     bool bit_crusher_enabled = false;
     tabletfx::BitCrusherParameters bit_crusher{};
     bool rhythmic_slicer_enabled = false;
@@ -591,6 +594,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--ring-mod") {
             options.ring_modulator_enabled = true;
+            continue;
+        }
+        if (key == "--am-ring-mod") {
+            options.am_ring_mod_enabled = true;
             continue;
         }
         if (key == "--ring-mod-type") {
@@ -2762,6 +2769,22 @@ Options parse_options(int argc, char** argv, int first) {
             options.ring_modulator.mix = value;
             options.ring_modulator_enabled = true;
         }
+        else if (key == "--am-ring-mod-rate-hz") {
+            options.am_ring_mod.rate_hz = value;
+            options.am_ring_mod_enabled = true;
+        }
+        else if (key == "--am-ring-mod-depth") {
+            options.am_ring_mod.depth = value;
+            options.am_ring_mod_enabled = true;
+        }
+        else if (key == "--am-ring-mod-mix") {
+            options.am_ring_mod.mix = value;
+            options.am_ring_mod_enabled = true;
+        }
+        else if (key == "--am-ring-mod-level-db") {
+            options.am_ring_mod.level_db = value;
+            options.am_ring_mod_enabled = true;
+        }
         else if (key == "--bit-crusher-mix") {
             options.bit_crusher.mix = value;
             options.bit_crusher_enabled = true;
@@ -3427,6 +3450,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.ring_modulator_enabled) {
         effects.push_back(std::make_unique<tabletfx::RingModulator>(
             static_cast<float>(sample_rate), channels, options.ring_modulator));
+    }
+    if (options.am_ring_mod_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::AmRingMod>(
+            static_cast<float>(sample_rate), channels, options.am_ring_mod));
     }
     if (options.rhythmic_slicer_enabled) {
         effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(
