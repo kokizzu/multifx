@@ -1094,6 +1094,19 @@ DEFERRED_AGENT_DRAFT_PATHS = (
     "include/tabletfx/effects/celestial_reverb.hpp",
     "src/effects/celestial_reverb.cpp",
     "tests/test_celestial_reverb.cpp",
+    "include/tabletfx/effects/am_ring_mod.hpp",
+    "src/effects/am_ring_mod.cpp",
+    "tests/test_am_ring_mod.cpp",
+    "include/tabletfx/effects/pitch_ring_mod.hpp",
+    "src/effects/pitch_ring_mod.cpp",
+    "tests/test_pitch_ring_mod.cpp",
+    "include/tabletfx/effects/stereo_crossover.hpp",
+    "src/effects/stereo_crossover.cpp",
+    "tests/test_stereo_crossover.cpp",
+    "include/tabletfx/effects/tape_echo.hpp",
+    "src/effects/tape_echo.cpp",
+    "tests/test_tape_echo.cpp",
+    "scripts/inspect_effect_draft.py",
 )
 RESONANT_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
@@ -1553,6 +1566,24 @@ FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
     "README.md",
     "scripts/publish_checkpoint.py",
 )
+OCTOBOT_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/octobot.hpp",
+    "src/effects/octobot.cpp",
+    "tests/test_octobot.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
@@ -1676,6 +1707,10 @@ CHECKPOINTS = {
     "fractal-three-voice-synth": (
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
         "feat: add project-authored three-voice tracked synth",
+    ),
+    "octobot": (
+        OCTOBOT_CHECKPOINT_PATHS,
+        "feat: add project-authored Octobot effect",
     ),
 }
 

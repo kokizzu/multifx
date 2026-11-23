@@ -170,8 +170,9 @@
            <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="79"><span class="effect-number">80</span><span class="effect-name">Cloud Reverb · project-authored modulated reverb</span><span class="effect-default">Mix · Tone · Decay · Diffuse · High/Low Damp · Rate/Depth · Spillover</span><span class="effect-category-tag">Reverb</span></label>
             <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="80"><span class="effect-number">81</span><span class="effect-name">Three-Stage Distortion · project-authored</span><span class="effect-default">Three nonlinear stages · two interstage drives · active Bass/Mid/Treble</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
             <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="81"><span class="effect-number">82</span><span class="effect-name">Manual Through-Zero Flanger · project-authored Fractal-inspired controls</span><span class="effect-default">Manual time · delayed dry crossing point · feedback · phase reverse</span><span class="effect-category-tag">Modulation</span></label>
-            <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="82" checked><span class="effect-number">83</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-            <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="83" checked><span class="effect-number">84</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+             <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="82"><span class="effect-number">83</span><span class="effect-name">Octobot · project-authored</span><span class="effect-default">Direct dry · Down octave · Sizzle octave-up fuzz</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+             <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="83" checked><span class="effect-number">84</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+             <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="84" checked><span class="effect-number">85</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -852,6 +853,21 @@
           <input id="mercator-level-db" type="range" min="-24" max="12" step="0.1" value="0">
         </label>
         <p class="hint">Project-authored three-stage soft clipping and active tone shaping. The controls borrow the documented stage ordering and names in Line 6 Helix Stadium 1.4 notes; the frequency response, bounds, defaults, clipping, and smoothing are independent project choices, not Line 6 settings or DSP parity.</p>
+      </div>
+      <div class="gain-controls" aria-label="Octobot project-authored controls">
+        <label class="mix-control" for="octobot-direct">
+          <span>Direct dry level · project range 0–100%</span><output id="octobot-direct-value" for="octobot-direct">65%</output>
+          <input id="octobot-direct" type="range" min="0" max="1" step="0.01" value="0.65">
+        </label>
+        <label class="mix-control" for="octobot-down">
+          <span>Down octave level · project range 0–100%</span><output id="octobot-down-value" for="octobot-down">20%</output>
+          <input id="octobot-down" type="range" min="0" max="1" step="0.01" value="0.2">
+        </label>
+        <label class="mix-control" for="octobot-sizzle">
+          <span>Sizzle octave-up fuzz level · project range 0–100%</span><output id="octobot-sizzle-value" for="octobot-sizzle">25%</output>
+          <input id="octobot-sizzle" type="range" min="0" max="1" step="0.01" value="0.25">
+        </label>
+        <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 lists Direct, Down, and Sizzle as dry, octave-down, and octave-up-fuzz levels; it publishes no numeric ranges, defaults, or DSP topology. This project uses its own pitch shifter and fuzz shaping, so control roles are a reference only, not Fender sound or settings parity. The project pitch shifter reports 256 samples (5.333 ms at 48 kHz) of algorithmic latency plus host buffering.</p>
       </div>
       <div class="gain-controls" aria-label="Manual Through-Zero Flanger project-authored controls">
         <label class="mix-control" for="manual-tzf-minimum-time">

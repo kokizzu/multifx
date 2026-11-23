@@ -27,6 +27,7 @@ add_library(tabletfx_core
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
     src/effects/manual_thru_zero_flanger.cpp
+    src/effects/octobot.cpp
     src/effects/phaser.cpp
     src/effects/overdrive.cpp
     src/effects/mid_overdrive.cpp
@@ -228,6 +229,10 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_manual_thru_zero_flanger_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_manual_thru_zero_flanger_tests
         COMMAND tabletfx_manual_thru_zero_flanger_tests)
+
+    add_executable(tabletfx_octobot_tests tests/test_octobot.cpp)
+    target_link_libraries(tabletfx_octobot_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_octobot_tests COMMAND tabletfx_octobot_tests)
 
     add_executable(tabletfx_phaser_tests tests/test_phaser.cpp)
     target_link_libraries(tabletfx_phaser_tests PRIVATE tabletfx_core)

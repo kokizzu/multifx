@@ -52,6 +52,7 @@
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
 #include "tabletfx/effects/manual_thru_zero_flanger.hpp"
+#include "tabletfx/effects/octobot.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -339,6 +340,9 @@ public:
                                 static_cast<float>(sample_rate)),
                             false});
         effects_.push_back({std::make_unique<tabletfx::ManualThruZeroFlanger>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::effects::Octobot>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -1788,6 +1792,16 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_octobot(const float* values) noexcept {
+        if (values == nullptr) return;
+        tabletfx::effects::OctobotParameters parameters;
+        parameters.direct = values[0];
+        parameters.down = values[1];
+        parameters.sizzle = values[2];
+        static_cast<tabletfx::effects::Octobot*>(effects_[82].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3118,6 +3132,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_manual_thru_zero_flanger(
     void* opaque, const float* values) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_manual_thru_zero_flanger(values);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_octobot(
+    void* opaque, const float* values) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_octobot(values);
     }
 }
 
