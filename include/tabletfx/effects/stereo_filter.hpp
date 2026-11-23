@@ -29,6 +29,9 @@ enum class StereoFilterType : std::uint8_t {
     AutoWah,
     EnvelopeFilter,
     LadderFilter,
+    // Envelope-driven Ladder mode; detects this effect's block input. The
+    // Fractal physical-input source selector is not supported by this API.
+    TouchLadderFilter,
 };
 
 enum class StereoFilterMode : std::uint8_t {
@@ -88,6 +91,11 @@ struct StereoFilterParameters {
     float mod_frequency_hz = 4000.0F;
     std::uint8_t lfo_quantize_steps = 0;
     StereoFilterMode mode = StereoFilterMode::Lowpass;
+    // For Auto-Wah, Envelope Filter, and Touch-Ladder, this project uses
+    // frequency_hz and mod_frequency_hz as the sweep endpoints. Touch-Ladder
+    // interprets them as cutoff at the softest and hardest detected input.
+    // Sweep scaling, sensitivity, timing, and emphasis retain project-authored
+    // values; no physical-input detector source selector is exposed.
     float sweep_shape = 1.0F;
     bool lfo_tempo_sync = false;
     float lfo_tempo_bpm = 120.0F;

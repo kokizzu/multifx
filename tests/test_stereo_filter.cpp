@@ -520,6 +520,76 @@ void test_ladder_filter_controls() {
     }
 }
 
+void test_touch_ladder_uses_input_envelope_instead_of_lfo() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t warmup = 12000U;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::TouchLadderFilter;
+    parameters.mode = tabletfx::StereoFilterMode::Highpass;
+    parameters.frequency_hz = 20.0F;
+    parameters.mod_frequency_hz = 20000.0F;
+    parameters.ladder_order = 2U;
+    parameters.ladder_resonance = 0.2F;
+    parameters.ladder_drive = 0.1F;
+    parameters.ladder_bass_comp = 0.4F;
+    parameters.lfo_enabled = true;
+
+    tabletfx::StereoFilter sanitized(sample_rate, parameters);
+    const auto bounded = sanitized.parameters();
+    require(bounded.type == tabletfx::StereoFilterType::TouchLadderFilter &&
+                bounded.mode == tabletfx::StereoFilterMode::Lowpass &&
+                bounded.frequency_hz == 100.0F &&
+                bounded.mod_frequency_hz == 10000.0F &&
+                bounded.ladder_order == 2U &&
+                bounded.ladder_resonance == 0.2F &&
+                bounded.ladder_drive == 0.1F &&
+                bounded.ladder_bass_comp == 0.4F,
+            "Touch-Ladder did not preserve the shared Ladder controls or sanitize its sweep");
+
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    parameters.frequency_hz = 300.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.ladder_order = 4U;
+    parameters.ladder_resonance = 0.0F;
+    parameters.ladder_drive = 0.0F;
+    parameters.ladder_bass_comp = 0.0F;
+    parameters.sensitivity_db = -36.0F;
+    parameters.attack_time_ms = 5.0F;
+    parameters.release_time_ms = 80.0F;
+
+    const auto render = [&](float input_gain, bool lfo_enabled) {
+        parameters.lfo_enabled = lfo_enabled;
+        tabletfx::StereoFilter effect(sample_rate, parameters);
+        auto audio = tone(sample_rate, 2500.0F, frames);
+        for (float& sample : audio) sample *= input_gain;
+        effect.process(audio, 1U);
+        return rms(audio, warmup) / input_gain;
+    };
+
+    const float soft_pick = render(0.01F, false);
+    const float hard_pick = render(0.8F, false);
+    require(hard_pick > soft_pick * 2.0F,
+            "Touch-Ladder cutoff did not open farther for a stronger block-input level");
+
+    const float hard_with_lfo_enabled = render(0.8F, true);
+    require(std::abs(hard_pick - hard_with_lfo_enabled) < 1.0e-7F,
+            "Touch-Ladder followed the LFO toggle instead of its input envelope");
+
+    parameters.lfo_enabled = false;
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    tabletfx::StereoFilter bandpass(sample_rate, parameters);
+    auto band_audio = tone(sample_rate, 2500.0F, frames);
+    for (float& sample : band_audio) sample *= 0.8F;
+    bandpass.process(band_audio, 1U);
+    for (float sample : band_audio) {
+        require(std::isfinite(sample),
+                "Touch-Ladder band-pass mode produced non-finite audio");
+    }
+    require(std::abs(rms(band_audio, warmup) - hard_pick * 0.8F) > 1.0e-4F,
+            "Touch-Ladder band-pass mode did not use the shared Ladder response");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -570,6 +640,7 @@ int main() {
         test_auto_wah_automatically_sweeps_filter_mode();
         test_envelope_filter_tracks_input_level_without_lfo();
         test_ladder_filter_controls();
+        test_touch_ladder_uses_input_envelope_instead_of_lfo();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;

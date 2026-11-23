@@ -2157,7 +2157,7 @@ CHECKPOINTS = {
     ),
     "fractal-filter-ladder": (
         FRACTAL_FILTER_LADDER_CHECKPOINT_PATHS,
-        "feat: add project-authored Ladder Filter",
+        "feat: add project-authored Touch-Ladder filter mode",
     ),
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,

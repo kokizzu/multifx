@@ -59,7 +59,8 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     const std::uint32_t saved_lfo_cycle = lfo_cycle_;
     parameters.type = sanitize_type(parameters.type);
     const bool swept_type = parameters.type == StereoFilterType::AutoWah ||
-                            parameters.type == StereoFilterType::EnvelopeFilter;
+                            parameters.type == StereoFilterType::EnvelopeFilter ||
+                            parameters.type == StereoFilterType::TouchLadderFilter;
     const float minimum_frequency = swept_type ? 100.0F : 20.0F;
     const float maximum_frequency = swept_type
         ? std::min(10000.0F, nyquist_limit())
@@ -104,7 +105,8 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.mod_frequency_hz = bounded(parameters.mod_frequency_hz, 4000.0F,
                                           minimum_frequency, maximum_frequency);
     parameters.mode = sanitize_mode(parameters.mode);
-    if (parameters.type == StereoFilterType::LadderFilter &&
+    if ((parameters.type == StereoFilterType::LadderFilter ||
+         parameters.type == StereoFilterType::TouchLadderFilter) &&
         parameters.mode == StereoFilterMode::Highpass) {
         parameters.mode = StereoFilterMode::Lowpass;
     }
@@ -166,8 +168,11 @@ void StereoFilter::process(std::span<float> interleaved,
     const bool is_auto_wah = parameters_.type == StereoFilterType::AutoWah;
     const bool is_envelope_filter =
         parameters_.type == StereoFilterType::EnvelopeFilter;
+    const bool is_touch_ladder =
+        parameters_.type == StereoFilterType::TouchLadderFilter;
+    const bool has_envelope_sweep = is_envelope_filter || is_touch_ladder;
     const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
-                         !is_envelope_filter &&
+                         !has_envelope_sweep &&
                          parameters_.type != StereoFilterType::FeedForwardComb &&
                          parameters_.type != StereoFilterType::FeedbackComb &&
                          parameters_.type != StereoFilterType::Allpass &&
@@ -180,7 +185,7 @@ void StereoFilter::process(std::span<float> interleaved,
                 interleaved[frame * channels + channel]);
         }
 
-        if (is_envelope_filter) {
+        if (has_envelope_sweep) {
             float detector_level = 0.0F;
             for (std::uint16_t channel = 0; channel < channels; ++channel) {
                 const float input = frame_inputs[channel];
@@ -245,6 +250,7 @@ void StereoFilter::process(std::span<float> interleaved,
                 output = process_allpass(input, channel);
                 break;
             case StereoFilterType::LadderFilter:
+            case StereoFilterType::TouchLadderFilter:
                 output = process_ladder(input, channel);
                 break;
             case StereoFilterType::Null:
@@ -334,6 +340,7 @@ StereoFilterType StereoFilter::sanitize_type(StereoFilterType type) noexcept {
     case StereoFilterType::AutoWah:
     case StereoFilterType::EnvelopeFilter:
     case StereoFilterType::LadderFilter:
+    case StereoFilterType::TouchLadderFilter:
         return type;
     }
     return StereoFilterType::Lowpass;
@@ -380,7 +387,8 @@ float StereoFilter::nyquist_limit() const noexcept {
 }
 
 void StereoFilter::rebuild_coefficients(float frequency_hz) noexcept {
-    if (parameters_.type == StereoFilterType::LadderFilter) {
+    if (parameters_.type == StereoFilterType::LadderFilter ||
+        parameters_.type == StereoFilterType::TouchLadderFilter) {
         ladder_cutoff_hz_ = bounded(frequency_hz, parameters_.frequency_hz,
                                     20.0F, nyquist_limit());
         ladder_cutoff_alpha_ = 1.0F - std::exp(
@@ -437,7 +445,8 @@ std::size_t StereoFilter::make_coefficients(
         effective_type == StereoFilterType::FeedForwardComb ||
         effective_type == StereoFilterType::FeedbackComb ||
         effective_type == StereoFilterType::Allpass ||
-        effective_type == StereoFilterType::LadderFilter) {
+        effective_type == StereoFilterType::LadderFilter ||
+        effective_type == StereoFilterType::TouchLadderFilter) {
         return 0U;
     }
 
@@ -538,6 +547,7 @@ std::size_t StereoFilter::make_coefficients(
     case StereoFilterType::AutoWah:
     case StereoFilterType::EnvelopeFilter:
     case StereoFilterType::LadderFilter:
+    case StereoFilterType::TouchLadderFilter:
         break;
     }
     return 0U;
