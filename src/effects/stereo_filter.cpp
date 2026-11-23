@@ -90,6 +90,13 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
                                           1.0F, 99.0F);
     parameters.mod_frequency_hz = bounded(parameters.mod_frequency_hz, 4000.0F,
                                           20.0F, nyquist_limit());
+    parameters.mode = sanitize_mode(parameters.mode);
+    parameters.sweep_shape = bounded(parameters.sweep_shape, 1.0F,
+                                     0.25F, 4.0F);
+    parameters.lfo_tempo_bpm = bounded(parameters.lfo_tempo_bpm, 120.0F,
+                                       20.0F, 300.0F);
+    parameters.lfo_beats_per_cycle = bounded(
+        parameters.lfo_beats_per_cycle, 1.0F, 0.0625F, 4.0F);
     if (parameters.lfo_quantize_steps == 1U) {
         parameters.lfo_quantize_steps = 2U;
     } else if (parameters.lfo_quantize_steps > 32U) {
@@ -125,7 +132,8 @@ void StereoFilter::process(std::span<float> interleaved,
                            std::uint16_t channels) noexcept {
     if (channels == 0U || channels > 2U) return;
     const std::size_t frames = interleaved.size() / channels;
-    const bool has_lfo = parameters_.lfo_enabled &&
+    const bool is_auto_wah = parameters_.type == StereoFilterType::AutoWah;
+    const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
                          parameters_.type != StereoFilterType::FeedForwardComb &&
                          parameters_.type != StereoFilterType::FeedbackComb &&
                          parameters_.type != StereoFilterType::Allpass &&
@@ -133,7 +141,10 @@ void StereoFilter::process(std::span<float> interleaved,
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
         if (has_lfo && frame % kCoefficientUpdateFrames == 0U) {
-            const float position = lfo_position();
+            const float raw_position = lfo_position();
+            const float position = is_auto_wah
+                ? std::pow(raw_position, parameters_.sweep_shape)
+                : raw_position;
             const float lower = std::log(parameters_.frequency_hz);
             const float upper = std::log(parameters_.mod_frequency_hz);
             const float frequency = std::exp(lower + (upper - lower) * position);
@@ -233,6 +244,7 @@ StereoFilterType StereoFilter::sanitize_type(StereoFilterType type) noexcept {
     case StereoFilterType::LowShelf2:
     case StereoFilterType::HighShelf2:
     case StereoFilterType::Peaking2:
+    case StereoFilterType::AutoWah:
         return type;
     }
     return StereoFilterType::Lowpass;
@@ -264,6 +276,16 @@ StereoFilterPhaseInvert StereoFilter::sanitize_phase(
     return StereoFilterPhaseInvert::None;
 }
 
+StereoFilterMode StereoFilter::sanitize_mode(StereoFilterMode mode) noexcept {
+    switch (mode) {
+    case StereoFilterMode::Lowpass:
+    case StereoFilterMode::Bandpass:
+    case StereoFilterMode::Highpass:
+        return mode;
+    }
+    return StereoFilterMode::Lowpass;
+}
+
 float StereoFilter::nyquist_limit() const noexcept {
     return std::max(20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
 }
@@ -287,10 +309,24 @@ std::size_t StereoFilter::make_coefficients(
     float frequency_hz,
     std::array<BiquadCoefficients, kMaximumPasses>& coefficients) const noexcept {
     coefficients.fill(BiquadCoefficients{});
-    if (parameters_.type == StereoFilterType::Null ||
-        parameters_.type == StereoFilterType::FeedForwardComb ||
-        parameters_.type == StereoFilterType::FeedbackComb ||
-        parameters_.type == StereoFilterType::Allpass) {
+    StereoFilterType effective_type = parameters_.type;
+    if (parameters_.type == StereoFilterType::AutoWah) {
+        switch (parameters_.mode) {
+        case StereoFilterMode::Lowpass:
+            effective_type = StereoFilterType::Lowpass;
+            break;
+        case StereoFilterMode::Bandpass:
+            effective_type = StereoFilterType::Bandpass;
+            break;
+        case StereoFilterMode::Highpass:
+            effective_type = StereoFilterType::Highpass;
+            break;
+        }
+    }
+    if (effective_type == StereoFilterType::Null ||
+        effective_type == StereoFilterType::FeedForwardComb ||
+        effective_type == StereoFilterType::FeedbackComb ||
+        effective_type == StereoFilterType::Allpass) {
         return 0U;
     }
 
@@ -343,7 +379,7 @@ std::size_t StereoFilter::make_coefficients(
             (a + 1.0F) - (a - 1.0F) * cosine - beta);
     };
 
-    switch (parameters_.type) {
+    switch (effective_type) {
     case StereoFilterType::Lowpass:
         coefficients[0] = normalize((1.0F - cosine) * 0.5F,
                                     1.0F - cosine,
@@ -388,6 +424,7 @@ std::size_t StereoFilter::make_coefficients(
     case StereoFilterType::FeedForwardComb:
     case StereoFilterType::FeedbackComb:
     case StereoFilterType::Null:
+    case StereoFilterType::AutoWah:
         break;
     }
     return 0U;
@@ -502,7 +539,11 @@ float StereoFilter::lfo_position() const noexcept {
 }
 
 void StereoFilter::advance_lfo() noexcept {
-    lfo_phase_ += parameters_.lfo_rate_hz / sample_rate_;
+    const float rate_hz = parameters_.lfo_tempo_sync
+        ? parameters_.lfo_tempo_bpm /
+              (60.0F * parameters_.lfo_beats_per_cycle)
+        : parameters_.lfo_rate_hz;
+    lfo_phase_ += std::clamp(rate_hz, 0.05F, 20.0F) / sample_rate_;
     if (lfo_phase_ >= 1.0F) {
         lfo_phase_ -= 1.0F;
         ++lfo_cycle_;

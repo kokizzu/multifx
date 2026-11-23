@@ -26,6 +26,13 @@ enum class StereoFilterType : std::uint8_t {
     LowShelf2,
     HighShelf2,
     Peaking2,
+    AutoWah,
+};
+
+enum class StereoFilterMode : std::uint8_t {
+    Lowpass,
+    Bandpass,
+    Highpass,
 };
 
 enum class StereoFilterLfoShape : std::uint8_t {
@@ -66,6 +73,11 @@ struct StereoFilterParameters {
     float lfo_duty_percent = 50.0F;
     float mod_frequency_hz = 4000.0F;
     std::uint8_t lfo_quantize_steps = 0;
+    StereoFilterMode mode = StereoFilterMode::Lowpass;
+    float sweep_shape = 1.0F;
+    bool lfo_tempo_sync = false;
+    float lfo_tempo_bpm = 120.0F;
+    float lfo_beats_per_cycle = 1.0F;
 };
 
 /*
@@ -129,6 +141,8 @@ private:
         StereoFilterLfoShape shape) noexcept;
     [[nodiscard]] static StereoFilterPhaseInvert sanitize_phase(
         StereoFilterPhaseInvert phase) noexcept;
+    [[nodiscard]] static StereoFilterMode sanitize_mode(
+        StereoFilterMode mode) noexcept;
     [[nodiscard]] float nyquist_limit() const noexcept;
     void rebuild_coefficients(float frequency_hz) noexcept;
     [[nodiscard]] std::size_t make_coefficients(

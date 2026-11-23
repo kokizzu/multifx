@@ -266,6 +266,64 @@ void test_lfo_and_optional_cut_filters() {
     }
 }
 
+void test_auto_wah_automatically_sweeps_filter_mode() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 96000U;
+    constexpr std::size_t warmup = 12000U;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::AutoWah;
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    parameters.frequency_hz = 350.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.q = 4.0F;
+    parameters.lfo_enabled = false;
+    parameters.lfo_shape = tabletfx::StereoFilterLfoShape::Triangle;
+    parameters.lfo_rate_hz = 2.0F;
+    parameters.sweep_shape = 1.0F;
+    tabletfx::StereoFilter auto_wah(sample_rate, parameters);
+    auto swept_audio = tone(sample_rate, 2500.0F, frames);
+    auto_wah.process(swept_audio, 1U);
+
+    parameters.type = tabletfx::StereoFilterType::Bandpass;
+    tabletfx::StereoFilter static_filter(sample_rate, parameters);
+    auto static_audio = tone(sample_rate, 2500.0F, frames);
+    static_filter.process(static_audio, 1U);
+    require(rms(swept_audio, warmup) > rms(static_audio, warmup) * 1.5F,
+            "Auto-Wah did not sweep automatically when the LFO toggle was off");
+
+    parameters.type = tabletfx::StereoFilterType::AutoWah;
+    parameters.lfo_tempo_sync = true;
+    parameters.lfo_tempo_bpm = 120.0F;
+    parameters.lfo_beats_per_cycle = 1.0F;
+    tabletfx::StereoFilter tempo_synced(sample_rate, parameters);
+    auto tempo_audio = tone(sample_rate, 2500.0F, frames);
+    tempo_synced.process(tempo_audio, 1U);
+    double tempo_error = 0.0;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const double delta = static_cast<double>(swept_audio[frame]) -
+                             static_cast<double>(tempo_audio[frame]);
+        tempo_error += delta * delta;
+    }
+    require(std::sqrt(tempo_error / static_cast<double>(frames)) < 1.0e-6,
+            "Auto-Wah tempo sync did not match its equivalent 2 Hz rate");
+
+    parameters.type = tabletfx::StereoFilterType::AutoWah;
+    parameters.lfo_tempo_sync = false;
+    parameters.sweep_shape = 3.0F;
+    tabletfx::StereoFilter reshaped(sample_rate, parameters);
+    auto reshaped_audio = tone(sample_rate, 2500.0F, frames);
+    reshaped.process(reshaped_audio, 1U);
+    double difference = 0.0;
+    for (std::size_t frame = warmup; frame < frames; ++frame) {
+        const double delta = static_cast<double>(swept_audio[frame]) -
+                             static_cast<double>(reshaped_audio[frame]);
+        difference += delta * delta;
+    }
+    require(std::sqrt(difference / static_cast<double>(frames - warmup)) >
+                1.0e-4,
+            "Auto-Wah Sweep Shape did not change the project-authored motion");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -313,6 +371,7 @@ int main() {
         test_comb_and_allpass_delay_controls();
         test_stereo_pan_phase_balance_and_mono();
         test_lfo_and_optional_cut_filters();
+        test_auto_wah_automatically_sweeps_filter_mode();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;
