@@ -676,7 +676,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const frames = Number(message.frames);
       const channels = Number(message.channels);
       const sampleRate = Number(message.sampleRate);
-      if (!Number.isInteger(frames) || frames < 1 || frames > 24000 ||
+      if (!Number.isInteger(frames) || frames < 1 || frames > 480000 ||
           ![1, 2].includes(channels) || !Number.isInteger(sampleRate) ||
           sampleRate < 8000 || sampleRate > 192000 ||
           !(message.left instanceof ArrayBuffer) ||
@@ -701,7 +701,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.chain, pointer, frames, channels, sampleRate,
       );
       if (loaded !== 1) {
-        throw new Error("The selected IR is invalid or exceeds the 24,000-frame target-rate limit.");
+        throw new Error("The selected IR is invalid or exceeds the 480,000-frame target-rate limit.");
       }
       this.port.postMessage({
         type: "convolution-ir-loaded",

@@ -676,10 +676,10 @@
       </div>
       <div class="effect-parameter-group" aria-label="Convolution reverb controls">
         <h3>Convolution Reverb · project-authored user IR</h3>
-        <p class="hint">Loads a local mono or stereo WAV impulse response; the file stays in this browser. Limit: 24,000 target-rate frames (0.5 s at 48 kHz), shorter than the 10-second maximum documented for HeadRush Prime C-Verb. Processing adds a fixed 128-frame latency and aligns the dry path to it. Mono IRs are duplicated to stereo; stereo IRs process left and right independently, without cross-channel convolution. High-pass, low-pass, wet level, and per-block Tails controls are project-authored features informed by the documented C-Verb controls; this does not emulate HeadRush DSP. With Tails on, bypass passes the dry chain and adds the stored convolution tail. Cross-rig spillover and rig switching are not implemented.</p>
+        <p class="hint">Loads a local mono or stereo WAV impulse response; the file stays in this browser. Limit: 480,000 target-rate frames (10 s at 48 kHz). Processing adds a fixed 1,024-frame latency (21.33 ms at 48 kHz) and aligns the dry path to it. Mono IRs are duplicated to stereo; stereo IRs process left and right independently, without cross-channel convolution. High-pass, low-pass, wet level, and per-block Tails controls are project-authored features informed by the documented C-Verb controls; this does not emulate HeadRush DSP. With Tails on, bypass passes the dry chain and adds the stored convolution tail. Cross-rig spillover and rig switching are not implemented.</p>
           <label class="file-picker" for="convolution-ir-file">
           <span class="file-icon" aria-hidden="true">IR</span>
-            <span><strong>Open a reverb IR WAV</strong><small>Mono/stereo · up to 24,000 frames · local only</small></span>
+            <span><strong>Open a reverb IR WAV</strong><small>Mono/stereo · up to 480,000 frames · local only</small></span>
           <input id="convolution-ir-file" type="file" accept=".wav,audio/wav">
         </label>
         <p id="convolution-ir-status" class="hint" role="status">No IR loaded; the enabled block passes audio through.</p>

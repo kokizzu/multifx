@@ -12,7 +12,8 @@
 namespace tabletfx {
 
 struct ConvolutionReverbParameters {
-    // Project-authored wet controls; these are not copied from a device.
+    // Wet controls shared with documented convolution-reverb workflows.
+    // Slider ranges/defaults remain project-authored where the source is silent.
     float mix = 0.25F;
     float level_db = 0.0F;
     // Zero disables the corresponding wet-path filter.
@@ -23,17 +24,20 @@ struct ConvolutionReverbParameters {
 
 // User-IR convolution reverb using uniform 128-frame overlap-add partitions.
 // Loading and FFT preparation happen outside process(); audio processing uses
-// fixed-capacity storage and adds one partition (128 frames) of latency.
+// IR-sized storage and adds one partition (1024 frames) of latency. The 10 s
+// 48 kHz limit is intended to cover the HeadRush Prime C-Verb IR ceiling;
+// longer native sample rates retain the same frame ceiling, so duration falls.
 // Mono IRs are applied independently to each output channel. Stereo IRs use
 // the corresponding left/right IR on each channel; cross-channel matrix
 // convolution is not implemented.
 class ConvolutionReverb final : public Effect {
 public:
-    static constexpr std::size_t kMaximumImpulseFrames = 24000;
-    static constexpr std::size_t kPartitionFrames = 128;
+    static constexpr std::size_t kMaximumImpulseFrames = 480000;
+    static constexpr std::size_t kPartitionFrames = 1024;
     static constexpr std::size_t kFftFrames = 2 * kPartitionFrames;
     static constexpr std::size_t kMaximumPartitions =
         (kMaximumImpulseFrames + kPartitionFrames - 1) / kPartitionFrames;
+    static constexpr std::size_t kSpectrumBins = kFftFrames / 2 + 1;
 
     explicit ConvolutionReverb(float sample_rate = 48000.0F,
                                std::uint16_t channels = 2,
@@ -103,6 +107,7 @@ private:
     std::array<float, 2 * kPartitionFrames> dry_delay_{};
     std::size_t impulse_frames_ = 0;
     std::size_t partition_count_ = 0;
+    std::uint16_t impulse_channels_ = 0;
     std::size_t history_write_partition_ = 0;
     std::size_t frame_cursor_ = 0;
     float mix_ = 0.25F;

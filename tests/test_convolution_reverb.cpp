@@ -17,6 +17,8 @@ namespace {
 int failures = 0;
 std::atomic<bool> count_allocations{false};
 std::atomic<std::size_t> allocation_count{0};
+constexpr std::size_t kLatencyFrames =
+    tabletfx::ConvolutionReverb::kPartitionFrames;
 
 void check(bool condition, const char* message) {
     if (!condition) {
@@ -45,34 +47,34 @@ void impulse_response_has_fixed_partition_latency() {
     check(effect.partition_count() == 1,
           "short impulse should use one partition");
 
-    std::array<float, 384> audio{};
+    std::array<float, kLatencyFrames + 4> audio{};
     audio[0] = 1.0F;
     effect.process(audio, 1);
-    for (std::size_t frame = 0; frame < tabletfx::ConvolutionReverb::kPartitionFrames; ++frame) {
+    for (std::size_t frame = 0; frame < kLatencyFrames; ++frame) {
         check(std::abs(audio[frame]) < 2.0e-5F,
               "wet-only impulse should be silent before the declared latency");
     }
     for (std::size_t frame = 0; frame < ir.size(); ++frame) {
-        check(near(audio[tabletfx::ConvolutionReverb::kPartitionFrames + frame], ir[frame]),
+        check(near(audio[kLatencyFrames + frame], ir[frame]),
               "loaded IR samples should appear after one partition");
     }
 }
 
 void impulse_response_crosses_partition_boundary() {
     auto effect = make_wet_mono();
-    std::array<float, 131> ir{};
+    std::array<float, kLatencyFrames + 3> ir{};
     ir[0] = 1.0F;
-    ir[127] = 0.25F;
-    ir[128] = -0.5F;
-    ir[130] = 0.125F;
+    ir[kLatencyFrames - 1] = 0.25F;
+    ir[kLatencyFrames] = -0.5F;
+    ir[kLatencyFrames + 2] = 0.125F;
     check(effect.load_impulse_response(ir, 1, 48000),
           "two-partition impulse response should load");
 
-    std::array<float, 512> audio{};
+    std::array<float, 2 * kLatencyFrames + 3> audio{};
     audio[0] = 1.0F;
     effect.process(audio, 1);
     for (std::size_t frame = 0; frame < ir.size(); ++frame) {
-        check(near(audio[tabletfx::ConvolutionReverb::kPartitionFrames + frame], ir[frame]),
+        check(near(audio[kLatencyFrames + frame], ir[frame]),
               "overlap-add should preserve the IR across partition boundaries");
     }
 }
@@ -84,24 +86,27 @@ void stereo_ir_uses_independent_channels_and_mono_ir_duplicates() {
     const std::array<float, 4> stereo_ir{1.0F, 0.5F, 0.0F, 0.0F};
     check(effect.load_impulse_response(stereo_ir, 2, 48000),
           "stereo IR should load");
-    std::array<float, 512> stereo_input{};
+    const std::size_t stereo_ir_memory = effect.memory_bytes();
+    std::array<float, 2 * (kLatencyFrames + 1)> stereo_input{};
     stereo_input[0] = 0.4F;
     stereo_input[1] = 0.8F;
     effect.process(stereo_input, 2);
-    check(near(stereo_input[2 * tabletfx::ConvolutionReverb::kPartitionFrames], 0.4F),
+    check(near(stereo_input[2 * kLatencyFrames], 0.4F),
           "left IR should process only the left channel");
-    check(near(stereo_input[2 * tabletfx::ConvolutionReverb::kPartitionFrames + 1], 0.4F),
+    check(near(stereo_input[2 * kLatencyFrames + 1], 0.4F),
           "right IR should process only the right channel");
 
     const std::array<float, 2> mono_ir{0.25F, 0.5F};
     check(effect.load_impulse_response(mono_ir, 1, 48000),
           "mono IR should load into stereo processing");
+    check(effect.memory_bytes() < stereo_ir_memory,
+          "a mono IR should share one spectrum across stereo output channels");
     effect.reset();
-    std::array<float, 512> mono_ir_input{};
+    std::array<float, 2 * (kLatencyFrames + 1)> mono_ir_input{};
     mono_ir_input[0] = 0.4F;
     mono_ir_input[1] = -0.8F;
     effect.process(mono_ir_input, 2);
-    const std::size_t delayed = 2 * tabletfx::ConvolutionReverb::kPartitionFrames;
+    const std::size_t delayed = 2 * kLatencyFrames;
     check(near(mono_ir_input[delayed], 0.1F),
           "mono IR should be duplicated to the left output");
     check(near(mono_ir_input[delayed + 1], -0.2F),
@@ -115,10 +120,10 @@ void dry_mix_is_aligned_with_convolved_wet_path() {
     const std::array<float, 1> ir{1.0F};
     check(effect.load_impulse_response(ir, 1, 48000),
           "single-sample IR should load");
-    std::array<float, 256> audio{};
+    std::array<float, kLatencyFrames + 1> audio{};
     audio[0] = 1.0F;
     effect.process(audio, 1);
-    check(near(audio[128], 1.0F),
+    check(near(audio[kLatencyFrames], 1.0F),
           "dry and wet impulse should sum without a relative timing offset");
 }
 
@@ -138,11 +143,12 @@ void wet_filter_controls_shape_the_convolved_signal() {
     }
     high_pass.process(low_tone, 1);
     float high_pass_rms = 0.0F;
-    for (std::size_t frame = 512; frame < low_tone.size(); ++frame) {
+    constexpr std::size_t settle_frames = kLatencyFrames + 512;
+    for (std::size_t frame = settle_frames; frame < low_tone.size(); ++frame) {
         high_pass_rms += low_tone[frame] * low_tone[frame];
     }
     high_pass_rms = std::sqrt(high_pass_rms /
-                              static_cast<float>(low_tone.size() - 512));
+                              static_cast<float>(low_tone.size() - settle_frames));
     check(high_pass_rms < 0.15F,
           "wet high-pass should attenuate frequencies below its cutoff");
 
@@ -160,11 +166,11 @@ void wet_filter_controls_shape_the_convolved_signal() {
     }
     low_pass.process(high_tone, 1);
     float low_pass_rms = 0.0F;
-    for (std::size_t frame = 512; frame < high_tone.size(); ++frame) {
+    for (std::size_t frame = settle_frames; frame < high_tone.size(); ++frame) {
         low_pass_rms += high_tone[frame] * high_tone[frame];
     }
     low_pass_rms = std::sqrt(low_pass_rms /
-                             static_cast<float>(high_tone.size() - 512));
+                              static_cast<float>(high_tone.size() - settle_frames));
     check(low_pass_rms < 0.2F,
           "wet low-pass should attenuate frequencies above its cutoff");
 }
@@ -178,10 +184,10 @@ void bypass_can_preserve_or_clear_the_convolution_tail() {
     tabletfx::ConvolutionReverb with_tails(48000.0F, 1, tails_parameters);
     check(with_tails.load_impulse_response(ir, 1, 48000),
           "IR should load for tails-on test");
-    std::array<float, 128> onset{};
+    std::array<float, kLatencyFrames> onset{};
     onset[0] = 1.0F;
     with_tails.process(onset, 1);
-    std::array<float, 128> bypassed{};
+    std::array<float, kLatencyFrames> bypassed{};
     with_tails.process_bypassed(bypassed, 1);
     check(near(bypassed[0], ir[0]) && near(bypassed[1], ir[1]),
           "tails-on bypass should pass dry input and continue the convolved tail");
@@ -190,10 +196,10 @@ void bypass_can_preserve_or_clear_the_convolution_tail() {
     tabletfx::ConvolutionReverb without_tails(48000.0F, 1, tails_parameters);
     check(without_tails.load_impulse_response(ir, 1, 48000),
           "IR should load for tails-off test");
-    std::array<float, 128> second_onset{};
+    std::array<float, kLatencyFrames> second_onset{};
     second_onset[0] = 1.0F;
     without_tails.process(second_onset, 1);
-    std::array<float, 128> cleared{};
+    std::array<float, kLatencyFrames> cleared{};
     without_tails.process_bypassed(cleared, 1);
     check(std::all_of(cleared.begin(), cleared.end(), [](float value) {
               return std::abs(value) < 2.0e-5F;
@@ -206,11 +212,11 @@ void reset_clears_pending_tail_and_keeps_loaded_ir() {
     const std::array<float, 4> ir{1.0F, 0.5F, -0.25F, 0.125F};
     check(effect.load_impulse_response(ir, 1, 48000),
           "IR should load for tail-reset test");
-    std::array<float, 128> onset{};
+    std::array<float, kLatencyFrames> onset{};
     onset[0] = 1.0F;
     effect.process(onset, 1);
     effect.reset();
-    std::array<float, 256> silence{};
+    std::array<float, kLatencyFrames> silence{};
     effect.process(silence, 1);
     check(std::all_of(silence.begin(), silence.end(), [](float value) {
               return std::abs(value) < 2.0e-5F;
@@ -239,6 +245,45 @@ void resampling_bounds_and_failed_load_preserve_loaded_ir() {
           "non-finite IR samples should be rejected");
     check(!effect.load_impulse_response(half_rate_ir, 3, 48000),
           "unsupported IR channel count should be rejected");
+}
+
+void cverb_duration_limit_accepts_ten_seconds_at_48khz_and_keeps_fixed_latency() {
+    constexpr std::size_t ten_seconds_frames = 10U * 48000U;
+    constexpr std::size_t project_latency_frames =
+        tabletfx::ConvolutionReverb::kPartitionFrames;
+    check(tabletfx::ConvolutionReverb::maximum_impulse_frames() >=
+              ten_seconds_frames,
+          "C-Verb-compatible IR limit should permit 10 seconds at 48 kHz");
+
+    // A mono IR keeps this native regression bounded while exercising the
+    // documented duration at the target sample rate. The nonzero last sample
+    // ensures the accepted input really spans the full ten seconds.
+    std::vector<float> ir(ten_seconds_frames, 0.0F);
+    ir.front() = 1.0F;
+    ir.back() = 0.25F;
+
+    tabletfx::ConvolutionReverbParameters parameters;
+    parameters.mix = 1.0F;
+    auto effect = tabletfx::ConvolutionReverb(48000.0F, 2, parameters);
+    check(effect.load_impulse_response(ir, 1, 48000),
+          "10-second mono IR should load for stereo output at 48 kHz");
+    check(effect.impulse_frames() == ten_seconds_frames,
+          "the complete 10-second IR length should be retained");
+
+    // The project partition latency remains independent of the selected IR's
+    // duration. Prime's C-Verb guide does not specify processing latency.
+    std::vector<float> input(4 * project_latency_frames, 0.0F);
+    input[0] = 1.0F;
+    input[1] = 0.5F;
+    effect.process(input, 2);
+    for (std::size_t frame = 0; frame < project_latency_frames; ++frame) {
+        check(std::abs(input[frame * 2]) < 2.0e-5F &&
+                  std::abs(input[frame * 2 + 1]) < 2.0e-5F,
+              "10-second IR should remain silent before the fixed partition latency");
+    }
+    check(near(input[project_latency_frames * 2], 1.0F) &&
+              near(input[project_latency_frames * 2 + 1], 0.5F),
+          "10-second IR should preserve the project fixed-partition wet latency");
 }
 
 void irregular_process_chunks_match_single_call() {
@@ -331,6 +376,7 @@ int main() {
     bypass_can_preserve_or_clear_the_convolution_tail();
     reset_clears_pending_tail_and_keeps_loaded_ir();
     resampling_bounds_and_failed_load_preserve_loaded_ir();
+    cverb_duration_limit_accepts_ten_seconds_at_48khz_and_keeps_fixed_latency();
     irregular_process_chunks_match_single_call();
     process_does_not_allocate_after_construction_and_ir_load();
     if (failures != 0) {

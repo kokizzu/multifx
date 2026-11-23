@@ -3957,7 +3957,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         if (!convolution->load_impulse_response(
                 ir.interleaved, ir.channels, ir.sample_rate)) {
             throw std::invalid_argument(
-                "Convolution IR must be finite mono/stereo WAV and fit the 24000-frame target-rate limit");
+                 "Convolution IR must be finite mono/stereo WAV and fit the 480000-frame target-rate limit");
         }
         effects.push_back(std::move(convolution));
     }
@@ -4827,7 +4827,7 @@ void run_bench() {
         return std::make_unique<tabletfx::ShimmerReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
-    benchmark_one("convolution-reverb-max-0.5s", [=] {
+    benchmark_one("convolution-reverb-max-10s", [=] {
         auto effect = std::make_unique<tabletfx::ConvolutionReverb>(
             static_cast<float>(sample_rate), channels);
         const std::vector<float> impulse =

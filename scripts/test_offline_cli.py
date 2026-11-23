@@ -91,7 +91,8 @@ def check_render(executable: Path) -> None:
 
 def check_convolution_reverb(executable: Path) -> None:
     sample_rate = 48000
-    input_samples = [32767] + [0] * 255
+    partition_frames = 1024
+    input_samples = [32767] + [0] * partition_frames
     ir_samples = [16384, 8192, 0, 0]
     with tempfile.TemporaryDirectory(prefix="tabletfx-convolution-reverb-cli-test-") as directory:
         root = Path(directory)
@@ -117,11 +118,13 @@ def check_convolution_reverb(executable: Path) -> None:
         values = struct.unpack("<" + "f" * len(input_samples), output.read_bytes()[44:])
         if not all(math.isfinite(value) for value in values):
             raise AssertionError("Convolution Reverb produced non-finite output")
-        if max(abs(value) for value in values[:128]) > 2.0e-5:
-            raise AssertionError("Convolution Reverb wet output did not honor its 128-frame latency")
+        if max(abs(value) for value in values[:partition_frames]) > 2.0e-5:
+            raise AssertionError("Convolution Reverb wet output started before its 1,024-frame latency")
         expected = (32767 / 32768.0) * (16384 / 32768.0)
-        if abs(values[128] - expected) > 1.0e-4:
-            raise AssertionError(f"Unexpected convolution impulse output: {values[128]} vs {expected}")
+        if abs(values[partition_frames] - expected) > 1.0e-4:
+            raise AssertionError(
+                f"Unexpected convolution impulse output: {values[partition_frames]} vs {expected}"
+            )
 
 
 def check_room_reverb(executable: Path) -> None:

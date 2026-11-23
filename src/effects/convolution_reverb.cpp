@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <new>
 #include <numbers>
 #include <stdexcept>
 
@@ -34,11 +35,7 @@ float finite_internal_sample(float value) noexcept {
 ConvolutionReverb::ConvolutionReverb(float sample_rate, std::uint16_t channels,
                                      ConvolutionReverbParameters parameters)
     : sample_rate_(checked_sample_rate(sample_rate)),
-      channels_(checked_channels(channels)),
-      impulse_spectra_(static_cast<std::size_t>(channels_) *
-                       kMaximumPartitions * kFftFrames),
-      input_spectra_(static_cast<std::size_t>(channels_) *
-                     kMaximumPartitions * kFftFrames) {
+      channels_(checked_channels(channels)) {
     const double ramp_frames = static_cast<double>(sample_rate_) *
                                static_cast<double>(kControlSmoothingMs) / 1000.0;
     ramp_total_ = std::max<std::size_t>(
@@ -47,7 +44,7 @@ ConvolutionReverb::ConvolutionReverb(float sample_rate, std::uint16_t channels,
     for (std::size_t index = 0; index < kFftFrames; ++index) {
         std::size_t value = index;
         std::size_t reversed = 0;
-        for (std::size_t bit = 0; bit < 8; ++bit) {
+        for (std::size_t bits = kFftFrames; bits > 1; bits >>= 1U) {
             reversed = (reversed << 1U) | (value & 1U);
             value >>= 1U;
         }
@@ -123,9 +120,26 @@ bool ConvolutionReverb::load_impulse_response(
 
     const std::size_t partitions =
         (target_frames + kPartitionFrames - 1) / kPartitionFrames;
-    for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+    const std::uint16_t stored_ir_channels =
+        (ir_channels == 1 || channels_ == 1) ? 1U : 2U;
+    std::vector<Complex> impulse_spectra;
+    std::vector<Complex> input_spectra;
+    try {
+        const std::size_t spectrum_count =
+            static_cast<std::size_t>(channels_) * partitions * kSpectrumBins;
+        const std::size_t impulse_spectrum_count =
+            static_cast<std::size_t>(stored_ir_channels) * partitions * kSpectrumBins;
+        impulse_spectra.resize(impulse_spectrum_count);
+        input_spectra.resize(spectrum_count);
+    } catch (const std::bad_alloc&) {
+        return false;
+    } catch (const std::length_error&) {
+        return false;
+    }
+
+    for (std::uint16_t channel = 0; channel < stored_ir_channels; ++channel) {
         const std::size_t channel_offset =
-            static_cast<std::size_t>(channel) * kMaximumPartitions * kFftFrames;
+            static_cast<std::size_t>(channel) * partitions * kSpectrumBins;
         for (std::size_t partition = 0; partition < partitions; ++partition) {
             transform_buffer_.fill(Complex{});
             for (std::size_t frame = 0; frame < kPartitionFrames; ++frame) {
@@ -141,22 +155,28 @@ bool ConvolutionReverb::load_impulse_response(
             }
             transform(transform_buffer_, false);
             const std::size_t offset =
-                channel_offset + partition * kFftFrames;
-            std::copy(transform_buffer_.begin(), transform_buffer_.end(),
-                      impulse_spectra_.begin() +
-                          static_cast<std::ptrdiff_t>(offset));
+                channel_offset + partition * kSpectrumBins;
+            std::copy_n(transform_buffer_.begin(), kSpectrumBins,
+                        impulse_spectra.begin() +
+                            static_cast<std::ptrdiff_t>(offset));
         }
     }
 
+    impulse_spectra_.swap(impulse_spectra);
+    input_spectra_.swap(input_spectra);
     impulse_frames_ = target_frames;
     partition_count_ = partitions;
+    impulse_channels_ = stored_ir_channels;
     reset();
     return true;
 }
 
 void ConvolutionReverb::clear_impulse_response() noexcept {
+    std::vector<Complex>().swap(impulse_spectra_);
+    std::vector<Complex>().swap(input_spectra_);
     impulse_frames_ = 0;
     partition_count_ = 0;
+    impulse_channels_ = 0;
     history_write_partition_ = 0;
     reset();
 }
@@ -224,13 +244,7 @@ void ConvolutionReverb::process_bypassed(std::span<float> interleaved,
 }
 
 void ConvolutionReverb::reset() noexcept {
-    const std::size_t active_complex_values = partition_count_ * kFftFrames;
-    for (std::uint16_t channel = 0; channel < channels_; ++channel) {
-        const std::size_t offset =
-            static_cast<std::size_t>(channel) * kMaximumPartitions * kFftFrames;
-        std::fill_n(input_spectra_.begin() + static_cast<std::ptrdiff_t>(offset),
-                    active_complex_values, Complex{});
-    }
+    std::fill(input_spectra_.begin(), input_spectra_.end(), Complex{});
     input_block_.fill(0.0F);
     output_block_.fill(0.0F);
     overlap_.fill(0.0F);
@@ -326,12 +340,12 @@ void ConvolutionReverb::process_partition() noexcept {
         transform(transform_buffer_, false);
 
         const std::size_t channel_offset =
-            static_cast<std::size_t>(channel) * kMaximumPartitions * kFftFrames;
+            static_cast<std::size_t>(channel) * partition_count_ * kSpectrumBins;
         const std::size_t history_offset = channel_offset +
-            history_write_partition_ * kFftFrames;
-        std::copy(transform_buffer_.begin(), transform_buffer_.end(),
-                  input_spectra_.begin() +
-                      static_cast<std::ptrdiff_t>(history_offset));
+            history_write_partition_ * kSpectrumBins;
+        std::copy_n(transform_buffer_.begin(), kSpectrumBins,
+                    input_spectra_.begin() +
+                        static_cast<std::ptrdiff_t>(history_offset));
 
         sum_buffer_.fill(Complex{});
         for (std::size_t partition = 0; partition < partition_count_; ++partition) {
@@ -339,14 +353,23 @@ void ConvolutionReverb::process_partition() noexcept {
                 (history_write_partition_ + partition_count_ - partition) %
                 partition_count_;
             const std::size_t input_offset = channel_offset +
-                history_partition * kFftFrames;
-            const std::size_t impulse_offset = channel_offset +
-                partition * kFftFrames;
-            for (std::size_t bin = 0; bin < kFftFrames; ++bin) {
+                history_partition * kSpectrumBins;
+        const std::size_t impulse_channel_offset =
+            static_cast<std::size_t>(impulse_channels_ == 1 ? 0 : channel) *
+            partition_count_ * kSpectrumBins;
+        const std::size_t impulse_offset = impulse_channel_offset +
+                partition * kSpectrumBins;
+            for (std::size_t bin = 0; bin < kSpectrumBins; ++bin) {
                 sum_buffer_[bin] +=
                     impulse_spectra_[impulse_offset + bin] *
                     input_spectra_[input_offset + bin];
             }
+        }
+        sum_buffer_[0] = Complex(sum_buffer_[0].real(), 0.0F);
+        sum_buffer_[kFftFrames / 2] =
+            Complex(sum_buffer_[kFftFrames / 2].real(), 0.0F);
+        for (std::size_t bin = 1; bin < kFftFrames / 2; ++bin) {
+            sum_buffer_[kFftFrames - bin] = std::conj(sum_buffer_[bin]);
         }
         transform(sum_buffer_, true);
 

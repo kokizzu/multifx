@@ -114,7 +114,9 @@ On a Ryzen 9 5950X Release build, the project-authored Shimmer Reverb measured 1
 
 At 48 kHz stereo/128 frames, the project-authored five-band peaking/shelf/cut EQ measured 0.0998% p50 / 0.1005% p95 / 0.2104% p99 / 0.4301% p99.9 / 0.6533% maximum of a 2.667 ms callback and owned 680 B. It has no algorithmic latency; coefficients are prepared when parameters are configured, outside `process()`.
 
-At 48 kHz stereo/128 frames, the maximum 0.5 s project-authored Convolution Reverb IR measured 5.1043% p50 / 6.4862% p95 / 18.1629% maximum of a 2.667 ms callback and owned 1,549,968 B. It uses a 128-frame partition and aligned dry path when an IR is loaded; this is fixed algorithmic latency, not measured device round-trip latency.
+The earlier 0.5-second Convolution Reverb checkpoint used 128-frame partitions and measured 5.1043% p50 / 6.4862% p95 / 18.1629% maximum of a 2.667 ms callback, with 1,549,968 B processor-owned state. That measurement is superseded by the 10-second implementation below.
+
+At 48 kHz stereo/128-frame callbacks, the 10-second maximum-length Convolution Reverb IR owns 15,461,240 B and uses a 1,024-frame partition (21.33 ms fixed algorithmic latency; not measured device round-trip latency). The Ryzen 9 5950X isolated maximum-IR benchmark measured 0.0382% p50 / 79.4286% p95 / 92.2945% p99 / 108.1668% p99.9 / 130.4420% maximum of the 2.667 ms callback. Its periodic bursts exceed the callback deadline, so glitch-free real-time playback is not established. The browser regression loads and replaces a 10-second stereo PCM WAV in the fixed 64 MiB WASM heap, checks independent left/right output and partition latency, and verifies that the Reverb picker category is preserved.
 
 Phrase Looper storage is fixed at 192,000 frames: its two loop/history buffers use 1,536,000 B in mono or 3,072,000 B in stereo, plus object state. It adds no fixed algorithmic latency, and `process()` allocates nothing. Record/overdub/clear snapshot copies are issued through the AudioWorklet message handler between `process()` calls but still run on that worklet thread; no isolated CPU benchmark or glitch test has measured the scheduling impact.
 

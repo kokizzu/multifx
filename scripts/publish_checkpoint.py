@@ -960,6 +960,13 @@ CONVOLUTION_REVERB_CHECKPOINT_PATHS = (
     "README.md",
     "scripts/publish_checkpoint.py",
 )
+HEADRUSH_CVERB_TEN_SECOND_IR_CHECKPOINT_PATHS = tuple(
+    path for path in CONVOLUTION_REVERB_CHECKPOINT_PATHS if path != "Makefile"
+) + (
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/run_cmake.py",
+)
 MONO_GUITAR_SYNTH_CHECKPOINT_PATHS = (
     "Makefile",
     "CMakeLists.txt",
@@ -1854,6 +1861,10 @@ CHECKPOINTS = {
                        "feat: add project-authored shimmer reverb"),
     "convolution-reverb": (CONVOLUTION_REVERB_CHECKPOINT_PATHS,
                            "feat: extend convolution reverb controls and tails"),
+    "headrush-cverb-ten-second-ir": (
+        HEADRUSH_CVERB_TEN_SECOND_IR_CHECKPOINT_PATHS,
+        "feat: support ten-second stereo C-Verb IRs in browser",
+    ),
     "mono-guitar-synth": (MONO_GUITAR_SYNTH_CHECKPOINT_PATHS,
                           "feat: add project-authored mono guitar synth"),
     "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,

@@ -4,32 +4,57 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "d76c6c54f223d28b20836d511e98db754ca28a96",
+  "previous_checkpoint_commit": "f633cec42f256562492407d425024ecae835198b",
+  "completed_checkpoints": [
+    {
+      "name": "Fractal FM9-family Dynamic Formant Morph",
+      "status": "verified",
+      "picker_index": 43,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide",
+        "revision": "November 2026",
+        "pages": [3, 4, 51],
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
+      },
+      "documented_controls": "Start/Middle/End vowels (AAA, EEE, III, OHH, OOO, EHH, AHH, AWW, UHH, ERR), Resonance, Control; common Mix, Level, Balance, Bypass, and Bypass Mode.",
+      "project_controls": "The existing generic A/E/I/O/U sweep is retained. Three-vowel mode has Start/Middle/End selectors, manual Control 0–100% with middle at 50%, project-authored profile frequencies/gains, Resonance Q 0.5–12, Mix 0–1, Level −24…+12 dB, Balance −100…+100%, and 10 ms smoothing. Automated LFO/expression modifier assignment and selectable Bypass Mode are not implemented.",
+      "verification": {
+        "native_ctest": "96/96 CTest cases passed",
+        "fixture_safety": "11 passed",
+        "picker_rows": 93,
+        "browser_native_comparison": "71 active stages passed on local stereo Guitar-TECHS DI; max absolute error 0.000006942274751509103, RMS error 0.0000012286337480166103",
+        "formant_morph_playback": "browser Play captured finite changed output with local prerecorded Guitar-TECHS DI",
+        "wasm_memory": "fixed 64 MiB heap; 32,959,916 B full stereo processor state plus 10,364 B tuner state",
+        "isolated_benchmark": "648 B processor state; p50 0.0896%, p95 0.1425%, p99 0.1560%, p99.9 0.9098%, max 1.4400% of 2.667 ms callback at 48 kHz stereo/128 frames; processor-call estimate, not a live device measurement",
+        "audio_regression": "passed: all five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full chain includes Formant Filter; separate isolated Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
+        "notes": "No Fractal DSP/settings parity is claimed. No hardware or human listening evidence."
+      }
+    }
+  ],
   "current_checkpoint": {
-    "name": "Fractal FM9-family Dynamic Formant Morph",
-    "status": "verified-awaiting-audio-regression",
-    "picker_index": 43,
-    "category": "Filters & wah",
+    "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
+    "status": "verified",
+    "picker_index": 58,
+    "category": "Reverb",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "November 2026",
-      "pages": [3, 4, 51],
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
+      "title": "HeadRush Prime User Guide",
+      "revision": "v5.0.0 guide checked for C-Verb details; official downloads page listed v5.2 guide and firmware as current on 2026-11-23",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+      "downloads_url": "https://www.headrushfx.com/downloads.html",
+      "qualification": "C-Verb controls, 10-second maximum, one-instance limit, and first-two-channel rule are documented in the v5.0.0 manual; project ranges and DSP are not HeadRush settings or parity."
     },
-    "documented_controls": "Start/Middle/End vowels (AAA, EEE, III, OHH, OOO, EHH, AHH, AWW, UHH, ERR), Resonance, Control; common Mix, Level, Balance, Bypass, and Bypass Mode.",
-    "project_controls": "The existing generic A/E/I/O/U sweep is retained. Three-vowel mode has Start/Middle/End selectors, manual Control 0–100% with middle at 50%, project-authored profile frequencies/gains, Resonance Q 0.5–12, Mix 0–1, Level −24…+12 dB, Balance −100…+100%, and 10 ms smoothing. Automated LFO/expression modifier assignment and selectable Bypass Mode are not implemented.",
+    "documented_controls": "Preset, Reverb File, High Pass, Low Pass, Wet, and Tails On/Off. The guide documents WAV/AIF/OPUS, first two channels of a multichannel IR, one C-Verb per rig, a 10-second maximum, and CPU use dependent on IR length; it gives no numeric control ranges.",
+    "project_controls": "Existing Reverb row/index 58; local mono/stereo WAV only; project-authored Mix, Wet Level, wet High Pass/Low Pass and Tails; max 480,000 frames at target rate (10 s at 48 kHz); 1,024-frame fixed latency; independent stereo kernels; no bundled IR, AIF/OPUS, multichannel import, or cross-rig spillover.",
     "verification": {
-      "native_ctest": "96/96 CTest cases passed",
-      "fixture_safety": "11 passed",
-      "picker_rows": 93,
-      "browser_native_comparison": "71 active stages passed on local stereo Guitar-TECHS DI; max absolute error 0.000006942274751509103, RMS error 0.0000012286337480166103",
-      "formant_morph_playback": "browser Play captured finite changed output with local prerecorded Guitar-TECHS DI",
-      "wasm_memory": "fixed 64 MiB heap; 32,959,916 B full stereo processor state plus 10,364 B tuner state",
-      "isolated_benchmark": "648 B processor state; p50 0.0896%, p95 0.1425%, p99 0.1560%, p99.9 0.9098%, max 1.4400% of 2.667 ms callback at 48 kHz stereo/128 frames; processor-call estimate, not a live device measurement",
-      "audio_regression": "running against existing local pickup/direct-input recordings",
-      "notes": "No Fractal DSP/settings parity is claimed. No hardware or human listening evidence."
+      "native_ctest": "make test passed: 96/96 CTest cases and 11 audio-fixture safety tests; Convolution Reverb tests cover partition timing, stereo kernels, 10-second acceptance, filters, tails, zero allocation, and offline CLI latency/output",
+      "web_build": "passed; generated tabletfx_wasm.js is 761,197 bytes",
+      "browser": "passed with local stereo Guitar-TECHS DI; full 71-stage native/browser comparison max absolute error 0.000006970898652980395 and RMS error 0.0000014077249412678672; C-Verb test loaded/replaced 480,000-frame stereo PCM WAV, checked separate L/R output (0.25/0.125), 1,024-frame latency, Reverb category, worklet guard, and 64 MiB heap",
+      "isolated_benchmark": "15,461,240 B maximum stereo processor state; Ryzen 9 5950X at 48 kHz stereo/128 frames: p50 0.0382%, p95 79.4286%, p99 92.2945%, p99.9 108.1668%, max 130.4420% of 2.667 ms callback; occasional deadline overruns mean glitch-free real-time use is not established",
+      "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
+      "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
     }
   },
   "next_research": [
@@ -37,9 +62,9 @@
       "device": "Fractal FM9 Mark II Turbo",
       "feature": "Enhancer modes",
       "source": "November 2026 Blocks Guide, p. 44",
-      "status": "official mode/control roles verified; project implementation pending",
+      "status": "existing project-authored Modern/Classic/Stereoizer modes and category UI verified; partial behavior only, no new processor required for the mode labels",
       "known_controls": "Modern, Classic, Stereoizer; only Classic Width 0–20 ms is numerically specified",
-      "qualification": "Existing Stereo Enhancer is related coverage, not mode parity; exact firmware applicability remains qualified."
+      "qualification": "Modern mode does not implement documented mono-to-stereo conversion; project controls/topology are not Fractal parity. Guide covers FM9 family, firmware v12.0 names Original/Turbo but not Mark II Turbo, and installed firmware is unknown."
     },
     {
       "device": "Line 6 Helix Stadium XL",
@@ -60,8 +85,8 @@
       "device": "HeadRush Prime",
       "feature": "C-Verb 10-second impulse support, Spring Guru, Kill Seq/Splicer, named synths",
       "source": "Prime v5.2 guide and firmware notes",
-      "status": "category/control roles audited; C-Verb exposes Reverb File, High Pass, Low Pass, Wet, Tails; no ranges/defaults published",
-      "qualification": "Do not infer undocumented model controls; project convolution IR currently caps at 0.5 seconds."
+      "status": "C-Verb 10-second duration is implemented and verified in the categorized Reverb row; remaining effects include Spring Guru, Kill Seq/Splicer, and named synths",
+      "qualification": "C-Verb controls have no published numeric ranges. Project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget; no HeadRush DSP parity or glitch-free real-time claim."
     },
     {
       "device": "Melofty Axom Max",

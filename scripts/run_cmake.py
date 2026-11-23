@@ -73,9 +73,14 @@ def build(cmake: str) -> None:
     run([cmake, "--build", str(BUILD_DIR), "--parallel", str(min(4, os.cpu_count() or 1))])
 
 
-def test(cmake: str, ctest: str) -> None:
+def test(cmake: str, ctest: str, test_filter: str = "") -> None:
     build(cmake)
-    run([ctest, "--test-dir", str(BUILD_DIR), "-C", "Release", "--output-on-failure"])
+    command = [ctest, "--test-dir", str(BUILD_DIR), "-C", "Release",
+               "--output-on-failure"]
+    test_filter = test_filter.strip()
+    if test_filter:
+        command.extend(["-R", test_filter])
+    run(command)
 
 
 def build_windows(cmake: str) -> None:
@@ -111,7 +116,9 @@ def cpu_name() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("configure", "build", "test", "bench", "windows-build"))
-    action = parser.parse_args().action
+    parser.add_argument("--test-filter", default="")
+    args = parser.parse_args()
+    action = args.action
     cmake = find_cmake()
     ctest = find_ctest(cmake) if action == "test" else None
     if action == "configure":
@@ -119,7 +126,7 @@ def main() -> None:
     elif action == "build":
         build(cmake)
     elif action == "test":
-        test(cmake, ctest or "ctest")
+        test(cmake, ctest or "ctest", args.test_filter)
     elif action == "bench":
         build(cmake)
         print(f"CPU: {cpu_name()}")

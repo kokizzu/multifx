@@ -292,7 +292,7 @@ const TUNER_FREQUENCY = EFFECT_NAMES.length + 12;
 const TUNER_CENTS = EFFECT_NAMES.length + 13;
 const TUNER_CONFIDENCE = EFFECT_NAMES.length + 14;
 const TUNER_TIME = EFFECT_NAMES.length + 15;
-const MAX_CONVOLUTION_IR_FRAMES = 24000;
+const MAX_CONVOLUTION_IR_FRAMES = 480000;
 
 const fileInput = document.querySelector("#audio-file");
 const convolutionIrFileInput = document.querySelector("#convolution-ir-file");
@@ -8177,8 +8177,8 @@ async function runBrowserSelfTest() {
      if (convolutionDefaults.join(",") !== "0.25,0,0,0,0" ||
          convolutionRanges.some(([control, minimum, maximum]) =>
            control.min !== minimum || control.max !== maximum) ||
-         !convolutionHint.includes("HeadRush Prime C-Verb") ||
-         !convolutionHint.includes("10-second maximum") ||
+          !convolutionHint.includes("HeadRush DSP") ||
+          !convolutionHint.includes("10 s at 48 kHz") ||
          !convolutionHint.includes("Cross-rig spillover") ||
          convolutionReverbTails.checked) {
        throw new Error("Convolution Reverb must expose its project filter and wet controls, per-block tails toggle, and Prime capability limits.");

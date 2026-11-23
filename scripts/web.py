@@ -486,6 +486,19 @@ def make_convolution_test_ir(destination: Path, sample_rate: int = 48000) -> Non
         output.writeframes(struct.pack("<4h", *samples))
 
 
+def make_long_convolution_test_ir(destination: Path, sample_rate: int = 48000) -> int:
+    frames = 10 * sample_rate
+    samples = bytearray(frames * 4)
+    struct.pack_into("<hh", samples, 0, 16384, 16384)
+    struct.pack_into("<hh", samples, len(samples) - 4, 8192, -4096)
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(samples)
+    return frames
+
+
 def websocket_send(sock: socket.socket, opcode: int, payload: bytes) -> None:
     mask = os.urandom(4)
     size = len(payload)
@@ -679,6 +692,7 @@ def browser_test() -> None:
         plex_delay_input_select_reference_path = temp_dir / "plex-delay-input-select-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
+        long_convolution_ir_path = temp_dir / "convolution-ir-10s.wav"
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
             make_test_audio(input_path)
@@ -687,6 +701,7 @@ def browser_test() -> None:
             print(f"Browser guitar input: local prerecorded DI {prerecorded_guitar_source}")
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
+        make_long_convolution_test_ir(long_convolution_ir_path)
         make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)
         make_stereo_plex_delay_impulse(plex_delay_input_select_input_path)
         renderer_command = [
@@ -1088,6 +1103,7 @@ def browser_test() -> None:
             "/__test_plex_delay_input_select_expected.wav": plex_delay_input_select_reference_path,
             "/__test_tuner.wav": tuner_path,
             "/__test_convolution_ir.wav": convolution_ir_path,
+            "/__test_convolution_ir_10s.wav": long_convolution_ir_path,
         }
         server = ThreadingHTTPServer(("127.0.0.1", 0), LocalWebHandler)
         server.daemon_threads = True
@@ -1134,7 +1150,7 @@ def browser_test() -> None:
             "const inputBytes=await inputResponse.arrayBuffer();const inputView=new DataView(inputBytes);"
             "assert(inputView.getUint16(22,true)===2&&inputView.getUint16(34,true)===16,"
             "'Stereo impulse fixture is not PCM16');const frames=(inputBytes.byteLength-44)/4;"
-            "const chain=module._tf_chain_create(sampleRate,2,frames);assert(chain,'Could not create WASM chain');"
+            "let chain=module._tf_chain_create(sampleRate,2,frames);assert(chain,'Could not create WASM chain');"
             "try{const inputOffset=module._tf_chain_input_buffer(chain)>>>2;"
             "for(let frame=0;frame<frames;frame++){for(let channel=0;channel<2;channel++){"
             "module.HEAPF32[inputOffset+frame*2+channel]=inputView.getInt16(44+(frame*2+channel)*2,true)/32768}}"
@@ -1216,12 +1232,64 @@ def browser_test() -> None:
             "const plexRmsError=Math.sqrt(plexErrorSquares/plexActual.length);"
             "assert(plexMaxError<4e-5&&plexRmsError<5e-6,"
             "`WASM/native Plex Delay Right-input mismatch: max ${plexMaxError}, RMS ${plexRmsError}`);"
+            "module._tf_chain_destroy(chain);chain=0;"
             ""
+            "const cverbRow=document.querySelector('[data-effect=\"58\"]')?.closest('.effect-row');"
+            "assert(cverbRow?.dataset.category==='reverb'&&cverbRow.querySelector('.effect-category-tag')?.textContent.trim()==='Reverb',"
+            "'Convolution Reverb is not categorized as Reverb');"
+            "assert(document.querySelector('#convolution-ir-file')?.closest('.file-picker')?.textContent.includes('480,000 frames'),"
+            "'Convolution Reverb UI does not advertise its 480,000-frame IR limit');"
+            "const cverbWorkletSource=await (await fetch('/web/audio-worklet.js')).text();"
+            "assert(cverbWorkletSource.includes('frames > 480000'),"
+            "'AudioWorklet does not accept the documented 10-second IR limit');"
+            "const cverbResponse=await fetch('/__test_convolution_ir_10s.wav');"
+            "const cverbBytes=await cverbResponse.arrayBuffer();const cverbView=new DataView(cverbBytes);"
+            "const cverbFrames=(cverbBytes.byteLength-44)/4;"
+            "assert(cverbResponse.ok&&cverbView.getUint16(22,true)===2&&"
+            "cverbView.getUint16(34,true)===16&&cverbView.getUint32(24,true)===48000&&"
+            "cverbFrames===480000,'Long C-Verb test fixture is not 10-second stereo PCM16 at 48 kHz');"
+            "const cverbChain=module._tf_chain_create(48000,2,2048);"
+            "assert(cverbChain,'Could not create the 10-second C-Verb WASM chain');"
+            "let cverbPointer=module._malloc(cverbFrames*2*4);"
+            "assert(cverbPointer,'Could not allocate the C-Verb IR upload buffer');"
+            "let cverbLeft=0,cverbRight=0,cverbWasmBytes=0;"
+            "try{const cverbIrOffset=cverbPointer>>>2;"
+            "for(let i=0;i<cverbFrames;i++){module.HEAPF32[cverbIrOffset+i*2]=cverbView.getInt16(44+i*4,true)/32768;"
+            "module.HEAPF32[cverbIrOffset+i*2+1]=cverbView.getInt16(46+i*4,true)/32768}"
+            "assert(module._tf_chain_load_convolution_reverb_ir(cverbChain,cverbPointer,cverbFrames,2,48000)===1,"
+            "'WASM rejected the 10-second stereo 48 kHz C-Verb IR');"
+            "assert(module._tf_chain_load_convolution_reverb_ir(cverbChain,cverbPointer,cverbFrames,2,48000)===1,"
+            "'WASM could not replace an existing 10-second stereo C-Verb IR');"
+            "module._free(cverbPointer);cverbPointer=0;"
+            "module._tf_chain_set_convolution_reverb(cverbChain,1,0,0,0,0);"
+            "assert(module._tf_chain_set_enabled(cverbChain,58,1)===1,"
+            "'WASM did not enable Convolution Reverb at index 58');"
+            "const cverbInputOffset=module._tf_chain_input_buffer(cverbChain)>>>2;"
+            "module.HEAPF32[cverbInputOffset]=0.5;module.HEAPF32[cverbInputOffset+1]=0.25;"
+            "assert(module._tf_chain_begin(cverbChain,2048)===2048,"
+            "'WASM C-Verb chain rejected stereo input');"
+            "module._tf_chain_process_effect(cverbChain,58);"
+            "module._tf_chain_finish(cverbChain,2048);"
+            "module._tf_chain_process_output_gain(cverbChain);"
+            "module._tf_chain_process_output_limiter(cverbChain);"
+            "const cverbOutputOffset=module._tf_chain_output_buffer(cverbChain)>>>2;"
+            "const cverbOutput=module.HEAPF32.slice(cverbOutputOffset,cverbOutputOffset+4096);"
+            "for(let i=0;i<1024*2;i++){assert(Math.abs(cverbOutput[i])<2e-5,"
+            "'10-second C-Verb output started before its fixed partition latency')}"
+            "cverbLeft=cverbOutput[1024*2];cverbRight=cverbOutput[1024*2+1];"
+            "assert(Math.abs(cverbLeft-0.25)<3e-4&&Math.abs(cverbRight-0.125)<3e-4,"
+            "`10-second C-Verb WASM output/latency mismatch: L ${cverbLeft}, R ${cverbRight}`);"
+            "cverbWasmBytes=module.HEAPF32.buffer.byteLength;"
+            "assert(cverbWasmBytes<=64*1024*1024,"
+            "`10-second stereo C-Verb exceeded the 64 MiB WASM heap: ${cverbWasmBytes}`);"
+            "}finally{if(cverbPointer)module._free(cverbPointer);module._tf_chain_destroy(cverbChain)}"
             "return JSON.stringify({passed:true,category:'Delay',effectIndex:84,leftTimeMs:10,rightTimeMs:20,"
             "leftEcho:actual[160],rightEcho:actual[321],maxError,rmsError,frames,tapSamples,"
             "plexDelayInputSelect:{category:'Delay',effectIndex:76,selection:'right',"
-            "maxError:plexMaxError,rmsError:Math.sqrt(plexErrorSquares/(plexFrames*2))}});"
-            "}finally{module._tf_chain_destroy(chain)}})()"
+            "maxError:plexMaxError,rmsError:Math.sqrt(plexErrorSquares/(plexFrames*2))},"
+            "cverb:{category:'Reverb',effectIndex:58,irFrames:cverbFrames,irSeconds:cverbFrames/48000,"
+            "latencyFrames:1024,outputLeft:cverbLeft,outputRight:cverbRight,wasmBytes:cverbWasmBytes}});"
+            "}finally{if(chain)module._tf_chain_destroy(chain)}})()"
         )
         try:
             result, stderr = run_chrome_page(
