@@ -676,6 +676,24 @@ Options parse_options(int argc, char** argv, int first) {
             options.tape_echo_enabled = true;
             continue;
         }
+        if (key == "--tape-echo-tap-division-left") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --tape-echo-tap-division-left");
+            }
+            options.tape_echo.left_tap_division = parse_delay_division(argv[++i]);
+            options.tape_echo.independent_stereo_times = true;
+            options.tape_echo_enabled = true;
+            continue;
+        }
+        if (key == "--tape-echo-tap-division-right") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --tape-echo-tap-division-right");
+            }
+            options.tape_echo.right_tap_division = parse_delay_division(argv[++i]);
+            options.tape_echo.independent_stereo_times = true;
+            options.tape_echo_enabled = true;
+            continue;
+        }
         if (key == "--tape-echo-spillover") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --tape-echo-spillover");
@@ -2966,6 +2984,16 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--tape-echo-time-ms") {
             options.tape_echo.time_ms = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-time-left-ms") {
+            options.tape_echo.left_time_ms = value;
+            options.tape_echo.independent_stereo_times = true;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-time-right-ms") {
+            options.tape_echo.right_time_ms = value;
+            options.tape_echo.independent_stereo_times = true;
             options.tape_echo_enabled = true;
         }
         else if (key == "--tape-echo-tempo-bpm") {

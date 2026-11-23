@@ -3,6 +3,7 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/effects/delay_timing.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -15,6 +16,11 @@ struct TapeEchoParameters {
     float time_ms = 350.0F;
     float tempo_bpm = 120.0F;
     DelayDivision tap_division = DelayDivision::quarter;
+    bool independent_stereo_times = false;
+    float left_time_ms = 350.0F;
+    float right_time_ms = 350.0F;
+    DelayDivision left_tap_division = DelayDivision::quarter;
+    DelayDivision right_tap_division = DelayDivision::quarter;
     float feedback = 0.35F;
     float mix = 0.25F;
     float record_level = 0.25F;
@@ -53,6 +59,7 @@ public:
         return parameters_;
     }
     [[nodiscard]] float selected_time_ms() const noexcept;
+    [[nodiscard]] float selected_time_ms(std::uint16_t channel) const noexcept;
 
     void configure(TapeEchoParameters parameters) noexcept;
     void process(std::span<float> interleaved,
@@ -81,7 +88,7 @@ private:
     [[nodiscard]] float read_delay(float delay_samples,
                                    std::uint16_t channel) const noexcept;
     [[nodiscard]] float record_to_tape(float sample) const noexcept;
-    [[nodiscard]] float modulated_delay_samples() const noexcept;
+    [[nodiscard]] float modulated_delay_samples(std::uint16_t channel) const noexcept;
     void advance_parameters() noexcept;
     void process_audio(std::span<float> interleaved, bool bypassed) noexcept;
 
@@ -93,9 +100,9 @@ private:
     bool storage_cleared_ = true;
     std::vector<float> storage_;
     TapeEchoParameters parameters_{};
-    float current_time_samples_ = 16800.0F;
-    float target_time_samples_ = 16800.0F;
-    float time_step_ = 0.0F;
+    std::array<float, 2> current_time_samples_{{16800.0F, 16800.0F}};
+    std::array<float, 2> target_time_samples_{{16800.0F, 16800.0F}};
+    std::array<float, 2> time_step_{};
     float current_feedback_ = 0.35F;
     float feedback_step_ = 0.0F;
     float current_mix_ = 0.25F;

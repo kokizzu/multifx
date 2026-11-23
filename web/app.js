@@ -207,7 +207,8 @@ const DEFAULT_PARAMETERS = {
   manualThruZeroFlanger: [0.34, 8, 5, 0.5, 0, 3, 0.5, 10],
   octobot: [0.65, 0.2, 0.25],
   amRingMod: [440, 0.5, 1, 0],
-  tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0],
+  tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
+    0, 350, 350, 4, 4],
   convolutionReverb: [0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
@@ -465,6 +466,11 @@ const tapeEchoControls = [
   document.querySelector("#tape-echo-noise"),
   document.querySelector("#tape-echo-wow-flutter"),
   document.querySelector("#tape-echo-spillover"),
+  document.querySelector("#tape-echo-independent-times"),
+  document.querySelector("#tape-echo-time-left-ms"),
+  document.querySelector("#tape-echo-time-right-ms"),
+  document.querySelector("#tape-echo-tap-division-left"),
+  document.querySelector("#tape-echo-tap-division-right"),
 ];
 const octaveFuzzControls = [
   document.querySelector("#octave-fuzz-boost"),
@@ -3286,12 +3292,24 @@ function updateTapeEcho() {
     Number(tapeEchoControls[8].value),
     Number(tapeEchoControls[9].value),
     tapeEchoControls[10].checked ? 1 : 0,
+    tapeEchoControls[11].checked ? 1 : 0,
+    Number(tapeEchoControls[12].value),
+    Number(tapeEchoControls[13].value),
+    Number(tapeEchoControls[14].value),
+    Number(tapeEchoControls[15].value),
   ];
   DEFAULT_PARAMETERS.tapeEcho = values;
+  const independent = values[11] === 1;
+  document.querySelector("#tape-echo-shared-time-controls").hidden = independent;
+  document.querySelector("#tape-echo-independent-time-controls").hidden = !independent;
   tapeEchoControls[1].parentElement.querySelector("output").value =
     `${Math.round(values[1])} ms`;
   tapeEchoControls[2].parentElement.querySelector("output").value =
     `${Math.round(values[2])} BPM`;
+  tapeEchoControls[12].parentElement.querySelector("output").value =
+    `${Math.round(values[12])} ms`;
+  tapeEchoControls[13].parentElement.querySelector("output").value =
+    `${Math.round(values[13])} ms`;
   for (let index = 4; index <= 9; index += 1) {
     tapeEchoControls[index].parentElement.querySelector("output").value =
       `${Math.round(values[index] * 100)}%`;
@@ -8477,7 +8495,7 @@ async function runBrowserSelfTest() {
      const tapeEchoHint = document.querySelector(
        '.effect-parameter-group[aria-label="Tape Echo project-authored controls"] .hint',
      ).textContent;
-     if (tapeEchoControls.length !== 11 ||
+      if (tapeEchoControls.length !== 16 ||
          tapeEchoControls[4].min !== "0" || tapeEchoControls[4].max !== "0.95" ||
          tapeEchoControls[10].type !== "checkbox" ||
          effectRows[84]?.dataset.category !== "delay" ||

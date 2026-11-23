@@ -1619,6 +1619,7 @@ TAPE_ECHO_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
     "GOAL.md",
@@ -1818,7 +1819,7 @@ CHECKPOINTS = {
     ),
     "tape-echo": (
         TAPE_ECHO_CHECKPOINT_PATHS,
-        "feat: add project-authored Tape Echo",
+        "feat: add independent stereo Tape Echo timing",
     ),
     "octave-fuzz": (
         OCTAVE_FUZZ_CHECKPOINT_PATHS,

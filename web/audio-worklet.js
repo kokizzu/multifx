@@ -353,7 +353,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureOctobot(parameters.octobot || [0.65, 0.2, 0.25]);
       this.configureAmRingMod(parameters.amRingMod || [440, 0.5, 1, 0]);
       this.configureTapeEcho(parameters.tapeEcho ||
-        [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0]);
+        [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
+          0, 350, 350, 4, 4]);
       this.configureOctaveFuzz(parameters.octaveFuzz || [0.55, 0.75, 1]);
       this.configureStereoCrossover(parameters.stereoCrossover || {
         frequencyHz: 500, frequencyMultiplier: "x1",
@@ -599,10 +600,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
   }
 
   configureTapeEcho(values) {
-    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
+    if (!this.module || !this.chain || !Array.isArray(values)) {
       return;
     }
-    this.module._tf_chain_set_tape_echo(this.chain, ...values);
+    const extendedValues = values.length === 11
+      ? [...values, 0, values[1], values[1], values[3], values[3]]
+      : values;
+    if (extendedValues.length !== 16) return;
+    this.module._tf_chain_set_tape_echo(this.chain, ...extendedValues);
   }
 
   configureStereoCrossover(parameters) {

@@ -1840,8 +1840,11 @@ public:
                              float tempo_bpm, std::uint32_t tap_division,
                              float feedback, float mix, float record_level,
                              float tape_bias, float tape_noise,
-                             float wow_flutter,
-                             std::uint32_t spillover) noexcept {
+                             float wow_flutter, std::uint32_t spillover,
+                             std::uint32_t independent_stereo_times,
+                             float left_time_ms, float right_time_ms,
+                             std::uint32_t left_tap_division,
+                             std::uint32_t right_tap_division) noexcept {
         tabletfx::TapeEchoParameters parameters;
         parameters.time_mode = time_mode == 1U
             ? tabletfx::DelayTimeMode::tempo_sync
@@ -1849,6 +1852,13 @@ public:
         parameters.time_ms = time_ms;
         parameters.tempo_bpm = tempo_bpm;
         parameters.tap_division = static_cast<tabletfx::DelayDivision>(tap_division);
+        parameters.independent_stereo_times = independent_stereo_times != 0U;
+        parameters.left_time_ms = left_time_ms;
+        parameters.right_time_ms = right_time_ms;
+        parameters.left_tap_division =
+            static_cast<tabletfx::DelayDivision>(left_tap_division);
+        parameters.right_tap_division =
+            static_cast<tabletfx::DelayDivision>(right_tap_division);
         parameters.feedback = feedback;
         parameters.mix = mix;
         parameters.record_level = record_level;
@@ -3303,11 +3313,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tape_echo(
     void* opaque, std::uint32_t time_mode, float time_ms,
     float tempo_bpm, std::uint32_t tap_division, float feedback,
     float mix, float record_level, float tape_bias, float tape_noise,
-    float wow_flutter, std::uint32_t spillover) noexcept {
+    float wow_flutter, std::uint32_t spillover,
+    std::uint32_t independent_stereo_times,
+    float left_time_ms, float right_time_ms,
+    std::uint32_t left_tap_division,
+    std::uint32_t right_tap_division) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_tape_echo(
             time_mode, time_ms, tempo_bpm, tap_division, feedback, mix,
-            record_level, tape_bias, tape_noise, wow_flutter, spillover);
+            record_level, tape_bias, tape_noise, wow_flutter, spillover,
+            independent_stereo_times, left_time_ms, right_time_ms,
+            left_tap_division, right_tap_division);
     }
 }
 

@@ -396,6 +396,17 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
     return frames
 
 
+def make_stereo_tape_echo_impulse(destination: Path, sample_rate: int = 8000,
+                                 frames: int = 240) -> None:
+    samples = bytearray(frames * 4)
+    struct.pack_into("<hh", samples, 0, 16384, 8192)
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(samples)
+
+
 def make_tuner_test_audio(destination: Path, sample_rate: int = 48000,
                           duration_seconds: float = 0.5) -> int:
     frames = int(sample_rate * duration_seconds)
@@ -478,7 +489,8 @@ def cdp_call(sock: socket.socket, stream, command_id: int,
 
 
 def run_chrome_page(chrome: str, profile: Path, url: str,
-                    stderr_path: Path) -> tuple[dict, str]:
+                    stderr_path: Path,
+                    post_test_expression: str | None = None) -> tuple[dict, str]:
     command = [
         chrome, "--headless=new", "--no-first-run", "--no-default-browser-check",
         "--no-sandbox", "--disable-dev-shm-usage", "--autoplay-policy=no-user-gesture-required",
@@ -555,6 +567,29 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                     if result.get("status") in ("passed", "failed"):
                         break
                 time.sleep(0.15)
+            if result.get("status") == "passed" and post_test_expression:
+                response = cdp_call(sock, stream, command_id, "Runtime.evaluate", {
+                    "expression": post_test_expression,
+                    "returnByValue": True,
+                    "awaitPromise": True,
+                    "userGesture": True,
+                })
+                remote = response.get("result", {}).get("result", {})
+                value = remote.get("value")
+                if response.get("result", {}).get("exceptionDetails"):
+                    raise RuntimeError(
+                        "Stereo Tape Echo browser verification failed: "
+                        + json.dumps(response["result"]["exceptionDetails"])
+                    )
+                if not value:
+                    raise RuntimeError("Stereo Tape Echo browser verification returned no result")
+                stereo_report = json.loads(value)
+                if not stereo_report.get("passed"):
+                    raise RuntimeError(
+                        "Stereo Tape Echo browser verification failed: "
+                        + json.dumps(stereo_report)
+                    )
+                result["stereoTapeEcho"] = stereo_report
             sock.close()
             if not result:
                 raise RuntimeError("Chrome page did not expose its browser-test status")
@@ -585,11 +620,14 @@ def browser_test() -> None:
         input_path = temp_dir / "guitar-fixture.wav"
         reference_path = temp_dir / "native-reference.wav"
         stereo_crossover_reference_path = temp_dir / "stereo-crossover-reference.wav"
+        stereo_tape_echo_input_path = temp_dir / "stereo-tape-echo-input.wav"
+        stereo_tape_echo_reference_path = temp_dir / "stereo-tape-echo-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
         make_test_audio(input_path)
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
+        make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
             "--gain-db", "2", "--output-gain-db", "-1",
@@ -957,10 +995,22 @@ def browser_test() -> None:
             "--stereo-crossover-balance", "0",
         ]
         run(stereo_crossover_command, cwd=ROOT)
+        stereo_tape_echo_command = [
+            str(native_renderer), "render", str(stereo_tape_echo_input_path),
+            str(stereo_tape_echo_reference_path),
+            "--tape-echo-time-left-ms", "10",
+            "--tape-echo-time-right-ms", "20",
+            "--tape-echo-feedback", "0", "--tape-echo-mix", "1",
+            "--tape-echo-record-level", "0", "--tape-echo-bias", "0",
+            "--tape-echo-noise", "0", "--tape-echo-wow-flutter", "0",
+        ]
+        run(stereo_tape_echo_command, cwd=ROOT)
         LocalWebHandler.test_files = {
             "/__test_input.wav": input_path,
             "/__test_expected.wav": reference_path,
             "/__test_stereo_crossover_expected.wav": stereo_crossover_reference_path,
+            "/__test_stereo_tape_echo_input.wav": stereo_tape_echo_input_path,
+            "/__test_stereo_tape_echo_expected.wav": stereo_tape_echo_reference_path,
             "/__test_tuner.wav": tuner_path,
             "/__test_convolution_ir.wav": convolution_ir_path,
         }
@@ -977,9 +1027,78 @@ def browser_test() -> None:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
         url = base_url + "/web/index.html?selftest=1"
+        stereo_tape_echo_expression = (
+            "(async()=>{"
+            "const assert=(condition,message)=>{if(!condition)throw new Error(message)};"
+            "const row=document.querySelector('[data-effect=\"84\"]')?.closest('.effect-row');"
+            "assert(row?.dataset.category==='delay'&&row.querySelector('.effect-category-tag')?.textContent.trim()==='Delay',"
+            "'Tape Echo picker entry is not categorized as Delay');"
+            "const independent=document.querySelector('#tape-echo-independent-times');"
+            "const shared=document.querySelector('#tape-echo-shared-time-controls');"
+            "const split=document.querySelector('#tape-echo-independent-time-controls');"
+            "const left=document.querySelector('#tape-echo-time-left-ms');"
+            "const right=document.querySelector('#tape-echo-time-right-ms');"
+            "assert(independent&&shared&&split&&left&&right,'Independent Tape Echo UI controls are missing');"
+            "const posted=[];const portPrototype=MessagePort.prototype;"
+            "const originalPost=portPrototype.postMessage;"
+            "portPrototype.postMessage=function(message,...transfer){"
+            "if(message?.type==='tape-echo')posted.push(message.value);"
+            "return originalPost.call(this,message,...transfer)};"
+            "try{independent.checked=true;independent.dispatchEvent(new Event('change',{bubbles:true}));"
+            "left.value='10';left.dispatchEvent(new Event('input',{bubbles:true}));"
+            "right.value='20';right.dispatchEvent(new Event('input',{bubbles:true}));"
+            "assert(shared.hidden&& !split.hidden,'Independent L/R controls did not become visible');"
+            "assert(left.parentElement.querySelector('output').value==='10 ms'&&"
+            "right.parentElement.querySelector('output').value==='20 ms','L/R control readouts are incorrect');"
+            "const message=posted.at(-1);assert(message?.length===16&&message[11]===1&&"
+            "message[12]===10&&message[13]===20,'UI did not send the independent L/R values to the AudioWorklet');"
+            "}finally{portPrototype.postMessage=originalPost}"
+            "const createModule=(await import('/build/web/tabletfx_wasm.js')).default;"
+            "const module=await createModule();const sampleRate=8000;"
+            "const inputResponse=await fetch('/__test_stereo_tape_echo_input.wav');"
+            "const inputBytes=await inputResponse.arrayBuffer();const inputView=new DataView(inputBytes);"
+            "assert(inputView.getUint16(22,true)===2&&inputView.getUint16(34,true)===16,"
+            "'Stereo impulse fixture is not PCM16');const frames=(inputBytes.byteLength-44)/4;"
+            "const chain=module._tf_chain_create(sampleRate,2,frames);assert(chain,'Could not create WASM chain');"
+            "try{const inputOffset=module._tf_chain_input_buffer(chain)>>>2;"
+            "for(let frame=0;frame<frames;frame++){for(let channel=0;channel<2;channel++){"
+            "module.HEAPF32[inputOffset+frame*2+channel]=inputView.getInt16(44+(frame*2+channel)*2,true)/32768}}"
+            "module._tf_chain_set_tape_echo(chain,0,350,120,4,0,1,0,0,0,0,0,1,10,20,4,4);"
+            "assert(module._tf_chain_set_enabled(chain,84,1)===1,'WASM did not enable Tape Echo at index 84');"
+            "assert(module._tf_chain_begin(chain,frames)===frames,'WASM chain rejected Tape Echo ramp warmup');"
+            "module._tf_chain_process_effect(chain,84);module._tf_chain_reset(chain);"
+            "assert(module._tf_chain_begin(chain,frames)===frames,'WASM chain rejected impulse frame count');"
+            "module._tf_chain_process_effect(chain,84);module._tf_chain_finish(chain,frames);"
+            "module._tf_chain_process_output_gain(chain);module._tf_chain_process_output_limiter(chain);"
+            "const outputOffset=module._tf_chain_output_buffer(chain)>>>2;"
+            "const actual=module.HEAPF32.slice(outputOffset,outputOffset+frames*2);"
+            "assert(Math.abs(actual[80*2])>0.1&&Math.abs(actual[80*2+1])<1e-6,"
+            "'WASM left channel did not echo independently at 10 ms');"
+            "assert(Math.abs(actual[160*2])<1e-6&&Math.abs(actual[160*2+1])>0.05,"
+            "'WASM right channel did not echo independently at 20 ms');"
+            "const expectedResponse=await fetch('/__test_stereo_tape_echo_expected.wav');"
+            "const expectedBytes=await expectedResponse.arrayBuffer();const expectedView=new DataView(expectedBytes);"
+            "assert(expectedView.getUint16(22,true)===2&&expectedView.getUint16(34,true)===32,"
+            "'Native Tape Echo reference is not stereo float32');"
+            "const expected=new Float32Array(frames*2);for(let i=0;i<expected.length;i++)"
+            "expected[i]=expectedView.getFloat32(44+i*4,true);let maxError=0,errorSquares=0;"
+            "let firstMismatch=-1;for(let i=0;i<actual.length;i++){const error=actual[i]-expected[i];"
+            "maxError=Math.max(maxError,Math.abs(error));errorSquares+=error*error;"
+            "if(firstMismatch<0&&Math.abs(error)>1e-4)firstMismatch=i}"
+            "const rmsError=Math.sqrt(errorSquares/actual.length);"
+            "const tapSamples={wasmFrame0:[actual[0],actual[1]],nativeFrame0:[expected[0],expected[1]],"
+            "wasmFrame1:[actual[2],actual[3]],nativeFrame1:[expected[2],expected[3]],"
+            "wasmFrame80:[actual[160],actual[161]],nativeFrame80:[expected[160],expected[161]],"
+            "wasmFrame160:[actual[320],actual[321]],nativeFrame160:[expected[320],expected[321]],firstMismatch};"
+            "assert(maxError<4e-5&&rmsError<5e-6,`WASM/native Stereo Tape Echo mismatch: max ${maxError}, RMS ${rmsError}; samples ${JSON.stringify(tapSamples)}`);"
+            "return JSON.stringify({passed:true,category:'Delay',effectIndex:84,leftTimeMs:10,rightTimeMs:20,"
+            "leftEcho:actual[160],rightEcho:actual[321],maxError,rmsError,frames,tapSamples});"
+            "}finally{module._tf_chain_destroy(chain)}})()"
+        )
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
+                stereo_tape_echo_expression,
             )
         finally:
             server.shutdown()
@@ -998,6 +1117,8 @@ def browser_test() -> None:
         report = json.loads(result.get("text", "{}"))
         print("Browser/native chain comparison passed.")
         print(json.dumps(report, indent=2))
+        print("Stereo Tape Echo independent-control browser/WASM check passed.")
+        print(json.dumps(result["stereoTapeEcho"], indent=2))
 
 
 def main() -> None:

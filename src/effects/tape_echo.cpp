@@ -55,7 +55,7 @@ TapeEcho::TapeEcho(float sample_rate, std::uint16_t channels,
     current_tape_bias_ = parameters_.tape_bias;
     current_tape_noise_ = parameters_.tape_noise;
     current_wow_flutter_ = parameters_.wow_flutter;
-    time_step_ = 0.0F;
+    time_step_.fill(0.0F);
     feedback_step_ = 0.0F;
     mix_step_ = 0.0F;
     record_level_step_ = 0.0F;
@@ -133,6 +133,25 @@ float TapeEcho::selected_time_ms() const noexcept {
     return parameters_.time_ms;
 }
 
+float TapeEcho::selected_time_ms(std::uint16_t channel) const noexcept {
+    if (!parameters_.independent_stereo_times || channel > 1U) {
+        return selected_time_ms();
+    }
+
+    const float time_ms = channel == 0U ? parameters_.left_time_ms
+                                        : parameters_.right_time_ms;
+    if (parameters_.time_mode == DelayTimeMode::tempo_sync) {
+        const DelayDivision division = channel == 0U
+            ? parameters_.left_tap_division
+            : parameters_.right_tap_division;
+        const float beat_ms = 60000.0F / parameters_.tempo_bpm;
+        return bounded(beat_ms * beats_for_division(division), time_ms,
+                       kMinimumTimeMs, std::min(kMaximumTimeMs, max_delay_ms_));
+    }
+    return bounded(time_ms, 350.0F, kMinimumTimeMs,
+                   std::min(kMaximumTimeMs, max_delay_ms_));
+}
+
 void TapeEcho::configure(TapeEchoParameters parameters) noexcept {
     const float maximum_time = std::min(kMaximumTimeMs, max_delay_ms_);
     parameters.time_ms = bounded(parameters.time_ms, 350.0F,
@@ -145,6 +164,16 @@ void TapeEcho::configure(TapeEchoParameters parameters) noexcept {
                                    kMinimumTempoBpm, kMaximumTempoBpm);
     if (!valid_division(parameters.tap_division)) {
         parameters.tap_division = DelayDivision::quarter;
+    }
+    parameters.left_time_ms = bounded(parameters.left_time_ms, 350.0F,
+                                      kMinimumTimeMs, maximum_time);
+    parameters.right_time_ms = bounded(parameters.right_time_ms, 350.0F,
+                                       kMinimumTimeMs, maximum_time);
+    if (!valid_division(parameters.left_tap_division)) {
+        parameters.left_tap_division = DelayDivision::quarter;
+    }
+    if (!valid_division(parameters.right_tap_division)) {
+        parameters.right_tap_division = DelayDivision::quarter;
     }
     parameters.feedback = bounded(parameters.feedback, 0.35F,
                                   0.0F, kMaximumFeedback);
@@ -159,13 +188,16 @@ void TapeEcho::configure(TapeEchoParameters parameters) noexcept {
                                      0.0F, 1.0F);
 
     parameters_ = parameters;
-    const float requested_time = selected_time_ms();
-    const float target_time = static_cast<float>(
-        static_cast<double>(sample_rate_) * requested_time / 1000.0);
-    target_time_samples_ = std::clamp(target_time, 1.0F,
-                                      static_cast<float>(capacity_frames_ - 2U));
-    time_step_ = (target_time_samples_ - current_time_samples_) /
-                 static_cast<float>(ramp_total_);
+    for (std::uint16_t channel = 0U; channel < 2U; ++channel) {
+        const float requested_time = selected_time_ms(channel);
+        const float target_time = static_cast<float>(
+            static_cast<double>(sample_rate_) * requested_time / 1000.0);
+        target_time_samples_[channel] = std::clamp(
+            target_time, 1.0F, static_cast<float>(capacity_frames_ - 2U));
+        time_step_[channel] =
+            (target_time_samples_[channel] - current_time_samples_[channel]) /
+            static_cast<float>(ramp_total_);
+    }
     feedback_step_ = (parameters_.feedback - current_feedback_) /
                      static_cast<float>(ramp_total_);
     mix_step_ = (parameters_.mix - current_mix_) /
@@ -210,19 +242,19 @@ float TapeEcho::record_to_tape(float sample) const noexcept {
     return headroom * std::tanh(finite_input(sample) * drive / headroom);
 }
 
-float TapeEcho::modulated_delay_samples() const noexcept {
+float TapeEcho::modulated_delay_samples(std::uint16_t channel) const noexcept {
     const float max_age = static_cast<float>(capacity_frames_ - 2U);
     const float wanted_depth = sample_rate_ *
         (kWowDepthMs + kFlutterDepthMs) / 1000.0F * current_wow_flutter_;
     const float depth = std::min(wanted_depth,
-        std::max(0.0F, std::min(current_time_samples_ - 1.0F,
-                                max_age - current_time_samples_)));
+        std::max(0.0F, std::min(current_time_samples_[channel] - 1.0F,
+                                max_age - current_time_samples_[channel])));
     const float wow = std::sin(kTau * wow_phase_);
     const float flutter = std::sin(kTau * flutter_phase_);
     const float weighting = kWowDepthMs / (kWowDepthMs + kFlutterDepthMs);
     const float modulation = depth *
         (weighting * wow + (1.0F - weighting) * flutter);
-    return std::clamp(current_time_samples_ + modulation, 1.0F, max_age);
+    return std::clamp(current_time_samples_[channel] + modulation, 1.0F, max_age);
 }
 
 float TapeEcho::signed_random(std::uint32_t& state) noexcept {
@@ -237,7 +269,9 @@ float TapeEcho::signed_random(std::uint32_t& state) noexcept {
 
 void TapeEcho::advance_parameters() noexcept {
     if (ramp_remaining_ != 0U) {
-        current_time_samples_ += time_step_;
+        for (std::size_t channel = 0U; channel < current_time_samples_.size(); ++channel) {
+            current_time_samples_[channel] += time_step_[channel];
+        }
         current_feedback_ += feedback_step_;
         current_mix_ += mix_step_;
         current_record_level_ += record_level_step_;
@@ -271,11 +305,11 @@ void TapeEcho::process_audio(std::span<float> interleaved,
     const std::size_t frames = interleaved.size() / channels_;
     for (std::size_t frame = 0U; frame < frames; ++frame) {
         advance_parameters();
-        const float delay_samples = modulated_delay_samples();
         const std::size_t write_offset = write_frame_ * channels_;
         for (std::uint16_t channel = 0U; channel < channels_; ++channel) {
             const std::size_t index = frame * channels_ + channel;
             const float input = finite_input(interleaved[index]);
+            const float delay_samples = modulated_delay_samples(channel);
             const float delayed = read_delay(delay_samples, channel);
             const float noise = signed_random(random_state_) *
                                 current_tape_noise_ * kMaximumTapeNoise;

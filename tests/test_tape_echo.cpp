@@ -122,6 +122,68 @@ void test_tempo_synced_time() {
     assert(audio[24000U] > 0.4F);
 }
 
+void test_independent_stereo_timing_controls() {
+    using namespace tabletfx;
+    TapeEchoParameters shared_parameters;
+    shared_parameters.time_ms = 10.0F;
+    shared_parameters.feedback = 0.0F;
+    shared_parameters.mix = 1.0F;
+    shared_parameters.record_level = 0.0F;
+    shared_parameters.tape_bias = 0.0F;
+    shared_parameters.tape_noise = 0.0F;
+    shared_parameters.wow_flutter = 0.0F;
+    TapeEcho shared_time(kSampleRate, 2U, 2000.0F, shared_parameters);
+    std::vector<float> shared_audio(500U * 2U, 0.0F);
+    shared_audio[0U] = 0.5F;
+    shared_audio[1U] = 0.25F;
+    shared_time.process(shared_audio, 2U);
+    assert(shared_audio[480U * 2U] > 0.4F);
+    assert(shared_audio[480U * 2U + 1U] > 0.2F);
+
+    TapeEchoParameters parameters;
+    parameters.independent_stereo_times = true;
+    parameters.left_time_ms = 10.0F;
+    parameters.right_time_ms = 20.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.record_level = 0.0F;
+    parameters.tape_bias = 0.0F;
+    parameters.tape_noise = 0.0F;
+    parameters.wow_flutter = 0.0F;
+
+    TapeEcho free_time(kSampleRate, 2U, 2000.0F, parameters);
+    std::vector<float> free_audio(1000U * 2U, 0.0F);
+    free_audio[0U] = 0.5F;
+    free_audio[1U] = 0.25F;
+    free_time.process(free_audio, 2U);
+    assert(std::abs(free_audio[479U * 2U]) < kTolerance);
+    assert(std::abs(free_audio[479U * 2U + 1U]) < kTolerance);
+    assert(free_audio[480U * 2U] > 0.4F);
+    assert(std::abs(free_audio[480U * 2U + 1U]) < kTolerance);
+    assert(std::abs(free_audio[959U * 2U]) < kTolerance);
+    assert(std::abs(free_audio[959U * 2U + 1U]) < kTolerance);
+    assert(std::abs(free_audio[960U * 2U]) < kTolerance);
+    assert(free_audio[960U * 2U + 1U] > 0.2F);
+
+    parameters.time_mode = DelayTimeMode::tempo_sync;
+    parameters.tempo_bpm = 120.0F;
+    parameters.left_tap_division = DelayDivision::eighth;
+    parameters.right_tap_division = DelayDivision::quarter;
+    TapeEcho tempo_sync(kSampleRate, 2U, 2000.0F, parameters);
+    std::vector<float> tempo_audio(24004U * 2U, 0.0F);
+    tempo_audio[0U] = 0.5F;
+    tempo_audio[1U] = 0.25F;
+    tempo_sync.process(tempo_audio, 2U);
+    assert(std::abs(tempo_audio[11999U * 2U]) < kTolerance);
+    assert(std::abs(tempo_audio[11999U * 2U + 1U]) < kTolerance);
+    assert(tempo_audio[12000U * 2U] > 0.4F);
+    assert(std::abs(tempo_audio[12000U * 2U + 1U]) < kTolerance);
+    assert(std::abs(tempo_audio[23999U * 2U]) < kTolerance);
+    assert(std::abs(tempo_audio[23999U * 2U + 1U]) < kTolerance);
+    assert(std::abs(tempo_audio[24000U * 2U]) < kTolerance);
+    assert(tempo_audio[24000U * 2U + 1U] > 0.2F);
+}
+
 void test_record_level_bias_noise_and_modulation_are_active() {
     using namespace tabletfx;
     TapeEchoParameters clean;
@@ -269,6 +331,7 @@ int main() {
     test_defaults_bounds_and_invalid_configuration();
     test_free_time_impulse_and_mix();
     test_tempo_synced_time();
+    test_independent_stereo_timing_controls();
     test_record_level_bias_noise_and_modulation_are_active();
     test_spillover_and_stereo_isolation();
     test_invalid_samples_channel_mismatch_and_no_allocations();

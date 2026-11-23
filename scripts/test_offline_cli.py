@@ -472,6 +472,51 @@ def check_tape_echo(executable: Path) -> None:
                 "Tape Echo spillover must be on or off" not in invalid_spillover.stderr):
             raise AssertionError("Tape Echo accepted an unknown spillover state")
 
+        stereo_frames = 4004
+        stereo_source = root / "stereo-impulse.wav"
+        stereo_samples = [16384, 8192] + [0] * (stereo_frames * 2 - 2)
+        write_pcm16_channels(stereo_source, sample_rate, 2, stereo_samples)
+
+        def render_stereo(label: str, *parameters: str) -> tuple[float, ...]:
+            stereo_output = root / f"stereo-{label}.wav"
+            stereo_result = subprocess.run(
+                [str(executable), "render", str(stereo_source), str(stereo_output),
+                 "--tape-echo", *parameters,
+                 "--tape-echo-feedback", "0", "--tape-echo-mix", "1",
+                 "--tape-echo-record-level", "0", "--tape-echo-bias", "0",
+                 "--tape-echo-noise", "0", "--tape-echo-wow-flutter", "0"],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in stereo_result.stdout:
+                raise AssertionError(
+                    f"Stereo Tape Echo controls did not enable one processor: {stereo_result.stdout}")
+            data = stereo_output.read_bytes()
+            header = struct.unpack("<4sI4s4sIHHIIHH4sI", data[:44])
+            if header[6] != 2 or header[10] != 32:
+                raise AssertionError(f"Stereo Tape Echo output is not stereo float WAV: {header}")
+            values = struct.unpack("<" + "f" * ((len(data) - 44) // 4), data[44:])
+            if len(values) != stereo_frames * 2 or not all(math.isfinite(value) for value in values):
+                raise AssertionError("Stereo Tape Echo produced invalid output samples")
+            return values
+
+        free_values = render_stereo(
+            "free-times", "--tape-echo-time-mode", "milliseconds",
+            "--tape-echo-time-left-ms", "10", "--tape-echo-time-right-ms", "20")
+        if not free_values[80 * 2] > 0.35 or abs(free_values[80 * 2 + 1]) > 1.0e-6:
+            raise AssertionError("Tape Echo did not render the independent 10 ms left delay")
+        if abs(free_values[160 * 2]) > 1.0e-6 or not free_values[160 * 2 + 1] > 0.17:
+            raise AssertionError("Tape Echo did not render the independent 20 ms right delay")
+
+        division_values = render_stereo(
+            "tempo-divisions", "--tape-echo-time-mode", "tempo-sync",
+            "--tape-echo-tempo-bpm", "120",
+            "--tape-echo-tap-division-left", "eighth",
+            "--tape-echo-tap-division-right", "quarter")
+        if not division_values[2000 * 2] > 0.35 or abs(division_values[2000 * 2 + 1]) > 1.0e-6:
+            raise AssertionError("Tape Echo did not render the left eighth-note division at 120 BPM")
+        if abs(division_values[4000 * 2]) > 1.0e-6 or not division_values[4000 * 2 + 1] > 0.17:
+            raise AssertionError("Tape Echo did not render the right quarter-note division at 120 BPM")
+
 
 def check_octave_fuzz(executable: Path) -> None:
     sample_rate = 8000

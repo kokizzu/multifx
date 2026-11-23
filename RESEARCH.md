@@ -10,6 +10,10 @@ Research baseline: `GOAL.md` was supplied with a source bibliography dated 20 No
 - The Amp Rack audit in `GOAL.md` identifies a pinned source snapshot and warns that bundled binary libraries, commented-out source modules, and individual effect licenses must be considered separately.
 - Pitch candidates in `GOAL.md` are not yet integrated, built, or measured in this project. Do not treat library buffer/window values as end-to-end latency.
 
+## Fender Tone Master Pro Stereo Tape Echo control check (2026-11-23)
+
+The official Tone Master Pro Model Guide v1.1.100, pp. 49–50, lists Stereo Tape Echo controls for independent left and right delay times and tap divisions. Feedback, Mix, Record Level, Tape Bias, Tape Noise, Wow and Flutter, and Spillover are shared controls. The guide warns that high feedback may self-oscillate and gives no numeric bounds, defaults, or DSP topology. Fender's current firmware page lists v1.8.85, dated 2026-11-18, but its release notes do not mention Stereo Tape Echo; exact applicability of the older model-guide revision to that firmware remains unconfirmed. TabletFX now adds optional independent L/R time or tempo-division controls while retaining shared timing by default for existing presets. Its modes, ranges, defaults, smoothing, and signal processing are project-authored and do not claim Fender parity. Sources: [Tone Master Pro Model Guide v1.1.100](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf), [current Fender firmware notes](https://support.fender.com/hc/en-gb/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates).
+
 ## Flagship effect-list audit: Axom Max, HeadRush Prime, and XR1 (2026-11-23)
 
 This supplements the focused flagship comparison in `FLAGSHIP_EFFECT_COMPARISON.md`; it is not a complete audit of any device's library or of this repository's DSP.
