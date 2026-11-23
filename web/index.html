@@ -173,8 +173,9 @@
              <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="82"><span class="effect-number">83</span><span class="effect-name">Octobot · project-authored</span><span class="effect-default">Direct dry · Down octave · Sizzle octave-up fuzz</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
              <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="83"><span class="effect-number">84</span><span class="effect-name">AM Ring Mod · project-authored</span><span class="effect-default">Rate · Depth · Mix · Level</span><span class="effect-category-tag">Modulation</span></label>
              <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="84"><span class="effect-number">85</span><span class="effect-name">Tape Echo · project-authored</span><span class="effect-default">Time · Tap Division · Feedback · Mix · Record Level · Bias · Noise · Wow/Flutter · Spillover</span><span class="effect-category-tag">Delay</span></label>
-             <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="85" checked><span class="effect-number">86</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-             <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="86" checked><span class="effect-number">87</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+              <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="85"><span class="effect-number">86</span><span class="effect-name">Octave Fuzz · project-authored</span><span class="effect-default">Boost · Volume · Octave Switch</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
+              <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="86" checked><span class="effect-number">87</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+              <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="87" checked><span class="effect-number">88</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -906,6 +907,15 @@
           <label class="mix-control" for="tape-echo-spillover"><span>Spillover</span><input id="tape-echo-spillover" type="checkbox"></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 pp. 49–50 documents these control names for Tape Echo and warns that high Feedback may self-oscillate; it publishes no numeric ranges, defaults, or DSP. This project uses its own 10 ms control ramps, tape saturation/noise, and fixed 0.31/6.2 Hz wow/flutter rates; those settings and behavior are project-authored, not Fender or Echoplex parity. Manual: <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100</a>.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Octave Fuzz project-authored controls">
+        <h3>Octave Fuzz · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="octave-fuzz-boost"><span>Boost · project range 0–100%</span><output id="octave-fuzz-boost-value" for="octave-fuzz-boost">55%</output><input id="octave-fuzz-boost" type="range" min="0" max="1" step="0.01" value="0.55"></label>
+          <label class="mix-control" for="octave-fuzz-volume"><span>Volume · project range 0–200%</span><output id="octave-fuzz-volume-value" for="octave-fuzz-volume">75%</output><input id="octave-fuzz-volume" type="range" min="0" max="2" step="0.01" value="0.75"></label>
+          <label class="mix-control" for="octave-fuzz-octave-switch"><span>Octave Switch</span><input id="octave-fuzz-octave-switch" type="checkbox" checked></label>
+        </div>
+        <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 p. 26 lists Boost, Volume, and Octave Switch for its Octave Fuzz, but publishes no numeric ranges, defaults, or DSP. These controls, ranges, and the project’s octave-plus-fuzz algorithm are independent and do not claim Fender model parity. <a href="https://www.fmicassets.com/Damroot/Original/10146/OM_2274900000_Tone-Master-Pro-Model-Guide-H_EN.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100</a>.</p>
       </div>
       <div class="gain-controls" aria-label="Manual Through-Zero Flanger project-authored controls">
         <label class="mix-control" for="manual-tzf-minimum-time">

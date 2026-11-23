@@ -1627,6 +1627,26 @@ TAPE_ECHO_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+OCTAVE_FUZZ_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/octave_fuzz.hpp",
+    "src/effects/octave_fuzz.cpp",
+    "tests/test_octave_fuzz.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/audio_regression.py",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1761,6 +1781,10 @@ CHECKPOINTS = {
     "tape-echo": (
         TAPE_ECHO_CHECKPOINT_PATHS,
         "feat: add project-authored Tape Echo",
+    ),
+    "octave-fuzz": (
+        OCTAVE_FUZZ_CHECKPOINT_PATHS,
+        "feat: add project-authored Octave Fuzz",
     ),
 }
 

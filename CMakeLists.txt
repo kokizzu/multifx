@@ -28,6 +28,7 @@ add_library(tabletfx_core
     src/effects/flanger.cpp
     src/effects/manual_thru_zero_flanger.cpp
     src/effects/octobot.cpp
+    src/effects/octave_fuzz.cpp
     src/effects/phaser.cpp
     src/effects/overdrive.cpp
     src/effects/mid_overdrive.cpp
@@ -235,6 +236,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_octobot_tests tests/test_octobot.cpp)
     target_link_libraries(tabletfx_octobot_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_octobot_tests COMMAND tabletfx_octobot_tests)
+
+    add_executable(tabletfx_octave_fuzz_tests tests/test_octave_fuzz.cpp)
+    target_link_libraries(tabletfx_octave_fuzz_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_octave_fuzz_tests COMMAND tabletfx_octave_fuzz_tests)
 
     add_executable(tabletfx_phaser_tests tests/test_phaser.cpp)
     target_link_libraries(tabletfx_phaser_tests PRIVATE tabletfx_core)

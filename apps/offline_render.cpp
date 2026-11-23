@@ -246,6 +246,8 @@ struct Options {
     tabletfx::effects::AmRingModParameters am_ring_mod{};
     bool tape_echo_enabled = false;
     tabletfx::TapeEchoParameters tape_echo{};
+    bool octave_fuzz_enabled = false;
+    tabletfx::effects::OctaveFuzzParameters octave_fuzz{};
     bool bit_crusher_enabled = false;
     tabletfx::BitCrusherParameters bit_crusher{};
     bool rhythmic_slicer_enabled = false;
@@ -600,6 +602,21 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--am-ring-mod") {
             options.am_ring_mod_enabled = true;
+            continue;
+        }
+        if (key == "--octave-fuzz") {
+            options.octave_fuzz_enabled = true;
+            continue;
+        }
+        if (key == "--octave-fuzz-octave-switch") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --octave-fuzz-octave-switch");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.octave_fuzz.octave_switch = true;
+            else if (value == "off") options.octave_fuzz.octave_switch = false;
+            else throw std::invalid_argument("Octave Fuzz switch must be on or off");
+            options.octave_fuzz_enabled = true;
             continue;
         }
         if (key == "--tape-echo") {
@@ -2858,6 +2875,14 @@ Options parse_options(int argc, char** argv, int first) {
             options.tape_echo.wow_flutter = value;
             options.tape_echo_enabled = true;
         }
+        else if (key == "--octave-fuzz-boost") {
+            options.octave_fuzz.boost = value;
+            options.octave_fuzz_enabled = true;
+        }
+        else if (key == "--octave-fuzz-volume") {
+            options.octave_fuzz.volume = value;
+            options.octave_fuzz_enabled = true;
+        }
         else if (key == "--bit-crusher-mix") {
             options.bit_crusher.mix = value;
             options.bit_crusher_enabled = true;
@@ -3532,6 +3557,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::TapeEcho>(
             static_cast<float>(sample_rate), channels, 2000.0F,
             options.tape_echo));
+    }
+    if (options.octave_fuzz_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::OctaveFuzz>(
+            static_cast<float>(sample_rate), channels, options.octave_fuzz));
     }
     if (options.rhythmic_slicer_enabled) {
         effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(

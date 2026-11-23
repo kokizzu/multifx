@@ -290,6 +290,8 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--tape-echo-feedback", "0.4", "--tape-echo-mix", "0.3",
         "--tape-echo-record-level", "0.45", "--tape-echo-bias", "0.45",
         "--tape-echo-noise", "0.04", "--tape-echo-wow-flutter", "0.4",
+        "--octave-fuzz", "--octave-fuzz-boost", "0.55",
+        "--octave-fuzz-volume", "0.75", "--octave-fuzz-octave-switch", "on",
         "--rhythmic-slicer", "--rhythmic-slicer-tempo-sync", "on",
         "--rhythmic-slicer-tempo-bpm", "120",
         "--rhythmic-slicer-division", "sixteenth",
@@ -384,7 +386,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    expected_processors = 69 + int(three_stage_distortion)
+    expected_processors = 70 + int(three_stage_distortion)
     if not match or int(match.group(1)) <= 0 or int(match.group(2)) != expected_processors:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:
@@ -467,7 +469,7 @@ def main() -> None:
             three_stage_distortion=True,
         )
         print(f"OK Three-Stage Distortion on prerecorded EGFxSet bridge pickup: {report}")
-    print("All prerecorded clean guitar inputs rendered through the 66-stage chain with a deterministic local convolution IR, including the project-authored Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. A separate 68-stage bridge-pickup render enables the project-authored Three-Stage Distortion through the offline CLI.")
+    print("All prerecorded clean guitar inputs rendered through the 70-stage chain with a deterministic local convolution IR, including the project-authored Octave Fuzz, Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. A separate 71-stage bridge-pickup render enables the project-authored Three-Stage Distortion through the offline CLI.")
 
 
 if __name__ == "__main__":

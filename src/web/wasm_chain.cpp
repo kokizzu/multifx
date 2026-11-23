@@ -55,6 +55,7 @@
 #include "tabletfx/effects/octobot.hpp"
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/tape_echo.hpp"
+#include "tabletfx/effects/octave_fuzz.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -351,6 +352,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::TapeEcho>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::effects::OctaveFuzz>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -1845,6 +1849,16 @@ public:
             ->configure(parameters);
     }
 
+    void configure_octave_fuzz(float boost, float volume,
+                               std::uint32_t octave_switch) noexcept {
+        tabletfx::effects::OctaveFuzzParameters parameters;
+        parameters.boost = boost;
+        parameters.volume = volume;
+        parameters.octave_switch = octave_switch != 0U;
+        static_cast<tabletfx::effects::OctaveFuzz*>(effects_[85].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3202,6 +3216,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tape_echo(
         as_chain(opaque)->configure_tape_echo(
             time_mode, time_ms, tempo_bpm, tap_division, feedback, mix,
             record_level, tape_bias, tape_noise, wow_flutter, spillover);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_octave_fuzz(
+    void* opaque, float boost, float volume,
+    std::uint32_t octave_switch) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_octave_fuzz(boost, volume, octave_switch);
     }
 }
 
