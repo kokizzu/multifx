@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-23",
+  "updated": "2026-11-24",
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "b71a4f3d56a88a358218639230c7f8719213c2c1",
+  "previous_checkpoint_commit": "87813491c9e444bc4d48d8ad2521053041a581ff",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -55,9 +55,30 @@
       "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
       "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
       }
+    },
+    {
+      "name": "Fractal FM9-family Touch-Ladder filter",
+      "status": "verified",
+      "picker_index": 96,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide",
+        "revision": "November 2026; printed pp. 45–47. FM9-family guide; firmware downloads checked 2026-11-24.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Guide covers the FM9 family but does not name FM9 Mark II Turbo in the device comparison; firmware v12.0 lists Original/Turbo, not Mark II Turbo explicitly. Applicability to Mark II Turbo is family-level inference; installed firmware is unknown."
+      },
+      "documented_controls": "Touch-Ladder is the Ladder filter controlled by playing, with Touch-Wah envelope controls in place of Frequency/LFO: Start/Stop Frequency (100 Hz–10 kHz), Sweep Shape, Detector Source (block or physical input), Sensitivity, Attack, Release, and Emphasis. Ladder controls: LP/BP Mode, Resonance, Drive, LP-only Bass Comp, 2-/4-pole Order (4-pole documented default), and Low/High Cut.",
+      "project_controls": "Project-authored Touch-Ladder sweeps its Ladder response using processed block-input level and shared envelope controls. Physical-input detector routing is unavailable. Project scales, envelope mapping, nonlinear cascade, feedback, shelf behavior, and DSP do not claim Fractal parity.",
+      "verification": {
+        "native_ctest": "make test-stereo-filter passed 1/1 CTest",
+        "picker_rows": 99,
+        "browser": "make web-test-stereo-filter verified Touch-Ladder controls at Stereo Filter ID 96 in Filters & wah; the following checkpoint also tests the Touch-Ladder configuration.",
+        "notes": "No Fractal DSP/settings parity, device test, or human listening result."
+      }
     }
   ],
-  "current_checkpoint": {
+  "previous_checkpoint": {
     "name": "Line 6 Helix Stadium Poly Sustain-inspired hold",
     "status": "verified",
     "picker_index": 91,
@@ -83,12 +104,55 @@
       "notes": "Project-only Poly Sustain is excluded from native parity because the offline renderer has no matching option. Human listening, physical device checks, and Line 6 DSP/settings/sound parity remain open."
     }
   },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Touch-Wah filter mode and Envelope Filter distinction",
+    "status": "verified",
+    "picker_index": 96,
+    "category": "Filters & wah",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026; printed pp. 45–47. FM9-family guide; firmware downloads checked 2026-11-24.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "Guide covers the FM9 family but does not name FM9 Mark II Turbo in the device comparison; firmware v12.0 lists Original/Turbo, not Mark II Turbo explicitly. Applicability to Mark II Turbo is family-level inference; installed firmware is unknown."
+    },
+    "documented_controls": "Touch-Wah differs from Envelope Filter: Touch-Wah follows volume more literally and closes with natural note fade; Envelope Filter is attack-led and bouncy. Touch-Wah controls: Mode LOWPASS/BANDPASS/HIGHPASS/MIX; Sensitivity; Attack Time; Release Time; Sweep Shape; Resonance; Start/Stop Frequency (100 Hz–10 kHz); Emphasis; Detector Source (block input or physical input).",
+    "project_controls": "Touch-Wah is a separate type within the existing Stereo Filter row. It follows smoothed processed block-input level continuously, supports LP/BP/HP, and ignores LFO. Envelope Filter uses a project-authored 65% attack-rise trigger that decays during held input. Touch-Wah MIX and physical-input detector routing are unavailable. Response curves, the 65% trigger, numeric bounds/defaults except the documented sweep span, and DSP are project-authored; no Fractal parity.",
+    "verification": {
+      "native_ctest": "make test-stereo-filter passed 1/1 CTest; covers Touch-Wah natural fade, LFO independence, LP/HP mode distinction, and Envelope Filter attack/tail distinction.",
+      "fixture_safety": "11 fixture-safety checks passed.",
+      "picker_rows": 99,
+      "focused_browser": "make web-test-stereo-filter passed; 34-value Touch-Ladder and Touch-Wah settings reached WASM; Touch-Wah Play used prerecorded 48 kHz stereo Guitar-TECHS DI in Filters & wah at ID 96, peak 0.0589828, 95,994 active samples, difference RMS 0.0429977.",
+      "full_browser": "make web-test passed 102/102 CTest cases and 73-stage browser/native comparison at 48 kHz; max absolute error 0.00000668335, RMS error 0.00000121755; processor memory 78,988,508 B plus 10,364 B tuner state in fixed 96 MiB WASM heap.",
+      "notes": "FM9-family evidence only. No hardware, human-listening, or Fractal DSP/settings/sound parity result."
+    }
+  },
   "next_research": [
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Dynamic Delay: tempo Tap Division and repeat Low/High Cut",
+      "source": "Tone Master Pro Model Guide v1.1.100 Rev. A, p.45; firmware history current through v1.8.85 (2026-11-18); v1.6.34 explicitly extends Time to 30–2,000 ms",
+      "source_urls": [
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+      ],
+      "status": "Official guide names Time, Feedback, Mix, Tap Division, repeat Low/High Cut, Threshold, Attenuation, Release, Mod Rate/Depth/Mode, and Spillover. It gives no general bounds/defaults; v1.6.34 is the last explicit 30–2,000 ms range note found. Existing Ducking Delay lacks Tap Division and repeat cuts; a project-authored native increment is the next implementation target. Do not claim Fender DSP/range parity."
+    },
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Chromatic Pitch Shifter: ±2-octave pitch plus delay, feedback, tone and spillover",
+      "source": "Tone Master Pro Model Guide v1.1.100, p.66; update page lists v1.8.85 but no changed controls for this model",
+      "source_urls": [
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+      ],
+      "status": "Guide documents Mix, Pitch −2 to +2 octaves, Delay, Tap Division, Feedback, Tone, Spillover Switch, and recommends single-note playing without establishing polyphony or tracking quality. Current project PolyPitchShifter clamps ±12 semitones; implementation feasibility and latency need measurement before adding a new categorized Pitch stage."
+    },
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Poly Detune plus Stadium-specific Synth, Delay, Reverb, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "Poly Sustain has a partial project-authored implementation; Poly Detune and Stadium-specific controls/behavior remain unresolved",
+      "status": "Poly Sustain is implemented and verified. The current Stadium live manual omits individual model parameter tables and directs users to the device edit screen; Poly Detune and other Stadium-specific controls remain unresolved, and older Helix controls are not substituted.",
       "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0.",
       "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },
@@ -96,17 +160,26 @@
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
       "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; Step Filter and Step Filter Delay introduced in v1.8.45 on 2026-06-03; v1.8.58 dated 2026-07-15 fixed a crash involving step effects",
-      "source_urls": ["https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates", "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here", "https://www.fender.com/products/tone-master-pro"],
-      "status": "Step Filter Delay is integrated in the categorized Delay picker at index 92 with browser/WASM controls; native tests and WASM build pass. The full browser test currently OOMs in the earlier Stereo Tape Echo check before reaching the Step Delay local-guitar smoke. Exact manufacturer controls, ranges, defaults, and stereo behavior remain unpublished.",
+      "source_urls": [
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here",
+        "https://www.fender.com/products/tone-master-pro"
+      ],
+      "status": "Step Filter Delay remains integrated at categorized Delay index 92; latest make web-test passes its local-DI Play smoke, the 102-case native suite, and 73-stage browser/native comparison. Exact Step Filter/Step Filter Delay numeric controls and topology remain unpublished. Dynamic Delay and Chromatic Pitch Shifter are separate documented gaps recorded below.",
       "known_controls": "No exact model control tables were found. Fender describes Step Filter as rhythmic sweeps/pulses/morphs and Step Filter Delay as unusual rhythms/textures. TabletFX Step Filter Delay controls, ranges, defaults, timing model, and DSP are project-authored, not Fender settings.",
       "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter or Step Filter Delay behavior. The linked Model Guide PDF could not be parsed, so do not infer manufacturer parameter controls or mono/stereo behavior. Browser playback smoke remains unverified in the current test ordering because the full suite aborts earlier on WASM OOM."
     },
     {
       "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Static Volume/Pan utility after Fender Step Filter Delay integration",
+      "feature": "Remaining Pitch/Synth/Tremolo controls and FM9 Filter MIX/physical detector source",
       "source": "Fractal Audio Systems Blocks Guide dated November 2026, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-23",
-      "source_urls": ["https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf", "https://www.fractalaudio.com/fm9-downloads/", "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit", "https://www.fractalaudio.com/about/"],
-      "status": "Next identified implementation after integrating and validating the standalone Fender Step Filter Delay prototype; build a project-authored static Volume/Pan utility, not Fractal emulation",
+      "source_urls": [
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/",
+        "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
+        "https://www.fractalaudio.com/about/"
+      ],
+      "status": "Volume/Pan and the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah are implemented as project-authored features. Touch-Wah MIX and physical detector selection remain open; pitch ±24 vs project ±12, voice harmonies/custom scales, arpeggiator range ±24 vs ±7, bass tracking, and Bias/Optical/Neon Tremolo variants remain unresolved.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
       "qualification": "The current guide cover includes FM9-family products and is dated November 2026. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },
@@ -114,8 +187,14 @@
       "device": "HeadRush Prime",
       "feature": "Spring Guru, Kill Seq/Splicer, named synths, and arpeggiator behavior",
       "source": "Prime v5.2.0 firmware notes (2026-10), v4.0.0 notes (2024-11), v3.2 notes, current product page, and the linked v5.2.0 User Guide that could not be parsed",
-      "source_urls": ["https://www.headrushfx.com/products/prime/", "https://www.headrushfx.com/downloads", "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf", "https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf", "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf"],
-      "status": "categories, model names, and selected firmware additions verified; per-effect parameter tables and timing/polyphony details remain unresolved",
+      "source_urls": [
+        "https://www.headrushfx.com/products/prime/",
+        "https://www.headrushfx.com/downloads",
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf",
+        "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf"
+      ],
+      "status": "Spring Guru, Kill Seq, Splicer, Hybrid Synth, Electric Piano, and DB-33 Organ are listed; firmware notes add selected features. Exact effect-specific controls, ranges/defaults, timing/polyphony, and model behavior were not recoverable from accessible official sources; do not infer them from older HeadRush products.",
       "known_controls": "Product page lists Ambi-Verb, Hybrid Synth, Electric Piano, and DB-33 Organ in Synth. v3.2 added Hybrid Synth, Electric Piano, and DB-33 Organ and moved Ambi Verb to Synth. v4.0 added Spring Guru in Reverb, Kill Seq/Splicer in Rhythmic, and arpeggiator controls for Hybrid Synth, Electric Piano, and DB-33 Organ.",
       "qualification": "v5.2 notes list no changes to these effects. The linked 11.7 MB v5.2 guide could not be parsed; exact per-effect controls, ranges/defaults, input-note polyphony, rhythmic resolution, and DSP behavior are unknown. Product Pitch heading says seven while displaying eight bullets with Octaves duplicated. C-Verb controls have no published numeric ranges; project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget, so no HeadRush parity or glitch-free real-time claim."
     },
@@ -123,8 +202,12 @@
       "device": "Melofty Axom Max",
       "feature": "effect families, Synth/Inst, categories, parameters and routing",
       "source": "Exact-model English Manual V1.7.4 dated 2026-08-31; official downloads list Axom Max firmware/app V1.9.2 dated 2026-10-27",
-      "source_urls": ["https://www.meloftyaudio.com/support/downloads", "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf", "https://apps.apple.com/de/app/melofty/id6762972347?platform=ipad"],
-      "status": "family labels and generic routing controls documented; exact per-effect names/parameter tables unavailable",
+      "source_urls": [
+        "https://www.meloftyaudio.com/support/downloads",
+        "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf",
+        "https://apps.apple.com/de/app/melofty/id6762972347?platform=ipad"
+      ],
+      "status": "Official manual v1.7.4, firmware-download listing v1.9.2, and app notes were checked; broad families/routing and generic app controls are documented, but exact per-effect control tables/ranges and current firmware behavior remain unavailable.",
       "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables.",
       "qualification": "The accessible manual is V1.7.4, not documentation for V1.9.2 firmware. Manual says 19 modules/880+ models; a secondary indexed Quick Guide lists 20 picker labels. Preserve the unresolved count mismatch and do not infer Axom model/control matching or installed firmware from the app notes."
     },
@@ -132,8 +215,13 @@
       "device": "XRecer XR1",
       "feature": "effect models/parameters, FX Loop, global EQ, scenes and looper",
       "source": "Official FAQ checked 2026-11-23; FAQ lists OS 1.0.0; linked exact-model manual at wiki.xrecer.com was JavaScript-only and unreadable in this review",
-      "source_urls": ["https://www.xrecer.com/pages/faq", "https://www.xrecer.com/products/xr1", "https://www.xrecer.com/pages/download", "https://wiki.xrecer.com/"],
-      "status": "FAQ confirms categories and system constraints, but manual is JS-only and unavailable to the current reader; exact effect names/control tables unknown",
+      "source_urls": [
+        "https://www.xrecer.com/pages/faq",
+        "https://www.xrecer.com/products/xr1",
+        "https://www.xrecer.com/pages/download",
+        "https://wiki.xrecer.com/"
+      ],
+      "status": "Official FAQ confirms 111 effect models/categories and some system constraints, but the manual is JS-only and unreadable in this reader; exact model names/parameters remain unknown. Seller pages are not used to fill manual gaps.",
       "known_controls": "FAQ distinguishes Cabinet IR Loader from Reverb IR Loader; both have single/dual versions and use 24-bit/48 kHz WAV IR files exactly 2,048 samples long. Channel count and what 'dual' combines are unspecified. It also documents four chains × eight blocks; one looper per preset with four-minute loop length and eight saved files; five-band global EQ; and external FX Loop send/return/mix. These are system/format facts, not per-effect control tables.",
       "qualification": "FAQ describes two FX loops (Send/Return 1 and 2), while the product I/O graphic says '3 Mono/Stereo FX Loops'; preserve the unresolved 2-versus-3 count. The project convolver is room/reverb IR processing, not cabinet loading; its 1,024-frame partition adds about 21.33 ms at 48 kHz and XR1-comparable IR latency is untested. Cabinet IR loading is a future gap, not the next implementation scope. Exact effect names and parameter values remain unknown. Planned OS v1.1 vocal processing is not current OS 1.0.0."
     }

@@ -32,6 +32,9 @@ enum class StereoFilterType : std::uint8_t {
     // Envelope-driven Ladder mode; detects this effect's block input. The
     // Fractal physical-input source selector is not supported by this API.
     TouchLadderFilter,
+    // Direct envelope-driven resonant filter; detects this effect's block
+    // input. The physical-input source and Mix mode are not supported here.
+    TouchWahFilter,
 };
 
 enum class StereoFilterMode : std::uint8_t {
@@ -91,9 +94,10 @@ struct StereoFilterParameters {
     float mod_frequency_hz = 4000.0F;
     std::uint8_t lfo_quantize_steps = 0;
     StereoFilterMode mode = StereoFilterMode::Lowpass;
-    // For Auto-Wah, Envelope Filter, and Touch-Ladder, this project uses
-    // frequency_hz and mod_frequency_hz as the sweep endpoints. Touch-Ladder
-    // interprets them as cutoff at the softest and hardest detected input.
+    // For Auto-Wah, Envelope Filter, Touch-Ladder, and Touch-Wah, this project
+    // uses frequency_hz and mod_frequency_hz as the sweep endpoints. Touch-
+    // Ladder and Touch-Wah interpret them as cutoff at the softest and hardest
+    // input.
     // Sweep scaling, sensitivity, timing, and emphasis retain project-authored
     // values; no physical-input detector source selector is exposed.
     float sweep_shape = 1.0F;
@@ -207,6 +211,9 @@ private:
     std::uint32_t lfo_cycle_ = 0U;
     std::array<float, 2> envelope_emphasis_lowpass_{};
     float envelope_level_ = 0.0F;
+    // Envelope Filter uses a project-authored attack trigger that decays while
+    // the note sustains; Touch-Wah follows envelope_level_ continuously.
+    float envelope_trigger_level_ = 0.0F;
     float attack_alpha_ = 0.0F;
     float release_alpha_ = 0.0F;
     float emphasis_alpha_ = 0.0F;

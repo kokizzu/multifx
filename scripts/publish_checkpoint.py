@@ -1982,6 +1982,7 @@ FRACTAL_FILTER_LADDER_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "research-state.json",
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
@@ -2157,7 +2158,7 @@ CHECKPOINTS = {
     ),
     "fractal-filter-ladder": (
         FRACTAL_FILTER_LADDER_CHECKPOINT_PATHS,
-        "feat: add project-authored Touch-Ladder filter mode",
+        "feat: add project-authored Touch-Wah filter mode",
     ),
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,

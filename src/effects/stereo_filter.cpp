@@ -60,7 +60,8 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.type = sanitize_type(parameters.type);
     const bool swept_type = parameters.type == StereoFilterType::AutoWah ||
                             parameters.type == StereoFilterType::EnvelopeFilter ||
-                            parameters.type == StereoFilterType::TouchLadderFilter;
+                            parameters.type == StereoFilterType::TouchLadderFilter ||
+                            parameters.type == StereoFilterType::TouchWahFilter;
     const float minimum_frequency = swept_type ? 100.0F : 20.0F;
     const float maximum_frequency = swept_type
         ? std::min(10000.0F, nyquist_limit())
@@ -170,7 +171,9 @@ void StereoFilter::process(std::span<float> interleaved,
         parameters_.type == StereoFilterType::EnvelopeFilter;
     const bool is_touch_ladder =
         parameters_.type == StereoFilterType::TouchLadderFilter;
-    const bool has_envelope_sweep = is_envelope_filter || is_touch_ladder;
+    const bool is_touch_wah = parameters_.type == StereoFilterType::TouchWahFilter;
+    const bool has_envelope_sweep =
+        is_envelope_filter || is_touch_ladder || is_touch_wah;
     const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
                          !has_envelope_sweep &&
                          parameters_.type != StereoFilterType::FeedForwardComb &&
@@ -200,13 +203,31 @@ void StereoFilter::process(std::span<float> interleaved,
                 detector_level = std::max(detector_level, emphasized);
             }
 
-            const float alpha = detector_level > envelope_level_
+            const float previous_level = envelope_level_;
+            const float alpha = detector_level > previous_level
                 ? attack_alpha_
                 : release_alpha_;
-            envelope_level_ = alpha * envelope_level_ +
+            envelope_level_ = alpha * previous_level +
                 (1.0F - alpha) * detector_level;
+            float sweep_level = envelope_level_;
+            if (is_envelope_filter) {
+                // Project-authored attack trigger: a rising level starts a
+                // short quacky sweep that releases during a held note. This
+                // keeps Envelope Filter distinct from Touch-Wah's continuous
+                // volume-following response.
+                const float trigger_threshold =
+                    std::max(1.0e-4F, previous_level * 0.65F);
+                if (detector_level > previous_level + trigger_threshold) {
+                    envelope_trigger_level_ = attack_alpha_ *
+                        envelope_trigger_level_ +
+                        (1.0F - attack_alpha_) * detector_level;
+                } else {
+                    envelope_trigger_level_ *= release_alpha_;
+                }
+                sweep_level = envelope_trigger_level_;
+            }
             const float envelope_db = 20.0F * std::log10(
-                std::max(envelope_level_, 1.0e-6F));
+                std::max(sweep_level, 1.0e-6F));
             const float normalized = parameters_.sensitivity_db >= -1.0e-6F
                 ? (envelope_db >= 0.0F ? 1.0F : 0.0F)
                 : std::clamp(
@@ -312,6 +333,7 @@ void StereoFilter::reset() noexcept {
     lfo_cycle_ = 0U;
     envelope_emphasis_lowpass_.fill(0.0F);
     envelope_level_ = 0.0F;
+    envelope_trigger_level_ = 0.0F;
 }
 
 float StereoFilter::bounded(float value, float fallback, float minimum,
@@ -341,6 +363,7 @@ StereoFilterType StereoFilter::sanitize_type(StereoFilterType type) noexcept {
     case StereoFilterType::EnvelopeFilter:
     case StereoFilterType::LadderFilter:
     case StereoFilterType::TouchLadderFilter:
+    case StereoFilterType::TouchWahFilter:
         return type;
     }
     return StereoFilterType::Lowpass;
@@ -428,7 +451,8 @@ std::size_t StereoFilter::make_coefficients(
             effective_type = StereoFilterType::Highpass;
             break;
         }
-    } else if (parameters_.type == StereoFilterType::EnvelopeFilter) {
+    } else if (parameters_.type == StereoFilterType::EnvelopeFilter ||
+               parameters_.type == StereoFilterType::TouchWahFilter) {
         switch (parameters_.mode) {
         case StereoFilterMode::Lowpass:
             effective_type = StereoFilterType::Lowpass;
@@ -548,6 +572,7 @@ std::size_t StereoFilter::make_coefficients(
     case StereoFilterType::EnvelopeFilter:
     case StereoFilterType::LadderFilter:
     case StereoFilterType::TouchLadderFilter:
+    case StereoFilterType::TouchWahFilter:
         break;
     }
     return 0U;

@@ -327,30 +327,29 @@ void test_auto_wah_automatically_sweeps_filter_mode() {
 void test_envelope_filter_tracks_input_level_without_lfo() {
     constexpr float sample_rate = 48000.0F;
     constexpr std::size_t frames = 48000U;
-    constexpr std::size_t warmup = 12000U;
+    constexpr std::size_t attack_frames = 4800U;
+    constexpr std::size_t release_begin = 24000U;
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::EnvelopeFilter;
-    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
     parameters.frequency_hz = 300.0F;
     parameters.mod_frequency_hz = 6000.0F;
-    parameters.q = 4.0F;
     parameters.sensitivity_db = -36.0F;
     parameters.attack_time_ms = 5.0F;
     parameters.release_time_ms = 80.0F;
     parameters.lfo_enabled = true;
 
-    const auto render = [&](float input_gain) {
-        tabletfx::StereoFilter effect(sample_rate, parameters);
-        auto audio = tone(sample_rate, 2500.0F, frames);
-        for (float& sample : audio) sample *= input_gain;
-        effect.process(audio, 1U);
-        return rms(audio, warmup) / input_gain;
-    };
-
-    const float soft_gain = render(0.01F);
-    const float hard_gain = render(0.8F);
-    require(hard_gain > soft_gain * 2.0F,
-            "Envelope Filter did not open farther for a stronger pick attack");
+    tabletfx::StereoFilter effect(sample_rate, parameters);
+    auto held_note = tone(sample_rate, 2500.0F, frames);
+    for (float& sample : held_note) sample *= 0.8F;
+    effect.process(held_note, 1U);
+    const float attack_response = rms(
+        std::span<const float>(held_note.data(), attack_frames), 0U) / 0.8F;
+    const float sustained_response = rms(held_note, release_begin) / 0.8F;
+    require(attack_response > sustained_response * 2.0F,
+            "Envelope Filter attack/tail responses were " +
+                std::to_string(attack_response) + " / " +
+                std::to_string(sustained_response));
 }
 
 void test_ladder_filter_controls() {
@@ -590,6 +589,63 @@ void test_touch_ladder_uses_input_envelope_instead_of_lfo() {
             "Touch-Ladder band-pass mode did not use the shared Ladder response");
 }
 
+void test_touch_wah_tracks_sustained_volume_and_natural_fade() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t warmup = 12000U;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    parameters.frequency_hz = 300.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.sensitivity_db = -36.0F;
+    parameters.attack_time_ms = 5.0F;
+    parameters.release_time_ms = 80.0F;
+    parameters.lfo_enabled = true;
+
+    tabletfx::StereoFilter touch_wah(sample_rate, parameters);
+    auto strong_sustain = tone(sample_rate, 2500.0F, frames);
+    for (float& sample : strong_sustain) sample *= 0.8F;
+    touch_wah.process(strong_sustain, 1U);
+    const float sustained_response = rms(strong_sustain, warmup) / 0.8F;
+
+    auto no_lfo_parameters = parameters;
+    no_lfo_parameters.lfo_enabled = false;
+    tabletfx::StereoFilter no_lfo(sample_rate, no_lfo_parameters);
+    auto same_sustain = tone(sample_rate, 2500.0F, frames);
+    for (float& sample : same_sustain) sample *= 0.8F;
+    no_lfo.process(same_sustain, 1U);
+    double lfo_difference = 0.0;
+    for (std::size_t index = 0U; index < frames; ++index) {
+        const double delta = static_cast<double>(strong_sustain[index]) -
+                             same_sustain[index];
+        lfo_difference += delta * delta;
+    }
+    require(std::sqrt(lfo_difference / static_cast<double>(frames)) < 1.0e-7,
+            "Touch-Wah unexpectedly followed the LFO toggle");
+
+    auto natural_fade = tone(sample_rate, 2500.0F, frames);
+    for (float& sample : natural_fade) sample *= 0.01F;
+    touch_wah.process(natural_fade, 1U);
+    const float faded_response = rms(natural_fade, warmup) / 0.01F;
+    require(sustained_response > faded_response * 2.0F,
+            "Touch-Wah did not follow sustained input volume through a natural fade");
+
+    parameters.mode = tabletfx::StereoFilterMode::Highpass;
+    tabletfx::StereoFilter highpass(sample_rate, parameters);
+    require(highpass.parameters().mode == tabletfx::StereoFilterMode::Highpass,
+            "Touch-Wah incorrectly sanitized its documented high-pass mode");
+    auto low_tone = tone(sample_rate, 100.0F, frames);
+    for (float& sample : low_tone) sample *= 0.8F;
+    auto highpass_audio = low_tone;
+    highpass.process(highpass_audio, 1U);
+    parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+    tabletfx::StereoFilter lowpass(sample_rate, parameters);
+    lowpass.process(low_tone, 1U);
+    require(rms(low_tone, warmup) > rms(highpass_audio, warmup) * 5.0F,
+            "Touch-Wah low-pass and high-pass modes did not select distinct responses");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -641,6 +697,7 @@ int main() {
         test_envelope_filter_tracks_input_level_without_lfo();
         test_ladder_filter_controls();
         test_touch_ladder_uses_input_envelope_instead_of_lfo();
+        test_touch_wah_tracks_sustained_volume_and_natural_fade();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;
