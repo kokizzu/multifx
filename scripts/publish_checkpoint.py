@@ -1422,7 +1422,6 @@ RHYTHM_TAP_DELAY_CHECKPOINT_PATHS = (
 
 PLEX_DELAY_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
-    "Makefile",
     "GOAL.md",
     "README.md",
     "apps/offline_render.cpp",
@@ -1794,7 +1793,7 @@ CHECKPOINTS = {
     "rhythm-tap-delay": (RHYTHM_TAP_DELAY_CHECKPOINT_PATHS,
                          "feat: add project-authored Rhythm Tap delay"),
     "plex-delay": (PLEX_DELAY_CHECKPOINT_PATHS,
-                   "feat: add project-authored Plex matrix delay"),
+                   "feat: add Plex Delay input selection"),
     "enhancer": (ENHANCER_CHECKPOINT_PATHS,
                  "feat: add categorized stereo enhancer"),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,

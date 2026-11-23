@@ -886,6 +886,11 @@ Options parse_options(int argc, char** argv, int first) {
                 else if (value == "stack") parameters.stack_mode = tabletfx::PlexDelayStackMode::stack;
                 else if (value == "hold") parameters.stack_mode = tabletfx::PlexDelayStackMode::hold;
                 else throw std::invalid_argument("Unknown Plex Delay stack mode");
+            } else if (setting == "input-select") {
+                if (value == "sum") parameters.input_select = tabletfx::PlexDelayInputSelect::sum_lr;
+                else if (value == "left") parameters.input_select = tabletfx::PlexDelayInputSelect::left;
+                else if (value == "right") parameters.input_select = tabletfx::PlexDelayInputSelect::right;
+                else throw std::invalid_argument("Unknown Plex Delay input select");
             } else if (setting == "wet-filter-type") {
                 if (value == "bypass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::bypass;
                 else if (value == "low-pass") parameters.wet_filter_type = tabletfx::PlexWetFilterType::low_pass;

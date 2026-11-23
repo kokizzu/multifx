@@ -397,9 +397,20 @@ def make_test_audio(destination: Path, sample_rate: int = 48000,
 
 
 def make_stereo_tape_echo_impulse(destination: Path, sample_rate: int = 8000,
-                                 frames: int = 240) -> None:
+                                 frames: int = 1024) -> None:
     samples = bytearray(frames * 4)
     struct.pack_into("<hh", samples, 0, 16384, 8192)
+    with wave.open(str(destination), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(sample_rate)
+        output.writeframes(samples)
+
+
+def make_stereo_plex_delay_impulse(destination: Path, sample_rate: int = 8000,
+                                  frames: int = 1024) -> None:
+    samples = bytearray(frames * 4)
+    struct.pack_into("<hh", samples, 0, 24576, 8192)
     with wave.open(str(destination), "wb") as output:
         output.setnchannels(2)
         output.setsampwidth(2)
@@ -622,12 +633,15 @@ def browser_test() -> None:
         stereo_crossover_reference_path = temp_dir / "stereo-crossover-reference.wav"
         stereo_tape_echo_input_path = temp_dir / "stereo-tape-echo-input.wav"
         stereo_tape_echo_reference_path = temp_dir / "stereo-tape-echo-reference.wav"
+        plex_delay_input_select_input_path = temp_dir / "plex-delay-input-select-input.wav"
+        plex_delay_input_select_reference_path = temp_dir / "plex-delay-input-select-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
         make_test_audio(input_path)
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
         make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)
+        make_stereo_plex_delay_impulse(plex_delay_input_select_input_path)
         renderer_command = [
             str(native_renderer), "render", str(input_path), str(reference_path),
             "--gain-db", "2", "--output-gain-db", "-1",
@@ -1005,12 +1019,21 @@ def browser_test() -> None:
             "--tape-echo-noise", "0", "--tape-echo-wow-flutter", "0",
         ]
         run(stereo_tape_echo_command, cwd=ROOT)
+        plex_delay_input_select_command = [
+            str(native_renderer), "render", str(plex_delay_input_select_input_path),
+            str(plex_delay_input_select_reference_path),
+            "--plex-delay", "--plex-delay-lines", "1",
+            "--plex-delay-input-select", "right", "--plex-delay-mix", "1",
+        ]
+        run(plex_delay_input_select_command, cwd=ROOT)
         LocalWebHandler.test_files = {
             "/__test_input.wav": input_path,
             "/__test_expected.wav": reference_path,
             "/__test_stereo_crossover_expected.wav": stereo_crossover_reference_path,
             "/__test_stereo_tape_echo_input.wav": stereo_tape_echo_input_path,
             "/__test_stereo_tape_echo_expected.wav": stereo_tape_echo_reference_path,
+            "/__test_plex_delay_input_select_input.wav": plex_delay_input_select_input_path,
+            "/__test_plex_delay_input_select_expected.wav": plex_delay_input_select_reference_path,
             "/__test_tuner.wav": tuner_path,
             "/__test_convolution_ir.wav": convolution_ir_path,
         }
@@ -1091,8 +1114,61 @@ def browser_test() -> None:
             "wasmFrame80:[actual[160],actual[161]],nativeFrame80:[expected[160],expected[161]],"
             "wasmFrame160:[actual[320],actual[321]],nativeFrame160:[expected[320],expected[321]],firstMismatch};"
             "assert(maxError<4e-5&&rmsError<5e-6,`WASM/native Stereo Tape Echo mismatch: max ${maxError}, RMS ${rmsError}; samples ${JSON.stringify(tapSamples)}`);"
+            "const plexInputSelectControl=document.querySelector('#plex-delay-input-select');"
+            "assert(plexInputSelectControl?.options.length===3,'Plex Delay input selector is missing');"
+            "{const previous=plexInputSelectControl.value;const messages=[];"
+            "portPrototype.postMessage=function(message,...transfer){"
+            "if(message?.type==='plex-delay')messages.push(message.value);"
+            "return originalPost.call(this,message,...transfer)};"
+            "try{plexInputSelectControl.value='2';"
+            "plexInputSelectControl.dispatchEvent(new Event('change',{bubbles:true}));"
+            "assert(messages.at(-1)?.inputSelect===2&&"
+            "plexInputSelectControl.parentElement.querySelector('output').value==='Right',"
+            "'Plex Delay input selector did not send the Right-only setting');"
+            "}finally{plexInputSelectControl.value=previous;"
+            "plexInputSelectControl.dispatchEvent(new Event('change',{bubbles:true}));"
+            "portPrototype.postMessage=originalPost}}"
+            "const plexInputResponse=await fetch('/__test_plex_delay_input_select_input.wav');"
+            "const plexInputBytes=await plexInputResponse.arrayBuffer();"
+            "const plexInputView=new DataView(plexInputBytes);"
+            "assert(plexInputView.getUint16(22,true)===2&&plexInputView.getUint16(34,true)===16,"
+            "'Plex Delay stereo impulse fixture is not PCM16');"
+            "const plexFrames=(plexInputBytes.byteLength-44)/4;"
+            "assert(plexFrames===frames,'Plex Delay fixture must fit the reused stereo chain');"
+            "const plexChain=chain;"
+            "let plexMaxError=0,plexErrorSquares=0;"
+            "const plexInputOffset=module._tf_chain_input_buffer(plexChain)>>>2;"
+            "for(let frame=0;frame<plexFrames;frame++){for(let channel=0;channel<2;channel++){"
+            "module.HEAPF32[plexInputOffset+frame*2+channel]="
+            "plexInputView.getInt16(44+(frame*2+channel)*2,true)/32768}}"
+            "module._tf_chain_set_plex_delay_global(plexChain,1,120,1,1,1,3,0,20,20000,0,0,0,1,0,0,2);"
+            "assert(module._tf_chain_set_enabled(plexChain,76,1)===1,"
+            "'WASM did not enable Plex Matrix Delay at index 76');"
+            "assert(module._tf_chain_begin(plexChain,plexFrames)===plexFrames,"
+            "'WASM Plex Delay chain rejected stereo input');"
+            "module._tf_chain_process_effect(plexChain,76);"
+            "module._tf_chain_finish(plexChain,plexFrames);"
+            "module._tf_chain_process_output_gain(plexChain);"
+            "module._tf_chain_process_output_limiter(plexChain);"
+            "const plexOutputOffset=module._tf_chain_output_buffer(plexChain)>>>2;"
+            "const plexActual=module.HEAPF32.slice(plexOutputOffset,plexOutputOffset+plexFrames*2);"
+            "const plexExpectedResponse=await fetch('/__test_plex_delay_input_select_expected.wav');"
+            "const plexExpectedBytes=await plexExpectedResponse.arrayBuffer();"
+            "const plexExpectedView=new DataView(plexExpectedBytes);"
+            "assert(plexExpectedView.getUint16(22,true)===2&&plexExpectedView.getUint16(34,true)===32,"
+            "'Native Plex Delay reference is not stereo float32');"
+            "const plexExpected=new Float32Array(plexFrames*2);"
+            "for(let i=0;i<plexExpected.length;i++){plexExpected[i]=plexExpectedView.getFloat32(44+i*4,true);"
+            "const error=plexActual[i]-plexExpected[i];plexMaxError=Math.max(plexMaxError,Math.abs(error));"
+            "plexErrorSquares+=error*error}"
+            "const plexRmsError=Math.sqrt(plexErrorSquares/plexActual.length);"
+            "assert(plexMaxError<4e-5&&plexRmsError<5e-6,"
+            "`WASM/native Plex Delay Right-input mismatch: max ${plexMaxError}, RMS ${plexRmsError}`);"
+            ""
             "return JSON.stringify({passed:true,category:'Delay',effectIndex:84,leftTimeMs:10,rightTimeMs:20,"
-            "leftEcho:actual[160],rightEcho:actual[321],maxError,rmsError,frames,tapSamples});"
+            "leftEcho:actual[160],rightEcho:actual[321],maxError,rmsError,frames,tapSamples,"
+            "plexDelayInputSelect:{category:'Delay',effectIndex:76,selection:'right',"
+            "maxError:plexMaxError,rmsError:Math.sqrt(plexErrorSquares/(plexFrames*2))}});"
             "}finally{module._tf_chain_destroy(chain)}})()"
         )
         try:

@@ -175,7 +175,7 @@ const DEFAULT_PARAMETERS = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ],
   plexDelay: {
-    activeLines: 8, tempoBpm: 120, masterTime: 1, masterLevel: 1,
+    activeLines: 8, inputSelect: 0, tempoBpm: 120, masterTime: 1, masterLevel: 1,
     masterPan: 1, decaySeconds: 3, diffusion: 0.5, lowCutHz: 20,
     highCutHz: 20000, preDelayMs: 0, stackMode: 0,
     inputGainDb: 0, mix: 0.25, levelDb: 0, balance: 0,
@@ -1811,6 +1811,7 @@ function updatePlexDelayOptions() {
   };
   const parameters = {
     activeLines: value("activeLines"),
+    inputSelect: value("inputSelect"),
     tempoBpm: value("tempoBpm"),
     masterTime: value("masterTime"),
     masterLevel: value("masterLevel") / 100,
@@ -1867,6 +1868,8 @@ function updatePlexDelayOptions() {
   };
   const labels = {
     activeLines: `${parameters.activeLines} lines`,
+    inputSelect: ["L+R (default)", "Left", "Right"][parameters.inputSelect] ??
+      "L+R (default)",
     tempoBpm: `${parameters.tempoBpm} BPM`,
     masterTime: `${parameters.masterTime.toFixed(2)}×`,
     masterLevel: `${Math.round(parameters.masterLevel * 100)}%`,
@@ -6141,7 +6144,7 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
       else control.value = String(value);
     };
     for (const [name, value] of Object.entries({
-      activeLines: 2, tempoBpm: 120, masterTime: 1, masterLevel: 100,
+      activeLines: 2, inputSelect: 1, tempoBpm: 120, masterTime: 1, masterLevel: 100,
       masterPan: 100, decaySeconds: 3, diffusion: 55, lowCutHz: 20,
       highCutHz: 20000, preDelayMs: 0, stackMode: 0, inputGainDb: 0,
       mix: 100, levelDb: 0, balance: 0, stereoSpread: 120,
@@ -6192,7 +6195,8 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
       throw new Error(`Plex Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
     }
     return { peak, activeSamples, enabledEffectIndex: 76, activeLines: 2,
-      delayMs: [40, 70], diffusionPercent: 55, advancedControls: true };
+      inputSelect: "left", delayMs: [40, 70], diffusionPercent: 55,
+      advancedControls: true };
   } finally {
     stopSource(false);
     if (workletNode) {

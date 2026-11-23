@@ -90,6 +90,37 @@ void test_line_timing_count_pan_and_dry_path() {
             "zero mix should preserve the dry stereo input exactly");
 }
 
+void test_input_select_routes_stereo_sources_to_wet_matrix() {
+    const auto render = [](tabletfx::PlexDelayInputSelect input_select) {
+        auto parameters = simple_parameters();
+        parameters.active_lines = 1U;
+        parameters.input_select = input_select;
+        parameters.line_pan[0] = 0.0F;
+        parameters.time_ms[0] = 1.0F;
+        tabletfx::PlexDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 40U> audio{};
+        audio[0] = 0.75F;
+        audio[1] = 0.25F;
+        delay.process(audio, 2U);
+        return std::array<float, 2U>{audio[16U], audio[17U]};
+    };
+
+    const auto sum = render(tabletfx::PlexDelayInputSelect::sum_lr);
+    const auto left = render(tabletfx::PlexDelayInputSelect::left);
+    const auto right = render(tabletfx::PlexDelayInputSelect::right);
+    require(left[0] > sum[0] && sum[0] > right[0] &&
+                left[1] > sum[1] && sum[1] > right[1],
+            "Left, Right, and summed input selection should route distinct wet sources");
+    require(std::abs(left[0] - sum[0] * 1.5F) < 1.0e-5F &&
+                std::abs(left[1] - sum[1] * 1.5F) < 1.0e-5F &&
+                std::abs(right[0] - sum[0] * 0.5F) < 1.0e-5F &&
+                std::abs(right[1] - sum[1] * 0.5F) < 1.0e-5F,
+            "L+R should preserve the project default average of the stereo input");
+    require(tabletfx::PlexDelayParameters{}.input_select ==
+                tabletfx::PlexDelayInputSelect::sum_lr,
+            "summed L+R should remain the default input selection");
+}
+
 void test_matrix_diffusion_routes_energy_to_other_line() {
     auto p = simple_parameters();
     p.time_ms[0] = 1.0F;
@@ -202,11 +233,13 @@ void test_unknown_enums_and_nonfinite_inputs_recover() {
     p.time_mode[0] = static_cast<tabletfx::DelayTimeMode>(99U);
     p.division[0] = static_cast<tabletfx::DelayDivision>(99U);
     p.stack_mode = static_cast<tabletfx::PlexDelayStackMode>(99U);
+    p.input_select = static_cast<tabletfx::PlexDelayInputSelect>(99U);
     p.mix = std::numeric_limits<float>::infinity();
     tabletfx::PlexDelay delay(8000.0F, 100.0F, p);
     require(delay.parameters().time_ms[0] == 45.0F &&
                 delay.parameters().time_mode[0] == tabletfx::DelayTimeMode::milliseconds &&
                 delay.parameters().stack_mode == tabletfx::PlexDelayStackMode::off &&
+                delay.parameters().input_select == tabletfx::PlexDelayInputSelect::sum_lr &&
                 delay.parameters().mix == 0.25F,
             "invalid parameters and enum values should fall back safely");
     std::array<float, 4U> audio{
@@ -341,6 +374,7 @@ void test_stereo_spread_and_advanced_bounds() {
 int main() {
     try {
         test_line_timing_count_pan_and_dry_path();
+        test_input_select_routes_stereo_sources_to_wet_matrix();
         test_matrix_diffusion_routes_energy_to_other_line();
         test_tempo_pre_delay_master_time_and_bounds();
         test_stack_hold_and_reset();

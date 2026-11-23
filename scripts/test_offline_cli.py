@@ -1296,6 +1296,7 @@ def check_plex_delay(executable: Path) -> None:
         result = subprocess.run(
             [str(executable), "render", str(source), str(output),
              "--plex-delay", "--plex-delay-lines", "4",
+             "--plex-delay-input-select", "right",
              "--plex-delay-decay-seconds", "2.5",
              "--plex-delay-diffusion", "0.7",
              "--plex-delay-pre-delay-ms", "5",

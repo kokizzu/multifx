@@ -20,6 +20,12 @@ enum class PlexDelayStackMode : std::uint8_t {
     hold,
 };
 
+enum class PlexDelayInputSelect : std::uint8_t {
+    sum_lr,
+    left,
+    right,
+};
+
 enum class PlexWetFilterType : std::uint8_t {
     bypass,
     low_pass,
@@ -59,6 +65,7 @@ struct PlexDelayParameters {
     float high_cut_hz = 20000.0F;
     float pre_delay_ms = 0.0F;
     PlexDelayStackMode stack_mode = PlexDelayStackMode::off;
+    PlexDelayInputSelect input_select = PlexDelayInputSelect::sum_lr;
     std::array<float, plex_delay_line_count> line_level{
         1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F};
     std::array<float, plex_delay_line_count> line_pan{
@@ -97,11 +104,11 @@ struct PlexDelayParameters {
  * stereo spread.
  *
  * Matrix topology, feedback/decay mapping, filter design, bounds, defaults,
- * input summing, and the 1 MiB total ring-storage cap are project choices.
+ * input selection/summing, and the 1 MiB total ring-storage cap are project choices.
  * The cap is divided among eight delay lines and one pre-delay ring, so the
  * maximum per-ring time depends on sample rate. Input diffusion, the remaining
  * Filter-block types, delay-line modulation, Plex Detune/Shift/Verb and Shimmer
- * Verb algorithms, Input Select, Kill Dry, Bypass, Bypass Mode, Global Mix,
+ * Verb algorithms, Kill Dry, Bypass, Bypass Mode, Global Mix,
  * spillover, and exact Fractal settings/DSP/sound parity are not implemented.
  * Plex Delay itself has no pitch effects; Plex Detune and Plex Shift are
  * separate types.
@@ -169,6 +176,8 @@ private:
     [[nodiscard]] static bool valid_time_mode(DelayTimeMode mode) noexcept;
     [[nodiscard]] static bool valid_division(DelayDivision division) noexcept;
     [[nodiscard]] static bool valid_stack_mode(PlexDelayStackMode mode) noexcept;
+    [[nodiscard]] static bool valid_input_select(
+        PlexDelayInputSelect input_select) noexcept;
     [[nodiscard]] static bool valid_filter_type(PlexWetFilterType type) noexcept;
     [[nodiscard]] static bool valid_lfo_type(PlexFilterLfoType type) noexcept;
     [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;

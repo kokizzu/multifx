@@ -99,6 +99,17 @@ bool PlexDelay::valid_stack_mode(PlexDelayStackMode mode) noexcept {
     return false;
 }
 
+bool PlexDelay::valid_input_select(
+    PlexDelayInputSelect input_select) noexcept {
+    switch (input_select) {
+    case PlexDelayInputSelect::sum_lr:
+    case PlexDelayInputSelect::left:
+    case PlexDelayInputSelect::right:
+        return true;
+    }
+    return false;
+}
+
 bool PlexDelay::valid_filter_type(PlexWetFilterType type) noexcept {
     switch (type) {
     case PlexWetFilterType::bypass:
@@ -188,6 +199,9 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         parameters_.pre_delay_ms, 0.0F, maximum_time);
     if (!valid_stack_mode(parameters.stack_mode)) {
         parameters.stack_mode = parameters_.stack_mode;
+    }
+    if (!valid_input_select(parameters.input_select)) {
+        parameters.input_select = parameters_.input_select;
     }
     for (std::size_t line = 0; line < plex_delay_line_count; ++line) {
         parameters.time_ms[line] = bounded(parameters.time_ms[line],
@@ -549,8 +563,13 @@ void PlexDelay::process(std::span<float> interleaved,
             ? safe_signal(interleaved[offset + 1U]) : dry_left;
         const float summed_input = channels == 2U
             ? 0.5F * (dry_left + dry_right) : dry_left;
-        const float detector_peak = std::max(std::abs(dry_left),
-                                             std::abs(dry_right));
+        const float selected_input = channels == 1U
+            ? dry_left
+            : parameters_.input_select == PlexDelayInputSelect::left
+                ? dry_left
+                : parameters_.input_select == PlexDelayInputSelect::right
+                    ? dry_right : summed_input;
+        const float detector_peak = std::abs(selected_input);
         const float envelope_coefficient = detector_peak > envelope_value_
             ? envelope_attack_coefficient_ : envelope_release_coefficient_;
         envelope_value_ = envelope_coefficient * envelope_value_ +
@@ -562,7 +581,7 @@ void PlexDelay::process(std::span<float> interleaved,
                     std::max(1.0e-6F, 1.0F - envelope_threshold_linear_),
                     0.0F, 1.0F));
         const float input = parameters_.stack_mode == PlexDelayStackMode::hold
-            ? 0.0F : safe_signal(summed_input * input_gain_linear_ *
+            ? 0.0F : safe_signal(selected_input * input_gain_linear_ *
                                  envelope_send_gain);
         const float ducker_envelope_coefficient =
             detector_peak > ducker_envelope_

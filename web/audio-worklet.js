@@ -80,7 +80,7 @@ function configurePlexDelay(module, chain, parameters = {}) {
     parameters.highCutHz ?? 20000, parameters.preDelayMs ?? 0,
     parameters.stackMode ?? 0, parameters.inputGainDb ?? 0,
     parameters.mix ?? 0.25, parameters.levelDb ?? 0,
-    parameters.balance ?? 0,
+    parameters.balance ?? 0, parameters.inputSelect ?? 0,
   );
   module._tf_chain_set_plex_delay_advanced(
     chain, Number(parameters.wetFilterType ?? 0),
