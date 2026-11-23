@@ -1602,6 +1602,30 @@ AM_RING_MOD_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+TAPE_ECHO_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/tape_echo.hpp",
+    "src/effects/tape_echo.cpp",
+    "tests/test_tape_echo.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/audio_regression.py",
+    "src/web/wasm_chain.cpp",
+    "scripts/web.py",
+    "scripts/inspect_effect_picker.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "AUDIO_COMPATIBILITY.md",
+    "LATENCY_AND_QUALITY.md",
+    "GOAL.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
@@ -1733,6 +1757,10 @@ CHECKPOINTS = {
     "am-ring-mod": (
         AM_RING_MOD_CHECKPOINT_PATHS,
         "feat: add project-authored AM ring modulation",
+    ),
+    "tape-echo": (
+        TAPE_ECHO_CHECKPOINT_PATHS,
+        "feat: add project-authored Tape Echo",
     ),
 }
 

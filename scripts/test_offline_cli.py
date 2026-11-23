@@ -432,6 +432,47 @@ def check_ring_modulator(executable: Path) -> None:
             raise AssertionError("Ring Mod accepted an unknown type")
 
 
+def check_tape_echo(executable: Path) -> None:
+    sample_rate = 8000
+    source_samples = [
+        round(9000 * math.sin(2.0 * math.pi * 330.0 * frame / sample_rate))
+        for frame in range(sample_rate * 2)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-tape-echo-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "tape-echo.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--tape-echo", "--tape-echo-time-mode", "tempo-sync",
+             "--tape-echo-tap-division", "eighth",
+             "--tape-echo-tempo-bpm", "120", "--tape-echo-feedback", "0.55",
+             "--tape-echo-mix", "0.65", "--tape-echo-record-level", "0.45",
+             "--tape-echo-bias", "0.55", "--tape-echo-noise", "0.1",
+             "--tape-echo-wow-flutter", "0.6", "--tape-echo-spillover", "on"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Tape Echo controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * len(source_samples), output.read_bytes()[44:])
+        source_float = [value / 32768.0 for value in source_samples]
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Tape Echo produced non-finite output")
+        if max(abs(actual - original) for actual, original in
+               zip(values, source_float, strict=True)) < 0.02:
+            raise AssertionError("Tape Echo controls did not change the test signal")
+
+        invalid_spillover = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--tape-echo-spillover", "sometimes"],
+            capture_output=True, text=True, check=False,
+        )
+        if (invalid_spillover.returncode == 0 or
+                "Tape Echo spillover must be on or off" not in invalid_spillover.stderr):
+            raise AssertionError("Tape Echo accepted an unknown spillover state")
+
+
 def check_rhythmic_slicer(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [
@@ -2583,6 +2624,7 @@ def main() -> None:
     check_auto_swell(args.executable.resolve())
     check_rotary_speaker(args.executable.resolve())
     check_ring_modulator(args.executable.resolve())
+    check_tape_echo(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
     check_notch_filter(args.executable.resolve())
@@ -2639,7 +2681,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

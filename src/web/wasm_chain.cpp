@@ -54,6 +54,7 @@
 #include "tabletfx/effects/manual_thru_zero_flanger.hpp"
 #include "tabletfx/effects/octobot.hpp"
 #include "tabletfx/effects/am_ring_mod.hpp"
+#include "tabletfx/effects/tape_echo.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/level_meter.hpp"
 #include "tabletfx/parallel_mixer.hpp"
@@ -98,7 +99,7 @@ public:
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)) {
-        effects_.reserve(80);
+        effects_.reserve(87);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
@@ -347,6 +348,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::effects::AmRingMod>(
+                                static_cast<float>(sample_rate), channels),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::TapeEcho>(
                                 static_cast<float>(sample_rate), channels),
                             false});
     }
@@ -1817,6 +1821,30 @@ public:
             ->set_parameters(parameters);
     }
 
+    void configure_tape_echo(std::uint32_t time_mode, float time_ms,
+                             float tempo_bpm, std::uint32_t tap_division,
+                             float feedback, float mix, float record_level,
+                             float tape_bias, float tape_noise,
+                             float wow_flutter,
+                             std::uint32_t spillover) noexcept {
+        tabletfx::TapeEchoParameters parameters;
+        parameters.time_mode = time_mode == 1U
+            ? tabletfx::DelayTimeMode::tempo_sync
+            : tabletfx::DelayTimeMode::milliseconds;
+        parameters.time_ms = time_ms;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.tap_division = static_cast<tabletfx::DelayDivision>(tap_division);
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.record_level = record_level;
+        parameters.tape_bias = tape_bias;
+        parameters.tape_noise = tape_noise;
+        parameters.wow_flutter = wow_flutter;
+        parameters.spillover = spillover != 0U;
+        static_cast<tabletfx::TapeEcho*>(effects_[84].effect.get())
+            ->configure(parameters);
+    }
+
     void configure_convolution_reverb(float mix, float level_db,
                                       float high_pass_hz, float low_pass_hz,
                                       std::uint32_t tails) noexcept {
@@ -3162,6 +3190,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_am_ring_mod(
     float level_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_am_ring_mod(rate_hz, depth, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_tape_echo(
+    void* opaque, std::uint32_t time_mode, float time_ms,
+    float tempo_bpm, std::uint32_t tap_division, float feedback,
+    float mix, float record_level, float tape_bias, float tape_noise,
+    float wow_flutter, std::uint32_t spillover) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_tape_echo(
+            time_mode, time_ms, tempo_bpm, tap_division, feedback, mix,
+            record_level, tape_bias, tape_noise, wow_flutter, spillover);
     }
 }
 

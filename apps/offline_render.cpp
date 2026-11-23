@@ -244,6 +244,8 @@ struct Options {
     tabletfx::RingModulatorParameters ring_modulator{};
     bool am_ring_mod_enabled = false;
     tabletfx::effects::AmRingModParameters am_ring_mod{};
+    bool tape_echo_enabled = false;
+    tabletfx::TapeEchoParameters tape_echo{};
     bool bit_crusher_enabled = false;
     tabletfx::BitCrusherParameters bit_crusher{};
     bool rhythmic_slicer_enabled = false;
@@ -598,6 +600,45 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--am-ring-mod") {
             options.am_ring_mod_enabled = true;
+            continue;
+        }
+        if (key == "--tape-echo") {
+            options.tape_echo_enabled = true;
+            continue;
+        }
+        if (key == "--tape-echo-time-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --tape-echo-time-mode");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "milliseconds" || value == "ms") {
+                options.tape_echo.time_mode = tabletfx::DelayTimeMode::milliseconds;
+            } else if (value == "tempo-sync") {
+                options.tape_echo.time_mode = tabletfx::DelayTimeMode::tempo_sync;
+            } else {
+                throw std::invalid_argument(
+                    "Tape Echo time mode must be milliseconds or tempo-sync");
+            }
+            options.tape_echo_enabled = true;
+            continue;
+        }
+        if (key == "--tape-echo-tap-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --tape-echo-tap-division");
+            }
+            options.tape_echo.tap_division = parse_delay_division(argv[++i]);
+            options.tape_echo_enabled = true;
+            continue;
+        }
+        if (key == "--tape-echo-spillover") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --tape-echo-spillover");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.tape_echo.spillover = true;
+            else if (value == "off") options.tape_echo.spillover = false;
+            else throw std::invalid_argument("Tape Echo spillover must be on or off");
+            options.tape_echo_enabled = true;
             continue;
         }
         if (key == "--ring-mod-type") {
@@ -2785,6 +2826,38 @@ Options parse_options(int argc, char** argv, int first) {
             options.am_ring_mod.level_db = value;
             options.am_ring_mod_enabled = true;
         }
+        else if (key == "--tape-echo-time-ms") {
+            options.tape_echo.time_ms = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-tempo-bpm") {
+            options.tape_echo.tempo_bpm = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-feedback") {
+            options.tape_echo.feedback = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-mix") {
+            options.tape_echo.mix = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-record-level") {
+            options.tape_echo.record_level = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-bias") {
+            options.tape_echo.tape_bias = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-noise") {
+            options.tape_echo.tape_noise = value;
+            options.tape_echo_enabled = true;
+        }
+        else if (key == "--tape-echo-wow-flutter") {
+            options.tape_echo.wow_flutter = value;
+            options.tape_echo_enabled = true;
+        }
         else if (key == "--bit-crusher-mix") {
             options.bit_crusher.mix = value;
             options.bit_crusher_enabled = true;
@@ -3454,6 +3527,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.am_ring_mod_enabled) {
         effects.push_back(std::make_unique<tabletfx::effects::AmRingMod>(
             static_cast<float>(sample_rate), channels, options.am_ring_mod));
+    }
+    if (options.tape_echo_enabled) {
+        effects.push_back(std::make_unique<tabletfx::TapeEcho>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            options.tape_echo));
     }
     if (options.rhythmic_slicer_enabled) {
         effects.push_back(std::make_unique<tabletfx::RhythmicSlicer>(

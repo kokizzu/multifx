@@ -286,6 +286,10 @@ def run_input(renderer: Path, source: Path, output: Path,
         "--am-ring-mod", "--am-ring-mod-rate-hz", "713",
         "--am-ring-mod-depth", "0.8", "--am-ring-mod-mix", "0.7",
         "--am-ring-mod-level-db", "0",
+        "--tape-echo", "--tape-echo-time-ms", "320",
+        "--tape-echo-feedback", "0.4", "--tape-echo-mix", "0.3",
+        "--tape-echo-record-level", "0.45", "--tape-echo-bias", "0.45",
+        "--tape-echo-noise", "0.04", "--tape-echo-wow-flutter", "0.4",
         "--rhythmic-slicer", "--rhythmic-slicer-tempo-sync", "on",
         "--rhythmic-slicer-tempo-bpm", "120",
         "--rhythmic-slicer-division", "sixteenth",
@@ -380,7 +384,7 @@ def run_input(renderer: Path, source: Path, output: Path,
         raise RuntimeError(f"Offline rendering failed for {source}: {result.stderr.strip()}")
     report = result.stdout.strip()
     match = re.search(r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)", report)
-    expected_processors = 68 + int(three_stage_distortion)
+    expected_processors = 69 + int(three_stage_distortion)
     if not match or int(match.group(1)) <= 0 or int(match.group(2)) != expected_processors:
         raise RuntimeError(f"Unexpected renderer report for {source}: {report}")
     if output_channels is not None:

@@ -85,6 +85,7 @@ const EFFECT_NAMES = [
   "Manual Through-Zero Flanger · project-authored Fractal-inspired controls",
   "Octobot · project-authored Fender control roles",
   "AM Ring Mod · project-authored Line 6-inspired category coverage",
+  "Tape Echo · project-authored Fender control roles",
   "Output level",
   "Peak limiter",
 ];
@@ -188,6 +189,7 @@ const DEFAULT_PARAMETERS = {
   manualThruZeroFlanger: [0.34, 8, 5, 0.5, 0, 3, 0.5, 10],
   octobot: [0.65, 0.2, 0.25],
   amRingMod: [440, 0.5, 1, 0],
+  tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0],
   convolutionReverb: [0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
@@ -431,6 +433,19 @@ const amRingModControls = [
   document.querySelector("#am-ring-mod-depth"),
   document.querySelector("#am-ring-mod-mix"),
   document.querySelector("#am-ring-mod-level-db"),
+];
+const tapeEchoControls = [
+  document.querySelector("#tape-echo-time-mode"),
+  document.querySelector("#tape-echo-time-ms"),
+  document.querySelector("#tape-echo-tempo-bpm"),
+  document.querySelector("#tape-echo-tap-division"),
+  document.querySelector("#tape-echo-feedback"),
+  document.querySelector("#tape-echo-mix"),
+  document.querySelector("#tape-echo-record-level"),
+  document.querySelector("#tape-echo-bias"),
+  document.querySelector("#tape-echo-noise"),
+  document.querySelector("#tape-echo-wow-flutter"),
+  document.querySelector("#tape-echo-spillover"),
 ];
 const manualThruZeroFlangerControls = [
   document.querySelector("#manual-tzf-minimum-time"),
@@ -3179,6 +3194,40 @@ for (const control of amRingModControls) {
   control.addEventListener("change", updateAmRingMod);
 }
 updateAmRingMod();
+
+function updateTapeEcho() {
+  const values = [
+    Number(tapeEchoControls[0].value),
+    Number(tapeEchoControls[1].value),
+    Number(tapeEchoControls[2].value),
+    Number(tapeEchoControls[3].value),
+    Number(tapeEchoControls[4].value),
+    Number(tapeEchoControls[5].value),
+    Number(tapeEchoControls[6].value),
+    Number(tapeEchoControls[7].value),
+    Number(tapeEchoControls[8].value),
+    Number(tapeEchoControls[9].value),
+    tapeEchoControls[10].checked ? 1 : 0,
+  ];
+  DEFAULT_PARAMETERS.tapeEcho = values;
+  tapeEchoControls[1].parentElement.querySelector("output").value =
+    `${Math.round(values[1])} ms`;
+  tapeEchoControls[2].parentElement.querySelector("output").value =
+    `${Math.round(values[2])} BPM`;
+  for (let index = 4; index <= 9; index += 1) {
+    tapeEchoControls[index].parentElement.querySelector("output").value =
+      `${Math.round(values[index] * 100)}%`;
+  }
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "tape-echo", value: values });
+  }
+}
+
+for (const control of tapeEchoControls) {
+  control.addEventListener("input", updateTapeEcho);
+  control.addEventListener("change", updateTapeEcho);
+}
+updateTapeEcho();
 
 function updateManualThruZeroFlanger(event) {
   const minimumControl = manualThruZeroFlangerControls[0];
@@ -6112,7 +6161,7 @@ async function runMercatorDistortionBrowserSmokeTest(reference, captureView, cap
   const previousControls = mercatorDistortionControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 80 || index === 83 || index === 84);
+    index === 80 || index === 83 || index === 85);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -6193,7 +6242,7 @@ async function runOctobotBrowserSmokeTest(reference, captureView, captureBuffer)
   const previousEffectState = enabledEffects();
   const previousControls = octobotControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 82 || index === 84 || index === 85);
+    index === 82 || index === 85 || index === 86);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -6273,7 +6322,7 @@ async function runAmRingModBrowserSmokeTest(reference, captureView, captureBuffe
   const previousEffectState = enabledEffects();
   const previousControls = amRingModControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 83 || index === 84 || index === 85);
+    index === 83 || index === 85 || index === 86);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -6350,11 +6399,96 @@ async function runAmRingModBrowserSmokeTest(reference, captureView, captureBuffe
   }
 }
 
+async function runTapeEchoBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = tapeEchoControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const testEnabled = previousEffectState.map((_, index) =>
+    index === 84 || index === 85 || index === 86);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Tape Echo smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const values = [0, 20, 120, 4, 0.55, 0.75, 0.45, 0.55, 0.1, 0.6, 0];
+    tapeEchoControls.forEach((control, index) => {
+      if (control.type === "checkbox") control.checked = Boolean(values[index]);
+      else control.value = String(values[index]);
+    });
+    updateTapeEcho();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Tape Echo playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    for (let index = 0; index < actual.length; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = Math.sqrt(differenceSquares / Math.max(1, actual.length));
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-5) {
+      throw new Error(`Tape Echo produced no measurable guitar output (peak ${peak}, active samples ${activeSamples}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      peak,
+      activeSamples,
+      differenceRms,
+      enabledEffectIndex: 84,
+      timeMs: 20,
+      feedback: 0.55,
+      mix: 0.75,
+      spillover: false,
+      latencySamples: 0,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      tapeEchoControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = Boolean(previousControls[index]);
+        else control.value = previousControls[index];
+      });
+      updateTapeEcho();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runManualThruZeroFlangerBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = manualThruZeroFlangerControls.map((control) => control.value);
   const testEnabled = previousEffectState.map((_, index) =>
-    index === 81 || index === 84 || index === 85);
+    index === 81 || index === 85 || index === 86);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
@@ -6589,7 +6723,7 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     const capture = async (synthEnabled) => {
       checkboxes.forEach((checkbox, index) => {
-       const enabled = index === 83 || index === 84 || (synthEnabled && index === 78);
+        const enabled = index === 83 || index === 85 || (synthEnabled && index === 78);
         checkbox.checked = enabled;
         workletNode.port.postMessage({ type: "enable", index, value: enabled });
       });
@@ -6667,8 +6801,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 86 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 86 || effectRows.length !== 86 ||
+      const expectedEffectIds = Array.from({ length: 87 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 87 || effectRows.length !== 87 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -6690,7 +6824,8 @@ async function runBrowserSelfTest() {
           !EFFECT_NAMES[81]?.startsWith("Manual Through-Zero Flanger") ||
             !EFFECT_NAMES[82]?.startsWith("Octobot") ||
             !EFFECT_NAMES[83]?.startsWith("AM Ring Mod") ||
-            EFFECT_NAMES[84] !== "Output level" || EFFECT_NAMES[85] !== "Peak limiter" ||
+            !EFFECT_NAMES[84]?.startsWith("Tape Echo") ||
+            EFFECT_NAMES[85] !== "Output level" || EFFECT_NAMES[86] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -6700,7 +6835,7 @@ async function runBrowserSelfTest() {
               initialEffectState[77] || initialEffectState[78] ||
                initialEffectState[79] || initialEffectState[80] || initialEffectState[81] ||
                 initialEffectState[82] || initialEffectState[83] ||
-                !initialEffectState[84] || !initialEffectState[85] ||
+                initialEffectState[84] || !initialEffectState[85] || !initialEffectState[86] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -6717,7 +6852,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 86 ordered, categorized effects (IDs 0–85), with optional effects disabled by default.");
+        throw new Error("The effect picker must list 87 ordered, categorized effects (IDs 0–86), with optional effects disabled by default.");
      }
      const convolutionDefaults = [...DEFAULT_PARAMETERS.convolutionReverb];
      const convolutionRanges = [
@@ -7525,7 +7660,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 86" ||
+          if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Vocal FX picker mismatch: IDs=${vocalIds.join(",")}; count=${effectCount.value}; chainStatePreserved=${JSON.stringify(enabledEffects()) === JSON.stringify(initialEffectState)}.`);
     }
@@ -7534,7 +7669,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
         if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83" ||
-               effectCount.value !== "15 of 86" ||
+                effectCount.value !== "15 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -7542,8 +7677,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,85" ||
-               effectCount.value !== "9 of 86" ||
+          if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,86" ||
+                effectCount.value !== "9 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -7552,7 +7687,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
        if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82" ||
-               effectCount.value !== "10 of 86" ||
+                effectCount.value !== "10 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include the distortion, boost, fuzz, crusher, and three-stage processors while preserving the current chain state.");
     }
@@ -7595,6 +7730,34 @@ async function runBrowserSelfTest() {
        octobotControls[index].value = String(value);
      });
      updateOctobot();
+     const originalTapeEchoParameters = [...DEFAULT_PARAMETERS.tapeEcho];
+     const tapeEchoHint = document.querySelector(
+       '.effect-parameter-group[aria-label="Tape Echo project-authored controls"] .hint',
+     ).textContent;
+     if (tapeEchoControls.length !== 11 ||
+         tapeEchoControls[4].min !== "0" || tapeEchoControls[4].max !== "0.95" ||
+         tapeEchoControls[10].type !== "checkbox" ||
+         effectRows[84]?.dataset.category !== "delay" ||
+         !tapeEchoHint.includes("no numeric ranges") ||
+         !tapeEchoHint.includes("not Fender or Echoplex parity")) {
+        throw new Error("Tape Echo control mapping, Delay categorization, or manufacturer/project qualification is missing.");
+     }
+     tapeEchoControls[0].value = "1";
+     tapeEchoControls[3].value = "7";
+     tapeEchoControls[4].value = "0.81";
+     tapeEchoControls[4].dispatchEvent(new Event("input", { bubbles: true }));
+     if (DEFAULT_PARAMETERS.tapeEcho[0] !== 1 ||
+         DEFAULT_PARAMETERS.tapeEcho[3] !== 7 ||
+         DEFAULT_PARAMETERS.tapeEcho[4] !== 0.81 ||
+         tapeEchoControls[4].parentElement.querySelector("output").value !== "81%") {
+       throw new Error("Tape Echo controls must update their display and parameter tuple.");
+     }
+     originalTapeEchoParameters.forEach((value, index) => {
+       const control = tapeEchoControls[index];
+       if (control.type === "checkbox") control.checked = Boolean(value);
+       else control.value = String(value);
+     });
+     updateTapeEcho();
     const originalManualTzfParameters = [...DEFAULT_PARAMETERS.manualThruZeroFlanger];
     const manualTzfHint = document.querySelector(
       '.gain-controls[aria-label="Manual Through-Zero Flanger project-authored controls"] .hint',
@@ -7628,7 +7791,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 86" ||
+           if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 87" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -7637,7 +7800,7 @@ async function runBrowserSelfTest() {
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
       if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-               effectCount.value !== "7 of 86" ||
+                effectCount.value !== "7 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -7645,7 +7808,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 86" ||
+           if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -7653,7 +7816,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 86" ||
+           if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -7661,7 +7824,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 86" ||
+           if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -7669,7 +7832,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 86" ||
+           if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
     }
@@ -7677,7 +7840,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 86" ||
+           if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -7685,7 +7848,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 86" ||
+           if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -7713,7 +7876,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76" || effectCount.value !== "15 of 86" ||
+        if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -7721,7 +7884,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-         if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 86" ||
+          if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 87" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
     }
@@ -7763,12 +7926,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 86") {
+        if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 87") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-      if (effectCount.value !== "86 of 86" || effectRows.some((row) => row.hidden)) {
+      if (effectCount.value !== "87 of 87" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -7970,11 +8133,13 @@ async function runBrowserSelfTest() {
     parityEnabled[82] = false;
      // AM Ring Mod has a dedicated playback smoke; keep the shared offline parity chain fixed.
      parityEnabled[83] = false;
+     // Tape Echo has a separate Play smoke; keep the shared offline comparison unchanged.
+     parityEnabled[84] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-     if (parityEnabled.length !== 86 || activeProcessorIndices.length !== 70 ||
+    if (parityEnabled.length !== 87 || activeProcessorIndices.length !== 70 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 70) {
          throw new Error("The all-effect chain must contain 70 optional processors between input trim and output utilities.");
     }
@@ -8586,6 +8751,10 @@ async function runBrowserSelfTest() {
     const amRingModSmoke = await runAmRingModBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+     testResult.textContent = "Checking Tape Echo playback on local guitar audio…";
+     const tapeEchoSmoke = await runTapeEchoBrowserSmokeTest(
+       reference, captureView, captureBuffer,
+     );
     testResult.textContent = "Checking Ring Modulator Classic and SSB modes on local guitar audio…";
     const ringModulatorSmoke = await runRingModulatorBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -8726,6 +8895,7 @@ async function runBrowserSelfTest() {
       manualThruZeroFlanger: manualThruZeroFlangerSmoke,
        octobot: octobotSmoke,
        amRingMod: amRingModSmoke,
+        tapeEcho: tapeEchoSmoke,
       ringModulator: ringModulatorSmoke,
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,

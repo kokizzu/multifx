@@ -6,7 +6,7 @@ const EFFECTS = [
   "transparent-overdrive",
   "mid-focused-overdrive", "high-gain-distortion", "round-fuzz", "soft-drive", "tremolo", "chorus", "flanger", "phaser", "vibrato", "three-band-eq", "delay", "poly-pitch-shifter",
   "optical-compressor", "fet-compressor", "guitar-graphic-eq", "bass-graphic-eq", "shelf-tilt-eq",
-  "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "fractal-three-voice-synth", "cloud-reverb", "three-stage-distortion", "manual-thru-zero-flanger", "octobot", "am-ring-mod", "output-level", "peak-limiter",
+  "room-reverb", "hall-reverb", "plate-reverb", "spring-reverb", "auto-swell", "rotary-speaker", "ring-modulator", "rhythmic-slicer", "step-filter", "notch-filter", "reverse-delay", "ducking-delay", "modulated-delay", "filtered-delay", "sweep-delay", "formant-filter", "harmonic-resonator", "multiband-compressor", "bit-crusher", "dimension-chorus", "triple-double-chorus", "four-band-resonator", "diatonic-harmonizer", "pitch-arpeggiator", "mono-guitar-synth", "note-generator", "grain-delay", "pitch-feedback-delay", "feedback-generator", "shimmer-reverb", "convolution-reverb", "five-band-parametric-eq", "phrase-looper", "enhancer", "resonant-delay", "harmonic-tremolo", "auto-swell-delay", "shuffling-looper", "ten-tap-delay", "auto-pan", "megatap-delay", "de-esser", "dual-engine-distortion", "vibe", "multi-delay", "porta-preamp", "pitch-sequence", "rhythm-tap-delay", "plex-delay", "celestial-reverb", "fractal-three-voice-synth", "cloud-reverb", "three-stage-distortion", "manual-thru-zero-flanger", "octobot", "am-ring-mod", "tape-echo", "output-level", "peak-limiter",
 ];
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
@@ -345,6 +345,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [0.34, 8, 5, 0.5, 0, 3, 0.5, 10]);
       this.configureOctobot(parameters.octobot || [0.65, 0.2, 0.25]);
       this.configureAmRingMod(parameters.amRingMod || [440, 0.5, 1, 0]);
+      this.configureTapeEcho(parameters.tapeEcho ||
+        [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
@@ -569,6 +571,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     this.module._tf_chain_set_am_ring_mod(this.chain, ...values);
+  }
+
+  configureTapeEcho(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
+      return;
+    }
+    this.module._tf_chain_set_tape_echo(this.chain, ...values);
   }
 
   loadConvolutionIR(message) {
@@ -939,6 +948,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureOctobot(message.value);
     } else if (message.type === "am-ring-mod" && this.ready) {
       this.configureAmRingMod(message.value);
+    } else if (message.type === "tape-echo" && this.ready) {
+      this.configureTapeEcho(message.value);
     } else if (message.type === "convolution-reverb" && this.ready) {
       this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
     } else if (message.type === "convolution-ir" && this.ready) {
