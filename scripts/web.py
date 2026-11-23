@@ -190,6 +190,7 @@ def build_web() -> None:
         "_tf_chain_set_step_filter_delay",
         "_tf_chain_set_volume_pan",
         "_tf_chain_set_stereo_filter",
+        "_tf_chain_set_step_tremolo",
         "_tf_chain_set_resonant_delay",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
@@ -317,6 +318,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "stereo_panner.cpp"),
         str(ROOT / "src" / "effects" / "stereo_crossover.cpp"),
         str(ROOT / "src" / "effects" / "stereo_filter.cpp"),
+        str(ROOT / "src" / "effects" / "step_tremolo.cpp"),
         str(ROOT / "src" / "effects" / "porta_preamp.cpp"),
         str(ROOT / "src" / "effects" / "pitch_sequence.cpp"),
         str(ROOT / "src" / "effects" / "poly_sustain.cpp"),
@@ -678,7 +680,8 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                     process.wait(timeout=5)
 
 
-def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False) -> None:
+def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
+                 step_tremolo_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1125,7 +1128,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        if stereo_filter_only:
+        if step_tremolo_only:
+            url = base_url + "/web/index.html?selftest=step-tremolo"
+        elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
             url = base_url + "/web/index.html?selftest=volume-pan"
@@ -1313,7 +1318,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
-                None if volume_pan_only or stereo_filter_only else stereo_tape_echo_expression,
+                None if volume_pan_only or stereo_filter_only or step_tremolo_only
+                else stereo_tape_echo_expression,
             )
         finally:
             server.shutdown()
@@ -1336,6 +1342,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif stereo_filter_only:
             print("Focused Stereo Filter browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
+        elif step_tremolo_only:
+            print("Focused Step Tremolo browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
             print(json.dumps(report, indent=2))
@@ -1343,11 +1352,53 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(result["stereoTapeEcho"], indent=2))
 
 
+def inspect_web_build_path() -> None:
+    path = ROOT / "scripts" / "web.py"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    tokens = ("stereo_filter", "exported_functions", "source_files", "sources =", "source =")
+    matched = [index for index, line in enumerate(lines)
+               if any(token in line.lower() for token in tokens)]
+    print(f"===== {path.relative_to(ROOT)} ({len(matched)} matching lines) =====")
+    windows: list[tuple[int, int]] = []
+    for index in matched:
+        start, end = max(0, index - 3), min(len(lines), index + 4)
+        if windows and start <= windows[-1][1]:
+            windows[-1] = (windows[-1][0], max(windows[-1][1], end))
+        else:
+            windows.append((start, end))
+    for start, end in windows[:20]:
+        print(f"--- lines {start + 1}-{end} ---")
+        for index in range(start, end):
+            print(f"{index + 1:4}: {lines[index]}")
+
+
+def inspect_web_smoke_path() -> None:
+    path = ROOT / "web" / "app.js"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    tokens = ("selftest", "runVolumePanBrowserSmokeTest", "runStereoFilterBrowserSmokeTest",
+              "focusedReport", "volumePanSmoke", "stepTremoloSmoke", "__tabletFx")
+    matched = [index for index, line in enumerate(lines)
+               if any(token.lower() in line.lower() for token in tokens)]
+    print(f"===== {path.relative_to(ROOT)} ({len(matched)} matching lines) =====")
+    windows: list[tuple[int, int]] = []
+    for index in matched:
+        start, end = max(0, index - 4), min(len(lines), index + 5)
+        if windows and start <= windows[-1][1]:
+            windows[-1] = (windows[-1][0], max(windows[-1][1], end))
+        else:
+            windows.append((start, end))
+    for start, end in windows[:30]:
+        print(f"--- lines {start + 1}-{end} ---")
+        for index in range(start, end):
+            print(f"{index + 1:4}: {lines[index]}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
-        "test-volume-pan", "test-stereo-filter",
+        "test-volume-pan", "test-stereo-filter", "test-step-tremolo",
+        "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
     if action == "bootstrap-toolchain":
@@ -1362,6 +1413,12 @@ def main() -> None:
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":
         browser_test(stereo_filter_only=True)
+    elif action == "test-step-tremolo":
+        browser_test(step_tremolo_only=True)
+    elif action == "inspect-build-path":
+        inspect_web_build_path()
+    elif action == "inspect-smoke-path":
+        inspect_web_smoke_path()
     else:
         build_web()
 

@@ -77,6 +77,7 @@ add_library(tabletfx_core
     src/effects/tape_echo.cpp
     src/effects/rhythmic_slicer.cpp
     src/effects/step_filter.cpp
+    src/effects/step_tremolo.cpp
     src/effects/asheville_pattrn.cpp
     src/effects/notch_filter.cpp
     src/effects/formant_filter.cpp
@@ -317,6 +318,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tremolo_tests tests/test_tremolo.cpp)
     target_link_libraries(tabletfx_tremolo_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tremolo_tests COMMAND tabletfx_tremolo_tests)
+
+    add_executable(tabletfx_step_tremolo_tests tests/test_step_tremolo.cpp)
+    target_link_libraries(tabletfx_step_tremolo_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_step_tremolo_tests COMMAND tabletfx_step_tremolo_tests)
 
     add_executable(tabletfx_harmonic_tremolo_tests tests/test_harmonic_tremolo.cpp)
     target_link_libraries(tabletfx_harmonic_tremolo_tests PRIVATE tabletfx_core)

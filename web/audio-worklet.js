@@ -18,6 +18,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "poly-sustain");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "step-filter-delay");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "volume-pan");
 EFFECTS.push("stereo-filter");
+EFFECTS.push("step-tremolo");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -799,6 +800,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureStepTremolo(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 20) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_step_tremolo(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   configureRhythmTapDelay(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 33) {
       return;
@@ -990,6 +1002,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureVolumePan(message.value);
     } else if (message.type === "stereo-filter" && this.ready) {
       this.configureStereoFilter(message.value);
+    } else if (message.type === "step-tremolo" && this.ready) {
+      this.configureStepTremolo(message.value);
     } else if (message.type === "rhythm-tap-delay" && this.ready) {
       this.configureRhythmTapDelay(message.value);
     } else if (message.type === "plex-delay" && this.ready) {
@@ -1231,6 +1245,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
     this.module._tf_chain_finish(this.chain, frames);
     this.module._tf_chain_process_effect(this.chain, 96);
+    this.module._tf_chain_process_effect(this.chain, 97);
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;

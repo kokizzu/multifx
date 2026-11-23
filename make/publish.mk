@@ -14,6 +14,7 @@ PUBLISH_CHECKPOINTS := \
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
 PUBLISH_CHECKPOINTS += stereo-filter
+PUBLISH_CHECKPOINTS += step-tremolo
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -53,6 +54,19 @@ web-test-volume-pan:
 
 web-test-stereo-filter:
 	$(PYTHON) scripts/web.py test-stereo-filter
+
+.PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
+test-step-tremolo:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_step_tremolo_tests
+
+web-test-step-tremolo:
+	$(PYTHON) scripts/web.py test-step-tremolo
+
+inspect-web-build-path:
+	$(PYTHON) scripts/web.py inspect-build-path
+
+inspect-web-smoke-path:
+	$(PYTHON) scripts/web.py inspect-smoke-path
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
 
 publish-plan:

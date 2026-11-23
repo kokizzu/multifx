@@ -1143,6 +1143,26 @@ VOLUME_PAN_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+STEP_TREMOLO_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/step_tremolo.hpp",
+    "src/effects/step_tremolo.cpp",
+    "tests/test_step_tremolo.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/inspect_effect_api.py",
+    "scripts/inspect_web_effect_path.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 STEREO_FILTER_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
@@ -2010,6 +2030,10 @@ CHECKPOINTS = {
     "stereo-filter": (
         STEREO_FILTER_CHECKPOINT_PATHS,
         "feat: add categorized Stereo Filter",
+    ),
+    "step-tremolo": (
+        STEP_TREMOLO_CHECKPOINT_PATHS,
+        "feat: add categorized Step Tremolo",
     ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),

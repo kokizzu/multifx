@@ -62,7 +62,12 @@ if _wasm_source.is_file():
     for _label, _needle in (
         ("enable routing", "if (index == 96U)"),
         ("effect processing", "void process_effect(std::uint32_t index)"),
+        ("Filter then Step Tremolo post-chain processing order", "stereo_filter_->process("),
         ("Stereo Filter configuration", "void configure_stereo_filter("),
+        ("Step Tremolo enable routing", "if (index == 97U)"),
+        ("Step Tremolo configuration", "void configure_step_tremolo("),
+        ("Step Tremolo member", "std::unique_ptr<tabletfx::StepTremolo> step_tremolo_"),
+        ("C ABI Step Tremolo export", "tf_chain_set_step_tremolo("),
         ("C ABI enable export", "tf_chain_set_enabled(void* opaque"),
         ("C ABI Stereo Filter export", "tf_chain_set_stereo_filter("),
         ("effect count", "std::size_t effect_count() const noexcept"),

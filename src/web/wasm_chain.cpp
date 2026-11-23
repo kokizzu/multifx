@@ -386,9 +386,11 @@ public:
         effects_.push_back({std::make_unique<tabletfx::VolumePan>(), false});
         stereo_filter_ = std::make_unique<tabletfx::StereoFilter>(
             static_cast<float>(sample_rate));
+        step_tremolo_ = std::make_unique<tabletfx::StepTremolo>(
+            static_cast<float>(sample_rate));
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 3; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 4; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -410,6 +412,10 @@ public:
         }
         if (index == 96U) {
             stereo_filter_enabled_ = enabled;
+            return true;
+        }
+        if (index == 97U) {
+            step_tremolo_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -509,6 +515,13 @@ public:
             }
             return;
         }
+        if (index == 97U) {
+            if (step_tremolo_enabled_) {
+                step_tremolo_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -574,6 +587,7 @@ public:
         output_gain_.reset();
         output_limiter_.reset();
         stereo_filter_->reset();
+        step_tremolo_->reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -1355,6 +1369,29 @@ public:
         parameters.lfo_quantize_steps = static_cast<std::uint8_t>(
             enum_index(values[20], 16U));
         stereo_filter_->set_parameters(parameters);
+    }
+
+    // Config vector order: rate Hz, depth, step count, 16 normalized levels,
+    // transition milliseconds. These are project-authored controls.
+    void configure_step_tremolo(const float* values,
+                                std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 20U) return;
+        const float requested_count = std::isfinite(values[2])
+                                          ? std::round(values[2])
+                                          : 8.0F;
+        const auto step_count = static_cast<std::uint8_t>(std::clamp(
+            requested_count, 1.0F,
+            static_cast<float>(tabletfx::kStepTremoloMaximumSteps)));
+
+        step_tremolo_->set_rate_hz(values[0]);
+        step_tremolo_->set_depth(values[1]);
+        step_tremolo_->set_step_count(step_count);
+        for (std::size_t step = 0;
+             step < tabletfx::kStepTremoloMaximumSteps; ++step) {
+            step_tremolo_->set_step_level(
+                static_cast<std::uint8_t>(step), values[3U + step]);
+        }
+        step_tremolo_->set_transition_ms(values[19]);
     }
 
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
@@ -2670,6 +2707,7 @@ public:
         bytes += output_gain_.memory_bytes();
         bytes += output_limiter_.memory_bytes();
         bytes += stereo_filter_->memory_bytes();
+        bytes += step_tremolo_->memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2687,6 +2725,12 @@ public:
         }
         if (index == 96U) {
             const std::size_t bytes = stereo_filter_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
+        if (index == 97U) {
+            const std::size_t bytes = step_tremolo_->memory_bytes();
             return bytes > std::numeric_limits<std::uint32_t>::max()
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
@@ -2711,6 +2755,7 @@ private:
     std::vector<float> work_;
     std::vector<float> output_;
     std::unique_ptr<tabletfx::StereoFilter> stereo_filter_;
+    std::unique_ptr<tabletfx::StepTremolo> step_tremolo_;
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
@@ -2720,6 +2765,7 @@ private:
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
+    bool step_tremolo_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4035,6 +4081,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_stereo_filter(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_stereo_filter(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_step_tremolo(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_step_tremolo(values, value_count);
     }
 }
 
