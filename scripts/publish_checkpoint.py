@@ -992,10 +992,10 @@ MONO_GUITAR_SYNTH_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 FLAGSHIP_CATALOG_CHECKPOINT_PATHS = (
-    "Makefile",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "RESEARCH.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "research-state.json",
     "README.md",
     "scripts/publish_checkpoint.py",
 )
@@ -1891,7 +1891,7 @@ CHECKPOINTS = {
     "mono-guitar-synth": (MONO_GUITAR_SYNTH_CHECKPOINT_PATHS,
                           "feat: add project-authored mono guitar synth"),
     "flagship-catalog": (FLAGSHIP_CATALOG_CHECKPOINT_PATHS,
-                         "docs: expand flagship effects catalog"),
+                         "docs: verify flagship effect inventory sources"),
     "five-band-eq": (FIVE_BAND_EQ_CHECKPOINT_PATHS,
                      "feat: add project-authored five-band EQ"),
     "phrase-looper": (PHRASE_LOOPER_CHECKPOINT_PATHS,

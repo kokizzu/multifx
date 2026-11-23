@@ -95,31 +95,38 @@
     {
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
-      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; effects introduced in v1.8.45 on 2026-06-03",
-      "status": "Step Filter Delay name/category and descriptive role verified; accessible official sources do not expose its exact controls/ranges/defaults/stereo behavior",
-      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter Delay behavior. The official Model Guide PDF could not be inspected, so do not invent a parameter table."
+      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; Step Filter and Step Filter Delay introduced in v1.8.45 on 2026-06-03; v1.8.58 dated 2026-07-15 fixed a crash involving step effects",
+      "source_urls": ["https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates", "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here", "https://www.fender.com/products/tone-master-pro"],
+      "status": "Step Filter and Step Filter Delay names, categories, introduction, and descriptive roles verified; exact controls, ranges, defaults, and stereo behavior remain unpublished in the accessible official sources",
+      "known_controls": "No exact model control tables were found. Fender describes Step Filter as rhythmic sweeps/pulses/morphs and Step Filter Delay as unusual rhythms/textures. Project prototype controls are project-authored and not Fender settings.",
+      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter or Step Filter Delay behavior. The linked Model Guide PDF could not be parsed, so do not infer parameter controls or mono/stereo behavior."
     },
     {
       "device": "HeadRush Prime",
       "feature": "Spring Guru, Kill Seq/Splicer, named synths, and arpeggiator behavior",
-      "source": "Prime v5.2 firmware notes (2026-10), v4.1.0 notes covering v4.0.0, v3.2 notes, and current Prime product page",
+      "source": "Prime v5.2.0 firmware notes (2026-10), v4.0.0 notes (2024-11), v3.2 notes, current product page, and the linked v5.2.0 User Guide that could not be parsed",
+      "source_urls": ["https://www.headrushfx.com/products/prime/", "https://www.headrushfx.com/downloads", "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf", "https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf", "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf"],
       "status": "categories, model names, and selected firmware additions verified; per-effect parameter tables and timing/polyphony details remain unresolved",
       "known_controls": "Product page lists Ambi-Verb, Hybrid Synth, Electric Piano, and DB-33 Organ in Synth. v3.2 added Hybrid Synth, Electric Piano, and DB-33 Organ and moved Ambi Verb to Synth. v4.0 added Spring Guru in Reverb, Kill Seq/Splicer in Rhythmic, and arpeggiator controls for Hybrid Synth, Electric Piano, and DB-33 Organ.",
-      "qualification": "v5.2 notes list no changes to these effects. Current v5.2 guide could not be parsed; do not infer numeric controls, polyphony, rhythmic resolution, or DSP behavior. C-Verb controls have no published numeric ranges; project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget, so no HeadRush parity or glitch-free real-time claim."
+      "qualification": "v5.2 notes list no changes to these effects. The linked 11.7 MB v5.2 guide could not be parsed; exact per-effect controls, ranges/defaults, input-note polyphony, rhythmic resolution, and DSP behavior are unknown. Product Pitch heading says seven while displaying eight bullets with Octaves duplicated. C-Verb controls have no published numeric ranges; project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget, so no HeadRush parity or glitch-free real-time claim."
     },
     {
       "device": "Melofty Axom Max",
       "feature": "effect families, Synth/Inst, categories, parameters and routing",
-      "source": "Exact-model English Manual V1.7.4 dated 2026-08-31; downloads list v1.9.2 as of 2026-10-27",
+      "source": "Exact-model English Manual V1.7.4 dated 2026-08-31; official downloads list Axom Max firmware/app V1.9.2 dated 2026-10-27",
+      "source_urls": ["https://www.meloftyaudio.com/support/downloads", "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf", "https://apps.apple.com/de/app/melofty/id6762972347?platform=ipad"],
       "status": "family labels and generic routing controls documented; exact per-effect names/parameter tables unavailable",
-      "qualification": "Manual says 19 modules/880+ models; indexed Quick Guide lists 20 picker labels. Preserve this unresolved count mismatch; do not use sibling-model specifications."
+      "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables.",
+      "qualification": "The accessible manual is V1.7.4, not documentation for V1.9.2 firmware. Manual says 19 modules/880+ models; a secondary indexed Quick Guide lists 20 picker labels. Preserve the unresolved count mismatch and do not infer Axom model/control matching or installed firmware from the app notes."
     },
     {
       "device": "XRecer XR1",
       "feature": "effect models/parameters, FX Loop, global EQ, scenes and looper",
-      "source": "Official FAQ checked 2026-11-23; linked manual at wiki.xrecer.com",
+      "source": "Official FAQ checked 2026-11-23; FAQ lists OS 1.0.0; linked exact-model manual at wiki.xrecer.com was JavaScript-only and unreadable in this review",
+      "source_urls": ["https://www.xrecer.com/pages/faq", "https://www.xrecer.com/products/xr1", "https://www.xrecer.com/pages/download", "https://wiki.xrecer.com/"],
       "status": "FAQ confirms categories and system constraints, but manual is JS-only and unavailable to the current reader; exact effect names/control tables unknown",
-      "qualification": "FAQ documents up to four chains, eight blocks per chain, 32 per preset, one looper/preset, up to 16 scenes, and EXP assignment; planned OS v1.1 vocal processing is not current OS 1.0.0."
+      "known_controls": "FAQ documents four IR loader entries with 24-bit/48 kHz/2,048-sample single/dual cabinet IR files; four chains × eight blocks; one looper per preset with four-minute loop length and eight saved files; five-band global EQ; and external FX Loop send/return/mix. These are system/format facts, not per-effect control tables.",
+      "qualification": "FAQ describes two FX loops (Send/Return 1 and 2), while the product I/O graphic says '3 Mono/Stereo FX Loops'; preserve the unresolved 2-versus-3 count. Exact effect names and parameter values remain unknown. Planned OS v1.1 vocal processing is not current OS 1.0.0."
     }
   ],
   "constraints": [
