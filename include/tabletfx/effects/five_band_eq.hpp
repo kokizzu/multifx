@@ -18,6 +18,9 @@ enum class FiveBandEQShape : std::uint8_t {
     HighShelf = 2,
     LowCut = 3,
     HighCut = 4,
+    Peaking2 = 5,
+    LowShelf2 = 6,
+    HighShelf2 = 7,
 };
 
 struct FiveBandEQBand {
@@ -54,6 +57,18 @@ public:
         return bands_;
     }
 
+    // Project audition behavior: 0 disables band solo; 1–5 routes only the
+    // selected frequency-region band-pass to the output.
+    void set_solo_band(std::uint32_t band) noexcept {
+        solo_band_ = band <= 5U ? static_cast<std::uint8_t>(band) : 0U;
+        neutral_ = solo_band_ == 0U && is_neutral_configuration();
+        reset();
+    }
+
+    [[nodiscard]] std::uint8_t solo_band() const noexcept {
+        return solo_band_;
+    }
+
     // The five-band layout is project-authored. Its frequency spans use the
     // Fractal family guide as a reference; bounds, shapes, shelf transition,
     // and filter realization remain independent of the manufacturer's DSP.
@@ -70,7 +85,7 @@ public:
         constexpr float kMaximumQ = 10.0F;
         const float nyquist_guard_hz = sample_rate_ * 0.45F;
 
-        neutral_ = true;
+        bool bands_are_neutral = true;
         for (std::size_t band = 0; band < bands.size(); ++band) {
             const float max_hz = std::min(kMaximumFrequencyHz[band], nyquist_guard_hz);
             bands_[band].frequency_hz = bounded(
@@ -88,10 +103,13 @@ public:
             bands_[band].slope_db_per_octave =
                 std::round(slope / 6.0F) * 6.0F;
             coefficients_[band] = make_band(bands_[band], sample_rate_);
-            neutral_ = neutral_ &&
-                       bands_[band].shape == FiveBandEQShape::Peaking &&
-                       bands_[band].gain_db == 0.0F;
+            solo_coefficients_[band] = make_band_pass(
+                bands_[band].frequency_hz, bands_[band].q, sample_rate_);
+            bands_are_neutral = bands_are_neutral &&
+                                !is_blocking(bands_[band].shape) &&
+                                bands_[band].gain_db == 0.0F;
         }
+        neutral_ = solo_band_ == 0U && bands_are_neutral;
         reset();
     }
 
@@ -106,6 +124,14 @@ public:
                 if (!std::isfinite(sample)) {
                     states_[channel] = {};
                     interleaved[index] = 0.0F;
+                    continue;
+                }
+                if (solo_band_ != 0U) {
+                    const std::size_t band = solo_band_ - 1U;
+                    sample = process_section(
+                        sample, solo_coefficients_[band],
+                        states_[channel][band][0]);
+                    interleaved[index] = sample;
                     continue;
                 }
                 for (std::size_t band = 0; band < coefficients_.size(); ++band) {
@@ -144,6 +170,19 @@ private:
         std::uint8_t count = 1;
     };
 
+    [[nodiscard]] bool is_neutral_configuration() const noexcept {
+        for (const auto& band : bands_) {
+            if (is_blocking(band.shape) || band.gain_db != 0.0F) return false;
+        }
+        return true;
+    }
+
+    [[nodiscard]] static constexpr bool is_blocking(
+        FiveBandEQShape shape) noexcept {
+        return shape == FiveBandEQShape::LowCut ||
+               shape == FiveBandEQShape::HighCut;
+    }
+
     [[nodiscard]] static constexpr std::array<FiveBandEQBand, 5>
     default_parameters() noexcept {
         return {{{100.0F, 0.0F, 0.707F},
@@ -163,10 +202,13 @@ private:
         std::size_t band, FiveBandEQShape shape) noexcept {
         switch (shape) {
         case FiveBandEQShape::Peaking:
+        case FiveBandEQShape::Peaking2:
             return true;
         case FiveBandEQShape::LowShelf:
+        case FiveBandEQShape::LowShelf2:
             return band <= 1;
         case FiveBandEQShape::HighShelf:
+        case FiveBandEQShape::HighShelf2:
             return band >= 3;
         case FiveBandEQShape::LowCut:
             return band == 0;
@@ -212,6 +254,16 @@ private:
                          -2.0 * cosine, 1.0 - alpha / amplitude);
     }
 
+    [[nodiscard]] static Coefficients make_peak2(float frequency_hz,
+                                                  float gain_db, float q,
+                                                  float sample_rate) noexcept {
+        // The guide describes a different response at low Q, but does not
+        // publish its coefficients. This project variant uses a narrower
+        // low-Q mapping as an explicitly project-authored choice.
+        const float mapped_q = q < 1.0F ? std::sqrt(q) : q;
+        return make_peak(frequency_hz, gain_db, mapped_q, sample_rate);
+    }
+
     [[nodiscard]] static Coefficients make_shelf(float frequency_hz,
                                                   float gain_db,
                                                   float sample_rate,
@@ -243,6 +295,34 @@ private:
             (amplitude + 1.0) + (amplitude - 1.0) * cosine + beta,
             -2.0 * ((amplitude - 1.0) + (amplitude + 1.0) * cosine),
             (amplitude + 1.0) + (amplitude - 1.0) * cosine - beta);
+    }
+
+    [[nodiscard]] static BandCoefficients make_shelf2(
+        float frequency_hz, float gain_db, float q, float sample_rate,
+        bool high_shelf) noexcept {
+        BandCoefficients result;
+        result.sections[0] = make_shelf(
+            frequency_hz, gain_db, sample_rate, high_shelf);
+        if (gain_db != 0.0F) {
+            // A second, gentle peak adds an audible project-authored
+            // cutoff overshoot; this is not the manufacturer's filter DSP.
+            result.sections[1] = make_peak(
+                frequency_hz, gain_db * 0.30F,
+                std::clamp(q * 0.90F, 0.5F, 2.0F), sample_rate);
+            result.count = 2;
+        }
+        return result;
+    }
+
+    [[nodiscard]] static Coefficients make_band_pass(
+        float frequency_hz, float q, float sample_rate) noexcept {
+        constexpr double kPi = 3.141592653589793238462643383279502884;
+        const double omega = 2.0 * kPi * static_cast<double>(frequency_hz) /
+                             static_cast<double>(sample_rate);
+        const double cosine = std::cos(omega);
+        const double alpha = std::sin(omega) / (2.0 * static_cast<double>(q));
+        return normalize(alpha, 0.0, -alpha, 1.0 + alpha, -2.0 * cosine,
+                         1.0 - alpha);
     }
 
     [[nodiscard]] static Coefficients make_first_order(float frequency_hz,
@@ -309,10 +389,20 @@ private:
             result.sections[0] = make_peak(
                 band.frequency_hz, band.gain_db, band.q, sample_rate);
             break;
+        case FiveBandEQShape::Peaking2:
+            result.sections[0] = make_peak2(
+                band.frequency_hz, band.gain_db, band.q, sample_rate);
+            break;
         case FiveBandEQShape::LowShelf:
             result.sections[0] = make_shelf(
                 band.frequency_hz, band.gain_db, sample_rate, false);
             break;
+        case FiveBandEQShape::LowShelf2:
+            return make_shelf2(band.frequency_hz, band.gain_db, band.q,
+                               sample_rate, false);
+        case FiveBandEQShape::HighShelf2:
+            return make_shelf2(band.frequency_hz, band.gain_db, band.q,
+                               sample_rate, true);
         case FiveBandEQShape::HighShelf:
             result.sections[0] = make_shelf(
                 band.frequency_hz, band.gain_db, sample_rate, true);
@@ -348,8 +438,10 @@ private:
     float sample_rate_;
     std::uint16_t channels_;
     bool neutral_ = true;
+    std::uint8_t solo_band_ = 0U;
     std::array<FiveBandEQBand, 5> bands_{};
     std::array<BandCoefficients, 5> coefficients_{};
+    std::array<Coefficients, 5> solo_coefficients_{};
     std::array<std::array<std::array<SectionState, 3>, 5>, 2> states_{};
 };
 

@@ -182,13 +182,20 @@ void test_outer_band_blocking_slope_controls_cut_response() {
 void test_shapes_are_limited_to_project_supported_bands() {
     tabletfx::FiveBandParametricEQ eq;
     auto bands = eq.parameters();
+    bands[0].shape = tabletfx::FiveBandEQShape::Peaking2;
+    bands[1].shape = tabletfx::FiveBandEQShape::LowShelf2;
+    bands[3].shape = tabletfx::FiveBandEQShape::HighShelf2;
+    bands[4].shape = tabletfx::FiveBandEQShape::Peaking2;
     bands[1].shape = tabletfx::FiveBandEQShape::HighCut;
     bands[2].shape = tabletfx::FiveBandEQShape::LowShelf;
     bands[4].slope_db_per_octave = 100.0F;
     eq.configure(bands);
     const auto actual = eq.parameters();
     require(actual[1].shape == tabletfx::FiveBandEQShape::Peaking &&
-                actual[2].shape == tabletfx::FiveBandEQShape::Peaking,
+                actual[2].shape == tabletfx::FiveBandEQShape::Peaking &&
+                actual[0].shape == tabletfx::FiveBandEQShape::Peaking2 &&
+                actual[3].shape == tabletfx::FiveBandEQShape::HighShelf2 &&
+                actual[4].shape == tabletfx::FiveBandEQShape::Peaking2,
             "unsupported outer-band filter shapes were not reset to peaking");
     require(actual[4].slope_db_per_octave == 36.0F,
             "blocking slope was not clamped to the project maximum");
@@ -198,6 +205,69 @@ void test_shapes_are_limited_to_project_supported_bands() {
     eq.configure(bands);
     require(eq.parameters()[4].slope_db_per_octave == 6.0F,
             "blocking slope was not quantized to 6 dB/octave steps");
+}
+
+void test_project_peaking2_has_distinct_low_q_response() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    tabletfx::FiveBandParametricEQ standard(kSampleRate, 1);
+    tabletfx::FiveBandParametricEQ alternate(kSampleRate, 1);
+    auto standard_bands = standard.parameters();
+    auto alternate_bands = alternate.parameters();
+    standard_bands[2] = {1000.0F, 9.0F, 0.25F};
+    alternate_bands[2] = {1000.0F, 9.0F, 0.25F,
+                          tabletfx::FiveBandEQShape::Peaking2};
+    standard.configure(standard_bands);
+    alternate.configure(alternate_bands);
+    auto standard_tone = make_sine(kSampleRate, 700.0F, kFrames);
+    auto alternate_tone = standard_tone;
+    standard.process(standard_tone, 1);
+    alternate.process(alternate_tone, 1);
+    require(std::abs(tail_rms(standard_tone, 1) -
+                     tail_rms(alternate_tone, 1)) > 0.01F,
+            "project Peaking 2 did not distinguish the low-Q response");
+}
+
+void test_project_shelving2_has_cutoff_overshoot() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    tabletfx::FiveBandParametricEQ standard(kSampleRate, 1);
+    tabletfx::FiveBandParametricEQ alternate(kSampleRate, 1);
+    auto standard_bands = standard.parameters();
+    auto alternate_bands = alternate.parameters();
+    standard_bands[0] = {200.0F, 9.0F, 0.707F,
+                         tabletfx::FiveBandEQShape::LowShelf};
+    alternate_bands[0] = {200.0F, 9.0F, 0.707F,
+                          tabletfx::FiveBandEQShape::LowShelf2};
+    standard.configure(standard_bands);
+    alternate.configure(alternate_bands);
+    auto standard_tone = make_sine(kSampleRate, 200.0F, kFrames);
+    auto alternate_tone = standard_tone;
+    standard.process(standard_tone, 1);
+    alternate.process(alternate_tone, 1);
+    require(tail_rms(alternate_tone, 1) > tail_rms(standard_tone, 1),
+            "project passive shelf did not add cutoff overshoot");
+}
+
+void test_solo_band_selects_one_frequency_region() {
+    constexpr float kSampleRate = 48000.0F;
+    constexpr std::size_t kFrames = 48000;
+    tabletfx::FiveBandParametricEQ eq(kSampleRate, 1);
+    auto bands = eq.parameters();
+    bands[2].frequency_hz = 1000.0F;
+    bands[2].q = 2.0F;
+    eq.configure(bands);
+    auto low = make_sine(kSampleRate, 100.0F, kFrames);
+    auto center = make_sine(kSampleRate, 1000.0F, kFrames);
+    auto high = make_sine(kSampleRate, 8000.0F, kFrames);
+    std::vector<float> mixed(kFrames);
+    for (std::size_t index = 0; index < mixed.size(); ++index) {
+        mixed[index] = low[index] + center[index] + high[index];
+    }
+    eq.set_solo_band(3);
+    eq.process(mixed, 1);
+    require(tail_rms(mixed, 1) > 0.08F,
+            "solo band removed the selected center-frequency signal");
 }
 
 void test_stereo_state_is_independent_and_nonfinite_input_is_contained() {
@@ -256,6 +326,9 @@ int main() {
         test_shelf_shapes_boost_only_their_side_of_the_spectrum();
         test_outer_band_blocking_slope_controls_cut_response();
         test_shapes_are_limited_to_project_supported_bands();
+        test_project_peaking2_has_distinct_low_q_response();
+        test_project_shelving2_has_cutoff_overshoot();
+        test_solo_band_selects_one_frequency_region();
         test_stereo_state_is_independent_and_nonfinite_input_is_contained();
         test_processing_allocates_nothing();
         std::cout << "FiveBandEQ tests passed.\n";

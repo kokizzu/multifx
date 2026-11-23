@@ -755,10 +755,11 @@ public:
                                 float f4, float g4, float q4,
                                 std::uint32_t shape4, float slope4,
                                 float f5, float g5, float q5,
-                                std::uint32_t shape5, float slope5) noexcept {
+                                std::uint32_t shape5, float slope5,
+                                std::uint32_t solo_band) noexcept {
         const auto shape = [](std::uint32_t value) noexcept {
             return static_cast<tabletfx::FiveBandEQShape>(
-                value <= 4U ? value : 5U);
+                value <= 7U ? value : 255U);
         };
         const std::array<tabletfx::FiveBandEQBand, 5> bands{{
             {f1, g1, q1, shape(shape1), slope1},
@@ -767,8 +768,10 @@ public:
             {f4, g4, q4, shape(shape4), slope4},
             {f5, g5, q5, shape(shape5), slope5},
         }};
-        static_cast<tabletfx::FiveBandParametricEQ*>(effects_[59].effect.get())
-            ->configure(bands);
+        auto* eq = static_cast<tabletfx::FiveBandParametricEQ*>(
+            effects_[59].effect.get());
+        eq->configure(bands);
+        eq->set_solo_band(solo_band);
     }
 
     [[nodiscard]] bool looper_command(std::uint32_t command) noexcept {
@@ -3886,12 +3889,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_five_band_eq(
     float f2, float g2, float q2, std::uint32_t shape2, float slope2,
     float f3, float g3, float q3, std::uint32_t shape3, float slope3,
     float f4, float g4, float q4, std::uint32_t shape4, float slope4,
-    float f5, float g5, float q5, std::uint32_t shape5, float slope5) noexcept {
+    float f5, float g5, float q5, std::uint32_t shape5, float slope5,
+    std::uint32_t solo_band) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_five_band_eq(
             f1, g1, q1, shape1, slope1, f2, g2, q2, shape2, slope2,
             f3, g3, q3, shape3, slope3, f4, g4, q4, shape4, slope4,
-            f5, g5, q5, shape5, slope5);
+            f5, g5, q5, shape5, slope5, solo_band);
     }
 }
 

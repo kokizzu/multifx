@@ -276,7 +276,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
        const fiveBandEq = parameters.fiveBandEq || [
          100, 0, 0.707, 0, 12, 350, 0, 0.707, 0, 12,
          1000, 0, 0.707, 0, 12, 3500, 0, 0.707, 0, 12,
-         8000, 0, 0.707, 0, 12,
+         8000, 0, 0.707, 0, 12, 0,
        ];
        module._tf_chain_set_five_band_eq(this.chain, ...fiveBandEq);
       const delay = parameters.delay || [350, 0.25, 0.25];

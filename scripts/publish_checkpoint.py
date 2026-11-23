@@ -1927,6 +1927,20 @@ FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FRACTAL_PEQ_TYPES_SOLO_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "include/tabletfx/effects/five_band_eq.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "src/web/wasm_chain.cpp",
+    "tests/test_five_band_eq.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2083,6 +2097,10 @@ CHECKPOINTS = {
     "fractal-ring-mod-tracking": (
         FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS,
         "feat: add project-authored ring mod pitch tracking",
+    ),
+    "fractal-peq-types-solo": (
+        FRACTAL_PEQ_TYPES_SOLO_CHECKPOINT_PATHS,
+        "feat: add project-authored PEQ variants and solo",
     ),
     "octobot": (
         OCTOBOT_CHECKPOINT_PATHS,

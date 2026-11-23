@@ -275,7 +275,7 @@ const DEFAULT_PARAMETERS = {
   eq: [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707],
   fiveBandEq: [100, 0, 0.707, 0, 12, 350, 0, 0.707, 0, 12,
     1000, 0, 0.707, 0, 12, 3500, 0, 0.707, 0, 12,
-    8000, 0, 0.707, 0, 12],
+    8000, 0, 0.707, 0, 12, 0],
   delay: [350, 0.25, 0.25],
   delayBbd: false,
   delayBbdMode: false,
@@ -1393,6 +1393,7 @@ const fiveBandEqControls = Array.from({ length: 5 }, (_, index) => {
     slopeValue: document.querySelector(`#${id}-slope-value`),
   };
 });
+const fiveBandEqSolo = document.querySelector("#five-band-eq-solo-band");
 const shelfTiltMode = document.querySelector("#shelf-tilt-mode");
 const shelfTiltFrequency = document.querySelector("#shelf-tilt-frequency-hz");
 const shelfTiltFrequencyValue = document.querySelector("#shelf-tilt-frequency-value");
@@ -5133,15 +5134,17 @@ function updateFiveBandEQ() {
     const shape = Number(band.shape.value);
     const slope = band.slope ? Number(band.slope.value) : 12;
     const isBlocking = shape === 3 || shape === 4;
+    const usesQ = [0, 5, 6, 7].includes(shape);
     band.frequencyValue.value = `${frequency.toFixed(0)} Hz`;
     band.gainValue.value = `${gain.toFixed(1)} dB`;
     band.qValue.value = q.toFixed(2);
     band.gain.disabled = isBlocking;
-    band.q.disabled = shape !== 0;
+    band.q.disabled = !usesQ;
     if (band.slope) band.slope.disabled = !isBlocking;
     if (band.slopeValue) band.slopeValue.value = `${slope} dB/oct`;
     values.push(frequency, gain, q, shape, slope);
   }
+  values.push(Number(fiveBandEqSolo.value));
   DEFAULT_PARAMETERS.fiveBandEq = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "five-band-eq", value: values });
@@ -5155,6 +5158,7 @@ for (const band of fiveBandEqControls) {
     control.addEventListener("change", updateFiveBandEQ);
   }
 }
+fiveBandEqSolo.addEventListener("change", updateFiveBandEQ);
 updateFiveBandEQ();
 
 function updateRoomReverb() {
