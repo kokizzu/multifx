@@ -85,7 +85,7 @@
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">83 of 83</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">90 of 90</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -176,8 +176,9 @@
              <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="84"><span class="effect-number">85</span><span class="effect-name">Tape Echo · project-authored</span><span class="effect-default">Time · Tap Division · Feedback · Mix · Record Level · Bias · Noise · Wow/Flutter · Spillover</span><span class="effect-category-tag">Delay</span></label>
               <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="85"><span class="effect-number">86</span><span class="effect-name">Octave Fuzz · project-authored</span><span class="effect-default">Boost · Volume · Octave Switch</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
               <label class="effect-row" data-category="crossover"><input type="checkbox" data-effect="86"><span class="effect-number">87</span><span class="effect-name">Stereo Crossover · project-authored Fractal XVR-inspired controls</span><span class="effect-default">Two-way LR4 split · per-channel low/high level and pan</span><span class="effect-category-tag">Crossover</span></label>
-               <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="87" checked><span class="effect-number">88</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
-               <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="88" checked><span class="effect-number">89</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
+                <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="87"><span class="effect-number">88</span><span class="effect-name">Asheville Pattrn · project-authored</span><span class="effect-default">8-band filter bank · 8 project patterns</span><span class="effect-category-tag">Filters &amp; wah</span></label>
+                <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="88" checked><span class="effect-number">89</span><span class="effect-name">Output level</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
+                <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="89" checked><span class="effect-number">90</span><span class="effect-name">Peak limiter</span><span class="effect-default">−1 dBFS · 0 lookahead</span><span class="effect-category-tag">Dynamics</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -298,6 +299,22 @@
         </div>
         <div id="step-filter-steps" class="slicer-step-grid" aria-label="16-step filter cutoff pattern"></div>
         <p class="hint">Pattern values sweep logarithmically between the minimum and maximum cutoff. Choose low-pass, band-pass, high-pass, or notch response. This sequenced filter is distinct from the amplitude-gate Rhythmic Slicer, and uses project-authored controls rather than a manufacturer parameter match.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Asheville Pattrn controls">
+        <h3>Asheville Pattrn · project-authored filter bank</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="asheville-pattrn-bank"><span>Frequency bank</span><select id="asheville-pattrn-bank"><option value="0" selected>BASS</option><option value="1">MIDS</option></select></label>
+          <label class="mix-control" for="asheville-pattrn-pattern"><span>Project pattern</span><select id="asheville-pattrn-pattern"><option value="0" selected>Pattern 1</option><option value="1">Pattern 2</option><option value="2">Pattern 3</option><option value="3">Pattern 4</option><option value="4">Pattern 5</option><option value="5">Pattern 6</option><option value="6">Pattern 7</option><option value="7">Pattern 8</option></select></label>
+          <label class="mix-control" for="asheville-pattrn-drive-db"><span>Drive</span><output id="asheville-pattrn-drive-db-value" for="asheville-pattrn-drive-db">0.0 dB</output><input id="asheville-pattrn-drive-db" type="range" min="0" max="18" step="0.1" value="0"></label>
+          <label class="mix-control" for="asheville-pattrn-output-db"><span>Output</span><output id="asheville-pattrn-output-db-value" for="asheville-pattrn-output-db">0.0 dB</output><input id="asheville-pattrn-output-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="asheville-pattrn-mix"><span>Mix</span><output id="asheville-pattrn-mix-value" for="asheville-pattrn-mix">50%</output><input id="asheville-pattrn-mix" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="asheville-pattrn-rate-hz"><span>Pattern rate</span><output id="asheville-pattrn-rate-hz-value" for="asheville-pattrn-rate-hz">0.75 Hz</output><input id="asheville-pattrn-rate-hz" type="range" min="0.05" max="10" step="0.05" value="0.75"></label>
+          <label class="mix-control" for="asheville-pattrn-resonance-q"><span>Resonance Q</span><output id="asheville-pattrn-resonance-q-value" for="asheville-pattrn-resonance-q">3.00</output><input id="asheville-pattrn-resonance-q" type="range" min="0.5" max="12" step="0.01" value="3"></label>
+          <label class="mix-control" for="asheville-pattrn-envelope-shape"><span>Envelope shape</span><output id="asheville-pattrn-envelope-shape-value" for="asheville-pattrn-envelope-shape">50%</output><input id="asheville-pattrn-envelope-shape" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+          <label class="mix-control" for="asheville-pattrn-smoothing-ms"><span>Parameter smoothing</span><output id="asheville-pattrn-smoothing-ms-value" for="asheville-pattrn-smoothing-ms">10 ms</output><input id="asheville-pattrn-smoothing-ms" type="range" min="0" max="1000" step="1" value="10"></label>
+        </div>
+        <div id="asheville-pattrn-band-levels" class="slicer-step-grid" aria-label="Eight filter band levels"></div>
+        <p class="hint">The 8-step patterns and control ranges are project-authored. BASS band 1 is a 110 Hz low-pass; the other BASS bands and all MIDS bands are resonant band-pass filters. This project processor does not claim Line 6 or Moog DSP, parameter, pattern, or sound parity.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Notch Filter controls">
         <h3>Notch Filter · project-authored</h3>
@@ -922,7 +939,7 @@
       <div class="effect-parameter-group" aria-label="Stereo Crossover project-authored controls">
         <h3>Stereo Crossover · project-authored</h3>
         <div class="gain-controls">
-          <label class="mix-control" for="stereo-crossover-frequency-hz"><span>Frequency · project range 20–2,000 Hz before multiplier</span><output for="stereo-crossover-frequency-hz">500 Hz</output><input id="stereo-crossover-frequency-hz" type="range" min="20" max="2000" step="1" value="500"></label>
+          <label class="mix-control" for="stereo-crossover-frequency-hz"><span>Frequency · project range 20–2,000 Hz before multiplier; project default 500 Hz</span><output for="stereo-crossover-frequency-hz">500 Hz</output><input id="stereo-crossover-frequency-hz" type="range" min="20" max="2000" step="1" value="500"></label>
           <label class="mix-control" for="stereo-crossover-frequency-multiplier"><span>Frequency Multiplier</span><select id="stereo-crossover-frequency-multiplier"><option value="x1" selected>×1</option><option value="x10">×10</option></select></label>
           <label class="mix-control" for="stereo-crossover-low-level-left-db"><span>Lo Level Left · project range −60…+12 dB</span><output for="stereo-crossover-low-level-left-db">0.0 dB</output><input id="stereo-crossover-low-level-left-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
           <label class="mix-control" for="stereo-crossover-low-level-right-db"><span>Lo Level Right · project range −60…+12 dB</span><output for="stereo-crossover-low-level-right-db">0.0 dB</output><input id="stereo-crossover-low-level-right-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
@@ -935,7 +952,7 @@
           <label class="mix-control" for="stereo-crossover-level-db"><span>Level · project range −60…+12 dB</span><output for="stereo-crossover-level-db">0.0 dB</output><input id="stereo-crossover-level-db" type="range" min="-60" max="12" step="0.1" value="0"></label>
           <label class="mix-control" for="stereo-crossover-balance"><span>Balance · project range −1…+1</span><output for="stereo-crossover-balance">0%</output><input id="stereo-crossover-balance" type="range" min="-1" max="1" step="0.01" value="0"></label>
         </div>
-        <p class="hint">The June 2023 Fractal Blocks Guide documents XVR as a two-way stereo fourth-order Linkwitz–Reilly split, Frequency with a ×1/×10 multiplier, separate Lo/Hi left/right levels and pans, and Mix-page Level, Balance, Bypass, and Bypass Mode. It does not publish numeric frequency bounds/defaults or DSP topology. TabletFX controls, ranges, and DSP are project-authored; no Fractal DSP/settings parity is claimed. The guide covers the FM9 family; checked firmware v12.0 (2026-07-07) names FM9 Original and FM9 Turbo, not Mark II Turbo. Exact Mark II Turbo applicability remains qualified. <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide · June 2023</a>.</p>
+        <p class="hint">The November 2026 Fractal Audio Blocks Guide documents XVR as a two-way stereo fourth-order Linkwitz–Reilly split, with Frequency at 40–800 Hz and a ×1/×10 multiplier (400 Hz–8 kHz at ×10), plus separate Lo/Hi left/right levels and pans and Mix-page Level, Balance, Bypass, and Bypass Mode. The guide publishes no frequency default. TabletFX’s base range is a separate project choice of 20–2,000 Hz (up to 20 kHz at ×10), with a 500 Hz project default; its controls, ranges, and DSP are project-authored, with no Fractal DSP/settings parity claim. The guide covers the FM9 family; checked firmware v12.0 (2026-07-07) names FM9 Original and FM9 Turbo, not Mark II Turbo. Exact Mark II Turbo applicability remains qualified. <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide · November 2026</a>.</p>
       </div>
       <div class="gain-controls" aria-label="Manual Through-Zero Flanger project-authored controls">
         <label class="mix-control" for="manual-tzf-minimum-time">

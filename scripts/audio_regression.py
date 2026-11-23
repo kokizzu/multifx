@@ -434,6 +434,39 @@ def run_stereo_crossover_input(renderer: Path, source: Path, output: Path) -> st
     return report
 
 
+def run_asheville_pattrn_input(renderer: Path, source: Path, output: Path) -> str:
+    command = [
+        str(renderer), "render", str(source), str(output),
+        "--asheville-pattrn",
+        "--asheville-pattrn-bank", "bass",
+        "--asheville-pattrn-pattern", "0",
+        "--asheville-pattrn-band-levels", "1,1,1,1,1,1,1,1",
+        "--asheville-pattrn-drive-db", "0",
+        "--asheville-pattrn-output-db", "0",
+        "--asheville-pattrn-mix", "0.5",
+        "--asheville-pattrn-rate-hz", "0.75",
+        "--asheville-pattrn-resonance-q", "3",
+        "--asheville-pattrn-envelope-shape", "0.5",
+        "--asheville-pattrn-smoothing-ms", "10",
+    ]
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Isolated Asheville Pattrn render failed for {source}: {result.stderr.strip()}")
+    report = result.stdout.strip()
+    match = re.search(
+        r"rendered frames=(\d+).*?processors=(\d+).*?output_peak=([0-9.eE+-]+).*?output_rms=([0-9.eE+-]+)",
+        report,
+    )
+    if not match or int(match.group(1)) <= 0 or int(match.group(2)) != 1:
+        raise RuntimeError(f"Unexpected isolated Asheville Pattrn report: {report}")
+    if not all(math.isfinite(float(match.group(index))) for index in (3, 4)):
+        raise RuntimeError(f"Asheville Pattrn produced non-finite peak/RMS: {report}")
+    if not output.is_file() or output.stat().st_size <= 44:
+        raise RuntimeError(f"Renderer did not write audio output for {source}: {output}")
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
@@ -508,7 +541,11 @@ def main() -> None:
             renderer, source, output_root / "stereo-crossover-bridge.wav",
         )
         print(f"OK isolated Stereo Crossover high-band-only on prerecorded EGFxSet bridge pickup: {report}")
-    print("All prerecorded clean guitar inputs rendered through the 70-stage chain with a deterministic local convolution IR, including the project-authored Octave Fuzz, Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. Separate bridge-pickup renders enable the project-authored Three-Stage Distortion in a 71-stage chain and isolated high-band-only Stereo Crossover through the offline CLI.")
+        report = run_asheville_pattrn_input(
+            renderer, source, output_root / "asheville-pattrn-bridge.wav",
+        )
+        print(f"OK isolated Asheville Pattrn BASS pattern 0 on prerecorded EGFxSet bridge pickup: {source.relative_to(clean_root)}; {report}")
+    print("All prerecorded clean guitar inputs rendered through the 70-stage chain with a deterministic local convolution IR, including the project-authored Octave Fuzz, Harmonic Tremolo, Manual Thru-Zero Flanger, Fender-guide-named Auto-Swell Delay control set, five-band parametric EQ, monophonic oscillator synth, Feedback Generator, Shimmer Reverb, Convolution Reverb, Pitch Arpeggiator and Diatonic Harmonizer, Bit Crusher, Dimension Chorus, Triple-Double Chorus, four-band Resonator, Grain Delay, pitch-feedback delay, Plex Matrix Delay, Room, Hall, Plate, Spring Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Rhythmic Slicer, Step Filter, Notch Filter, Formant Filter, Harmonic Resonator, three-band compression, Reverse Delay, Ducking Delay, Modulated Delay, Filtered Delay, Resonant Delay, and Swept Delay, five pickup positions, and DI music with Tape Echo and multi-head echo. Separate bridge-pickup renders enable the project-authored Three-Stage Distortion in a 71-stage chain, isolated high-band-only Stereo Crossover, and isolated Asheville Pattrn in the offline CLI.")
 
 
 if __name__ == "__main__":

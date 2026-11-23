@@ -88,6 +88,7 @@ const EFFECT_NAMES = [
   "Tape Echo · project-authored Fender control roles",
   "Octave Fuzz · project-authored Fender control roles",
   "Stereo Crossover · project-authored Fractal XVR-inspired controls",
+  "Asheville Pattrn · project-authored filter bank",
   "Output level",
   "Peak limiter",
 ];
@@ -230,6 +231,7 @@ const DEFAULT_PARAMETERS = {
   stepFilter: [1, 120, 8, 8, 0, 120, 6000, 0.707, 1, 0.15, 4, 1, 0,
     0, 0.72, 0.18, 0.88, 0.32, 0.62, 0.08, 0.96,
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
+  ashevillePattrn: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0.5, 0.75, 3, 0.5, 10],
   notchFilter: [1000, 4, 1],
   formantFilter: [0, 4, 1, 0],
   harmonicResonator: [110, 1.2, 0.55, 0.5],
@@ -1392,6 +1394,41 @@ const stepFilterSteps = Array.from({ length: 16 }, (_, index) => {
   input.setAttribute("aria-label", `Step Filter step ${index + 1} cutoff position`);
   label.append(name, output, input);
   stepFilterStepsRoot.append(label);
+  return { input, output };
+});
+const ashevillePattrnBank = document.querySelector("#asheville-pattrn-bank");
+const ashevillePattrnPattern = document.querySelector("#asheville-pattrn-pattern");
+const ashevillePattrnDrive = document.querySelector("#asheville-pattrn-drive-db");
+const ashevillePattrnDriveValue = document.querySelector("#asheville-pattrn-drive-db-value");
+const ashevillePattrnOutput = document.querySelector("#asheville-pattrn-output-db");
+const ashevillePattrnOutputValue = document.querySelector("#asheville-pattrn-output-db-value");
+const ashevillePattrnMix = document.querySelector("#asheville-pattrn-mix");
+const ashevillePattrnMixValue = document.querySelector("#asheville-pattrn-mix-value");
+const ashevillePattrnRate = document.querySelector("#asheville-pattrn-rate-hz");
+const ashevillePattrnRateValue = document.querySelector("#asheville-pattrn-rate-hz-value");
+const ashevillePattrnQ = document.querySelector("#asheville-pattrn-resonance-q");
+const ashevillePattrnQValue = document.querySelector("#asheville-pattrn-resonance-q-value");
+const ashevillePattrnEnvelope = document.querySelector("#asheville-pattrn-envelope-shape");
+const ashevillePattrnEnvelopeValue = document.querySelector("#asheville-pattrn-envelope-shape-value");
+const ashevillePattrnSmoothing = document.querySelector("#asheville-pattrn-smoothing-ms");
+const ashevillePattrnSmoothingValue = document.querySelector("#asheville-pattrn-smoothing-ms-value");
+const ashevillePattrnBandLevelsRoot = document.querySelector("#asheville-pattrn-band-levels");
+const ashevillePattrnBandLevels = Array.from({ length: 8 }, (_, index) => {
+  const label = document.createElement("label");
+  label.className = "slicer-step";
+  const name = document.createElement("span");
+  name.textContent = `Band ${index + 1}`;
+  const output = document.createElement("output");
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = "0";
+  input.max = "1";
+  input.step = "0.01";
+  input.value = String(DEFAULT_PARAMETERS.ashevillePattrn[index + 2]);
+  output.textContent = `${Math.round(Number(input.value) * 100)}%`;
+  input.setAttribute("aria-label", `Asheville Pattrn band ${index + 1} level`);
+  label.append(name, output, input);
+  ashevillePattrnBandLevelsRoot.append(label);
   return { input, output };
 });
 const notchFilterFrequency = document.querySelector("#notch-filter-frequency-hz");
@@ -4612,6 +4649,37 @@ function updateStepFilter() {
   }
 }
 
+function updateAshevillePattrn() {
+  const bandLevels = ashevillePattrnBandLevels.map(({ input }) =>
+    Number(input.value));
+  const values = [
+    Number(ashevillePattrnBank.value),
+    Number(ashevillePattrnPattern.value),
+    ...bandLevels,
+    Number(ashevillePattrnDrive.value),
+    Number(ashevillePattrnOutput.value),
+    Number(ashevillePattrnMix.value) / 100,
+    Number(ashevillePattrnRate.value),
+    Number(ashevillePattrnQ.value),
+    Number(ashevillePattrnEnvelope.value),
+    Number(ashevillePattrnSmoothing.value),
+  ];
+  ashevillePattrnDriveValue.value = `${values[10].toFixed(1)} dB`;
+  ashevillePattrnOutputValue.value = `${values[11].toFixed(1)} dB`;
+  ashevillePattrnMixValue.value = `${Math.round(values[12] * 100)}%`;
+  ashevillePattrnRateValue.value = `${values[13].toFixed(2)} Hz`;
+  ashevillePattrnQValue.value = values[14].toFixed(2);
+  ashevillePattrnEnvelopeValue.value = `${Math.round(values[15] * 100)}%`;
+  ashevillePattrnSmoothingValue.value = `${values[16].toFixed(0)} ms`;
+  ashevillePattrnBandLevels.forEach(({ output }, index) => {
+    output.value = `${Math.round(bandLevels[index] * 100)}%`;
+  });
+  DEFAULT_PARAMETERS.ashevillePattrn = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "asheville-pattrn", value: values });
+  }
+}
+
 function updateNotchFilter() {
   const values = [
     Number(notchFilterFrequency.value),
@@ -4939,6 +5007,16 @@ for (const input of [stepFilterTempoBpm, stepFilterRate, stepFilterMinimumCutoff
 }
 for (const input of [stepFilterTempoSync, stepFilterDivision, stepFilterMode]) {
   input.addEventListener("change", updateStepFilter);
+}
+for (const input of [ashevillePattrnDrive, ashevillePattrnOutput,
+  ashevillePattrnMix, ashevillePattrnRate, ashevillePattrnQ,
+  ashevillePattrnEnvelope, ashevillePattrnSmoothing,
+  ...ashevillePattrnBandLevels.map(({ input: level }) => level)]) {
+  input.addEventListener("input", updateAshevillePattrn);
+  input.addEventListener("change", updateAshevillePattrn);
+}
+for (const input of [ashevillePattrnBank, ashevillePattrnPattern]) {
+  input.addEventListener("change", updateAshevillePattrn);
 }
 for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
@@ -6993,6 +7071,143 @@ async function runStereoCrossoverBrowserSmokeTest(reference, captureView, captur
   }
 }
 
+async function runAshevillePattrnBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = [
+    ashevillePattrnBank.value, ashevillePattrnPattern.value,
+    ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+    ashevillePattrnMix.value, ashevillePattrnRate.value,
+    ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+    ashevillePattrnSmoothing.value,
+    ...ashevillePattrnBandLevels.map(({ input }) => input.value),
+  ];
+  const previousParameters = [...DEFAULT_PARAMETERS.ashevillePattrn];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error(
+        "Asheville Pattrn smoke test requires the ready browser chain and local guitar audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    ashevillePattrnBank.value = "1";
+    ashevillePattrnPattern.value = "5";
+    [
+      ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+      ashevillePattrnMix.value, ashevillePattrnRate.value,
+      ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+      ashevillePattrnSmoothing.value,
+    ] = ["8", "-3", "85", "1.7", "5.5", "0.7", "10"];
+    const bandLevels = [0.2, 0.85, 0.3, 1, 0.35, 0.9, 0.25, 0.7];
+    ashevillePattrnBandLevels.forEach(({ input }, index) => {
+      input.value = String(bandLevels[index]);
+    });
+    updateAshevillePattrn();
+    if (decodedAudio.numberOfChannels !== 1 ||
+        decodedAudio.length !== reference.samples.length) {
+      throw new Error("Asheville Pattrn smoke requires a matching mono local guitar fixture.");
+    }
+    const dry = Float32Array.from(decodedAudio.getChannelData(0));
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    const capture = async () => {
+      checkboxes.forEach((checkbox, index) => {
+        const enabled = index === 87;
+        checkbox.checked = enabled;
+        workletNode.port.postMessage({ type: "enable", index, value: enabled });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Asheville Pattrn playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return Float32Array.from(new Float32Array(captureBuffer));
+    };
+    const processed = await capture();
+    let peak = 0;
+    let squares = 0;
+    let maximumDifferenceFromDry = 0;
+    let differenceFromDrySquares = 0;
+    let changedSamplesFromDry = 0;
+    for (let index = 0; index < processed.length; index += 1) {
+      const sample = processed[index];
+      const drySample = dry[index];
+      if (!Number.isFinite(sample) || !Number.isFinite(drySample)) {
+        throw new Error(
+          "Asheville Pattrn produced a non-finite sample at frame " + index + ".");
+      }
+      peak = Math.max(peak, Math.abs(sample));
+      squares += sample * sample;
+      const difference = Math.abs(sample - drySample);
+      maximumDifferenceFromDry = Math.max(maximumDifferenceFromDry, difference);
+      differenceFromDrySquares += difference * difference;
+      if (difference > 1e-6) changedSamplesFromDry += 1;
+    }
+    const rms = Math.sqrt(squares / Math.max(1, processed.length));
+    const rmsDifferenceFromDry = Math.sqrt(
+      differenceFromDrySquares / Math.max(1, processed.length),
+    );
+    if (peak < 1e-5 || rms < 1e-6 || maximumDifferenceFromDry < 1e-4 ||
+        rmsDifferenceFromDry < 1e-5 || changedSamplesFromDry < 32) {
+      throw new Error(
+        "Asheville Pattrn did not produce finite, changed local guitar output: " +
+        JSON.stringify({ peak, rms, maximumDifferenceFromDry, rmsDifferenceFromDry, changedSamplesFromDry }));
+    }
+    return {
+      enabledEffectIndex: 87,
+      bank: "MIDS",
+      pattern: 5,
+      bandLevels,
+      driveDb: 8,
+      outputDb: -3,
+      mix: 0.85,
+      rateHz: 1.7,
+      resonanceQ: 5.5,
+      envelopeShape: 0.7,
+      smoothingMs: 10,
+      peak,
+      rms,
+      maximumDifferenceFromDry,
+      rmsDifferenceFromDry,
+      changedSamplesFromDry,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [
+        ashevillePattrnBank.value, ashevillePattrnPattern.value,
+        ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+        ashevillePattrnMix.value, ashevillePattrnRate.value,
+        ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+        ashevillePattrnSmoothing.value,
+      ] = previousControls.slice(0, 9);
+      ashevillePattrnBandLevels.forEach(({ input }, index) => {
+        input.value = previousControls[index + 9];
+      });
+      updateAshevillePattrn();
+      DEFAULT_PARAMETERS.ashevillePattrn = previousParameters;
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runFractalThreeVoiceSynthBrowserSmokeTest(
   reference, captureView, captureBuffer,
 ) {
@@ -7097,8 +7312,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-      const expectedEffectIds = Array.from({ length: 89 }, (_, index) => index);
-      if (EFFECT_NAMES.length !== 89 || effectRows.length !== 89 ||
+      const expectedEffectIds = Array.from({ length: 90 }, (_, index) => index);
+      if (EFFECT_NAMES.length !== 90 || effectRows.length !== 90 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -7123,7 +7338,10 @@ async function runBrowserSelfTest() {
             !EFFECT_NAMES[84]?.startsWith("Tape Echo") ||
             !EFFECT_NAMES[85]?.startsWith("Octave Fuzz") ||
             !EFFECT_NAMES[86]?.startsWith("Stereo Crossover") ||
-            EFFECT_NAMES[87] !== "Output level" || EFFECT_NAMES[88] !== "Peak limiter" ||
+             !EFFECT_NAMES[87]?.startsWith("Asheville Pattrn") ||
+             effectRows[87]?.dataset.category !== "filter" ||
+             effectRows[87]?.querySelector(".effect-category-tag")?.textContent !== "Filters & wah" ||
+             EFFECT_NAMES[88] !== "Output level" || EFFECT_NAMES[89] !== "Peak limiter" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -7134,7 +7352,8 @@ async function runBrowserSelfTest() {
                initialEffectState[79] || initialEffectState[80] || initialEffectState[81] ||
                 initialEffectState[82] || initialEffectState[83] ||
                  initialEffectState[84] || initialEffectState[85] ||
-                 initialEffectState[86] || !initialEffectState[87] || !initialEffectState[88] ||
+                  initialEffectState[86] || initialEffectState[87] ||
+                  !initialEffectState[88] || !initialEffectState[89] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -7151,8 +7370,70 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error("The effect picker must list 89 ordered, categorized effects (IDs 0–88), with optional effects disabled by default.");
+        throw new Error("The effect picker must list 90 ordered, categorized effects (IDs 0–89), with Asheville Pattrn in Filters & wah and optional effects disabled by default.");
      }
+      const ashevilleRanges = [
+        [ashevillePattrnDrive, "0", "18"],
+        [ashevillePattrnOutput, "-24", "12"],
+        [ashevillePattrnMix, "0", "100"],
+        [ashevillePattrnRate, "0.05", "10"],
+        [ashevillePattrnQ, "0.5", "12"],
+        [ashevillePattrnEnvelope, "0", "1"],
+        [ashevillePattrnSmoothing, "0", "1000"],
+        ...ashevillePattrnBandLevels.map(({ input }) => [input, "0", "1"]),
+      ];
+      if (DEFAULT_PARAMETERS.ashevillePattrn.join(",") !==
+            "0,0,1,1,1,1,1,1,1,1,0,0,0.5,0.75,3,0.5,10" ||
+          ashevilleRanges.some(([control, minimum, maximum]) =>
+            control.min !== minimum || control.max !== maximum) ||
+          ashevillePattrnBank.querySelectorAll("option").length !== 2 ||
+          ashevillePattrnPattern.querySelectorAll("option").length !== 8 ||
+          ashevillePattrnBandLevels.length !== 8) {
+        throw new Error("Asheville Pattrn must expose its project-authored defaults, eight band levels, bank/pattern selectors, and bounded controls.");
+      }
+      const ashevilleControlSnapshot = [
+        ashevillePattrnBank.value, ashevillePattrnPattern.value,
+        ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+        ashevillePattrnMix.value, ashevillePattrnRate.value,
+        ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+        ashevillePattrnSmoothing.value,
+        ...ashevillePattrnBandLevels.map(({ input }) => input.value),
+      ];
+      const ashevilleDefaultsSnapshot = [...DEFAULT_PARAMETERS.ashevillePattrn];
+      const previousAshevilleWorklet = workletNode;
+      const ashevilleMessages = [];
+      try {
+        workletNode = { port: { postMessage: (message) => ashevilleMessages.push(message) } };
+        [ashevillePattrnBank.value, ashevillePattrnPattern.value] = ["1", "2"];
+        [ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+          ashevillePattrnMix.value, ashevillePattrnRate.value,
+          ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+          ashevillePattrnSmoothing.value] =
+          ["6", "-3", "65", "2.5", "4", "0.8", "25"];
+        ashevillePattrnBandLevels.forEach(({ input }, index) => {
+          input.value = index === 0 ? "0.25" : index === 7 ? "0.75" : "1";
+        });
+        updateAshevillePattrn();
+        const message = ashevilleMessages.at(-1);
+        if (message?.type !== "asheville-pattrn" ||
+            message.value.join(",") !==
+              "1,2,0.25,1,1,1,1,1,1,0.75,6,-3,0.65,2.5,4,0.8,25") {
+          throw new Error("Asheville Pattrn UI controls must send bank, pattern, bands, and project parameters in WASM API order.");
+        }
+      } finally {
+        workletNode = null;
+        [ashevillePattrnBank.value, ashevillePattrnPattern.value,
+          ashevillePattrnDrive.value, ashevillePattrnOutput.value,
+          ashevillePattrnMix.value, ashevillePattrnRate.value,
+          ashevillePattrnQ.value, ashevillePattrnEnvelope.value,
+          ashevillePattrnSmoothing.value] = ashevilleControlSnapshot.slice(0, 9);
+        ashevillePattrnBandLevels.forEach(({ input }, index) => {
+          input.value = ashevilleControlSnapshot[index + 9];
+        });
+        updateAshevillePattrn();
+        DEFAULT_PARAMETERS.ashevillePattrn = ashevilleDefaultsSnapshot;
+        workletNode = previousAshevilleWorklet;
+      }
      const convolutionDefaults = [...DEFAULT_PARAMETERS.convolutionReverb];
      const convolutionRanges = [
        [convolutionReverbControls[0], "0", "100"],
@@ -7959,7 +8240,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const vocalIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 89" ||
+          if (vocalIds.join(",") !== "69" || effectCount.value !== "1 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Vocal FX picker mismatch: IDs=${vocalIds.join(",")}; count=${effectCount.value}; chainStatePreserved=${JSON.stringify(enabledEffects()) === JSON.stringify(initialEffectState)}.`);
     }
@@ -7968,7 +8249,7 @@ async function runBrowserSelfTest() {
     const modulationIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
         if (modulationIds.join(",") !== "15,16,17,18,19,33,34,35,47,48,63,67,71,81,83" ||
-                 effectCount.value !== "15 of 89" ||
+                  effectCount.value !== "15 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error(`Filtering by effect category changed chain state or returned the wrong effects (ids ${modulationIds.join(",")}; count ${effectCount.value}; enabled ${JSON.stringify(enabledEffects())}; initial ${JSON.stringify(initialEffectState)}).`);
     }
@@ -7976,8 +8257,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const dynamicsIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-           if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,88" ||
-                 effectCount.value !== "9 of 89" ||
+            if (dynamicsIds.join(",") !== "4,5,6,23,24,32,45,56,89" ||
+                  effectCount.value !== "9 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Dynamics filter must include Auto Swell and preserve the current chain state.");
     }
@@ -7986,7 +8267,7 @@ async function runBrowserSelfTest() {
     const driveIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
         if (driveIds.join(",") !== "9,10,11,12,13,14,46,70,80,82,85" ||
-                 effectCount.value !== "11 of 89" ||
+                  effectCount.value !== "11 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Drive & fuzz filter must include the distortion, boost, fuzz, crusher, and three-stage processors while preserving the current chain state.");
     }
@@ -8090,7 +8371,7 @@ async function runBrowserSelfTest() {
      effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
      const ampIds = effectRows.filter((row) => !row.hidden)
        .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 89" ||
+              if (ampIds.join(",") !== "73" || effectCount.value !== "1 of 90" ||
          JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Amp / preamp category must return the Porta Preamp without changing chain state.");
      }
@@ -8098,8 +8379,8 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const filterIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-      if (filterIds.join(",") !== "2,3,7,8,36,37,43" ||
-                 effectCount.value !== "7 of 89" ||
+     if (filterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
+                  effectCount.value !== "8 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Filters category must include the wah and filter processors and preserve the current chain state.");
     }
@@ -8107,7 +8388,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 89" ||
+              if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== "5 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -8115,7 +8396,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const resonatorIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 89" ||
+              if (resonatorIds.join(",") !== "44,49" || effectCount.value !== "2 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Resonator category must include both resonator processors and preserve the current chain state.");
     }
@@ -8123,7 +8404,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 89" ||
+              if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== "4 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
     }
@@ -8131,7 +8412,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 89" ||
+              if (synthIds.join(",") !== "52,53,78" || effectCount.value !== "3 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
     }
@@ -8139,7 +8420,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 89" ||
+              if (loopIds.join(",") !== "60,65" || effectCount.value !== "2 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list both loopers and preserve the current chain state.");
     }
@@ -8147,7 +8428,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const stereoIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-             if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 89" ||
+              if (stereoIds.join(",") !== "61" || effectCount.value !== "1 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Stereo & image category must list the Enhancer and preserve chain state.");
     }
@@ -8155,9 +8436,19 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const crossoverIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 89" ||
+    if (crossoverIds.join(",") !== "86" || effectCount.value !== "1 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Crossover category must list the XVR-inspired stage and preserve chain state.");
+    }
+    effectCategoryFilter.value = "filter";
+    effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    const ashevilleFilterIds = effectRows.filter((row) => !row.hidden)
+      .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
+    if (ashevilleFilterIds.join(",") !== "2,3,7,8,36,37,43,87" ||
+        effectCount.value !== "8 of 90" ||
+        effectRows[87]?.dataset.category !== "filter" ||
+        JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
+      throw new Error("Filters & wah must include Asheville Pattrn at ID 87 and preserve chain state.");
     }
     const originalStereoCrossover = { ...DEFAULT_PARAMETERS.stereoCrossover };
     stereoCrossoverControls.frequencyHz.value = "710";
@@ -8194,7 +8485,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 89" ||
+           if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84" || effectCount.value !== "16 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -8202,7 +8493,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-            if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 89" ||
+             if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== "8 of 90" ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
        throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
     }
@@ -8244,12 +8535,12 @@ async function runBrowserSelfTest() {
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
     const searchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-          if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 89") {
+           if (searchIds.join(",") !== "25" || effectCount.value !== "1 of 90") {
       throw new Error("Searching the effect browser returned the wrong processor.");
     }
     effectSearch.value = "";
     effectSearch.dispatchEvent(new Event("input", { bubbles: true }));
-        if (effectCount.value !== "89 of 89" || effectRows.some((row) => row.hidden)) {
+         if (effectCount.value !== "90 of 90" || effectRows.some((row) => row.hidden)) {
       throw new Error("Clearing effect filters did not restore the complete chain.");
     }
     const defaultDiatonicHarmonizer = [...DEFAULT_PARAMETERS.diatonicHarmonizer];
@@ -8455,11 +8746,13 @@ async function runBrowserSelfTest() {
      parityEnabled[84] = false;
       // Octave Fuzz has its own local Play smoke and stays out of shared parity.
       parityEnabled[85] = false;
+     // Asheville Pattrn has a separate isolated prerecorded-audio regression.
+     parityEnabled[87] = false;
     const activeProcessorIndices = parityEnabled
       .map((enabled, index) => enabled && index > 0 && index < EFFECT_NAMES.length - 2
         ? index : -1)
       .filter((index) => index >= 0);
-      if (parityEnabled.length !== 89 || activeProcessorIndices.length !== 71 ||
+       if (parityEnabled.length !== 90 || activeProcessorIndices.length !== 71 ||
           activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 86) {
           throw new Error("The all-effect chain must contain 71 optional processors between input trim and output utilities.");
     }
@@ -9084,6 +9377,10 @@ async function runBrowserSelfTest() {
     const stereoCrossoverSmoke = await runStereoCrossoverBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Asheville Pattrn WASM playback on local guitar audio…";
+    const ashevillePattrnSmoke = await runAshevillePattrnBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Ring Modulator Classic and SSB modes on local guitar audio…";
     const ringModulatorSmoke = await runRingModulatorBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -9227,6 +9524,7 @@ async function runBrowserSelfTest() {
          tapeEcho: tapeEchoSmoke,
          octaveFuzz: octaveFuzzSmoke,
       stereoCrossover: stereoCrossoverSmoke,
+      ashevillePattrn: ashevillePattrnSmoke,
       ringModulator: ringModulatorSmoke,
       fractalThreeVoiceSynth: fractalThreeVoiceSynthSmoke,
       shufflingLooper: shufflingLooperSmoke,

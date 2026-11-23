@@ -1667,6 +1667,25 @@ FRACTAL_XVR_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+ASHEVILLE_PATTRN_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/asheville_pattrn.hpp",
+    "src/effects/asheville_pattrn.cpp",
+    "tests/test_asheville_pattrn.cpp",
+    "scripts/audio_regression.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -1809,6 +1828,10 @@ CHECKPOINTS = {
     "fractal-xvr": (
         FRACTAL_XVR_CHECKPOINT_PATHS,
         "feat: add project-authored stereo crossover",
+    ),
+    "asheville-pattrn": (
+        ASHEVILLE_PATTRN_CHECKPOINT_PATHS,
+        "feat: add project-authored Asheville Pattrn",
     ),
 }
 

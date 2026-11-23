@@ -24,6 +24,7 @@
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
+#include "tabletfx/effects/asheville_pattrn.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/four_band_resonator.hpp"
@@ -359,6 +360,9 @@ public:
                                 static_cast<float>(sample_rate), channels),
                             false});
         effects_.push_back({std::make_unique<tabletfx::StereoCrossover>(
+                                static_cast<float>(sample_rate)),
+                            false});
+        effects_.push_back({std::make_unique<tabletfx::ProjectAshevillePattrn>(
                                 static_cast<float>(sample_rate)),
                             false});
     }
@@ -2198,6 +2202,34 @@ public:
         }
     }
 
+    void configure_asheville_pattrn(
+        std::uint32_t bank, std::uint32_t pattern,
+        float band_level_1, float band_level_2, float band_level_3,
+        float band_level_4, float band_level_5, float band_level_6,
+        float band_level_7, float band_level_8, float drive_db,
+        float output_db, float mix, float pattern_rate_hz,
+        float resonance_q, float envelope_shape, float smoothing_ms) noexcept {
+        auto* pattrn = static_cast<tabletfx::ProjectAshevillePattrn*>(
+            effects_[87U].effect.get());
+        auto parameters = pattrn->parameters();
+        parameters.bank = bank == 1U
+                              ? tabletfx::AshevilleFrequencyBank::Mids
+                              : tabletfx::AshevilleFrequencyBank::Bass;
+        parameters.pattern = static_cast<std::uint8_t>(
+            std::min(pattern, 255U));
+        parameters.band_level = {band_level_1, band_level_2, band_level_3,
+                                 band_level_4, band_level_5, band_level_6,
+                                 band_level_7, band_level_8};
+        parameters.drive_db = drive_db;
+        parameters.output_db = output_db;
+        parameters.mix = mix;
+        parameters.pattern_rate_hz = pattern_rate_hz;
+        parameters.resonance_q = resonance_q;
+        parameters.envelope_shape = envelope_shape;
+        parameters.smoothing_ms = smoothing_ms;
+        pattrn->set_parameters(parameters);
+    }
+
     void configure_notch_filter(float frequency_hz, float q, float mix) noexcept {
         auto* notch_filter = static_cast<tabletfx::NotchFilter*>(
             effects_[37].effect.get());
@@ -2844,6 +2876,22 @@ TABLETFX_WASM_EXPORT void tf_chain_set_step_filter(
             {step_1, step_2, step_3, step_4, step_5, step_6, step_7, step_8,
              step_9, step_10, step_11, step_12, step_13, step_14, step_15,
              step_16});
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_asheville_pattrn(
+    void* opaque, std::uint32_t bank, std::uint32_t pattern,
+    float band_level_1, float band_level_2, float band_level_3,
+    float band_level_4, float band_level_5, float band_level_6,
+    float band_level_7, float band_level_8, float drive_db,
+    float output_db, float mix, float pattern_rate_hz,
+    float resonance_q, float envelope_shape, float smoothing_ms) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_asheville_pattrn(
+            bank, pattern, band_level_1, band_level_2, band_level_3,
+            band_level_4, band_level_5, band_level_6, band_level_7,
+            band_level_8, drive_db, output_db, mix, pattern_rate_hz,
+            resonance_q, envelope_shape, smoothing_ms);
     }
 }
 

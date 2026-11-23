@@ -10,6 +10,7 @@ const EFFECTS = [
 ];
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "octave-fuzz");
 EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "stereo-crossover");
+EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "asheville-pattrn");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -230,6 +231,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
          0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84,
        ];
        module._tf_chain_set_step_filter(this.chain, ...stepFilter);
+       const ashevillePattrn = parameters.ashevillePattrn || [
+         0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0.5, 0.75, 3, 0.5, 10,
+       ];
+       module._tf_chain_set_asheville_pattrn(this.chain, ...ashevillePattrn);
       module._tf_chain_set_drive(this.chain, parameters.drive || 3);
       const eq = parameters.eq || [120, 0, 0.707, 800, 0, 0.707, 5000, 0, 0.707];
       module._tf_chain_set_eq(this.chain, ...eq);
@@ -903,6 +908,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.module._tf_chain_set_rhythmic_slicer(this.chain, ...message.value);
       } else if (message.type === "step-filter" && this.ready) {
         this.module._tf_chain_set_step_filter(this.chain, ...message.value);
+     } else if (message.type === "asheville-pattrn" && this.ready) {
+       this.module._tf_chain_set_asheville_pattrn(this.chain, ...message.value);
     } else if (message.type === "notch-filter" && this.ready) {
       this.module._tf_chain_set_notch_filter(this.chain, ...message.value);
     } else if (message.type === "formant-filter" && this.ready) {

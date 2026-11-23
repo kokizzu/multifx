@@ -21,6 +21,7 @@
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
 #include "tabletfx/effects/step_filter.hpp"
+#include "tabletfx/effects/asheville_pattrn.hpp"
 #include "tabletfx/effects/notch_filter.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/harmonic_resonator.hpp"
@@ -257,6 +258,8 @@ struct Options {
     tabletfx::RhythmicSlicerParameters rhythmic_slicer{};
     bool step_filter_enabled = false;
     tabletfx::StepFilterParameters step_filter{};
+    bool asheville_pattrn_enabled = false;
+    tabletfx::ProjectAshevillePattrnParameters asheville_pattrn{};
     bool notch_filter_enabled = false;
     tabletfx::NotchFilterParameters notch_filter{};
     bool formant_filter_enabled = false;
@@ -1480,6 +1483,50 @@ Options parse_options(int argc, char** argv, int first) {
                 throw std::invalid_argument("Unknown option: " + std::string(key));
             }
             options.four_band_resonator_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--asheville-pattrn-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view value(argv[++i]);
+            auto& parameters = options.asheville_pattrn;
+            const std::string_view setting = key.substr(
+                std::string_view("--asheville-pattrn-").size());
+            if (setting == "bank") {
+                if (value == "bass") {
+                    parameters.bank = tabletfx::AshevilleFrequencyBank::Bass;
+                } else if (value == "mids") {
+                    parameters.bank = tabletfx::AshevilleFrequencyBank::Mids;
+                } else {
+                    throw std::invalid_argument(
+                        "Asheville Pattrn bank must be bass or mids");
+                }
+            } else if (setting == "pattern") {
+                const std::uint32_t pattern = parse_unsigned_integer(key, argv[i]);
+                if (pattern >= tabletfx::project_asheville_pattern_count) {
+                    throw std::invalid_argument(
+                        "Asheville Pattrn pattern index must be 0..7");
+                }
+                parameters.pattern = static_cast<std::uint8_t>(pattern);
+            } else if (setting == "band-levels") {
+                parameters.band_level = parse_float_array<8>(key, value);
+            } else {
+                const float parameter_value = parse_float(key, argv[i]);
+                if (setting == "drive-db") parameters.drive_db = parameter_value;
+                else if (setting == "output-db") parameters.output_db = parameter_value;
+                else if (setting == "mix") parameters.mix = parameter_value;
+                else if (setting == "rate-hz") parameters.pattern_rate_hz = parameter_value;
+                else if (setting == "resonance-q") parameters.resonance_q = parameter_value;
+                else if (setting == "envelope-shape") parameters.envelope_shape = parameter_value;
+                else if (setting == "smoothing-ms") parameters.smoothing_ms = parameter_value;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.asheville_pattrn_enabled = true;
+            continue;
+        }
+        if (key == "--asheville-pattrn") {
+            options.asheville_pattrn_enabled = true;
             continue;
         }
         if (key == "--rhythmic-slicer") {
@@ -3644,6 +3691,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::StepFilter>(
             static_cast<float>(sample_rate), options.step_filter));
     }
+    if (options.asheville_pattrn_enabled) {
+        effects.push_back(std::make_unique<tabletfx::ProjectAshevillePattrn>(
+            static_cast<float>(sample_rate), options.asheville_pattrn));
+    }
     if (options.notch_filter_enabled) {
         effects.push_back(std::make_unique<tabletfx::NotchFilter>(
             static_cast<float>(sample_rate), options.notch_filter));
@@ -4325,6 +4376,8 @@ void benchmark_full_chain(std::uint32_t sample_rate, std::uint16_t channels,
         static_cast<float>(sample_rate), slicer_parameters));
     effects.push_back(std::make_unique<tabletfx::StepFilter>(
         static_cast<float>(sample_rate)));
+    effects.push_back(std::make_unique<tabletfx::ProjectAshevillePattrn>(
+        static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::NotchFilter>(
         static_cast<float>(sample_rate)));
     effects.push_back(std::make_unique<tabletfx::ReverseDelay>(
@@ -4673,6 +4726,10 @@ void run_bench() {
         tabletfx::StepFilterParameters parameters;
         return std::make_unique<tabletfx::StepFilter>(
             static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("asheville-pattrn", [=] {
+        return std::make_unique<tabletfx::ProjectAshevillePattrn>(
+            static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("notch-filter", [=] {
         return std::make_unique<tabletfx::NotchFilter>(
@@ -5170,7 +5227,15 @@ void print_usage() {
                    " [--step-filter-depth 0..1] [--step-filter-shape 0..1]"
                    " [--step-filter-smoothing-ms 0..100] [--step-filter-mix 0..1]"
                    " [--step-filter-phase 0..1] [--step-filter-steps 16 values in 0..1]\n"
-                << "                 [--notch-filter] [--notch-filter-frequency-hz 20..18000]"
+                 << "                 [--asheville-pattrn] [--asheville-pattrn-bank bass|mids]"
+                    " [--asheville-pattrn-pattern 0..7]"
+                    " [--asheville-pattrn-band-levels 8 comma-separated values in 0..1]"
+                    " [--asheville-pattrn-drive-db 0..18] [--asheville-pattrn-output-db -24..12]"
+                    " [--asheville-pattrn-mix 0..1] [--asheville-pattrn-rate-hz 0.05..10]"
+                    " [--asheville-pattrn-resonance-q 0.5..12]"
+                    " [--asheville-pattrn-envelope-shape 0..1]"
+                    " [--asheville-pattrn-smoothing-ms 0..1000]\\n"
+                 << "                 [--notch-filter] [--notch-filter-frequency-hz 20..18000]"
                    " [--notch-filter-q 0.5..12] [--notch-filter-mix 0..1]\n"
                   << "                 [--formant-filter] [--formant-filter-vowel-position 0..4]"
                      " [--formant-filter-q 0.5..12] [--formant-filter-mix 0..1]"

@@ -72,6 +72,7 @@ add_library(tabletfx_core
     src/effects/tape_echo.cpp
     src/effects/rhythmic_slicer.cpp
     src/effects/step_filter.cpp
+    src/effects/asheville_pattrn.cpp
     src/effects/notch_filter.cpp
     src/effects/formant_filter.cpp
     src/effects/harmonic_resonator.cpp
@@ -423,6 +424,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_step_filter_tests tests/test_step_filter.cpp)
     target_link_libraries(tabletfx_step_filter_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_step_filter_tests COMMAND tabletfx_step_filter_tests)
+
+    add_executable(tabletfx_asheville_pattrn_tests tests/test_asheville_pattrn.cpp)
+    target_link_libraries(tabletfx_asheville_pattrn_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_asheville_pattrn_tests COMMAND tabletfx_asheville_pattrn_tests)
 
     add_executable(tabletfx_notch_filter_tests tests/test_notch_filter.cpp)
     target_link_libraries(tabletfx_notch_filter_tests PRIVATE tabletfx_core)
