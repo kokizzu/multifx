@@ -29,11 +29,11 @@ enum class StereoFilterType : std::uint8_t {
     AutoWah,
     EnvelopeFilter,
     LadderFilter,
-    // Envelope-driven Ladder mode; detects this effect's block input. The
-    // Fractal physical-input source selector is not supported by this API.
+    // Envelope-driven Ladder mode. PhysicalInput uses the original raw chain
+    // input when supplied; it does not model a specific hardware jack.
     TouchLadderFilter,
-    // Direct envelope-driven resonant filter; detects this effect's block
-    // input. Physical-input detector selection is not supported here.
+    // Direct envelope-driven resonant filter with selectable block or raw
+    // chain-input detection.
     TouchWahFilter,
 };
 
@@ -44,6 +44,13 @@ enum class StereoFilterMode : std::uint8_t {
     // Touch-Wah only: a TabletFX-authored dry/filter crossfade. The source
     // guide names a MIX mode but does not define its signal topology.
     Mix,
+};
+
+enum class StereoFilterDetectorSource : std::uint8_t {
+    BlockInput,
+    // TabletFX interpretation: original chain input, not a specific hardware
+    // jack or a claim about Fractal's internal routing.
+    PhysicalInput,
 };
 
 enum class StereoFilterLfoShape : std::uint8_t {
@@ -102,7 +109,7 @@ struct StereoFilterParameters {
     // Ladder and Touch-Wah interpret them as cutoff at the softest and hardest
     // input.
     // Sweep scaling, sensitivity, timing, and emphasis retain project-authored
-    // values; no physical-input detector source selector is exposed.
+    // values; physical-input means the original raw chain input in this project.
     float sweep_shape = 1.0F;
     bool lfo_tempo_sync = false;
     float lfo_tempo_bpm = 120.0F;
@@ -114,6 +121,10 @@ struct StereoFilterParameters {
     // TabletFX dry/filter blend for Touch-Wah MIX mode. It is not a published
     // Fractal range, default, or topology.
     float mix_percent = 50.0F;
+    // The physical-input selector uses the original host/chain input when the
+    // caller supplies it; otherwise processing safely falls back to block input.
+    StereoFilterDetectorSource detector_source =
+        StereoFilterDetectorSource::BlockInput;
 };
 
 /*
@@ -145,6 +156,9 @@ public:
     void set_parameters(StereoFilterParameters parameters) noexcept;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    void process_with_detector(std::span<float> interleaved,
+                               std::span<const float> raw_input,
+                               std::uint16_t channels) noexcept;
     void reset() noexcept override;
 
 private:
@@ -179,6 +193,8 @@ private:
         StereoFilterPhaseInvert phase) noexcept;
     [[nodiscard]] static StereoFilterMode sanitize_mode(
         StereoFilterMode mode) noexcept;
+    [[nodiscard]] static StereoFilterDetectorSource sanitize_detector_source(
+        StereoFilterDetectorSource source) noexcept;
     [[nodiscard]] float nyquist_limit() const noexcept;
     void rebuild_coefficients(float frequency_hz) noexcept;
     [[nodiscard]] std::size_t make_coefficients(

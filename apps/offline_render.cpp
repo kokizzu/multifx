@@ -4352,6 +4352,58 @@ void benchmark_one(std::string_view name, Factory make_effect, std::uint32_t sam
               << signal.rms << '\n';
 }
 
+void benchmark_touch_wah_physical_detector(std::uint32_t sample_rate,
+                                           std::uint16_t channels,
+                                           std::size_t block_frames,
+                                           std::size_t warmup_blocks,
+                                           std::size_t measured_blocks) {
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+    parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+    parameters.frequency_hz = 350.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.sensitivity_db = -36.0F;
+    parameters.detector_source = tabletfx::StereoFilterDetectorSource::PhysicalInput;
+    tabletfx::StereoFilter effect(static_cast<float>(sample_rate), parameters);
+    std::vector<float> buffer(block_frames * channels);
+    std::vector<float> detector(block_frames * channels);
+    std::uint32_t noise = 0x67a9123U;
+    for (std::size_t i = 0; i < buffer.size(); ++i) {
+        noise = noise * 1664525U + 1013904223U;
+        buffer[i] = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
+        noise = noise * 1664525U + 1013904223U;
+        detector[i] = static_cast<float>((noise >> 8U) & 0xffffU) / 65536.0F - 0.5F;
+    }
+    const std::vector<float> source_buffer = buffer;
+    const auto process = [&](std::span<float> audio) {
+        effect.process_with_detector(audio, std::span<const float>(detector), channels);
+    };
+    for (std::size_t i = 0; i < warmup_blocks; ++i) {
+        std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
+        process(buffer);
+    }
+    effect.reset();
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    for (std::size_t i = 0; i < measured_blocks; ++i) {
+        std::copy(source_buffer.begin(), source_buffer.end(), buffer.begin());
+        const auto start = Clock::now();
+        process(buffer);
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        percentages.push_back(100.0 * elapsed_us / deadline_us);
+    }
+    const Metrics signal = metrics(buffer);
+    std::cout << "fractal-touch-wah-physical-detector," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << effect.memory_bytes() << "," << signal.rms << '\n';
+}
+
 void benchmark_signal_controls(std::uint32_t sample_rate, std::uint16_t channels,
                                std::size_t block_frames, std::size_t warmup_blocks,
                                std::size_t measured_blocks) {
@@ -5006,6 +5058,8 @@ void run_bench() {
         return std::make_unique<tabletfx::StereoFilter>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_touch_wah_physical_detector(
+        sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("harmonic-resonator", [=] {
         return std::make_unique<tabletfx::HarmonicResonator>(
             static_cast<float>(sample_rate));

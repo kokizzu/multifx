@@ -1,6 +1,12 @@
 # Flagship effects comparison and implementation checklist
 
-Research snapshot: **2026-11-24**. This compares manufacturer-documented categories and representative features for the six named flagship processors. It is a focused documentation check, not a fresh audit of every algorithm in every firmware or of the whole effects catalogue. Product names below identify documented examples; TabletFX implementations should use project-authored names, controls, and signal paths rather than copy proprietary presets or imply circuit emulation.
+Research snapshot: **2026-11-25**. This compares manufacturer-documented categories and representative features for the six named flagship processors. It is a focused documentation check, not a fresh audit of every algorithm in every firmware or of the whole effects catalogue. Product names below identify documented examples; TabletFX implementations should use project-authored names, controls, and signal paths rather than copy proprietary presets or imply circuit emulation.
+
+## Latest verified additions — 2026-11-25
+
+- **Fractal FM9 family:** Touch-Wah and Touch-Ladder now let the user choose the original chain input as their envelope detector source. This reuses picker index 96 and the existing filter; the source span is not a separate hardware jack, and the guide's applicability to FM9 Mark II Turbo remains family-level. [x] Native/browser/WASM tests, local prerecorded guitar Play test, full suite, Windows cross-build, and DSP benchmark pass. Human/device checks remain open.
+- **Line 6 Helix Stadium XL:** A 1 Switch controller profile now operates the existing Deluxe Looper in the Loop & performance picker category. The hardware looper time limits and Playback/Overdub/Low Cut/High Cut controls come from the Stadium manual; the project's press timing and button mapping are UI choices. [x] Automated browser sequence passes; hardware mapping remains untested.
+- **Melofty AXOM MAX:** Existing Filtered Delay coverage now has stronger regression tests for the repeat filters and timing. Melofty app V1.9.2 mentions 1/64–1/1 divisions and High/Low Cut, but does not name the affected algorithm or publish ranges. This is related function, not a verified AXOM model match. [x] Native/full browser tests pass; exact model mapping remains open.
 
 ## Source-verified category inventory and remaining audit checklist
 
@@ -19,7 +25,7 @@ This is a focused source check of the six requested processors, not a complete a
 
 - [x] Keep the project picker grouped by functional type, with a visible category tag on every row; preserve stable IDs and default-off behavior for optional stages. The Pedal Detune addition is Pitch index 110, with project-authored control values.
 - [~] Broad project coverage exists in Drive & fuzz, Dynamics, Equalizer, Delay, Reverb, Modulation, Filters & wah, Pitch, Synth, IR Loader, Utility, and Loop & performance. Category presence means related function exists; it does not mean every manufacturer algorithm is implemented.
-- [ ] Implement and verify exact-source gaps one feature at a time: Axom DeepSynth and Instrument Simulation; Prime Hybrid Synth, Electric Piano, DB-33 Organ, Kill Seq, Splicer, and named Pitch models; Fender named effects still lacking exact parameter evidence; and additional Stadium/Fractal block behaviors.
+- [ ] Continue exact-source gap work one feature at a time: Axom DeepSynth/Instrument Simulation; Prime Hybrid Synth, Electric Piano, DB-33 Organ, Kill Seq, Splicer, and named Pitch models; Fender Virtual Capo, newer synth/sequencer/reverb families; Stadium Mutant Filter and block-specific behavior; and Fractal multi-voice pitch/synth behavior. Do not present a broad category as an exact model match.
 - [ ] Read a usable XR1 model catalog/manual before implementing its individual effects. Keep its product categories and the project's functional categories connected through documented mappings.
 - [ ] Add appropriate non-guitar fixtures for Prime Vocal FX and other source paths that cannot be validated with guitar-only audio.
 

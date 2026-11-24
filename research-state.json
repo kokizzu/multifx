@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-24",
+  "updated": "2026-11-25",
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
@@ -376,7 +376,7 @@
         "qualification": "The guide lists LOWPASS/BANDPASS/HIGHPASS/MIX and describes Touch-Wah following playing volume through natural note fade. It does not specify MIX topology, numeric blend controls, bounds, or defaults. Applicability to Mark II Turbo is family-level inference; exact firmware and installed version remain unknown."
       },
       "documented_controls": "Touch-Wah controls include Mode (LOWPASS/BANDPASS/HIGHPASS/MIX), Sensitivity, Attack, Release, Sweep Shape, Start/Stop Frequency (100 Hz–10 kHz), Resonance, Emphasis, and Detector Source (block or physical input). The guide does not define MIX topology or numeric controls.",
-      "project_controls": "Existing Stereo Filter at categorized Filters & wah picker index 96 adds a Touch-Wah MIX option with project-authored dry/band-pass blend, 0–100%, default 50%, smoothed over 10 ms. The existing processor is reused; no extra processor, audio buffer, delay, or fixed latency is added. Physical-input detector routing remains unavailable. This is not Fractal settings, DSP, or sound parity.",
+      "project_controls": "Existing Stereo Filter at categorized Filters & wah picker index 96 adds a Touch-Wah MIX option with project-authored dry/band-pass blend, 0–100%, default 50%, smoothed over 10 ms. The existing processor is reused; no extra processor, audio buffer, delay, or fixed latency is added. Physical-input detector routing was not included in the initial MIX checkpoint; the 2026-11-25 follow-up adds block/raw-chain-input selection for Touch-Wah and Touch-Ladder, as recorded in the current checkpoint. This is not Fractal settings, DSP, or sound parity.",
       "verification": {
         "native_ctest": "make test-stereo-filter passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases.",
         "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames. It verifies the 35-value UI/WASM configuration, visible Mix option and amount control, sends 50% at value[34], and captures Play output: peak 0.1918012649, 95,138 active samples, difference RMS 0.0393057665.",
@@ -384,6 +384,35 @@
         "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
         "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.3064/0.3195/0.4174/0.5363/1.1738% of callback; existing shared filter state 38,960 B. No added fixed latency or audio buffer. Desktop processor-call timing, not device performance.",
         "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and benchmark pass. Human listening, hardware, and target-device/round-trip checks remain open."
+      },
+      "picker_rows": 111
+    },
+    {
+      "name": "Fractal detector-source, Stadium 1 Switch Looper, and AXOM Delay coverage",
+      "status": "verified",
+      "picker_index": 96,
+      "category": "Filters & wah; Loop & performance; Delay",
+      "official_source": {
+        "title": "Fractal Audio Blocks Guide; Line 6 Helix Stadium manual; Melofty AXOM app notes",
+        "revision": "Fractal Blocks Guide November 2026, printed pp.45–47 (FM9 family; v12.0 firmware listing names Original/Turbo); Stadium manual selector Rev E / firmware v1.4.1; AXOM app V1.9.2 notes (2026-10-26) and firmware/controller downloads V1.9.2 (2026-10-27). Installed device firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "source_urls": [
+          "https://manuals.line6.com/en/helix-stadium/live/looper-block",
+          "https://line6.com/helix-stadium-models/",
+          "https://www.meloftyaudio.com/support/downloads",
+          "https://apps.apple.com/tc/app/melofty/id6762972347"
+        ],
+        "qualification": "Fractal Physical Input is mapped to the project original chain-input span, not a separate hardware jack/routing emulation. Stadium 1 Switch controller timing/mapping is project-authored over the existing Deluxe Looper. Melofty notes do not identify an affected Delay model or exact controls; related coverage is not an Axom model match."
+      },
+      "documented_controls": "Fractal Touch-Wah and Touch-Ladder document block/physical detector sources. Stadium 1 Switch uses Playback, Overdub, Low Cut, and High Cut; 120 s mono / 60 s stereo full-speed capacity, double at half speed. Melofty app V1.9.2 notes mention 1/64–1/1 Delay divisions and High/Low Cut without an algorithm-specific control table.",
+      "project_controls": "The Stereo Filter at categorized picker index 96 adds Block/Physical detector source selection and reuses existing filter state; no extra processor stage, input copy, audio buffer, or fixed latency. Stadium 1 Switch is a controller profile over existing Deluxe Looper DSP/buffer; 280 ms double-press and 1 s hold timings are project UI choices. Filtered Delay remains the existing processor with 1/32 and 1/64 divisions and repeat-path cuts; no Axom-specific model is claimed.",
+      "verification": {
+        "native_ctest": "make test passed 112/112 CTest cases and 11/11 audio-fixture safety checks, including delay repeat-filter/timing and both Stereo Filter detector-source tests.",
+        "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames; the 36-value API exposes Block/Physical source for Touch-Wah and Touch-Ladder and captures distinct output for both. Full browser interaction verified the Stadium 1 Switch sequence: record, play, overdub, undo, redo, stop, and clear using the same Deluxe Looper processor and buffer.",
+        "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported max absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+        "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: Physical Input Touch-Wah p50/p95/p99/p99.9/max 0.3023/0.4178/0.5666/1.4787/4.6944% of deadline; filter state 38,968 B. Existing Filtered Delay: 0.1365/0.2715/0.3323/0.6270/3.1332% and 768,864 B. Desktop processor-call measurements, not device performance; no DSP stage is added by the Stadium controller profile.",
+        "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and DSP benchmark pass. Human listening, hardware routing/footswitch mapping, and target-device checks remain open."
       },
       "picker_rows": 111
     }
@@ -413,26 +442,31 @@
     "picker_rows": 111
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Touch-Wah MIX project-authored mode",
+    "name": "Fractal detector-source, Stadium 1 Switch Looper, and AXOM Delay coverage",
     "status": "verified",
     "picker_index": 96,
-    "category": "Filters & wah",
+    "category": "Filters & wah; Loop & performance; Delay",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "November 2026; printed p. 46; FM9-family guide. Firmware downloads checked 2026-11-24; v12.0 names Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
+      "title": "Fractal Audio Blocks Guide; Line 6 Helix Stadium manual; Melofty AXOM app notes",
+      "revision": "Fractal Blocks Guide November 2026, printed pp.45–47 (FM9 family; v12.0 firmware listing names Original/Turbo); Stadium manual selector Rev E / firmware v1.4.1; AXOM app V1.9.2 notes (2026-10-26) and firmware/controller downloads V1.9.2 (2026-10-27). Installed device firmware is unknown.",
       "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide lists LOWPASS/BANDPASS/HIGHPASS/MIX and describes Touch-Wah following playing volume through natural note fade. It does not specify MIX topology, numeric blend controls, bounds, or defaults. Applicability to Mark II Turbo is family-level inference; exact firmware and installed version remain unknown."
+      "source_urls": [
+        "https://manuals.line6.com/en/helix-stadium/live/looper-block",
+        "https://line6.com/helix-stadium-models/",
+        "https://www.meloftyaudio.com/support/downloads",
+        "https://apps.apple.com/tc/app/melofty/id6762972347"
+      ],
+      "qualification": "Fractal Physical Input is mapped to the project original chain-input span, not a separate hardware jack/routing emulation. Stadium 1 Switch controller timing/mapping is project-authored over the existing Deluxe Looper. Melofty notes do not identify an affected Delay model or exact controls; related coverage is not an Axom model match."
     },
-    "documented_controls": "Touch-Wah controls include Mode (LOWPASS/BANDPASS/HIGHPASS/MIX), Sensitivity, Attack, Release, Sweep Shape, Start/Stop Frequency (100 Hz–10 kHz), Resonance, Emphasis, and Detector Source (block or physical input). The guide does not define MIX topology or numeric controls.",
-    "project_controls": "Existing Stereo Filter at categorized Filters & wah picker index 96 adds a Touch-Wah MIX option with project-authored dry/band-pass blend, 0–100%, default 50%, smoothed over 10 ms. The existing processor is reused; no extra processor, audio buffer, delay, or fixed latency is added. Physical-input detector routing remains unavailable. This is not Fractal settings, DSP, or sound parity.",
+    "documented_controls": "Fractal Touch-Wah and Touch-Ladder document block/physical detector sources. Stadium 1 Switch uses Playback, Overdub, Low Cut, and High Cut; 120 s mono / 60 s stereo full-speed capacity, double at half speed. Melofty app V1.9.2 notes mention 1/64–1/1 Delay divisions and High/Low Cut without an algorithm-specific control table.",
+    "project_controls": "The Stereo Filter at categorized picker index 96 adds Block/Physical detector source selection and reuses existing filter state; no extra processor stage, input copy, audio buffer, or fixed latency. Stadium 1 Switch is a controller profile over existing Deluxe Looper DSP/buffer; 280 ms double-press and 1 s hold timings are project UI choices. Filtered Delay remains the existing processor with 1/32 and 1/64 divisions and repeat-path cuts; no Axom-specific model is claimed.",
     "verification": {
-      "native_ctest": "make test-stereo-filter passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases.",
-      "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames. It verifies the 35-value UI/WASM configuration, visible Mix option and amount control, sends 50% at value[34], and captures Play output: peak 0.1918012649, 95,138 active samples, difference RMS 0.0393057665.",
-      "full_browser": "make web-test passed local-guitar browser/WASM tests and native/browser chain comparison across 78 optional processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+      "native_ctest": "make test passed 112/112 CTest cases and 11/11 audio-fixture safety checks, including delay repeat-filter/timing and both Stereo Filter detector-source tests.",
+      "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames; the 36-value API exposes Block/Physical source for Touch-Wah and Touch-Ladder and captures distinct output for both. Full browser interaction verified the Stadium 1 Switch sequence: record, play, overdub, undo, redo, stop, and clear using the same Deluxe Looper processor and buffer.",
+      "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported max absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
       "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.3064/0.3195/0.4174/0.5363/1.1738% of callback; existing shared filter state 38,960 B. No added fixed latency or audio buffer. Desktop processor-call timing, not device performance.",
-      "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and benchmark pass. Human listening, hardware, and target-device/round-trip checks remain open."
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: Physical Input Touch-Wah p50/p95/p99/p99.9/max 0.3023/0.4178/0.5666/1.4787/4.6944% of deadline; filter state 38,968 B. Existing Filtered Delay: 0.1365/0.2715/0.3323/0.6270/3.1332% and 768,864 B. Desktop processor-call measurements, not device performance; no DSP stage is added by the Stadium controller profile.",
+      "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and DSP benchmark pass. Human listening, hardware routing/footswitch mapping, and target-device checks remain open."
     },
     "picker_rows": 111
   },
@@ -441,22 +475,22 @@
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "Project-authored Poly Detune-inspired Modulation at picker index 109 is implemented and verified. The current Stadium live manual omits its individual model parameter table and directs users to the device edit screen; exact controls and behavior remain unresolved. Poly Sustain has a separate project-authored partial implementation. Older Helix controls are not substituted.",
-      "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0.",
+      "status": "The 1 Switch Looper controller profile is implemented over the existing Deluxe Looper and verified in browser interaction tests. The current live manual omits model-specific parameter tables for many audio blocks; exact settings remain unresolved. Poly Sustain has a separate project-authored partial implementation. Next distinct filter candidate is Mutant Filter: the Stadium catalogue lists it Mono/Stereo, while the source-pedal control concept does not establish Line 6 parameter values.",
+      "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0. 1 Switch is covered with the same Deluxe Looper buffer and a project-authored 280 ms double-press / 1 s hold controller mapping; physical device verification remains open.",
       "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },
     {
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
-      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; Step Filter and Step Filter Delay introduced in v1.8.45 on 2026-06-03; v1.8.58 dated 2026-07-15 fixed a crash involving step effects",
+      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; v1.8.45 introduced Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay, Step Tremolo, Cirrostratus Reverb/Synthverb, and Spectral Reverb; v1.8.58 fixed crashes in step effects; v1.8.85 rebuilt Virtual Capo.",
       "source_urls": [
         "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
         "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here",
         "https://www.fender.com/products/tone-master-pro"
       ],
-      "status": "Step Filter Delay remains integrated at categorized Delay index 92; latest make web-test passes its local-DI Play smoke, the 102-case native suite, and 73-stage browser/native comparison. Exact Step Filter/Step Filter Delay numeric controls and topology remain unpublished. Dynamic Delay and Chromatic Pitch Shifter are separate documented gaps recorded below.",
+      "status": "Step Filter Delay remains integrated at categorized Delay index 92; latest make web-test passes its local-DI Play smoke, the 102-case native suite, and 73-stage browser/native comparison. Exact Step Filter/Step Filter Delay numeric controls and topology remain unpublished. Dynamic Delay and Chromatic Pitch Shifter are separate documented gaps recorded below. Official v1.8.85 notes also describe Virtual Capo as a polyphonic ±12-semitone shifter with reduced latency/cleaner attacks, flat response and unchanged CPU versus the prior implementation; new synth model parameter tables remain unpublished.",
       "known_controls": "No exact model control tables were found. Fender describes Step Filter as rhythmic sweeps/pulses/morphs and Step Filter Delay as unusual rhythms/textures. TabletFX Step Filter Delay controls, ranges, defaults, timing model, and DSP are project-authored, not Fender settings.",
-      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter or Step Filter Delay behavior. The linked Model Guide PDF could not be parsed, so do not infer manufacturer parameter controls or mono/stereo behavior. Browser playback smoke remains unverified in the current test ordering because the full suite aborts earlier on WASM OOM."
+      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter or Step Filter Delay behavior. The linked Model Guide PDF could not be parsed, so do not infer manufacturer parameter controls or mono/stereo behavior. Browser playback smoke remains unverified in the current test ordering because the full suite aborts earlier on WASM OOM. The 2023 Model Guide predates 2025–26 models; use rolling release notes for newer models. Release notes do not publish exact values or sound/DSP topology for most of the added algorithms."
     },
     {
       "device": "Fractal FM9 Mark II Turbo",
@@ -468,8 +502,8 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, the existing Pitch row’s ±24-semitone profile, and the Touch-Wah MIX project mode are implemented. The Diatonic Harmonizer has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, physical-input detector selection, and additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified.",
-      "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
+      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, the existing Pitch row’s ±24-semitone profile, and the Touch-Wah MIX project mode are implemented. The Diatonic Harmonizer has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, plus additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified. Touch-Wah and Touch-Ladder block/physical detector selection is now implemented; Physical Input uses the raw original chain-input span and is not separate hardware-jack routing.",
+      "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not. The family Blocks Guide also documents a three-oscillator monophonic Synth with oscillator waveform, tracking mode (Off/Env Only/Pitch+Env), Frequency, Shift, Tune, Duty Cycle, Pan, Filter Frequency/Q, Attack, and Level; this remains a potential comparison gap. Three oscillators do not imply three-note input tracking.",
       "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },
     {
@@ -490,29 +524,42 @@
     {
       "device": "Melofty Axom Max",
       "feature": "effect families, Synth/Inst, categories, parameters and routing",
-      "source": "Exact-model English Manual V1.7.4 dated 2026-08-31; official downloads list Axom Max firmware/app V1.9.2 dated 2026-10-27",
+      "source": "Exact-model English Manual V1.7.4 (2026-08-31); official firmware/controller/app V1.9.2 downloads (2026-10-27); app V1.9.2 release notes dated 2026-10-26.",
       "source_urls": [
         "https://www.meloftyaudio.com/support/downloads",
         "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf",
         "https://apps.apple.com/de/app/melofty/id6762972347?platform=ipad"
       ],
-      "status": "Official manual v1.7.4, firmware-download listing v1.9.2, and app notes were checked; broad families/routing and generic app controls are documented, but exact per-effect control tables/ranges and current firmware behavior remain unavailable.",
-      "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables.",
+      "status": "App V1.9.2 notes list Delay divisions 1/64–1/1 and High/Low Cut, lower Pitch CPU, Simplified Noise Gate, and Synth/Inst Subpatch switching/dynamic response; they do not name affected algorithms, expose parameter ranges, or prove installed hardware firmware. Related Filtered Delay tests are verified, but exact Axom model mapping remains unknown.",
+      "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables. The V1.9.2 app notes additionally mention Pitch CPU reduction, MFIM Sharpness for AMP/ENTIRE, improved Noise Gate, Synth/Inst Subpatch model switching, and dynamic response, without control tables or named affected models.",
       "qualification": "The accessible manual is V1.7.4, not documentation for V1.9.2 firmware. Manual says 19 modules/880+ models; a secondary indexed Quick Guide lists 20 picker labels. Preserve the unresolved count mismatch and do not infer Axom model/control matching or installed firmware from the app notes."
     },
     {
       "device": "XRecer XR1",
       "feature": "effect models/parameters, FX Loop, global EQ, scenes and looper",
-      "source": "Official FAQ checked 2026-11-23; FAQ lists OS 1.0.0; linked exact-model manual at wiki.xrecer.com was JavaScript-only and unreadable in this review",
+      "source": "Official product page, FAQ, launch announcement and download center checked 2026-11-25; FAQ references OS 1.0.0 for NAM Train; official download center currently lists Windows ASIO driver v6.16.0 (2026-09-01), not firmware/manual.",
       "source_urls": [
         "https://www.xrecer.com/pages/faq",
         "https://www.xrecer.com/products/xr1",
         "https://www.xrecer.com/pages/download",
         "https://wiki.xrecer.com/"
       ],
-      "status": "Official FAQ confirms 111 effect models/categories and some system constraints, but the manual is JS-only and unreadable in this reader; exact model names/parameters remain unknown. Seller pages are not used to fill manual gaps.",
-      "known_controls": "FAQ distinguishes Cabinet IR Loader from Reverb IR Loader; both have single/dual versions and use 24-bit/48 kHz WAV IR files exactly 2,048 samples long. Channel count and what 'dual' combines are unspecified. It also documents four chains × eight blocks; one looper per preset with four-minute loop length and eight saved files; five-band global EQ; and external FX Loop send/return/mix. These are system/format facts, not per-effect control tables.",
+      "status": "Product page/FAQ still provide categories and system constraints only; the linked official manual/wiki returns no readable content. FAQ reports four chains × up to eight blocks, per-chain CPU display, 48 kHz/24-bit and 1.6 ms round trip; looper is four minutes with overdub/Quantize and eight files. Exact algorithm names and parameter tables remain unknown, so no model-specific effect is safe to implement from this evidence.",
+      "known_controls": "FAQ distinguishes Cabinet IR Loader from Reverb IR Loader; both have single/dual versions and use 24-bit/48 kHz WAV IR files exactly 2,048 samples long. Channel count and what 'dual' combines are unspecified. It also documents four chains × eight blocks; one looper per preset with four-minute loop length and eight saved files; five-band global EQ; and external FX Loop send/return/mix. These are system/format facts, not per-effect control tables. Official launch announcement says OS 1.1 vocal processing and about 50 additional models are planned for the December 2026 shipping start; those are future features as of this check, not available OS 1.0 evidence.",
       "qualification": "FAQ describes two FX loops (Send/Return 1 and 2), while the product I/O graphic says '3 Mono/Stereo FX Loops'; preserve the unresolved 2-versus-3 count. The project convolver is room/reverb IR processing, not cabinet loading; its 1,024-frame partition adds about 21.33 ms at 48 kHz and XR1-comparable IR latency is untested. Cabinet IR loading is a future gap, not the next implementation scope. Exact effect names and parameter values remain unknown. Planned OS v1.1 vocal processing is not current OS 1.0.0."
+    },
+    {
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Mutant Filter envelope modes and control exposure",
+      "source": "Stadium v1.4 model catalogue and 1.4 release notes; source-pedal control concepts from Mu-Tron III manufacturer page",
+      "source_urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "https://mu-tron.com/vintage-musitronics/mu-tron-iii/"
+      ],
+      "status": "The Stadium catalogue lists Mutant Filter as Mono/Stereo and first appearing in 1.0, modeled on Mu-Tron III. No exact Stadium parameter table, ranges/defaults, DSP or latency are published. The source pedal documents low/band/high mode, peak, gain, range, and sweep direction; those are not confirmed Line 6 controls.",
+      "known_controls": "Potential project-authored related controls: filter mode, envelope sensitivity, sweep range/direction, peak/resonance. Do not claim these names/ranges as Stadium settings until the exact effect page/device is checked.",
+      "qualification": "Use an existing envelope/filter path where possible to minimize memory and CPU; project mappings and defaults must be labeled as such. Manual listening/hardware checks remain open."
     }
   ],
   "constraints": [

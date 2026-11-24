@@ -64,6 +64,8 @@ void test_tempo_divisions_and_ms_mode() {
         DivisionCase{tabletfx::DelayDivision::dotted_sixteenth, 187.5F, 188},
         DivisionCase{tabletfx::DelayDivision::sixteenth, 125.0F, 125},
         DivisionCase{tabletfx::DelayDivision::sixteenth_triplet, 83.333336F, 83},
+        DivisionCase{tabletfx::DelayDivision::thirty_second, 62.5F, 63},
+        DivisionCase{tabletfx::DelayDivision::sixty_fourth, 31.25F, 31},
     };
 
     for (const auto& test : cases) {
@@ -701,6 +703,144 @@ void test_parameter_ramps_are_block_partition_invariant_and_resettable() {
             "reset must settle pending tempo/parameter changes to their selected targets");
 }
 
+void test_repeat_filters_shape_delay_path_and_preserve_dry_audio() {
+    const auto capture_echoes = [](bool enabled, float low_cut_hz,
+                                   float high_cut_hz) {
+        tabletfx::Delay delay(48000.0F, 1, 10.0F, 1.0F, 0.95F, 1.0F);
+        if (enabled) {
+            delay.configure_repeat_filters(true, low_cut_hz, high_cut_hz);
+        }
+        std::array<float, 512> settle{};
+        delay.process(settle, 1);
+
+        std::array<float, 145> impulse{};
+        impulse[0] = 1.0F;
+        delay.process(impulse, 1);
+        return impulse;
+    };
+
+    const auto unfiltered = capture_echoes(false, 120.0F, 6000.0F);
+    const auto low_cut = capture_echoes(true, 1000.0F, 20000.0F);
+    const auto high_cut = capture_echoes(true, 20.0F, 2000.0F);
+    require(near(unfiltered[48], 1.0F),
+            "unfiltered delay must pass its first echo at the selected delay time");
+    require(low_cut[48] < unfiltered[48] * 0.95F,
+            "low-cut control did not shape the first delayed signal");
+    require(high_cut[48] < unfiltered[48] * 0.3F,
+            "high-cut control did not shape the first delayed signal");
+    require(low_cut[96] < unfiltered[96] * 0.95F,
+            "low-cut control did not shape the feedback repeats");
+    require(high_cut[96] < unfiltered[96] * 0.2F,
+            "high-cut control did not shape the feedback repeats");
+
+    tabletfx::Delay dry_unfiltered(48000.0F, 1, 10.0F, 1.0F, 0.95F, 0.0F);
+    tabletfx::Delay dry_filtered(48000.0F, 1, 10.0F, 1.0F, 0.95F, 0.0F);
+    dry_filtered.configure_repeat_filters(true, 1000.0F, 2000.0F);
+    std::array<float, 512> dry_settle_unfiltered{};
+    std::array<float, 512> dry_settle_filtered{};
+    dry_unfiltered.process(dry_settle_unfiltered, 1);
+    dry_filtered.process(dry_settle_filtered, 1);
+    std::array<float, 96> dry_input_unfiltered{};
+    std::array<float, 96> dry_input_filtered{};
+    dry_input_unfiltered[0] = 1.0F;
+    dry_input_filtered[0] = 1.0F;
+    dry_unfiltered.process(dry_input_unfiltered, 1);
+    dry_filtered.process(dry_input_filtered, 1);
+    require(dry_input_unfiltered == dry_input_filtered &&
+                dry_input_filtered[0] == 1.0F,
+            "repeat filters must leave the direct path unchanged");
+}
+
+void test_repeat_filters_bypass_stereo_bounds_reset_and_allocations() {
+    tabletfx::Delay defaults(48000.0F, 1, 10.0F, 1.0F, 0.8F, 1.0F);
+    tabletfx::Delay bypassed(48000.0F, 1, 10.0F, 1.0F, 0.8F, 1.0F);
+    bypassed.configure_repeat_filters(false, 1000.0F, 500.0F);
+    std::array<float, 512> settle_defaults{};
+    std::array<float, 512> settle_bypassed{};
+    defaults.process(settle_defaults, 1);
+    bypassed.process(settle_bypassed, 1);
+    std::array<float, 145> default_impulse{};
+    std::array<float, 145> bypass_impulse{};
+    default_impulse[0] = 1.0F;
+    bypass_impulse[0] = 1.0F;
+    defaults.process(default_impulse, 1);
+    bypassed.process(bypass_impulse, 1);
+    require(default_impulse == bypass_impulse,
+            "disabled repeat filters must preserve the default delay output");
+
+    tabletfx::Delay stereo(48000.0F, 2, 10.0F, 1.0F, 0.8F, 1.0F);
+    stereo.configure_repeat_filters(true, 400.0F, 8000.0F);
+    std::array<float, 1024> stereo_settle{};
+    stereo.process(stereo_settle, 2);
+    std::array<float, 290> stereo_impulse{};
+    stereo_impulse[0] = 1.0F;
+    stereo.process(stereo_impulse, 2);
+    for (std::size_t frame = 0; frame < stereo_impulse.size() / 2; ++frame) {
+        require(stereo_impulse[frame * 2 + 1] == 0.0F,
+                "repeat filter state crossed between stereo channels");
+    }
+
+    const auto capture_bounded = [](float low_cut_hz, float high_cut_hz) {
+        tabletfx::Delay delay(48000.0F, 1, 10.0F, 1.0F, 0.95F, 1.0F);
+        delay.configure_repeat_filters(true, low_cut_hz, high_cut_hz);
+        std::array<float, 512> settle{};
+        delay.process(settle, 1);
+        std::array<float, 145> impulse{};
+        impulse[0] = 1.0F;
+        delay.process(impulse, 1);
+        return impulse;
+    };
+    const auto clamped = capture_bounded(-100000.0F, 100000.0F);
+    const auto explicit_bounds = capture_bounded(20.0F, 20000.0F);
+    require(clamped == explicit_bounds,
+            "finite cut controls outside project bounds must clamp deterministically");
+    const auto fallbacks = capture_bounded(
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity());
+    const auto explicit_fallbacks = capture_bounded(120.0F, 6000.0F);
+    require(fallbacks == explicit_fallbacks,
+            "non-finite cut controls must use the documented project defaults");
+
+    tabletfx::Delay extreme(48000.0F, 1, 10.0F, 1.0F, 0.95F, 1.0F);
+    extreme.configure_repeat_filters(true, -std::numeric_limits<float>::max(),
+                                     std::numeric_limits<float>::max());
+    std::array<float, 64> extreme_audio{};
+    extreme_audio.fill(std::numeric_limits<float>::max());
+    extreme.process(extreme_audio, 1);
+    require(std::all_of(extreme_audio.begin(), extreme_audio.end(),
+                        [](float sample) { return std::isfinite(sample); }),
+            "bounded repeat filters must keep extreme finite input from poisoning audio");
+
+    tabletfx::Delay resettable(48000.0F, 1, 10.0F, 1.0F, 0.8F, 1.0F);
+    resettable.configure_repeat_filters(true, 400.0F, 8000.0F);
+    std::array<float, 512> prime{};
+    prime.fill(0.25F);
+    resettable.process(prime, 1);
+    resettable.reset();
+    tabletfx::Delay fresh(48000.0F, 1, 10.0F, 1.0F, 0.8F, 1.0F);
+    fresh.configure_repeat_filters(true, 400.0F, 8000.0F);
+    fresh.reset();
+    std::array<float, 145> reset_audio{};
+    std::array<float, 145> fresh_audio{};
+    reset_audio[0] = 1.0F;
+    fresh_audio[0] = 1.0F;
+    resettable.process(reset_audio, 1);
+    fresh.process(fresh_audio, 1);
+    require(reset_audio == fresh_audio,
+            "reset must clear repeat-filter history while preserving selected controls");
+
+    std::array<float, 256> allocation_audio{};
+    allocation_audio.fill(0.1F);
+    tabletfx::Delay allocation_check(48000.0F, 1, 10.0F, 1.0F, 0.8F, 0.5F);
+    allocation_check.configure_repeat_filters(true, 400.0F, 8000.0F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        allocation_check.process(allocation_audio, 1);
+    }
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "repeat-filtered delay processing allocated memory");
+}
+
 void test_layout_invalid_audio_and_process_allocation() {
     tabletfx::Delay delay(1000.0F, 1, 10.0F, 2.0F, 0.95F, 0.5F);
     std::array<float, 2> untouched{0.25F, -0.5F};
@@ -761,6 +901,8 @@ int main() {
         test_tape_head_reconfiguration_is_smoothed();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
+        test_repeat_filters_shape_delay_path_and_preserve_dry_audio();
+        test_repeat_filters_bypass_stereo_bounds_reset_and_allocations();
         test_layout_invalid_audio_and_process_allocation();
         std::cout << "All digital delay tests passed\n";
     } catch (const std::exception& error) {

@@ -803,6 +803,157 @@ void test_touch_wah_mix_sanitization_reset_smoothing_and_blocks() {
             "Touch-Wah MIX allocated during process()");
 }
 
+void test_physical_detector_uses_raw_chain_input_and_falls_back_safely() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 8192U;
+    const std::array<std::uint16_t, 2> channel_counts{1U, 2U};
+    const std::array<tabletfx::StereoFilterType, 2> filter_types{
+        tabletfx::StereoFilterType::TouchWahFilter,
+        tabletfx::StereoFilterType::TouchLadderFilter};
+
+    for (const auto type : filter_types) {
+        for (const std::uint16_t channels : channel_counts) {
+            std::vector<float> block_signal(frames * channels);
+            std::vector<float> raw_signal(frames * channels);
+            for (std::size_t frame = 0U; frame < frames; ++frame) {
+                for (std::uint16_t channel = 0U; channel < channels; ++channel) {
+                    const float frequency = channel == 0U ? 2400.0F : 3700.0F;
+                    const std::size_t sample_index = frame * channels + channel;
+                    const float phase = 2.0F * 3.14159265358979323846F *
+                        frequency * static_cast<float>(frame) / sample_rate;
+                    block_signal[sample_index] = 0.12F * std::sin(phase);
+                    raw_signal[sample_index] = 0.8F * std::sin(phase);
+                }
+            }
+
+            auto block_output = block_signal;
+            auto physical_output = block_signal;
+            auto fallback_output = block_signal;
+            tabletfx::StereoFilterParameters parameters;
+            parameters.type = type;
+            parameters.frequency_hz = 300.0F;
+            parameters.mod_frequency_hz = 6000.0F;
+            parameters.sensitivity_db = -36.0F;
+            parameters.attack_time_ms = 2.0F;
+            parameters.release_time_ms = 80.0F;
+            parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+            parameters.detector_source =
+                tabletfx::StereoFilterDetectorSource::BlockInput;
+            tabletfx::StereoFilter block_filter(sample_rate, parameters);
+            block_filter.process(block_output, channels);
+
+            parameters.detector_source =
+                tabletfx::StereoFilterDetectorSource::PhysicalInput;
+            tabletfx::StereoFilter physical_filter(sample_rate, parameters);
+            physical_filter.process_with_detector(physical_output, raw_signal,
+                                                  channels);
+            tabletfx::StereoFilter fallback_filter(sample_rate, parameters);
+            fallback_filter.process(fallback_output, channels);
+
+            double physical_difference = 0.0;
+            for (std::size_t sample = 0U; sample < block_output.size(); ++sample) {
+                physical_difference += std::abs(
+                    static_cast<double>(block_output[sample]) -
+                    physical_output[sample]);
+                require(std::abs(block_output[sample] - fallback_output[sample]) <
+                            1.0e-7F,
+                        "Physical detector without a raw span did not fall back to block input");
+            }
+            physical_difference /= static_cast<double>(block_output.size());
+            require(physical_difference > 0.002,
+                    "Physical detector did not follow the original raw chain input");
+            require(block_filter.memory_bytes() == physical_filter.memory_bytes(),
+                    "Detector source selection changed filter buffer memory");
+        }
+    }
+}
+
+void test_physical_detector_is_block_invariant_and_allocation_free() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 4093U;
+    const std::array<std::uint16_t, 2> channel_counts{1U, 2U};
+    const std::array<tabletfx::StereoFilterType, 2> filter_types{
+        tabletfx::StereoFilterType::TouchWahFilter,
+        tabletfx::StereoFilterType::TouchLadderFilter};
+    const std::array<std::size_t, 7> chunks{3U, 17U, 1U, 31U, 9U, 64U, 5U};
+
+    for (const auto type : filter_types) {
+        for (const std::uint16_t channels : channel_counts) {
+            std::vector<float> audio(frames * channels);
+            std::vector<float> raw_input(frames * channels);
+            for (std::size_t frame = 0U; frame < frames; ++frame) {
+                for (std::uint16_t channel = 0U; channel < channels; ++channel) {
+                    const std::size_t sample_index = frame * channels + channel;
+                    const float frequency = channel == 0U ? 350.0F : 1200.0F;
+                    const float phase = 2.0F * 3.14159265358979323846F *
+                        frequency * static_cast<float>(frame) / sample_rate;
+                    audio[sample_index] = 0.15F * std::sin(phase);
+                    const float envelope = frame < frames / 2U ? 0.85F : 0.08F;
+                    raw_input[sample_index] = envelope * std::sin(phase + 0.2F);
+                }
+            }
+            auto contiguous = audio;
+            auto chunked = audio;
+            tabletfx::StereoFilterParameters parameters;
+            parameters.type = type;
+            parameters.mode = tabletfx::StereoFilterMode::Lowpass;
+            parameters.frequency_hz = 250.0F;
+            parameters.mod_frequency_hz = 7000.0F;
+            parameters.sensitivity_db = -36.0F;
+            parameters.attack_time_ms = 4.0F;
+            parameters.release_time_ms = 60.0F;
+            parameters.detector_source =
+                tabletfx::StereoFilterDetectorSource::PhysicalInput;
+            tabletfx::StereoFilter one_block(sample_rate, parameters);
+            tabletfx::StereoFilter irregular_blocks(sample_rate, parameters);
+            one_block.process_with_detector(contiguous, raw_input, channels);
+
+            std::size_t offset_frames = 0U;
+            std::size_t chunk_index = 0U;
+            while (offset_frames < frames) {
+                const std::size_t count = std::min(
+                    chunks[chunk_index % chunks.size()], frames - offset_frames);
+                const std::size_t sample_offset = offset_frames * channels;
+                const std::size_t sample_count = count * channels;
+                irregular_blocks.process_with_detector(
+                    std::span<float>(chunked.data() + sample_offset, sample_count),
+                    std::span<const float>(raw_input.data() + sample_offset,
+                                           sample_count),
+                    channels);
+                offset_frames += count;
+                ++chunk_index;
+            }
+            for (std::size_t sample = 0U; sample < contiguous.size(); ++sample) {
+                require(std::abs(contiguous[sample] - chunked[sample]) < 1.0e-7F,
+                        "Physical detector changed with irregular process blocks");
+            }
+        }
+    }
+
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+    parameters.detector_source =
+        tabletfx::StereoFilterDetectorSource::PhysicalInput;
+    tabletfx::StereoFilter filter(sample_rate, parameters);
+    std::array<float, 128> audio{};
+    std::array<float, 128> raw_input{};
+    audio.fill(0.1F);
+    raw_input.fill(0.8F);
+    allocation_count = 0U;
+    count_allocations = true;
+    filter.process_with_detector(audio, raw_input, 1U);
+    count_allocations = false;
+    require(allocation_count == 0U,
+            "Physical detector path allocated during process()");
+
+    parameters.detector_source =
+        static_cast<tabletfx::StereoFilterDetectorSource>(255U);
+    filter.set_parameters(parameters);
+    require(filter.parameters().detector_source ==
+                tabletfx::StereoFilterDetectorSource::BlockInput,
+            "Invalid detector source was not sanitized to block input");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -857,6 +1008,8 @@ int main() {
         test_touch_wah_tracks_sustained_volume_and_natural_fade();
         test_touch_wah_mix_crossfades_dry_and_project_bandpass();
         test_touch_wah_mix_sanitization_reset_smoothing_and_blocks();
+        test_physical_detector_uses_raw_chain_input_and_falls_back_safely();
+        test_physical_detector_is_block_invariant_and_allocation_free();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;

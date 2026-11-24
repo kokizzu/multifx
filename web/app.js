@@ -350,6 +350,9 @@ const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
 const looperStatus = document.querySelector("#looper-status");
 const deluxeLooperStatus = document.querySelector("#deluxe-looper-status");
+const deluxeLooperOneSwitchButton = document.querySelector("#deluxe-looper-one-switch");
+const deluxeLooperOneSwitchStatus = document.querySelector("#deluxe-looper-one-switch-status");
+const deluxeLooperOneSwitchProfile = document.querySelector("#deluxe-looper-one-switch-profile");
 const shufflingLooperStatus = document.querySelector("#shuffling-looper-status");
 const looperReverse = document.querySelector("#looper-reverse");
 const looperHalfSpeed = document.querySelector("#looper-half-speed");
@@ -1445,6 +1448,7 @@ const stereoFilterControls = [
   document.querySelector("#stereo-filter-ladder-bass-comp"),
   document.querySelector("#stereo-filter-ladder-order"),
   document.querySelector("#stereo-filter-mix-percent"),
+  document.querySelector("#stereo-filter-detector-source"),
 ];
 const multiDelayLineControls = [...document.querySelectorAll("[data-multi-delay-line]")]
   .map((row) => Object.fromEntries(
@@ -2147,10 +2151,121 @@ function sendDeluxeLooperCommand(command) {
     deluxeLooperStatus.value = "Load audio and start processed playback first";
     return;
   }
+  if (command === 0 || command === 2 || command === 6) {
+    deluxeLooperOneSwitchRedoAvailable = false;
+  }
+  if (command === 4 || command === 5) {
+    deluxeLooperOneSwitchUndoRedoCommand = command;
+  }
   workletNode.port.postMessage({ type: "deluxe-looper-command", command });
 }
 
 let deluxeLooperStatusTimeout = 0;
+const deluxeLooperOneSwitchDoublePressMs = 280;
+const deluxeLooperOneSwitchLongPressMs = 1000;
+let deluxeLooperOneSwitchState = 0;
+let deluxeLooperOneSwitchFrames = 0;
+let deluxeLooperOneSwitchRedoAvailable = false;
+let deluxeLooperOneSwitchUndoRedoCommand = 0;
+let deluxeLooperOneSwitchTapTimer = 0;
+let deluxeLooperOneSwitchLongPressTimer = 0;
+let deluxeLooperOneSwitchPressActive = false;
+let deluxeLooperOneSwitchSecondPress = false;
+let deluxeLooperOneSwitchLongPressFired = false;
+let deluxeLooperOneSwitchIgnoreKeyboardClickUntil = 0;
+
+function sendDeluxeLooperOneSwitchTap() {
+  if (deluxeLooperOneSwitchState === 0) {
+    sendDeluxeLooperCommand(deluxeLooperOneSwitchFrames > 0 ? 1 : 0);
+  } else if (deluxeLooperOneSwitchState === 1) {
+    sendDeluxeLooperCommand(3);
+  } else if (deluxeLooperOneSwitchState === 2) {
+    sendDeluxeLooperCommand(2);
+  } else if (deluxeLooperOneSwitchState === 3) {
+    sendDeluxeLooperCommand(3);
+  }
+}
+
+function sendDeluxeLooperOneSwitchDoublePress() {
+  const state = deluxeLooperOneSwitchState;
+  if (state === 1 || state === 3) {
+    // First finish recording/overdub, then stop playback while retaining audio.
+    sendDeluxeLooperCommand(3);
+    sendDeluxeLooperCommand(3);
+  } else if (state === 2) {
+    sendDeluxeLooperCommand(3);
+  }
+}
+
+function sendDeluxeLooperOneSwitchLongPress() {
+  if (deluxeLooperOneSwitchState === 0) {
+    if (deluxeLooperOneSwitchFrames > 0) sendDeluxeLooperCommand(6);
+    return;
+  }
+  if (deluxeLooperOneSwitchState === 2 || deluxeLooperOneSwitchState === 3) {
+    sendDeluxeLooperCommand(deluxeLooperOneSwitchRedoAvailable ? 5 : 4);
+    if (deluxeLooperOneSwitchState === 3) sendDeluxeLooperCommand(3);
+  }
+}
+
+function queueDeluxeLooperOneSwitchTap() {
+  if (deluxeLooperOneSwitchTapTimer) {
+    window.clearTimeout(deluxeLooperOneSwitchTapTimer);
+    deluxeLooperOneSwitchTapTimer = 0;
+    sendDeluxeLooperOneSwitchDoublePress();
+    return;
+  }
+  deluxeLooperOneSwitchTapTimer = window.setTimeout(() => {
+    deluxeLooperOneSwitchTapTimer = 0;
+    sendDeluxeLooperOneSwitchTap();
+  }, deluxeLooperOneSwitchDoublePressMs);
+}
+
+function beginDeluxeLooperOneSwitchPress(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+  event.preventDefault();
+  if (deluxeLooperOneSwitchPressActive) return;
+  deluxeLooperOneSwitchPressActive = true;
+  deluxeLooperOneSwitchLongPressFired = false;
+  deluxeLooperOneSwitchSecondPress = Boolean(deluxeLooperOneSwitchTapTimer);
+  if (deluxeLooperOneSwitchTapTimer) {
+    window.clearTimeout(deluxeLooperOneSwitchTapTimer);
+    deluxeLooperOneSwitchTapTimer = 0;
+  }
+  deluxeLooperOneSwitchLongPressTimer = window.setTimeout(() => {
+    deluxeLooperOneSwitchLongPressFired = true;
+    sendDeluxeLooperOneSwitchLongPress();
+  }, deluxeLooperOneSwitchLongPressMs);
+}
+
+function endDeluxeLooperOneSwitchPress() {
+  if (!deluxeLooperOneSwitchPressActive) return;
+  deluxeLooperOneSwitchPressActive = false;
+  window.clearTimeout(deluxeLooperOneSwitchLongPressTimer);
+  deluxeLooperOneSwitchLongPressTimer = 0;
+  if (deluxeLooperOneSwitchLongPressFired) {
+    deluxeLooperOneSwitchLongPressFired = false;
+    deluxeLooperOneSwitchSecondPress = false;
+    return;
+  }
+  if (deluxeLooperOneSwitchSecondPress) {
+    deluxeLooperOneSwitchSecondPress = false;
+    sendDeluxeLooperOneSwitchDoublePress();
+    return;
+  }
+  queueDeluxeLooperOneSwitchTap();
+}
+
+function cancelDeluxeLooperOneSwitchPress() {
+  deluxeLooperOneSwitchPressActive = false;
+  deluxeLooperOneSwitchSecondPress = false;
+  deluxeLooperOneSwitchLongPressFired = false;
+  window.clearTimeout(deluxeLooperOneSwitchLongPressTimer);
+  deluxeLooperOneSwitchLongPressTimer = 0;
+  window.clearTimeout(deluxeLooperOneSwitchTapTimer);
+  deluxeLooperOneSwitchTapTimer = 0;
+}
+
 function scheduleDeluxeLooperStatusPoll(state) {
   window.clearTimeout(deluxeLooperStatusTimeout);
   deluxeLooperStatusTimeout = 0;
@@ -2166,7 +2281,18 @@ function renderDeluxeLooperStatus(message) {
   const frames = Number(message.frames) || 0;
   const sampleRate = Number(message.sampleRate) || 48000;
   const length = frames > 0 ? `${(frames / sampleRate).toFixed(2)} s` : "no loop";
+  deluxeLooperOneSwitchState = state;
+  deluxeLooperOneSwitchFrames = frames;
+  if (deluxeLooperOneSwitchUndoRedoCommand !== 0) {
+    if (message.accepted !== false) {
+      deluxeLooperOneSwitchRedoAvailable = deluxeLooperOneSwitchUndoRedoCommand === 4;
+    } else {
+      deluxeLooperOneSwitchRedoAvailable = false;
+    }
+    deluxeLooperOneSwitchUndoRedoCommand = 0;
+  }
   deluxeLooperStatus.value = `${labels[state] || "Unknown"} · ${length}${message.accepted === false ? " · command unavailable" : ""}`;
+  deluxeLooperOneSwitchStatus.value = `${labels[state] || "Unknown"} · ${length}${message.accepted === false ? " · command unavailable" : ""}`;
   scheduleDeluxeLooperStatusPoll(state);
 }
 
@@ -2899,6 +3025,7 @@ function updateStereoFilterOptions() {
   const isLadderFilter = Number(stereoFilterControls[0].value) === 17;
   const isTouchLadderFilter = Number(stereoFilterControls[0].value) === 18;
   const isTouchWahFilter = Number(stereoFilterControls[0].value) === 19;
+  const hasTouchDetectorSource = isTouchLadderFilter || isTouchWahFilter;
   const modeControl = stereoFilterControls[21];
   const mixModeOption = modeControl.querySelector('option[value="3"]');
   mixModeOption.hidden = !isTouchWahFilter;
@@ -2963,6 +3090,7 @@ function updateStereoFilterOptions() {
     stereoFilterControls[index].parentElement.hidden = !isLadderFamily;
   }
   stereoFilterControls[34].parentElement.hidden = !isTouchWahMixMode;
+  stereoFilterControls[35].parentElement.hidden = !hasTouchDetectorSource;
   const ladderHighpassOption = stereoFilterControls[21].querySelector('option[value="2"]');
   ladderHighpassOption.disabled = isLadderFamily;
   if (isLadderFamily && Number(stereoFilterControls[21].value) === 2) {
@@ -3007,6 +3135,7 @@ function updateStereoFilterOptions() {
     Number(stereoFilterControls[32].value),
     Number(stereoFilterControls[33].value),
     Number(stereoFilterControls[34].value),
+    Number(stereoFilterControls[35].value),
   ];
   DEFAULT_PARAMETERS.stereoFilter = values;
   const displays = [
@@ -3048,6 +3177,7 @@ function updateStereoFilterOptions() {
     `${Math.round(values[32] * 100)}%`,
     `${values[33]}-pole`,
     `${Math.round(values[34])}%`,
+    stereoFilterControls[35].selectedOptions[0]?.textContent ?? values[35],
   ];
   stereoFilterControls.forEach((control, index) => {
     const output = control.parentElement.querySelector("output");
@@ -4151,6 +4281,29 @@ for (const button of document.querySelectorAll("[data-deluxe-looper-command]")) 
     sendDeluxeLooperCommand(Number(button.dataset.deluxeLooperCommand));
   });
 }
+
+deluxeLooperOneSwitchButton.addEventListener("pointerdown", beginDeluxeLooperOneSwitchPress);
+window.addEventListener("pointerup", endDeluxeLooperOneSwitchPress);
+window.addEventListener("pointercancel", cancelDeluxeLooperOneSwitchPress);
+deluxeLooperOneSwitchButton.addEventListener("keydown", (event) => {
+  if ((event.key === " " || event.key === "Enter") && !event.repeat) {
+    event.preventDefault();
+    beginDeluxeLooperOneSwitchPress(event);
+  }
+});
+deluxeLooperOneSwitchButton.addEventListener("keyup", (event) => {
+  if (event.key === " " || event.key === "Enter") {
+    event.preventDefault();
+    endDeluxeLooperOneSwitchPress();
+    deluxeLooperOneSwitchIgnoreKeyboardClickUntil = performance.now() + 100;
+  }
+});
+deluxeLooperOneSwitchButton.addEventListener("click", (event) => {
+  if (event.detail !== 0 || performance.now() < deluxeLooperOneSwitchIgnoreKeyboardClickUntil) {
+    return;
+  }
+  queueDeluxeLooperOneSwitchTap();
+});
 
 for (const button of document.querySelectorAll("[data-shuffling-looper-command]")) {
   button.addEventListener("click", () => {
@@ -7063,6 +7216,7 @@ async function waitForDeluxeLooperStatus(predicate, description, timeoutMs = 400
 
 async function runDeluxeLooperBrowserSmokeTest() {
   const previousEffectState = enabledEffects();
+  const previousOneSwitchProfileOpen = deluxeLooperOneSwitchProfile.open;
   const previousControls = {
     reverse: deluxeLooperReverse.checked,
     halfSpeed: deluxeLooperHalfSpeed.checked,
@@ -7129,7 +7283,91 @@ async function runDeluxeLooperBrowserSmokeTest() {
     await command(3, "Stopped ·", "stop after playback");
     await command(6, "Stopped · no loop", "clear loop");
     loopCleared = true;
-    return { recordedStatus, playingStatus, clearedStatus: deluxeLooperStatus.value };
+
+    if (typeof PointerEvent !== "function") {
+      throw new Error("1 Switch Looper browser test requires PointerEvent support.");
+    }
+    deluxeLooperOneSwitchProfile.open = true;
+    const oneSwitchPointer = (type) => deluxeLooperOneSwitchButton.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 51,
+        pointerType: "mouse",
+        isPrimary: true,
+        button: 0,
+      }),
+    );
+    const oneSwitchTap = async () => {
+      oneSwitchPointer("pointerdown");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      window.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true, cancelable: true, pointerId: 51, pointerType: "mouse",
+        isPrimary: true, button: 0,
+      }));
+      await new Promise((resolve) => setTimeout(resolve, deluxeLooperOneSwitchDoublePressMs + 40));
+    };
+    const oneSwitchHold = async () => {
+      oneSwitchPointer("pointerdown");
+      await new Promise((resolve) => setTimeout(resolve, deluxeLooperOneSwitchLongPressMs + 40));
+      window.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true, cancelable: true, pointerId: 51, pointerType: "mouse",
+        isPrimary: true, button: 0,
+      }));
+    };
+    await oneSwitchTap();
+    const oneSwitchRecording = await waitForDeluxeLooperStatus((value) => value.startsWith("Recording"), "1 Switch recording");
+    await oneSwitchTap();
+    const oneSwitchPlaying = await waitForDeluxeLooperStatus((value) => value.startsWith("Playing"), "1 Switch playback");
+    await oneSwitchTap();
+    const oneSwitchOverdubbing = await waitForDeluxeLooperStatus((value) => value.startsWith("Overdubbing"), "1 Switch overdub");
+    await oneSwitchHold();
+    const oneSwitchUndo = await waitForDeluxeLooperStatus(
+      (value) => value.startsWith("Playing") && deluxeLooperOneSwitchRedoAvailable,
+      "1 Switch undo",
+    );
+    await oneSwitchHold();
+    const oneSwitchRedo = await waitForDeluxeLooperStatus(
+      (value) => value.startsWith("Playing") && !deluxeLooperOneSwitchRedoAvailable,
+      "1 Switch redo",
+    );
+    oneSwitchPointer("pointerdown");
+    window.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true, cancelable: true, pointerId: 51, pointerType: "mouse",
+      isPrimary: true, button: 0,
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    oneSwitchPointer("pointerdown");
+    window.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true, cancelable: true, pointerId: 51, pointerType: "mouse",
+      isPrimary: true, button: 0,
+    }));
+    const oneSwitchStopped = await waitForDeluxeLooperStatus(
+      (value) => value.startsWith("Stopped") && !value.includes("no loop"),
+      "1 Switch double-press stop",
+    );
+    await oneSwitchHold();
+    const oneSwitchCleared = await waitForDeluxeLooperStatus(
+      (value) => value.startsWith("Stopped") && value.includes("no loop"),
+      "1 Switch hold-to-clear",
+    );
+    loopCleared = true;
+    return {
+      recordedStatus,
+      playingStatus,
+      clearedStatus: deluxeLooperStatus.value,
+      oneSwitch: {
+        recording: oneSwitchRecording,
+        playing: oneSwitchPlaying,
+        overdubbing: oneSwitchOverdubbing,
+        undo: oneSwitchUndo,
+        redo: oneSwitchRedo,
+        stopped: oneSwitchStopped,
+        cleared: oneSwitchCleared,
+        profile: "same Deluxe Looper processor and buffer",
+        doublePressWindowMs: deluxeLooperOneSwitchDoublePressMs,
+      },
+    };
   } finally {
     stopSource(false);
     if (workletNode && !loopCleared) {
@@ -7143,6 +7381,7 @@ async function runDeluxeLooperBrowserSmokeTest() {
     deluxeLooperLowCut.value = previousControls.lowCut;
     deluxeLooperHighCut.value = previousControls.highCut;
     updateDeluxeLooperOptions();
+    deluxeLooperOneSwitchProfile.open = previousOneSwitchProfileOpen;
     if (workletNode) {
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((checkbox, index) => {
@@ -11452,6 +11691,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
   const previousEffectState = enabledEffects();
   const previousControls = stereoFilterControls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
+  const previousCleanBoost = cleanBoost.value;
   const previousCategory = effectCategoryFilter.value;
   const postedStereoFilterMessages = [];
   const portPrototype = MessagePort.prototype;
@@ -11501,18 +11741,21 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     stereoFilterControls[27].value = "5";
     stereoFilterControls[28].value = "80";
     stereoFilterControls[29].value = "0";
+    stereoFilterControls[35].value = "0";
     updateStereoFilterOptions();
-    if (DEFAULT_PARAMETERS.stereoFilter.length !== 35 ||
+    if (DEFAULT_PARAMETERS.stereoFilter.length !== 36 ||
         DEFAULT_PARAMETERS.stereoFilter[0] !== 15 ||
         DEFAULT_PARAMETERS.stereoFilter[1] !== 300 ||
-        DEFAULT_PARAMETERS.stereoFilter[2] !== 4) {
-      throw new Error("Stereo Filter controls did not produce the expected 35-value API vector.");
+        DEFAULT_PARAMETERS.stereoFilter[2] !== 4 ||
+        DEFAULT_PARAMETERS.stereoFilter[35] !== 0 ||
+        !stereoFilterControls[35].parentElement.hidden) {
+      throw new Error("Stereo Filter controls did not produce the expected 36-value API vector with a hidden Block Input default.");
     }
     stereoFilterControls[0].value = "16";
     updateStereoFilterOptions();
     const postedEnvelopeFilter = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 16,
+        message.value?.length === 36 && message.value?.[0] === 16,
     );
     if (!postedEnvelopeFilter || !stereoFilterControls[15].disabled ||
         stereoFilterControls[26].parentElement.hidden ||
@@ -11522,7 +11765,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         postedEnvelopeFilter.value[27] !== 5 ||
         postedEnvelopeFilter.value[28] !== 80 ||
         postedEnvelopeFilter.value[29] !== 0) {
-      throw new Error("Envelope Filter controls did not reach the 35-value Worklet API.");
+      throw new Error("Envelope Filter controls did not reach the 36-value Worklet API.");
     }
     stereoFilterControls[0].value = "17";
     stereoFilterControls[1].value = "700";
@@ -11536,7 +11779,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     updateStereoFilterOptions();
     const postedLadderFilter = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 17,
+        message.value?.length === 36 && message.value?.[0] === 17,
     );
     if (!postedLadderFilter ||
         stereoFilterControls[2].parentElement.hidden !== true ||
@@ -11546,6 +11789,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         stereoFilterControls[31].parentElement.hidden ||
         stereoFilterControls[32].parentElement.hidden ||
         stereoFilterControls[33].parentElement.hidden ||
+        !stereoFilterControls[35].parentElement.hidden ||
         stereoFilterControls[32].disabled ||
         postedLadderFilter.value[0] !== 17 ||
         postedLadderFilter.value[1] !== 700 ||
@@ -11553,8 +11797,9 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         postedLadderFilter.value[30] !== 0.65 ||
         postedLadderFilter.value[31] !== 0.35 ||
         postedLadderFilter.value[32] !== 0.55 ||
-        postedLadderFilter.value[33] !== 2) {
-      throw new Error("Ladder Filter mode and project controls did not reach the 35-value Worklet API.");
+        postedLadderFilter.value[33] !== 2 ||
+        postedLadderFilter.value[35] !== 0) {
+      throw new Error("Ladder Filter mode and project controls did not reach the 36-value Worklet API.");
     }
     stereoFilterControls[0].value = "18";
     stereoFilterControls[1].value = "100";
@@ -11565,10 +11810,11 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     stereoFilterControls[27].value = "10";
     stereoFilterControls[28].value = "100";
     stereoFilterControls[29].value = "25";
+    stereoFilterControls[35].value = "1";
     updateStereoFilterOptions();
     const postedTouchLadder = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 18,
+        message.value?.length === 36 && message.value?.[0] === 18,
     );
     if (!postedTouchLadder ||
         !stereoFilterControls[15].disabled ||
@@ -11578,6 +11824,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         stereoFilterControls[22].parentElement.hidden ||
         stereoFilterControls[26].parentElement.hidden ||
         stereoFilterControls[30].parentElement.hidden ||
+        stereoFilterControls[35].parentElement.hidden ||
         !stereoFilterControls[32].disabled ||
         !stereoFilterControls[21].querySelector('option[value="2"]').disabled ||
         postedTouchLadder.value[1] !== 100 ||
@@ -11587,8 +11834,9 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         postedTouchLadder.value[26] !== -24 ||
         postedTouchLadder.value[27] !== 10 ||
         postedTouchLadder.value[28] !== 100 ||
-        postedTouchLadder.value[29] !== 0.25) {
-      throw new Error("Touch-Ladder envelope and shared Ladder controls did not reach the 35-value Worklet API.");
+        postedTouchLadder.value[29] !== 0.25 ||
+        postedTouchLadder.value[35] !== 1) {
+      throw new Error("Touch-Ladder envelope, detector source, and shared Ladder controls did not reach the 36-value Worklet API.");
     }
     stereoFilterControls[0].value = "19";
     stereoFilterControls[1].value = "100";
@@ -11599,10 +11847,11 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     stereoFilterControls[27].value = "10";
     stereoFilterControls[28].value = "100";
     stereoFilterControls[29].value = "25";
+    stereoFilterControls[35].value = "1";
     updateStereoFilterOptions();
     const postedTouchWah = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 19,
+        message.value?.length === 36 && message.value?.[0] === 19,
     );
     if (!postedTouchWah ||
         !stereoFilterControls[15].disabled ||
@@ -11611,6 +11860,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         stereoFilterControls[22].parentElement.hidden ||
         stereoFilterControls[26].parentElement.hidden ||
         stereoFilterControls[30].parentElement.hidden === false ||
+        stereoFilterControls[35].parentElement.hidden ||
         stereoFilterControls[21].querySelector('option[value="2"]').disabled ||
         postedTouchWah.value[1] !== 100 ||
         postedTouchWah.value[15] !== 0 ||
@@ -11619,15 +11869,16 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
         postedTouchWah.value[26] !== -24 ||
         postedTouchWah.value[27] !== 10 ||
         postedTouchWah.value[28] !== 100 ||
-        postedTouchWah.value[29] !== 0.25) {
-      throw new Error("Touch-Wah mode and direct-envelope controls did not reach the 35-value Worklet API.");
+        postedTouchWah.value[29] !== 0.25 ||
+        postedTouchWah.value[35] !== 1) {
+      throw new Error("Touch-Wah mode, detector source, and direct-envelope controls did not reach the 36-value Worklet API.");
     }
     stereoFilterControls[21].value = "3";
     stereoFilterControls[34].value = "50";
     updateStereoFilterOptions();
     const postedTouchWahMix = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 19 &&
+        message.value?.length === 36 && message.value?.[0] === 19 &&
         message.value?.[21] === 3,
     );
     if (!postedTouchWahMix ||
@@ -11657,7 +11908,7 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     }
     const postedConfiguration = postedStereoFilterMessages.find(
       (message) => message.type === "stereo-filter" &&
-        message.value?.length === 35 && message.value?.[0] === 19 &&
+        message.value?.length === 36 && message.value?.[0] === 19 &&
         message.value?.[21] === 3,
     );
     const postedEnable = postedStereoFilterMessages.find(
@@ -11669,21 +11920,64 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     const expectedStereoFilter = [
       19, 100, 4, 4, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0,
       0, 1, 2, 50, 10000, 0, 3, 2, 0, 120, 1, -24, 10, 100, 0.25,
-      0.65, 0.35, 0.55, 2, 50,
+      0.65, 0.35, 0.55, 2, 50, 1,
     ];
     if (JSON.stringify(postedConfiguration.value) !== JSON.stringify(expectedStereoFilter)) {
-      throw new Error("Stereo Filter Worklet message does not match the 35-value Touch-Wah API order.");
+      throw new Error("Stereo Filter Worklet message does not match the 36-value Touch-Wah API order.");
     }
-    workletNode.port.postMessage({ type: "reset" });
-    workletNode.port.postMessage({ type: "capture-reset" });
-    Atomics.store(captureView, 0, 0);
-    Atomics.store(captureView, 1, 0);
-    playbackOffset = 0;
-    playButton.click();
-    await waitForCapture(captureView, reference.samples.length);
-    stopSource(false);
+    const inputSquares = decodedAudio.getChannelData(0).reduce(
+      (sum, sample) => sum + sample * sample, 0);
+    const inputRms = Math.sqrt(inputSquares / Math.max(1, decodedAudio.length));
+    const sensitivityDb = Math.max(-36, Math.min(0,
+      20 * Math.log10(Math.max(inputRms, 1e-6)) + 12));
+    stereoFilterControls[21].value = "2";
+    stereoFilterControls[26].value = String(sensitivityDb);
+    stereoFilterControls[35].value = "1";
+    updateStereoFilterOptions();
+    cleanBoost.value = "24";
+    cleanBoost.dispatchEvent(new Event("input", { bubbles: true }));
+    const cleanBoostCheckbox = document.querySelector('[data-effect="9"]');
+    cleanBoostCheckbox.checked = true;
+    workletNode.port.postMessage({ type: "enable", index: 9, value: true });
 
-    const actual = new Float32Array(captureBuffer);
+    const captureWithDetectorSource = async (source) => {
+      stereoFilterControls[35].value = String(source);
+      updateStereoFilterOptions();
+      const postedSourceConfiguration = [...postedStereoFilterMessages].reverse().find(
+        (message) => message.type === "stereo-filter" &&
+          message.value?.length === 36 && message.value?.[0] === 19 &&
+          message.value?.[35] === source,
+      );
+      if (!postedSourceConfiguration) {
+        throw new Error(`Stereo Filter did not send detector source ${source} at value index 35.`);
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+    const physicalInputActual = await captureWithDetectorSource(1);
+    const blockInputActual = await captureWithDetectorSource(0);
+    const framesForSourceComparison = Math.min(physicalInputActual.length,
+      blockInputActual.length, reference.samples.length);
+    let detectorSourceDifferenceSquares = 0;
+    for (let sample = 0; sample < framesForSourceComparison; sample += 1) {
+      const difference = physicalInputActual[sample] - blockInputActual[sample];
+      detectorSourceDifferenceSquares += difference * difference;
+    }
+    const detectorSourceDifferenceRms = Math.sqrt(
+      detectorSourceDifferenceSquares / Math.max(1, framesForSourceComparison),
+    );
+    if (!Number.isFinite(detectorSourceDifferenceRms) || detectorSourceDifferenceRms < 1e-5) {
+      throw new Error(`Physical Input did not change captured Touch-Wah output (difference RMS ${detectorSourceDifferenceRms}).`);
+    }
+
+    const actual = physicalInputActual;
     let peak = 0;
     let activeSamples = 0;
     let differenceSquares = 0;
@@ -11707,10 +12001,10 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
     if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
       throw new Error(`Stereo Filter produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
     }
-    return { category: "Filters & wah",
+    return { category: "Filters & wah", detectorSource: "Physical Input",
       type: stereoFilterControls[0].selectedOptions[0]?.textContent ?? "unknown",
       enabledEffectIndex: 96, playOutputCaptured: true,
-      peak, activeSamples, differenceRms };
+      peak, activeSamples, differenceRms, detectorSourceDifferenceRms };
   } finally {
     stopSource(false);
     if (workletNode) {
@@ -11722,6 +12016,8 @@ async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBu
           control.value = previousControls[index];
         }
       });
+      cleanBoost.value = previousCleanBoost;
+      cleanBoost.dispatchEvent(new Event("input", { bubbles: true }));
       updateStereoFilterOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {

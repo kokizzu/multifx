@@ -1,5 +1,19 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal Touch-Wah / Touch-Ladder physical detector source (2026-11-25)
+
+The existing Stereo Filter at picker index 96 can detect its Touch-Wah or Touch-Ladder envelope from either the processed block input or the original chain input. The physical-input option passes a read-only view of the already-available raw input; it adds no audio copy, buffer, processor stage, or fixed algorithmic latency. The control value adds 8 B to the filter object's reported state (38,968 B total at 48 kHz stereo). This is the project's routing interpretation of the family guide, not a separate physical jack or Fractal routing emulation.
+
+`make bench` on AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks, recorded p50/p95/p99/p99.9/max at **0.3023/0.4178/0.5666/1.4787/4.6944%** of the deadline. This is isolated native processor-call timing; the peak is a scheduler/measurement outlier candidate and device performance is unknown. Focused native/browser tests verify a measurable output difference between Block and Physical sources with local prerecorded guitar; full browser/native parity and Windows cross-build pass. No human listening or target-device latency data is available.
+
+## Related Melofty AXOM MAX Filtered Delay controls (2026-11-25)
+
+The AXOM app V1.9.2 notes mention 1/64–1/1 divisions and High/Low Cut but do not identify the model or control ranges. TabletFX's existing Filtered Delay already offers tempo sync and repeat-path cuts; the new tests validate that path and add no extra processor or memory. The `make bench` Filtered Delay row reports existing processor use of 768,864 B and p50/p95/p99/p99.9/max of 0.1365/0.2715/0.3323/0.6270/3.1332% of a 2.667 ms callback. These figures characterize TabletFX's effect, not Melofty hardware or an incremental change from the controls.
+
+## Line 6 Stadium XL 1 Switch Looper controller profile (2026-11-25)
+
+The one-switch controller profile drives the existing Deluxe Looper; it adds no audio processor stage, recording buffer, or signal latency. The profile uses project UI timing (280 ms double press, 1 s hold). The audio callback and looper memory are those of Deluxe Looper and were not remeasured specifically for the alternate controller profile. Browser interaction tests cover transport and undo/redo/clear states. Physical Stadium footswitch behavior remains a manual check.
+
 ## Fractal FM9 Touch-Wah MIX interpretation (2026-11-24)
 
 The November 2026 Fractal Blocks Guide (p. 46) lists Touch-Wah modes LOWPASS, BANDPASS, HIGHPASS, and MIX, but gives no MIX topology, amount range, or default. TabletFX defines MIX as a linear dry/band-pass crossfade with a project-selected 50% default, a 0–100% range, and a 10 ms blend ramp. It uses the existing Touch-Wah filter, adds one scalar parameter/state value and no buffer, delay, or fixed latency; shared filter state remains 38,960 B at 48 kHz stereo. This is not Fractal DSP or control parity.

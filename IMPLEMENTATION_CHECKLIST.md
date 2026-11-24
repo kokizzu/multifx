@@ -1,10 +1,32 @@
 # Implementation checklist
 
+## Melofty AXOM MAX — Delay control coverage (2026-11-25)
+
+- [x] Checked the AXOM MAX download page (firmware/controller/app V1.9.2 dated 2026-10-27) and the app's V1.9.2 release notes. They mention 1/64–1/1 Delay divisions plus High/Low Cut, but do not name the affected delay model, publish numeric ranges/defaults, or establish installed hardware firmware.
+- [x] Confirmed related project coverage in the existing categorized Filtered Delay: tempo sync, 1/32 and 1/64 choices, and repeat-path Low/High Cut. Strengthened native regression coverage for cut response in the repeat path, timing, channel isolation, bounds, reset, and no process-time allocation; this adds no new picker item or DSP stage.
+- [x] `make test` passes 112/112 CTest cases and 11/11 fixture checks; full `make web-test`, Windows MinGW cross-build, and `make bench` pass. The existing Filtered Delay benchmark row is recorded separately; these checks do not establish an AXOM model match.
+- [ ] Device listening and exact AXOM algorithm/parameter mapping remain open.
+
+## Fractal FM9 family — Touch-Wah/Touch-Ladder physical detector source (2026-11-25)
+
+- [x] The November 2026 Blocks Guide, pp. 45–47, documents block or physical detector source for Touch-Wah and Touch-Ladder. The guide is family-level evidence; firmware v12.0 is listed for FM9 Original/Turbo, not Mark II Turbo by name, and installed firmware is unknown.
+- [x] Added a Block Input / Physical Input choice to the existing Filters & wah Stereo Filter at picker index 96. TabletFX Physical Input uses the original raw chain-input span before effects as the envelope source; it does not emulate a separate hardware jack or Fractal routing. It adds no processor stage, sample buffer, or fixed latency.
+- [x] Native tests cover both detector modes for Touch-Wah and Touch-Ladder, source fallback, reset, irregular blocks, and allocation-free processing. Focused browser/WASM Play verifies the visible controls and measurable output difference using the local prerecorded Guitar-TECHS DI. Full `make web-test` passes with 112/112 CTest cases and 78 browser/native stages; Windows MinGW core/offline build passes.
+- [x] At 48 kHz stereo/128 frames (2.667 ms callback), the Ryzen 9 5950X Release benchmark measures Physical Input Touch-Wah p50/p95/p99/p99.9/max at 0.3023/0.4178/0.5666/1.4787/4.6944% of the callback deadline; existing filter state is 38,968 B. Desktop processor-call results do not predict tablet load.
+- [ ] Hardware input routing, installed firmware applicability, human listening, and target-device checks remain open. No Fractal settings, DSP, or sound parity is claimed.
+
+## Line 6 Helix Stadium XL — 1 Switch Looper controller profile (2026-11-25)
+
+- [x] Checked the Stadium manual selector for Rev. E / firmware v1.4.1 and the looper page: 1 Switch shares the Deluxe Looper's mono/stereo limits (120 s mono / 60 s stereo at full speed, doubled at half speed) and uses Playback, Overdub, Low Cut, and High Cut. The model catalogue marks the looper hardware-only; it is not available in Stadium Native.
+- [x] Added a categorized 1 Switch controller profile over the existing project Deluxe Looper. Record/Play/Overdub, double-press stop, and hold-based undo/redo/clear use the same processor and recording buffer; the 280 ms double-press window and 1 s hold are project UI choices. No new audio stage or audio latency is introduced.
+- [x] Full `make web-test` verifies recording, playback, overdubbing, undo, redo, stop, clear, and reuse of the Deluxe Looper processor/buffer. Native suite, browser/native comparison, and Windows MinGW core/offline build pass.
+- [ ] Verify hardware footswitch mapping and loop behavior on a Stadium device; no Line 6 UI-control or sound parity is claimed.
+
 ## Fractal FM9-family — Touch-Wah MIX mode (2026-11-24)
 
 - [x] Verified the November 2026 Fractal Audio Blocks Guide, printed p. 46: Touch-Wah Mode lists LOWPASS, BANDPASS, HIGHPASS, and MIX; Touch-Wah follows playing volume through natural note fade. The guide does not define MIX topology, blend amount/range/default, or all other numeric controls. Current FM9 v12.0 listings name Original/Turbo, not Mark II Turbo separately; installed firmware is unknown.
-- [x] Added MIX to the existing categorized Filters & wah Stereo Filter at picker ID 96. TabletFX defines it as a project-authored, smoothed 0–100% dry/band-pass crossfade, default 50%. No extra processor, buffer, delay, or audio state is added. Physical-input detector selection remains unavailable; no Fractal parity is claimed.
-- [x] Focused native tests cover dry/full/mid blend, clamping, mono/stereo, reset, irregular blocks, and no process-time allocation. Focused browser/WASM test exercises the visible Mix option and amount slider, confirms the 35-value API configuration, and captures Play output from the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames.
+- [x] Added MIX to the existing categorized Filters & wah Stereo Filter at picker ID 96. TabletFX defines it as a project-authored, smoothed 0–100% dry/band-pass crossfade, default 50%. No extra processor, buffer, delay, or audio state is added. Block/Physical detector source selection is now available for Touch-Wah and Touch-Ladder; see the 2026-11-25 checkpoint above. No Fractal parity is claimed.
+- [x] Focused native tests cover dry/full/mid blend, clamping, mono/stereo, reset, irregular blocks, and no process-time allocation. Focused browser/WASM tests exercise Mix and detector-source controls, confirm the 36-value API configuration, and capture Play output from the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames.
 - [x] Windows MinGW core/offline cross-build and isolated benchmark pass. At 48 kHz stereo/128 frames (2.667 ms callback), Ryzen 9 5950X Release benchmark p50/p95/p99/p99.9/max are 0.3064/0.3195/0.4174/0.5363/1.1738% of the deadline; existing filter state is 38,960 B. No fixed algorithmic latency is added.
 - [ ] Human listening and target-device/round-trip checks remain open.
 

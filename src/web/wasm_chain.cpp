@@ -609,8 +609,9 @@ public:
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
         if (index == 96U) {
             if (stereo_filter_enabled_) {
-                stereo_filter_->process(
-                    std::span<float>(output_.data(), samples), channels_);
+                stereo_filter_->process_with_detector(
+                    std::span<float>(output_.data(), samples),
+                    std::span<const float>(input_.data(), samples), channels_);
             }
             return;
         }
@@ -1640,7 +1641,9 @@ public:
 
     void configure_stereo_filter(const float* values,
                                  std::uint32_t value_count) noexcept {
-        if (values == nullptr || value_count != 35U) return;
+        if (values == nullptr || (value_count != 35U && value_count != 36U)) {
+            return;
+        }
         const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
             if (!std::isfinite(value)) return 0U;
             return static_cast<std::uint32_t>(std::clamp(
@@ -1648,7 +1651,7 @@ public:
         };
         tabletfx::StereoFilterParameters parameters;
         parameters.type = static_cast<tabletfx::StereoFilterType>(
-            enum_index(values[0], 17U));
+            enum_index(values[0], 19U));
         parameters.frequency_hz = values[1];
         parameters.order = static_cast<std::uint8_t>(enum_index(values[2], 4U));
         parameters.q = values[3];
@@ -1689,6 +1692,11 @@ public:
         parameters.ladder_order = static_cast<std::uint8_t>(
             enum_index(values[33], 4U));
         parameters.mix_percent = values[34];
+        if (value_count == 36U) {
+            parameters.detector_source =
+                static_cast<tabletfx::StereoFilterDetectorSource>(
+                    enum_index(values[35], 1U));
+        }
         stereo_filter_->set_parameters(parameters);
     }
 

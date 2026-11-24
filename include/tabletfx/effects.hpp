@@ -194,8 +194,11 @@ public:
     // routing only; tape coloration remains independently controlled above.
     void configure_tape_heads(bool enabled, float head_spacing_ms = 110.0F,
                               std::uint8_t selected_heads = 0x0FU) noexcept;
-    // Project-authored repeat-path high-pass and low-pass coloration. This
-    // affects the signal written back into the delay ring, not the dry path.
+    // Project-authored repeat-path high-pass/low-pass approximation; it is not
+    // a claim about Axom firmware or DSP. At 48 kHz, project control bounds are
+    // 20–1000 Hz (low cut) and 2–20 kHz (high cut), with sample-rate limits at
+    // lower rates. Non-finite controls use 120 Hz / 6 kHz. Disabled by default;
+    // affects repeats written into the delay ring, not the dry path.
     void configure_repeat_filters(bool enabled, float low_cut_hz,
                                   float high_cut_hz) noexcept;
     void configure_tempo(float bpm, DelayDivision division, float feedback,

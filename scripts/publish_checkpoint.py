@@ -2238,6 +2238,25 @@ FRACTAL_TOUCH_WAH_MIX_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FLAGSHIP_CONTROL_ROUTING_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/stereo_filter.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "src/effects/stereo_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_delay.cpp",
+    "tests/test_stereo_filter.cpp",
+    "web/app.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2627,6 +2646,10 @@ CHECKPOINTS = {
     "fractal-touch-wah-mix": (
         FRACTAL_TOUCH_WAH_MIX_CHECKPOINT_PATHS,
         "feat: add project-authored Touch-Wah Mix mode",
+    ),
+    "flagship-control-routing": (
+        FLAGSHIP_CONTROL_ROUTING_CHECKPOINT_PATHS,
+        "feat: add flagship filter and looper controls",
     ),
 }
 

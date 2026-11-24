@@ -109,6 +109,8 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.mod_frequency_hz = bounded(parameters.mod_frequency_hz, 4000.0F,
                                           minimum_frequency, maximum_frequency);
     parameters.mode = sanitize_mode(parameters.mode);
+    parameters.detector_source = sanitize_detector_source(
+        parameters.detector_source);
     if ((parameters.type == StereoFilterType::LadderFilter ||
          parameters.type == StereoFilterType::TouchLadderFilter) &&
         parameters.mode == StereoFilterMode::Highpass) {
@@ -173,6 +175,12 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
 
 void StereoFilter::process(std::span<float> interleaved,
                            std::uint16_t channels) noexcept {
+    process_with_detector(interleaved, {}, channels);
+}
+
+void StereoFilter::process_with_detector(
+    std::span<float> interleaved, std::span<const float> raw_input,
+    std::uint16_t channels) noexcept {
     if (channels == 0U || channels > 2U) return;
     const std::size_t frames = interleaved.size() / channels;
     const bool is_auto_wah = parameters_.type == StereoFilterType::AutoWah;
@@ -183,6 +191,12 @@ void StereoFilter::process(std::span<float> interleaved,
     const bool is_touch_wah = parameters_.type == StereoFilterType::TouchWahFilter;
     const bool is_touch_wah_mix = is_touch_wah &&
                                   parameters_.mode == StereoFilterMode::Mix;
+    const bool has_raw_detector =
+        parameters_.detector_source ==
+            StereoFilterDetectorSource::PhysicalInput &&
+        raw_input.size() >= frames * channels;
+    const bool use_persistent_coefficient_schedule = is_touch_wah_mix ||
+        (has_raw_detector && (is_touch_ladder || is_touch_wah));
     const bool has_envelope_sweep =
         is_envelope_filter || is_touch_ladder || is_touch_wah;
     const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
@@ -193,19 +207,23 @@ void StereoFilter::process(std::span<float> interleaved,
                          parameters_.type != StereoFilterType::Null;
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
-        const bool update_coefficients = is_touch_wah_mix
+        const bool update_coefficients = use_persistent_coefficient_schedule
             ? coefficient_update_countdown_ == 0U
             : frame % kCoefficientUpdateFrames == 0U;
         float frame_inputs[2] = {0.0F, 0.0F};
+        float detector_inputs[2] = {0.0F, 0.0F};
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
-            frame_inputs[channel] = safe_sample(
-                interleaved[frame * channels + channel]);
+            const std::size_t sample_index = frame * channels + channel;
+            frame_inputs[channel] = safe_sample(interleaved[sample_index]);
+            detector_inputs[channel] = has_raw_detector
+                ? safe_sample(raw_input[sample_index])
+                : frame_inputs[channel];
         }
 
         if (has_envelope_sweep) {
             float detector_level = 0.0F;
             for (std::uint16_t channel = 0; channel < channels; ++channel) {
-                const float input = frame_inputs[channel];
+                const float input = detector_inputs[channel];
                 const float previous_lowpass =
                     envelope_emphasis_lowpass_[channel];
                 const float lowpass = emphasis_alpha_ * previous_lowpass +
@@ -443,6 +461,16 @@ StereoFilterMode StereoFilter::sanitize_mode(StereoFilterMode mode) noexcept {
         return mode;
     }
     return StereoFilterMode::Lowpass;
+}
+
+StereoFilterDetectorSource StereoFilter::sanitize_detector_source(
+    StereoFilterDetectorSource source) noexcept {
+    switch (source) {
+    case StereoFilterDetectorSource::BlockInput:
+    case StereoFilterDetectorSource::PhysicalInput:
+        return source;
+    }
+    return StereoFilterDetectorSource::BlockInput;
 }
 
 float StereoFilter::nyquist_limit() const noexcept {
