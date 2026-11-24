@@ -602,6 +602,50 @@ def check_octave_divider(executable: Path) -> None:
             )
 
 
+def check_double_take(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate // 5
+    source_samples = [0] * frame_count
+    source_samples[0] = 16384
+    with tempfile.TemporaryDirectory(prefix="tabletfx-double-take-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "double-take.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--double-take", "--double-take-doubles", "1",
+             "--double-take-slop", "0", "--double-take-sensitivity", "0.55",
+             "--double-take-dry-level", "0", "--double-take-wet-level", "1",
+             "--double-take-source", "mono"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"Double Take controls did not enable one processor: {result.stdout}")
+        values = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Double Take produced non-finite output")
+        first_output = next(
+            (index for index, value in enumerate(values) if abs(value) > 1.0e-5),
+            None,
+        )
+        expected_delay = round(0.007 * sample_rate)
+        if first_output != expected_delay or abs(values[first_output] - 0.5) > 1.0e-4:
+            raise AssertionError(
+                f"Double Take wet-only impulse should emerge at {expected_delay} frames; "
+                f"first output was {first_output} at {values[first_output] if first_output is not None else 'silence'}"
+            )
+
+        invalid_source = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid.wav"),
+             "--double-take-source", "center"],
+            capture_output=True, text=True, check=False,
+        )
+        if (invalid_source.returncode == 0 or
+                "Double Take source must be mono, true-stereo, left, or right" not in invalid_source.stderr):
+            raise AssertionError("Double Take accepted an unknown Source option")
+
+
 def check_stereo_crossover(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 4096
@@ -2847,6 +2891,7 @@ def main() -> None:
     check_tape_echo(args.executable.resolve())
     check_octave_fuzz(args.executable.resolve())
     check_octave_divider(args.executable.resolve())
+    check_double_take(args.executable.resolve())
     check_stereo_crossover(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
@@ -2904,7 +2949,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

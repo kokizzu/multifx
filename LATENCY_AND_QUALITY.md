@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium Double Take-inspired Modulation (2026-11-24)
+
+The project-authored Double Take processor uses four preallocated delay voices with a 24 ms maximum ring. The default two-double configuration uses Slop 0.25, Sensitivity 0.55, Dry 0.85, Wet 0.15, and Mono Source. Project bounds, dynamic envelope response, timing drift, voice placement, delay values, and mixing do not claim Line 6 settings or DSP parity. Stereo processor-owned state is 9,504 B at 48 kHz. The dry path is immediate; wet voices use a 7–10.75 ms base delay with up to ±2.5 ms modulation. Construction allocates the fixed ring; process() performs no allocation.
+
+An isolated Release benchmark on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame blocks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.2528/0.3424/0.4823/0.6792/2.1484% of the deadline. This is processor-call timing on that desktop, not an Android/Windows live-route or end-to-end measurement. Native tests cover defaults/bounds, all Source choices, immediate dry timing, wet onset, irregular callback partitioning, reset, finite recovery, and no allocation. Browser Play smoke uses existing local prerecorded Guitar-TECHS DI and verifies measurable changed output; browser/native comparison and Windows MinGW core cross-build pass. No human listening or physical-device result is available.
+
 ## Project-authored Fractal-inspired Octave Divider (2026-11-24)
 
 The fixed crossing-derived square-wave divider adds independent −12 and −24 semitone sub voices without an FFT, note tracker, delay line, or process-time allocation. Its measured state is 192 B at 48 kHz stereo, with zero fixed algorithmic latency. A Ryzen 9 5950X Release run (48 kHz stereo, 128-frame blocks, 2,000 warm-up and 5,000 measured blocks) measured p50/p95/p99/p99.9/max at 0.0503/0.0953/0.1050/0.2940/0.4571% of the 2.667 ms callback deadline. These processor-call timings are desktop estimates, not tablet or end-to-end latency evidence.
@@ -8,7 +14,7 @@ Native tests cover −12/−24 voice frequency, parameter bounds, stereo pan/mix
 
 ## Fractal Rotary Speaker Hi Depth behavior (2026-11-24)
 
-The June 2023 FM9-family Blocks Guide (printed p. 87) says setting Hi Depth to zero can simulate drum-only operation; it does not publish numeric bounds or define the control mapping. The project now scales the horn/Doppler path with Hi Depth, so Rotor Length cannot move the horn at zero depth. A regression checks that zero-depth case and verifies that Rotor Length still changes the high-rotor output with nonzero depth. This is project-authored behavior, not Fractal DSP/settings/sound parity.
+The November 2026 FM9-family Blocks Guide (printed p. 98) says setting Hi Depth to zero can simulate drum-only operation; it does not publish numeric bounds or define the control mapping. The project now scales the horn/Doppler path with Hi Depth, so Rotor Length cannot move the horn at zero depth. A regression checks that zero-depth case and verifies that Rotor Length still changes the high-rotor output with nonzero depth. This is project-authored behavior, not Fractal DSP/settings/sound parity.
 
 `make bench` on an AMD Ryzen 9 5950X, Release build, 48 kHz stereo, 128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks reports p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of the callback deadline. Owned state is 1,208 B; there is no fixed algorithmic latency, and `process()` does not allocate. This is a desktop processor-call estimate. FM9-family v12.0 download listings name FM9 Original and Turbo but not Mark II Turbo; installed firmware and device performance are unknown. [Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) · [FM9 downloads](https://www.fractalaudio.com/fm9-downloads/)
 

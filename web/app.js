@@ -103,12 +103,14 @@ const EFFECT_NAMES = [
   "Chromatic Pitch Delay · project-authored Fender-inspired control roles",
   "Cabinet IR · project-authored mono impulse response",
   "Octave Divider · project-authored Fractal-inspired controls",
+  "Double Take · project-authored dynamic double",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
   stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0, 0.25, 0, 0, 4],
   stepTremolo: [4, 0.75, 8, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 4],
   octaveDivider: [1, 0.45, -0.25, 0.2, 0.25, 0.65, 1],
+  doubleTake: [2, 0.25, 0.55, 0.85, 0.15, 0],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1218,6 +1220,14 @@ const octaveDividerControls = [
   document.querySelector("#octave-divider-voice2-pan"),
   document.querySelector("#octave-divider-mix"),
   document.querySelector("#octave-divider-output-level"),
+];
+const doubleTakeControls = [
+  document.querySelector("#double-take-doubles"),
+  document.querySelector("#double-take-slop"),
+  document.querySelector("#double-take-sensitivity"),
+  document.querySelector("#double-take-dry-level"),
+  document.querySelector("#double-take-wet-level"),
+  document.querySelector("#double-take-source"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -2860,6 +2870,24 @@ function updateOctaveDividerOptions() {
   }
 }
 
+function updateDoubleTakeOptions() {
+  const values = doubleTakeControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.doubleTake = values;
+  const output = (control, value) => {
+    const node = control.parentElement.querySelector("output");
+    if (node) node.value = value;
+  };
+  output(doubleTakeControls[0], `${values[0]} voices`);
+  output(doubleTakeControls[1], `${Math.round(values[1] * 100)}%`);
+  output(doubleTakeControls[2], `${Math.round(values[2] * 100)}%`);
+  output(doubleTakeControls[3], `${Math.round(values[3] * 100)}%`);
+  output(doubleTakeControls[4], `${Math.round(values[4] * 100)}%`);
+  output(doubleTakeControls[5], ["Mono", "True Stereo", "Left Only", "Right Only"][values[5]] || "Mono");
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "double-take", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -3894,6 +3922,12 @@ for (const control of octaveDividerControls) {
   control.addEventListener("change", updateOctaveDividerOptions);
 }
 updateOctaveDividerOptions();
+
+for (const control of doubleTakeControls) {
+  control.addEventListener("input", updateDoubleTakeOptions);
+  control.addEventListener("change", updateDoubleTakeOptions);
+}
+updateDoubleTakeOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9483,6 +9517,108 @@ async function runOctaveDividerBrowserSmokeTest(reference, captureView, captureB
   }
 }
 
+async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = doubleTakeControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Double Take browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    ["3", "0.65", "0.55", "0.75", "0.45", "0"].forEach((value, index) => {
+      doubleTakeControls[index].value = value;
+    });
+    doubleTakeControls[1].dispatchEvent(new Event("input", { bubbles: true }));
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="102"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !checkbox || doubleTakeControls.length !== 6 ||
+        effectMemory.length !== 103 || !(effectMemory[102] > 0) ||
+        DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
+      throw new Error("Double Take is missing its categorized Modulation row or six controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 102;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Double Take picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Double Take playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Double Take produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 102,
+      doubles: 3, slop: 0.65, sensitivity: 0.55,
+      dryLevel: 0.75, wetLevel: 0.45, source: "Mono",
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[102],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      doubleTakeControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateDoubleTakeOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = stereoFilterControls.map((control) =>
@@ -10334,8 +10470,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 102 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 102 || effectRows.length !== 102 ||
+        const expectedEffectIds = Array.from({ length: 103 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 103 || effectRows.length !== 103 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -10400,6 +10536,9 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[101]?.startsWith("Octave Divider") ||
               effectRows[101]?.dataset.category !== "pitch" ||
               effectRows[101]?.querySelector(".effect-category-tag")?.textContent !== "Pitch" ||
+              !EFFECT_NAMES[102]?.startsWith("Double Take") ||
+              effectRows[102]?.dataset.category !== "modulation" ||
+              effectRows[102]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -10416,7 +10555,7 @@ async function runBrowserSelfTest() {
                     initialEffectState[92] || initialEffectState[93] ||
                       !initialEffectState[94] || !initialEffectState[95] ||
                         initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
-                         initialEffectState[100] || initialEffectState[101] ||
+                         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -12034,9 +12173,9 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-        if (parityEnabled.length !== 102 || activeProcessorIndices.length !== 73 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 98) {
-             throw new Error("The all-effect chain must contain 73 optional processors between input trim and output utilities.");
+    if (parityEnabled.length !== 103 || activeProcessorIndices.length !== 74 ||
+            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 102) {
+             throw new Error("The all-effect chain must contain 74 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -12057,6 +12196,7 @@ async function runBrowserSelfTest() {
         inputGainDb: 2,
         outputGainDb: -1,
         stereoCrossover: { ...DEFAULT_PARAMETERS.stereoCrossover },
+        doubleTake: [3, 0.65, 0.55, 0.75, 0.45, 0],
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
@@ -12666,6 +12806,10 @@ async function runBrowserSelfTest() {
     const octaveDividerSmoke = await runOctaveDividerBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Double Take Modulation-category playback on local guitar audio…";
+    const doubleTakeSmoke = await runDoubleTakeBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -12914,6 +13058,7 @@ async function runBrowserSelfTest() {
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       cabinetIR: cabinetIRSmoke,
       octaveDivider: octaveDividerSmoke,
+      doubleTake: doubleTakeSmoke,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

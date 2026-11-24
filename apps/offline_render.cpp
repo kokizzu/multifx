@@ -16,6 +16,7 @@
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/octave_divider.hpp"
+#include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -254,6 +255,8 @@ struct Options {
     tabletfx::effects::OctaveFuzzParameters octave_fuzz{};
     bool octave_divider_enabled = false;
     tabletfx::effects::OctaveDividerParameters octave_divider{};
+    bool double_take_enabled = false;
+    tabletfx::DoubleTakeParameters double_take{};
     bool stereo_crossover_enabled = false;
     tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
@@ -620,6 +623,25 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--octave-divider") {
             options.octave_divider_enabled = true;
+            continue;
+        }
+        if (key == "--double-take") {
+            options.double_take_enabled = true;
+            continue;
+        }
+        if (key == "--double-take-source") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --double-take-source");
+            }
+            const std::string_view value(argv[++i]);
+            using Source = tabletfx::DoubleTakeSource;
+            if (value == "mono") options.double_take.source = Source::mono;
+            else if (value == "true-stereo") options.double_take.source = Source::true_stereo;
+            else if (value == "left") options.double_take.source = Source::left_only;
+            else if (value == "right") options.double_take.source = Source::right_only;
+            else throw std::invalid_argument(
+                "Double Take source must be mono, true-stereo, left, or right");
+            options.double_take_enabled = true;
             continue;
         }
         if (key == "--stereo-crossover") {
@@ -3079,6 +3101,31 @@ Options parse_options(int argc, char** argv, int first) {
             options.octave_divider.output_level = value;
             options.octave_divider_enabled = true;
         }
+        else if (key == "--double-take-doubles") {
+            const int doubles = static_cast<int>(std::lround(value));
+            if (std::abs(value - static_cast<float>(doubles)) > 1.0e-6F ||
+                doubles < 1 || doubles > 4) {
+                throw std::invalid_argument("Double Take voices must be 1 through 4");
+            }
+            options.double_take.doubles = static_cast<std::uint8_t>(doubles);
+            options.double_take_enabled = true;
+        }
+        else if (key == "--double-take-slop") {
+            options.double_take.slop = value;
+            options.double_take_enabled = true;
+        }
+        else if (key == "--double-take-sensitivity") {
+            options.double_take.sensitivity = value;
+            options.double_take_enabled = true;
+        }
+        else if (key == "--double-take-dry-level") {
+            options.double_take.dry_level = value;
+            options.double_take_enabled = true;
+        }
+        else if (key == "--double-take-wet-level") {
+            options.double_take.wet_level = value;
+            options.double_take_enabled = true;
+        }
         else if (key == "--stereo-crossover-frequency-hz") {
             options.stereo_crossover.frequency_hz = value;
             options.stereo_crossover_enabled = true;
@@ -3620,6 +3667,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.octave_divider_enabled) {
         effects.push_back(std::make_unique<tabletfx::effects::OctaveDivider>(
             static_cast<float>(sample_rate), channels, options.octave_divider));
+    }
+    if (options.double_take_enabled) {
+        effects.push_back(std::make_unique<tabletfx::DoubleTake>(
+            static_cast<float>(sample_rate), channels, options.double_take));
     }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
@@ -4658,6 +4709,10 @@ void run_bench() {
         tabletfx::effects::OctaveDividerParameters parameters;
         return std::make_unique<tabletfx::effects::OctaveDivider>(
             static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("double-take-project-authored", [=] {
+        return std::make_unique<tabletfx::DoubleTake>(
+            static_cast<float>(sample_rate), channels);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));

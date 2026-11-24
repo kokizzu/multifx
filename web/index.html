@@ -192,6 +192,7 @@
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="99"><span class="effect-number">100</span><span class="effect-name">Chromatic Pitch Delay · project-authored</span><span class="effect-default">±24 semitones · tempo sync · 10–2,000 ms</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="ir-loader"><input type="checkbox" data-effect="100"><span class="effect-number">101</span><span class="effect-name">Cabinet IR · project-authored mono FIR</span><span class="effect-default">24-bit PCM · 48 kHz · 2,048 samples</span><span class="effect-category-tag">IR Loader</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="101"><span class="effect-number">102</span><span class="effect-name">Octave Divider · project-authored Fractal-inspired controls</span><span class="effect-default">Fixed −1 / −2 octave voices</span><span class="effect-category-tag">Pitch</span></label>
+                <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="102"><span class="effect-number">103</span><span class="effect-name">Double Take · project-authored dynamic double</span><span class="effect-default">1–4 voices · timing/pitch drift · dry/wet</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -733,6 +734,18 @@
           <label class="mix-control" for="octave-divider-voice2-pan"><span>−2 octave pan</span><output id="octave-divider-voice2-pan-value" for="octave-divider-voice2-pan">+25%</output><input id="octave-divider-voice2-pan" type="range" min="-1" max="1" step="0.01" value="0.25"></label>
           <label class="mix-control" for="octave-divider-mix"><span>Mix</span><output id="octave-divider-mix-value" for="octave-divider-mix">65%</output><input id="octave-divider-mix" type="range" min="0" max="1" step="0.01" value="0.65"></label>
           <label class="mix-control" for="octave-divider-output-level"><span>Output level</span><output id="octave-divider-output-level-value" for="octave-divider-output-level">100%</output><input id="octave-divider-output-level" type="range" min="0" max="2" step="0.01" value="1"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Double Take controls">
+        <h3>Double Take · project-authored dynamic double</h3>
+        <p class="hint">The Line 6 Stadium catalogue lists a mono/stereo Double Take model. A Line 6 sound designer described the original Helix controls; numeric ranges, defaults and this project's delay-based DSP are independent choices. Slop modulates bounded short delays; this does not claim vendor algorithm or sound parity.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="double-take-doubles"><span>Double voices</span><output>2 voices</output><select id="double-take-doubles"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></label>
+          <label class="mix-control" for="double-take-slop"><span>Slop</span><output>25%</output><input id="double-take-slop" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="double-take-sensitivity"><span>Sensitivity</span><output>55%</output><input id="double-take-sensitivity" type="range" min="0" max="1" step="0.01" value="0.55"></label>
+          <label class="mix-control" for="double-take-dry-level"><span>Dry level</span><output>85%</output><input id="double-take-dry-level" type="range" min="0" max="1" step="0.01" value="0.85"></label>
+          <label class="mix-control" for="double-take-wet-level"><span>Wet level</span><output>15%</output><input id="double-take-wet-level" type="range" min="0" max="1" step="0.01" value="0.15"></label>
+          <label class="mix-control" for="double-take-source"><span>Stereo source</span><output>Mono</output><select id="double-take-source"><option value="0" selected>Mono</option><option value="1">True Stereo</option><option value="2">Left Only</option><option value="3">Right Only</option></select></label>
         </div>
       </div>
       <div class="gain-controls">

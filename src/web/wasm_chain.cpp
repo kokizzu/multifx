@@ -14,6 +14,7 @@
 #include "tabletfx/effects/shimmer_reverb.hpp"
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/cabinet_ir.hpp"
+#include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -110,7 +111,9 @@ public:
           cabinet_ir_(static_cast<float>(sample_rate),
                       static_cast<std::uint16_t>(channels)),
           octave_divider_(static_cast<float>(sample_rate),
-                          static_cast<std::uint16_t>(channels)) {
+                          static_cast<std::uint16_t>(channels)),
+          double_take_(static_cast<float>(sample_rate),
+                       static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -401,7 +404,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 7; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 8; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -446,6 +449,11 @@ public:
         if (index == 101U) {
             octave_divider_enabled_ = enabled;
             if (!enabled) octave_divider_.reset();
+            return true;
+        }
+        if (index == 102U) {
+            double_take_enabled_ = enabled;
+            if (!enabled) double_take_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -584,6 +592,13 @@ public:
             }
             return;
         }
+        if (index == 102U) {
+            if (double_take_enabled_) {
+                double_take_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -654,6 +669,7 @@ public:
         chromatic_pitch_delay_->reset();
         cabinet_ir_.reset();
         octave_divider_.reset();
+        double_take_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2921,6 +2937,19 @@ public:
         octave_divider_.configure(parameters);
     }
 
+    void configure_double_take(std::uint32_t doubles, float slop,
+                               float sensitivity, float dry_level,
+                               float wet_level, std::uint32_t source) noexcept {
+        tabletfx::DoubleTakeParameters parameters;
+        parameters.doubles = static_cast<std::uint8_t>(doubles);
+        parameters.slop = slop;
+        parameters.sensitivity = sensitivity;
+        parameters.dry_level = dry_level;
+        parameters.wet_level = wet_level;
+        parameters.source = static_cast<tabletfx::DoubleTakeSource>(source);
+        double_take_.set_parameters(parameters);
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -2933,6 +2962,7 @@ public:
         bytes += chromatic_pitch_delay_->memory_bytes();
         bytes += cabinet_ir_.memory_bytes();
         bytes += octave_divider_.memory_bytes();
+        bytes += double_take_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2981,6 +3011,12 @@ public:
         if (index == 101U) {
             return static_cast<std::uint32_t>(octave_divider_.memory_bytes());
         }
+        if (index == 102U) {
+            const std::size_t bytes = double_take_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3012,6 +3048,7 @@ private:
     tabletfx::LevelMeter output_meter_;
     tabletfx::CabinetIr cabinet_ir_;
     tabletfx::effects::OctaveDivider octave_divider_;
+    tabletfx::DoubleTake double_take_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3020,6 +3057,7 @@ private:
     bool chromatic_pitch_delay_enabled_ = false;
     bool cabinet_ir_enabled_ = false;
     bool octave_divider_enabled_ = false;
+    bool double_take_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -3987,6 +4025,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_octave_divider(
         as_chain(opaque)->configure_octave_divider(
             input_gain, voice1_level, voice1_pan, voice2_level, voice2_pan,
             mix, output_level);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_double_take(
+    void* opaque, std::uint32_t doubles, float slop, float sensitivity,
+    float dry_level, float wet_level, std::uint32_t source) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_double_take(
+            doubles, slop, sensitivity, dry_level, wet_level, source);
     }
 }
 

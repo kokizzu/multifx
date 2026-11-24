@@ -25,6 +25,7 @@ add_library(tabletfx_core
     src/effects/convolution_reverb.cpp
     src/effects/cabinet_ir.cpp
     src/effects/octave_divider.cpp
+    src/effects/double_take.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
@@ -243,6 +244,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_octave_divider_tests tests/test_octave_divider.cpp)
     target_link_libraries(tabletfx_octave_divider_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_octave_divider_tests COMMAND tabletfx_octave_divider_tests)
+
+    add_executable(tabletfx_double_take_tests tests/test_double_take.cpp)
+    target_link_libraries(tabletfx_double_take_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_double_take_tests COMMAND tabletfx_double_take_tests)
 
     add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
     target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)
