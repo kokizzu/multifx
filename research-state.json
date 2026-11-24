@@ -4,23 +4,29 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "57e0268bca970391ff079d6ee54feb3a015dc084",
+  "previous_checkpoint_commit": "8afb24ea93a868422ca9d2f5a8390b6d92b2f2e2",
   "latest_audit": {
-    "name": "Fractal FM9-family Resonator Input Gain control",
-    "status": "verified; automated checks pass; hardware listening remains",
+    "name": "Fractal FM9-family Volume/Pan utility audit and implementation",
+    "status": "verified; automated checks pass; human listening and hardware checks remain",
     "date": "2026-11-25",
-    "picker_index": 49,
-    "category": "Resonator",
-    "official_source": "The family guide says Resonator Input Gain changes signal fed to the effect processor while leaving dry signal unchanged. It publishes no numeric range or default. FM9 firmware v12.0 is listed for Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown.",
-    "project_controls": "Project-authored control on the existing Four-band Resonator row, picker ID 49; default 0 dB, project-selected range −24…+12 dB. A cached linear multiplier scales wet feed before band routing/delay excitation; dry path and existing feedback return are unchanged. It remains an in-chain control, not a preset-global/output assignment. No extra stage, fixed algorithmic latency, buffer, or process-time allocation; total state 31,144 B at 48 kHz stereo. No Fractal DSP/settings/sound parity.",
+    "picker_index": 93,
+    "category": "Utility",
+    "official_source": "The current November 2026 FM9-family Blocks Guide, printed p. 109, documents Volume/Auto-Swell Type, Volume, detector controls, Balance, seven taper choices, Input Select, independent L/R pan, pass-or-mute bypass, and Output Level separate from Volume. It publishes no numeric bounds/defaults or taper/pan laws. Firmware v12.0 lists FM9 Original/Turbo but not Mark II Turbo by name; installed firmware is unknown.",
+    "project_controls": "Existing project-authored Utility picker ID 93: normalized Volume position 0…1; configurable endpoints bounded −96…+12 dB (default endpoints −96/0); seven project taper approximations; Balance and independent L/R pan ±100%; Stereo/Left/Right selection; independent Output Level −24…+12 dB; pass/mute bypass. Auto-Swell remains separate and no hardware expression-controller assignment is included. Mono uses shared volume/output gain; channels beyond the first stereo pair receive shared gain. 80 B state, zero fixed latency, no process-time allocation; no Fractal settings/DSP/sound parity.",
     "verification": {
-      "focused_native": "make test-fractal-resonator-input-gain passed the focused Four-band Resonator CTest and offline-renderer CLI checks, including the 6 dB renderer flag.",
-      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
-      "browser": "make web-test-fractal-resonator-input-gain passed with the local prerecorded 48 kHz stereo guitar DI; Resonator category and picker row 49 verified, UI/WASM index 34 mapped, and 0/+6 dB Play output differed by RMS 0.0103064 / peak 0.0429585 across 95,706 active samples.",
+      "focused_native": "make test-volume-pan passed the focused VolumePan CTest suite.",
+      "browser": "make web-test-volume-pan passed with local prerecorded 48 kHz stereo guitar DI: Utility category, picker ID 93, 95,980 active samples, peak 0.126371 and difference RMS 0.0169668. make inspect-volume-pan-path verified app-to-Worklet-to-WASM ID 93 mapping.",
       "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback budget, 2,000 warm-up/5,000 measured: owned state 31,144 B, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB 0.4283/0.5625/0.7350/1.8207/2.6288%. Isolated desktop processor-call measurement, not target-device performance."
+      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 80 B state, zero fixed latency; p50/p95/p99/p99.9/max callback use 0.0180/0.0180/0.0382/0.3428/1.2195%. Isolated processor-call result, not target-device performance."
     },
     "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
+  },
+  "continuation_cursor": {
+    "task": "categorized flagship effects",
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Three-oscillator monophonic Synth documentation and browser/native verification",
+    "qualification": "The current November 2026 family guide documents the Synth but most numeric ranges/defaults, latency, and DSP cost are unknown. Compare against the existing project synth before considering code; three oscillators do not imply three-note tracking polyphony."
   },
   "completed_checkpoints": [
     {
@@ -538,6 +544,30 @@
       },
       "picker_rows": "Existing inventory membership and picker count unchanged.",
       "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
+    },
+    {
+      "name": "Fractal FM9-family Volume/Pan utility audit and existing project implementation",
+      "status": "verified; automated checks pass; human listening and hardware checks remain",
+      "picker_index": 93,
+      "category": "Utility",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 firmware downloads",
+        "revision": "Blocks Guide November 2026, printed p. 109; firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The guide covers the FM9 family and documents the Volume/Pan block controls but no numeric bounds/defaults or taper/pan laws. Firmware v12.0 lists FM9 Original/Turbo, not Mark II Turbo by name; exact SKU applicability remains a family-level inference and installed firmware is unknown."
+      },
+      "documented_controls": "Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (pass or mute), and Output Level independent of Volume. No numeric ranges/defaults, taper laws, or pan laws are published.",
+      "project_controls": "Existing project-authored static Utility effect at ID 93. Volume position 0…1; endpoints project-bounded −96…+12 dB with defaults −96/0; taper approximations for Linear, Log 30A/20A/15A/10A/5A, and S-Taper; Balance and L/R pan −100…+100%; Stereo/Left/Right selection; Output Level −24…+12 dB, default 0; pass/mute bypass. Auto-Swell and the expression Volume pedal remain separate; no physical controller mapping. Mono uses shared Volume/Output gain; channels above the first pair receive shared gain. No Fractal settings/DSP/sound parity.",
+      "verification": {
+        "focused_native": "make test-volume-pan passed focused VolumePan CTest.",
+        "browser": "make web-test-volume-pan played local prerecorded 48 kHz stereo guitar DI through Utility ID 93 and passed; peak 0.126371, 95,980 active samples, RMS difference 0.0169668. make inspect-volume-pan-path verified app/Worklet/WASM ID alignment.",
+        "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+        "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 80 B state, zero fixed latency, p50/p95/p99/p99.9/max callback use 0.0180/0.0180/0.0382/0.3428/1.2195%. Isolated desktop measurement, not target-device performance."
+      },
+      "picker_rows": 114,
+      "remaining": "Human listening, exact Mark II Turbo firmware applicability, installed firmware, physical hardware behavior, and target-device CPU/latency remain unverified."
     }
   ],
   "previous_checkpoint": {
@@ -565,28 +595,28 @@
     "picker_rows": 114
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Resonator Input Gain control",
-    "status": "verified; automated checks pass; hardware listening remains",
-    "picker_index": 49,
-    "category": "Resonator",
+    "name": "Fractal FM9-family Volume/Pan utility audit and existing project implementation",
+    "status": "verified; automated checks pass; human listening and hardware checks remain",
+    "picker_index": 93,
+    "category": "Utility",
     "official_source": {
       "title": "Fractal Audio Systems Blocks Guide and FM9 firmware downloads",
-      "revision": "Blocks Guide June 2023 revision, printed p. 81 (no distinct revision number); firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
+      "revision": "Blocks Guide November 2026, printed p. 109; firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
       "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
       "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The family guide says Resonator Input Gain changes signal fed to the effect processor while leaving dry signal unchanged. It publishes no numeric range or default. FM9 firmware v12.0 is listed for Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown."
+      "qualification": "The guide covers FM9-family controls but publishes no numeric bounds/defaults or taper/pan laws. Firmware v12.0 lists Original/Turbo, not Mark II Turbo by name; exact applicability is inferred from family coverage and installed firmware is unknown."
     },
-    "documented_controls": "Resonator Input Gain controls the effect-processor input and does not affect dry signal. The guide does not publish numeric bounds/defaults.",
-    "project_controls": "Project-authored control on the existing Four-band Resonator row, picker ID 49; default 0 dB, project-selected range −24…+12 dB. A cached linear multiplier scales wet feed before band routing/delay excitation; dry path and existing feedback return are unchanged. It remains an in-chain control, not a preset-global/output assignment. No extra stage, fixed algorithmic latency, buffer, or process-time allocation; total state 31,144 B at 48 kHz stereo. No Fractal DSP/settings/sound parity.",
+    "documented_controls": "Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, seven Taper choices, Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left/Right, Bypass Mode (pass/mute), and Output Level independent of Volume; no numeric bounds/defaults or taper/pan laws are provided.",
+    "project_controls": "Existing project-authored Utility ID 93: Volume 0…1; endpoints project-bounded −96…+12 dB (defaults −96/0); seven project taper approximations; Balance and L/R pan ±100%; Stereo/Left/Right input selection; independent Output Level −24…+12 dB (default 0); pass/mute bypass. Auto-Swell remains separate and no hardware expression-controller assignment is included. Mono uses shared Volume/Output gain; channels above the first stereo pair use shared gain. State 80 B, no process-time allocation, zero added fixed latency; no Fractal settings/DSP/sound parity.",
     "verification": {
-      "focused_native": "make test-fractal-resonator-input-gain passed the focused Four-band Resonator CTest and offline-renderer CLI checks, including the 6 dB renderer flag.",
-      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
-      "browser": "make web-test-fractal-resonator-input-gain passed with the local prerecorded 48 kHz stereo guitar DI; Resonator category and picker row 49 verified, UI/WASM index 34 mapped, and 0/+6 dB Play output differed by RMS 0.0103064 / peak 0.0429585 across 95,706 active samples.",
+      "focused_native": "make test-volume-pan passed focused VolumePan CTest.",
+      "browser": "make web-test-volume-pan passed with the local prerecorded 48 kHz stereo guitar DI through Utility ID 93; peak 0.126371, 95,980 active samples, RMS difference 0.0169668. make inspect-volume-pan-path verified app-to-Worklet-to-WASM ID 93 alignment.",
       "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback budget, 2,000 warm-up/5,000 measured: owned state 31,144 B, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB 0.4283/0.5625/0.7350/1.8207/2.6288%. Isolated desktop processor-call measurement, not target-device performance."
+      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 80 B state, zero fixed latency; p50/p95/p99/p99.9/max callback use 0.0180/0.0180/0.0382/0.3428/1.2195%. Isolated desktop processor-call timing, not target-device performance."
     },
-    "picker_rows": "Existing inventory membership and picker count unchanged.",
-    "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
+    "picker_rows": 114,
+    "remaining": "Human listening, physical hardware behavior, target-device CPU/latency, exact Mark II Turbo applicability, and installed firmware remain unverified."
   },
   "next_research": [
     {
@@ -624,17 +654,17 @@
     },
     {
       "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Fractal Synth model controls and remaining pitch/synth behavior",
-      "source": "Fractal Audio Systems Blocks Guide, November 2026, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-24",
+      "feature": "Fractal FM9-family three-oscillator monophonic Synth comparison and verification",
+      "source": "Fractal Audio Systems Blocks Guide, November 2026, printed pp. 3 and 102; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-25",
       "source_urls": [
         "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
         "https://www.fractalaudio.com/fm9-downloads/",
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "The four-voice fixed-interval chromatic effect is now implemented as default-off Pitch picker ID 112 and verified with focused/full native and browser tests, Windows cross-build, and benchmark. It is not a note-tracked synth. The remaining comparison gap is the family three-oscillator Synth parameter/behavior surface; preserve the Mark II Turbo firmware applicability caveat. Human and hardware checks remain open.",
-      "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not. The family Blocks Guide also documents a three-oscillator monophonic Synth with oscillator waveform, tracking mode (Off/Env Only/Pitch+Env), Frequency, Shift, Tune, Duty Cycle, Pan, Filter Frequency/Q, Attack, and Level; this remains a potential comparison gap. Three oscillators do not imply three-note input tracking.",
-      "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim.",
+      "status": "Next in the categorized flagship queue: verify the existing project FractalThreeVoiceSynth against the current manufacturer Synth section, check picker/browser/native behavior, and document measured tracking latency. The project already has a three-voice synth, so do not add a redundant oscillator implementation unless a documented control gap remains. Preserve the Mark II Turbo firmware applicability caveat.",
+      "known_controls": "The current guide documents a three-oscillator monophonic synth: shared Guitar/Bass tracking range; per voice waveform (Sine, Triangle, Square, Sawtooth, Random, White Noise, Pink Noise, Off), Track (Off, Env Only, Pitch+Env, Quantize), Frequency, Shift, Tune ±50 cents, Duty Cycle, Pan, low-pass Filter Freq/Q, Attack, and separate Voice 1/2/3 Level; block Mix, Level, Balance, Bypass, Bypass Mode, and Global Mix also exist. The guide states single-note tracking and BASS down to about F♯0; three oscillators do not mean three-note input polyphony. Most numeric bounds/defaults, DSP cost, and latency are unpublished.",
+      "qualification": "The current guide has a November 2026 cover and gives FM9-family evidence. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; exact applicability is inferred from family coverage, and installed firmware is unknown. The project may use independent controls, detector design, ranges, defaults, and DSP; its Bass tracker has a project-measured response delay and is not evidence of Fractal tracking quality or parity.",
       "implementation_estimate": "Four-voice Chromatic implementation measured 675,480 B native without delay, 2,211,496 B with all four 2-second rings; 19.8103/26.3085/30.3267/35.6049/39.2801% p50/p95/p99/p99.9/max of a 2.667 ms deadline on Ryzen 9 5950X. These are measured project results, not Fractal DSP or target-device estimates."
     },
     {

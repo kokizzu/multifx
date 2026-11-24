@@ -34,7 +34,7 @@ for anchor, insertion in re.findall(
 
 app_label = "Volume/Pan · project-authored Fractal FM9-family controls"
 expected = (
-    len(app_effects) == 96
+    len(app_effects) >= 96
     and app_effects[93] == app_label
     and app_effects[94] == "Output level"
     and app_effects[95] == "Peak limiter"
@@ -62,7 +62,10 @@ if not expected or not wasm_has_volume_pan_slot or not worklet_handles_settings:
         f"settings routed={worklet_handles_settings}"
     )
 
-print(f"App picker ID 93: {app_effects[93]} (IDs 0–95; {len(app_effects)} total)")
+print(
+    f"App picker ID 93: {app_effects[93]} "
+    f"({len(app_effects)} picker rows currently registered)"
+)
 print(f"AudioWorklet ID 93: {worklet_effects[93]} ({len(worklet_effects)} total)")
 print("WASM chain: VolumePan is appended in the matching effect slot and configured at effects_[93].")
 print("Browser controls: app -> volume-pan message -> AudioWorklet -> tf_chain_set_volume_pan.")

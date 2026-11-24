@@ -1153,9 +1153,12 @@ STEP_FILTER_DELAY_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 VOLUME_PAN_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
     "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
     "RESEARCH.md",
     "research-state.json",
     "include/tabletfx/effects.hpp",

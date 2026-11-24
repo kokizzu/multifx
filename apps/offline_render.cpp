@@ -61,6 +61,7 @@
 #include "tabletfx/effects/three_band_eq.hpp"
 #include "tabletfx/effects/vibrato.hpp"
 #include "tabletfx/effects/volume_pedal.hpp"
+#include "tabletfx/effects/volume_pan.hpp"
 #include "tabletfx/effects/wah.hpp"
 #include "tabletfx/effects/stereo_crossover.hpp"
 #include "tabletfx/level_meter.hpp"
@@ -5017,6 +5018,16 @@ void run_bench() {
         tabletfx::VolumePedalParameters parameters;
         parameters.position = 0.72F;
         return std::make_unique<tabletfx::VolumePedal>(static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-volume-pan-utility-project-authored", [=] {
+        tabletfx::VolumePanParameters parameters;
+        parameters.volume = 0.72F;
+        parameters.taper = tabletfx::VolumePanTaper::Log10A;
+        parameters.balance_percent = 12.0F;
+        parameters.pan_left_percent = -35.0F;
+        parameters.pan_right_percent = 42.0F;
+        parameters.output_level_db = -1.0F;
+        return std::make_unique<tabletfx::VolumePan>(parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("high-pass", [=] {
         return std::make_unique<tabletfx::HighPassFilter>(sample_rate, channels, 80.0F);

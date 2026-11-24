@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9-family Volume/Pan utility (2026-11-25)
+
+The existing project-authored Utility stage is picker ID 93. It performs volume, taper, balance, stereo input selection, independent L/R pan, Output Level, and pass/mute bypass; Auto-Swell remains a separate effect. All ranges, defaults, curve approximations, and routing are project choices. The utility owns **80 B**, adds **zero fixed latency**, and makes no process-time allocation. The focused local guitar-DI Play test verifies audible Utility-row output.
+
+On an AMD Ryzen 9 5950X Release build at 48 kHz stereo/128-frame blocks (2.667 ms callback deadline; 2,000 warm-up and 5,000 measured blocks), `make bench` reports p50/p95/p99/p99.9/max at **0.0180/0.0180/0.0382/0.3428/1.2195%** of the deadline. This is isolated processor-call timing, not whole-chain or target-device performance. Human listening and physical Fractal behavior remain open; the November 2026 FM9-family guide does not publish numeric bounds/defaults or curve laws, and v12.0 does not name Mark II Turbo explicitly.
+
 ## Fractal FM9-family Resonator Input Gain (2026-11-25)
 
 The existing Four-band Resonator at picker ID 49 now has project-authored Input Gain. It defaults to 0 dB with a project-selected −24…+12 dB range; the June 2023 Blocks Guide, printed p. 81, documents only the wet-input role and unchanged dry signal, not numeric bounds/defaults. The cached gain scales samples before the resonator's band routing and delay excitation. Dry signal and the existing feedback return are not multiplied. The gain control adds no processor stage, fixed algorithmic latency, or process-time allocation; total processor state is 31,144 B at 48 kHz stereo.
