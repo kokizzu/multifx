@@ -23,6 +23,7 @@
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
+#include "tabletfx/effects/vibratone.hpp"
 #include "tabletfx/effects/ring_modulator.hpp"
 #include "tabletfx/effects/am_ring_mod.hpp"
 #include "tabletfx/effects/rhythmic_slicer.hpp"
@@ -267,6 +268,8 @@ struct Options {
     float eq5_graphic_overall_gain_db = 0.0F;
     bool fractal_bias_trem_enabled = false;
     tabletfx::BiasTremParameters fractal_bias_trem{};
+    bool vibratone_enabled = false;
+    tabletfx::VibratoneParameters vibratone{};
     bool stereo_crossover_enabled = false;
     tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
@@ -645,6 +648,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--fractal-bias-trem") {
             options.fractal_bias_trem_enabled = true;
+            continue;
+        }
+        if (key == "--vibratone") {
+            options.vibratone_enabled = true;
             continue;
         }
         if (key == "--optical-tremolo") {
@@ -4238,6 +4245,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::BiasTrem>(
             static_cast<float>(sample_rate), options.fractal_bias_trem));
     }
+    if (options.vibratone_enabled) {
+        effects.push_back(std::make_unique<tabletfx::Vibratone>(
+            static_cast<float>(sample_rate), channels, options.vibratone));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -5017,6 +5028,13 @@ void run_bench() {
         return std::make_unique<tabletfx::RotarySpeaker>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("vibratone", [=] {
+        tabletfx::VibratoneParameters parameters;
+        parameters.dynamics_switch = true;
+        parameters.drive = 0.15F;
+        return std::make_unique<tabletfx::Vibratone>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("ring-modulator", [=] {
         tabletfx::RingModulatorParameters parameters;
         parameters.frequency_hz = 713.0F;
@@ -5458,6 +5476,7 @@ void print_usage() {
                    " [--fractal-bias-trem-bias-drive 0..1] [--fractal-bias-trem-mix 0..1]"
                    " [--fractal-bias-trem-level-db -24..12] [--fractal-bias-trem-balance -1..1]"
                    " [--fractal-bias-trem-bypass on|off]"
+                   " [--vibratone]"
                   " [--harmonic-tremolo-rate-hz Hz] [--harmonic-tremolo-depth 0..1]"
                   " [--harmonic-tremolo-crossover-hz Hz]"
                   " [--harmonic-tremolo-waveform sine|triangle|square]"

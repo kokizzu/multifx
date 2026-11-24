@@ -107,6 +107,7 @@ const EFFECT_NAMES = [
   "EQ5 Graphic · project-authored five-band EQ",
   "Optical Tremolo · project-authored Fractal FM9-family controls",
   "Bias Trem · project-authored Fractal Blocks Guide-inspired controls",
+  "Vibratone · project-authored rotating-baffle effect",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -117,6 +118,7 @@ const DEFAULT_PARAMETERS = {
   eq5Graphic: [0, 0, 0, 0, 0, 0],
   opticalTremolo: [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0],
   fractalBiasTrem: [4.5, 0.35, 0, 0, 120, 1, 0, -36, 0, 0.18, 1, 0, 0, 0],
+  vibratone: [0, 0.8, 0, 6.5, 0.85, 0, 650, 0.5, 0],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1278,6 +1280,17 @@ const fractalBiasTremControls = [
   document.querySelector("#fractal-bias-trem-level-db"),
   document.querySelector("#fractal-bias-trem-balance"),
   document.querySelector("#fractal-bias-trem-bypass"),
+];
+const vibratoneControls = [
+  document.querySelector("#vibratone-drive"),
+  document.querySelector("#vibratone-tone"),
+  document.querySelector("#vibratone-level-db"),
+  document.querySelector("#vibratone-fast-speed-hz"),
+  document.querySelector("#vibratone-slow-speed-hz"),
+  document.querySelector("#vibratone-speed-switch"),
+  document.querySelector("#vibratone-ramp-ms"),
+  document.querySelector("#vibratone-sensitivity"),
+  document.querySelector("#vibratone-dynamics-switch"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -3039,6 +3052,36 @@ function updateFractalBiasTremOptions() {
   }
 }
 
+function updateVibratoneOptions() {
+  const values = [
+    Number(vibratoneControls[0].value) / 100,
+    Number(vibratoneControls[1].value) / 100,
+    Number(vibratoneControls[2].value),
+    Number(vibratoneControls[3].value),
+    Number(vibratoneControls[4].value),
+    Number(vibratoneControls[5].value),
+    Number(vibratoneControls[6].value),
+    Number(vibratoneControls[7].value) / 100,
+    Number(vibratoneControls[8].checked),
+  ];
+  DEFAULT_PARAMETERS.vibratone = values;
+  const labels = [
+    `${Math.round(values[0] * 100)}%`, `${Math.round(values[1] * 100)}%`,
+    `${values[2].toFixed(1)} dB`, `${values[3].toFixed(2)} Hz`,
+    `${values[4].toFixed(2)} Hz`, values[5] ? "Fast" : "Slow",
+    `${Math.round(values[6])} ms`, `${Math.round(values[7] * 100)}%`,
+    values[8] ? "On" : "Off",
+  ];
+  vibratoneControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = labels[index];
+  });
+  vibratoneControls[5].disabled = Boolean(values[8]);
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "vibratone", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -4094,6 +4137,11 @@ for (const control of fractalBiasTremControls) {
   control.addEventListener("change", updateFractalBiasTremOptions);
 }
 updateFractalBiasTremOptions();
+for (const control of vibratoneControls) {
+  control.addEventListener("input", updateVibratoneOptions);
+  control.addEventListener("change", updateVibratoneOptions);
+}
+updateVibratoneOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9707,7 +9755,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 106 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 107 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9809,7 +9857,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 106 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 107 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -9916,7 +9964,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 106 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 107 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10029,7 +10077,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 106 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 107 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10096,6 +10144,118 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
         }
       });
       updateFractalBiasTremOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = vibratoneControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Vibratone browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const smokeValues = [30, 35, 3, 7.4, 1.1, 0, 450, 70, 1];
+    vibratoneControls.forEach((control, index) => {
+      if (control.type === "checkbox") {
+        control.checked = Boolean(smokeValues[index]);
+      } else {
+        control.value = String(smokeValues[index]);
+      }
+    });
+    updateVibratoneOptions();
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="106"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !checkbox || vibratoneControls.length !== 9 ||
+        effectMemory.length !== 107 || !(effectMemory[106] > 0) ||
+        DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
+      throw new Error("Vibratone is missing its Modulation row or project control mapping.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 106;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Vibratone picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Vibratone playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Vibratone produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 106,
+      drive: 0.3, tone: 0.35, levelDb: 3, fastSpeedHz: 7.4,
+      slowSpeedHz: 1.1, rampMs: 450, sensitivity: 0.7,
+      dynamicsSwitch: true, playOutputCaptured: true, peak, activeSamples,
+      differenceRms, effectMemoryBytes: effectMemory[106],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      vibratoneControls.forEach((control, index) => {
+        if (control.type === "checkbox") {
+          control.checked = previousControls[index];
+        } else {
+          control.value = previousControls[index];
+        }
+      });
+      updateVibratoneOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -10962,8 +11122,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 106 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 106 || effectRows.length !== 106 ||
+        const expectedEffectIds = Array.from({ length: 107 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 107 || effectRows.length !== 107 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -12670,13 +12830,15 @@ async function runBrowserSelfTest() {
     parityEnabled[101] = false;
     // Bias Trem has a native CLI reference and participates in full-chain parity.
     parityEnabled[105] = true;
+    // Vibratone has a native CLI reference stage as well.
+    parityEnabled[106] = true;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 106 || activeProcessorIndices.length !== 77 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 105) {
-             throw new Error("The all-effect chain must contain 77 optional processors between input trim and output utilities.");
+    if (parityEnabled.length !== 107 || activeProcessorIndices.length !== 78 ||
+            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
+             throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -12701,6 +12863,7 @@ async function runBrowserSelfTest() {
         eq5Graphic: [2, -3, 6, -3, 2, 0],
         opticalTremolo: [1, 5.2, 0.65, 4, 0, 120, 1, 35, 58, 18, 10, 0, -36, 25, 0.75, -1, 0, 0],
         fractalBiasTrem: [3.7, 0.75, 1, 0, 120, 1, 0, -36, 0, 0.7, 1, 0, 0, 0],
+        vibratone: [0, 0.8, 0, 6.5, 0.85, 0, 650, 0.5, 0],
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
@@ -13136,6 +13299,24 @@ async function runBrowserSelfTest() {
           document.title = "PASS · TabletFX Bias Trem browser test";
           return;
         }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-vibratone") {
+          testResult.textContent = "Checking Vibratone browser Play with the local guitar fixture…";
+          const vibratoneSmoke = await runVibratoneBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            vibratone: vibratoneSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Vibratone browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "step-tremolo") {
          testResult.textContent = "Checking Step Tremolo browser Play with the local guitar fixture…";
          const stepTremoloSmoke = await runStepTremoloBrowserSmokeTest(
@@ -13343,6 +13524,10 @@ async function runBrowserSelfTest() {
     );
     testResult.textContent = "Checking Bias Trem Modulation-category playback on local guitar audio…";
     const fractalBiasTremSmoke = await runFractalBiasTremBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
+    testResult.textContent = "Checking Fender-inspired Vibratone Modulation playback on local guitar audio…";
+    const vibratoneSmoke = await runVibratoneBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
@@ -13597,6 +13782,7 @@ async function runBrowserSelfTest() {
       eq5Graphic: eq5GraphicSmoke,
       opticalTremolo: opticalTremoloSmoke,
       fractalBiasTrem: fractalBiasTremSmoke,
+      vibratone: vibratoneSmoke,
       playOutputCaptured: actualRms >= minimumSignalRms,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

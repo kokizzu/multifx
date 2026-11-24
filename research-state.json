@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "835ad98a7986725b90137c9ce30f4e78819b2147",
+  "previous_checkpoint_commit": "598456d5917c4c90f5e33198ba26352ac997fdc3",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -169,32 +169,33 @@
         "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0570/0.1118/0.1256/0.7474/1.7708% of a 2.667 ms deadline; native sizeof 136 B, zero fixed latency, no process allocation. Desktop processor-call estimate, not target-device performance.",
         "notes": "Automated implementation checks only. No Fractal DSP/settings/sound parity, human listening, or physical-device test."
       }
+    },
+    {
+      "name": "Fender Tone Master Pro Vibratone project-authored Modulation implementation",
+      "status": "verified",
+      "picker_index": 106,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and Fender firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 36–37; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide lists the Vibratone controls but gives no numeric ranges/defaults, rotor geometry, ramp/detector behavior, stereo configuration, latency, DSP cost, or block limit. The checked v1.8.85 notes do not mention Vibratone. Installed firmware is unknown."
+      },
+      "documented_controls": "Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, Dynamics Switch.",
+      "project_controls": "Project defaults: Drive 0%, Tone 80%, Level 0 dB, Fast 6.5 Hz, Slow 0.85 Hz, Speed Switch Slow, Ramp 650 ms, Sensitivity 50%, Dynamics off. Project ranges: Drive 0–100%, Tone 0–100% mapped exponentially to an 800 Hz–20 kHz one-pole output low-pass, Level −24…+12 dB, Fast 1–10 Hz, Slow 0.1–5 Hz capped at half Fast, Ramp 50–3,000 ms, Sensitivity mapped to a −5…−45 dB threshold. Dynamics uses project-selected 20 ms attack/250 ms release and 0.75 hysteresis. It wraps the existing project RotarySpeaker effect; these are not Fender settings, topology, DSP, or sound parity.",
+      "verification": {
+        "native_ctest": "make test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests. Vibratone tests cover defaults/bounds, manual/dynamics speed switching, tone/level response, reset, hostile and irregular input, and no process-time allocation.",
+        "cli": "The full native/offline CLI test passed within make test.",
+        "browser": "make web-test-fender-vibratone passed with local prerecorded Guitar-TECHS DI: Modulation category, enabled effect index 106, 48 kHz stereo/48,000 frames, captured Play output peak 0.7913645, 96,000 active samples, difference RMS 0.1667494, and 1,264 B effect memory. Full make web-test passed with 107 picker entries and 78 processor stages; maximum absolute native/WASM error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,341,868 B processor state plus 10,364 B tuner state in a fixed 100,663,296 B WASM heap.",
+        "windows": "make windows-cross-build passed for Windows MinGW native core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4298/0.5963/0.8708/1.5859/1.9392% of deadline; 1,304 B native owned state; zero fixed algorithmic latency and no process-time allocation. Desktop measurement, not target-device performance.",
+        "notes": "Automated implementation verification only. No human listening, target-device test, or Fender DSP/settings/sound parity."
+      },
+      "picker_rows": 107
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Optical / Neon Tremolo categorized Modulation implementation",
-    "status": "verified",
-    "picker_index": 104,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "November 2026 cover date checked 2026-11-24; printed pp. 106–107; FM9-family guide. Firmware v12.0 is listed for FM9 Original/Turbo but does not name Mark II Turbo separately; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "FM9-family documentation is not explicit confirmation of exact Mark II Turbo firmware support. Optical numeric bounds/defaults and model-specific response curves are not published."
-    },
-    "documented_controls": "Optical 1 is a photocell/light tremolo described as more even; Optical 2 is choppier; Neon uses neon bulb/LDR behavior and fixed LFO. Shared controls include Rate/Tempo, Depth/Width, ten LFO names, Duty, Shape, Phase, Start Phase, Trigger Threshold, and Ducking; common Mix-page controls include Level, Balance, Bypass, and Bypass Mode.",
-    "project_controls": "One categorized Modulation picker row at index 104 offers Optical 1/2 and Neon. Defaults: 4.5 Hz, 50% depth, Sine, 50% Duty/Shape, 0° phases, trigger/ducking off, full wet, 0 dB Level, centered Balance. Project ranges, response curves, mappings, fixed-width Neon pulse, trigger/ducking, tempo behavior, and DSP are project-authored; no light-cell simulation or Fractal parity.",
-    "verification": {
-      "native_ctest": "make test passed 108/108 CTest tests and 11/11 audio-fixture safety checks.",
-      "cli": "Offline CLI smoke passed with Optical Tremolo enabled.",
-      "browser": "make web-test passed with 105 categorized picker entries, local prerecorded Guitar-TECHS DI Play smokes, and browser/native parity across 76 optional processors. Maximum absolute error 6.278365880518777e-6; RMS error 1.2600249278412961e-6. Processor state 80,340,048 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passed for the MinGW core and offline renderer.",
-      "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: p50/p95/p99/p99.9/max 0.0743/0.0746/0.1204/0.2895/0.3638% of a 2.667 ms callback deadline; 216 B, zero fixed latency, no process allocation.",
-      "notes": "Automated verification only; no Fractal parity, human listening, or physical-device validation."
-    }
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Bias Trem project-authored Modulation implementation",
     "status": "verified",
     "picker_index": 105,
@@ -216,19 +217,31 @@
       "notes": "Automated implementation checks only. No Fractal DSP/settings/sound parity, human listening, or physical-device test."
     }
   },
-  "next_research": [
-    {
-      "device": "Fender Tone Master Pro",
-      "feature": "Vibratone / rotating-baffle Modulation",
-      "source": "Tone Master Pro Model Guide v1.1.100 / Rev A, printed pp. 36–37; firmware history checked through v1.8.85 (2026-11-18)",
-      "source_urls": [
-        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
-      ],
-      "status": "Exact-model guide identifies the Vibratone rotary-speaker effect and lists its controls. Implement a project-authored rotary variant only after reviewing the existing Rotary Speaker API and avoiding claims of Fender parity.",
-      "known_controls": "Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, Dynamics Switch.",
-      "qualification": "Guide provides no numeric ranges/defaults, ramp/detector behavior, rotor geometry, stereo configuration, latency, DSP, or stacking limit. v1.8.85 notes do not mention Vibratone; installed firmware is unknown. Reuse common rotary primitives where possible and expose project-authored controls/curve; do not infer Fender settings or sound parity."
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Vibratone project-authored Modulation implementation",
+    "status": "verified",
+    "picker_index": 106,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and Fender firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 36–37; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists the Vibratone controls but gives no numeric ranges/defaults, rotor geometry, ramp/detector behavior, stereo configuration, latency, DSP cost, or block limit. The checked v1.8.85 notes do not mention Vibratone. Installed firmware is unknown."
     },
+    "documented_controls": "Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, Dynamics Switch.",
+    "project_controls": "Project defaults: Drive 0%, Tone 80%, Level 0 dB, Fast 6.5 Hz, Slow 0.85 Hz, Speed Switch Slow, Ramp 650 ms, Sensitivity 50%, Dynamics off. Project ranges: Drive 0–100%, Tone 0–100% mapped exponentially to an 800 Hz–20 kHz one-pole output low-pass, Level −24…+12 dB, Fast 1–10 Hz, Slow 0.1–5 Hz capped at half Fast, Ramp 50–3,000 ms, Sensitivity mapped to a −5…−45 dB threshold. Dynamics uses project-selected 20 ms attack/250 ms release and 0.75 hysteresis. It wraps the existing project RotarySpeaker effect; these are not Fender settings, topology, DSP, or sound parity.",
+    "verification": {
+      "native_ctest": "make test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests. Vibratone tests cover defaults/bounds, manual/dynamics speed switching, tone/level response, reset, hostile and irregular input, and no process-time allocation.",
+      "cli": "The full native/offline CLI test passed within make test.",
+      "browser": "make web-test-fender-vibratone passed with local prerecorded Guitar-TECHS DI: Modulation category, enabled effect index 106, 48 kHz stereo/48,000 frames, captured Play output peak 0.7913645, 96,000 active samples, difference RMS 0.1667494, and 1,264 B effect memory. Full make web-test passed with 107 picker entries and 78 processor stages; maximum absolute native/WASM error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,341,868 B processor state plus 10,364 B tuner state in a fixed 100,663,296 B WASM heap.",
+      "windows": "make windows-cross-build passed for Windows MinGW native core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4298/0.5963/0.8708/1.5859/1.9392% of deadline; 1,304 B native owned state; zero fixed algorithmic latency and no process-time allocation. Desktop measurement, not target-device performance.",
+      "notes": "Automated implementation verification only. No human listening, target-device test, or Fender DSP/settings/sound parity."
+    },
+    "picker_rows": 107
+  },
+  "next_research": [
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Poly Detune plus Stadium-specific Synth, Delay, Reverb, and Looper algorithm details",

@@ -1,5 +1,15 @@
 # Research and source audit
 
+## Fender Tone Master Pro Vibratone audit and implementation (2026-11-24)
+
+The exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A (printed pp. 36–37) lists Vibratone's Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, and Dynamics Switch. It does not publish numerical ranges/defaults, rotor geometry, speed-ramp or detector behavior, stereo details, latency, DSP use, or block limits. Fender's firmware-history page was checked through v1.8.85 dated 2026-11-18; those release notes do not mention Vibratone, and the installed firmware is unknown.
+
+TabletFX implements a separate project-authored Modulation processor at picker index 106. It reuses `RotarySpeaker`, maps Tone to an 800 Hz–20 kHz one-pole filter, clamps Slow to no more than half Fast, maps Sensitivity to a −5…−45 dB envelope threshold, and uses a project-chosen 20 ms attack, 250 ms release, and 0.75 hysteresis for its optional Dynamics mode. Defaults are 0% Drive, 80% Tone, 0 dB Level, 6.5 Hz Fast, 0.85 Hz Slow, Slow selected, 650 ms Ramp, 50% Sensitivity, and Dynamics off. These mappings/ranges/defaults and signal path are project choices, not Fender controls or DSP/sound parity.
+
+Automated native tests, local prerecorded Guitar-TECHS DI browser Play, browser/native parity, and Windows MinGW core/offline build pass. The isolated desktop CPU, memory, and latency measurements are recorded in [LATENCY_AND_QUALITY.md](LATENCY_AND_QUALITY.md). Listening and target-device verification remain open.
+
+Sources: [Tone Master Pro Model Guide](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf) · [Fender firmware and app update history](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates).
+
 ## Fractal Blocks Guide current revision check (2026-11-24)
 
 The current official [Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) has a November 2026 cover and 114 pages. Earlier audit entries citing June 2023 refer to the previous PDF snapshot. The current guide covers the FM9 family but does not confirm which firmware is installed on any owned unit. The official [FM9 downloads page](https://www.fractalaudio.com/fm9-downloads/) lists v12.0 (July 7, 2026) for FM9 Original and FM9 Turbo; it does not name Mark II Turbo separately, so exact SKU applicability remains unverified.

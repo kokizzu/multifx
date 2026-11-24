@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Fender Vibratone-inspired Modulation (2026-11-24)
+
+The project effect reuses the Rotary Speaker processor with a project-selected single-pole output Tone filter and envelope-controlled Fast/Slow switching. Defaults: Drive 0%, Tone 80%, Level 0 dB, Fast 6.5 Hz, Slow 0.85 Hz, Speed Switch Slow, Ramp 650 ms, Sensitivity 50%, Dynamics off. Project ranges: Drive 0–100%, Tone mapped to 800 Hz–20 kHz, Level −24…+12 dB, Fast 1–10 Hz, Slow 0.1–5 Hz capped at half Fast, Ramp 50–3,000 ms, and Sensitivity mapped to a −5…−45 dB threshold. Dynamics uses project-selected 20 ms attack, 250 ms release, and 0.75 hysteresis. These are not Fender settings, topology, or sound parity. The product guide lists controls but no numerical bounds, dynamics behavior, rotor geometry, DSP, or latency.
+
+At 48 kHz stereo, the native processor owns 1,304 B and the WASM chain reports 1,264 B effect memory. It adds zero fixed algorithmic latency and allocates no memory in `process()`. On an AMD Ryzen 9 5950X Release build, 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.4298/0.5963/0.8708/1.5859/1.9392% of the callback deadline. This is desktop processor-call timing, not tablet/device performance.
+
+`make test` passes 110/110 CTest cases plus 11 fixture-safety tests. Focused browser Play uses local prerecorded Guitar-TECHS DI and verifies a Modulation-category effect at picker index 106, audible output change, and 1,264 B effect memory. Full `make web-test` passes the 107-entry picker and 78-stage native/browser comparison (max absolute error 3.400965e−6; RMS error 5.880495e−7); processor state is 80,341,868 B plus 10,364 B tuner state within fixed 100,663,296 B WASM memory. Windows MinGW core and offline renderer build pass. Native tests cover parameter bounds, manual/dynamics switching, envelope switching, tone/level behavior, reset, irregular blocks, finite output, and zero process-time allocation. No human listening or physical-device result is available.
+
 ## Project-authored Fractal Bias Trem (2026-11-24)
 
 The effect owns 136 B of native state (the browser/WASM chain reports 132 B) at 48 kHz stereo, has zero fixed algorithmic latency, and allocates no memory in process(). Defaults and ranges are project choices; the curve is a bounded nonlinear modulation shape, not a tube-bias circuit model.

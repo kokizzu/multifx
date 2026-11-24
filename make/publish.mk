@@ -28,6 +28,7 @@ PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic
 PUBLISH_CHECKPOINTS += fractal-optical-tremolo
 PUBLISH_CHECKPOINTS += fractal-bias-trem
+PUBLISH_CHECKPOINTS += fender-vibratone
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -70,6 +71,7 @@ web-test-stereo-filter:
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
 .PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem
+.PHONY: test-vibratone web-test-fender-vibratone
 test-step-tremolo:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_step_tremolo_tests
 
@@ -81,6 +83,12 @@ test-fractal-bias-trem:
 
 web-test-fractal-bias-trem: web-build
 	$(PYTHON) scripts/web.py test-fractal-bias-trem
+
+test-vibratone:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_vibratone_tests
+
+web-test-fender-vibratone: web-build
+	$(PYTHON) scripts/web.py test-fender-vibratone
 
 web-test-step-tremolo:
 	$(PYTHON) scripts/web.py test-step-tremolo

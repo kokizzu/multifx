@@ -196,6 +196,7 @@
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="103"><span class="effect-number">104</span><span class="effect-name">EQ5 Graphic · project-authored five-band EQ</span><span class="effect-default">80 · 240 · 750 · 2,200 · 6,600 Hz · ±12 dB</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="104"><span class="effect-number">105</span><span class="effect-name">Optical Tremolo · project-authored Fractal FM9-family controls</span><span class="effect-default">Optical 1 · Optical 2 · Neon · ten LFO shapes</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="105"><span class="effect-number">106</span><span class="effect-name">Bias Trem · project-authored Fractal Blocks Guide-inspired controls</span><span class="effect-default">LFO amplitude modulation with a mild asymmetric curve</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="106"><span class="effect-number">107</span><span class="effect-name">Vibratone · project-authored rotating-baffle effect</span><span class="effect-default">Fast/Slow speed · ramp · input dynamics</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -805,6 +806,21 @@
           <label class="mix-control" for="fractal-bias-trem-level-db"><span>Level · project range −24–+12 dB</span><output>0.0 dB</output><input id="fractal-bias-trem-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
           <label class="mix-control" for="fractal-bias-trem-balance"><span>Balance · project range −100–+100%</span><output>0%</output><input id="fractal-bias-trem-balance" type="range" min="-100" max="100" step="1" value="0"></label>
           <label class="mix-control" for="fractal-bias-trem-bypass"><span>Bypass · project control</span><output>Off</output><input id="fractal-bias-trem-bypass" type="checkbox"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Vibratone controls">
+        <h3>Vibratone · project-authored Tone Master Pro control roles</h3>
+        <p class="hint">Fender documents Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, and Dynamics Switch. It publishes no numeric bounds, defaults, exact ramp/detector behavior, rotor geometry, DSP, or latency. TabletFX reuses its project rotary-speaker engine and maps the controls to project-authored ranges and input-envelope speed selection; no Fender settings, DSP, or sound parity is claimed. The effect-row checkbox is its bypass.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="vibratone-drive"><span>Drive · project range 0–100%</span><output>0%</output><input id="vibratone-drive" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="vibratone-tone"><span>Tone · project range 0–100%</span><output>80%</output><input id="vibratone-tone" type="range" min="0" max="100" step="1" value="80"></label>
+          <label class="mix-control" for="vibratone-level-db"><span>Level · project range −24–+12 dB</span><output>0.0 dB</output><input id="vibratone-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="vibratone-fast-speed-hz"><span>Fast speed · project range 1–10 Hz</span><output>6.50 Hz</output><input id="vibratone-fast-speed-hz" type="range" min="1" max="10" step="0.05" value="6.5"></label>
+          <label class="mix-control" for="vibratone-slow-speed-hz"><span>Slow speed · project range 0.1–5 Hz (bounded to ≤ half Fast)</span><output>0.85 Hz</output><input id="vibratone-slow-speed-hz" type="range" min="0.1" max="5" step="0.05" value="0.85"></label>
+          <label class="mix-control" for="vibratone-speed-switch"><span>Speed Switch · used when Dynamics Switch is off</span><output>Slow</output><select id="vibratone-speed-switch"><option value="0" selected>Slow</option><option value="1">Fast</option></select></label>
+          <label class="mix-control" for="vibratone-ramp-ms"><span>Ramp · project range 50–3,000 ms</span><output>650 ms</output><input id="vibratone-ramp-ms" type="range" min="50" max="3000" step="10" value="650"></label>
+          <label class="mix-control" for="vibratone-sensitivity"><span>Sensitivity · project threshold control</span><output>50%</output><input id="vibratone-sensitivity" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="vibratone-dynamics-switch"><span>Dynamics Switch · project input-envelope mode</span><output>Off</output><input id="vibratone-dynamics-switch" type="checkbox"></label>
         </div>
       </div>
       <div class="gain-controls">

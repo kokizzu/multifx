@@ -453,6 +453,16 @@ Latest integrated verification (2026-11-22) covers the 67-entry categorized brow
 
 Total source requirements: 327; approved additions: 12.
 
+## Fender Vibratone implementation checkpoint (2026-11-24)
+
+- [x] Exact-model guide and current checked firmware notes reviewed; missing vendor ranges, rotor details, DSP/latency, and installed firmware recorded as unknown.
+- [x] Project-authored rotary-baffle effect added to the Modulation picker at ID 106 with conservative defaults and bounded parameters.
+- [x] Native tests cover bounds, switching, tone/level, reset, irregular buffers, finite recovery, and callback allocation behavior.
+- [x] Local prerecorded-guitar browser Play smoke and full browser/native comparison pass.
+- [x] Windows MinGW core and offline-renderer cross-build pass.
+- [x] CPU, state memory, fixed latency, and process allocation measurements recorded in [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
+- [ ] Human listening and target-device checks remain open; do not claim Fender sound or DSP parity.
+
 ## Latest effect checkpoint — Manual Through-Zero Flanger
 
 - Picker: 84 entries; Manual Through-Zero Flanger is categorized under Modulation at index 81, before Output Level and Peak Limiter.

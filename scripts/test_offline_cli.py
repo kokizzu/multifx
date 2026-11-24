@@ -754,6 +754,37 @@ def check_fractal_bias_trem(executable: Path) -> None:
             raise AssertionError("Bias Trem CLI smoke did not change the guitar signal")
 
 
+def check_vibratone(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate
+    source_samples = [
+        round(4000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-vibratone-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "vibratone.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output), "--vibratone"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Vibratone options did not enable one processor: {result.stdout}")
+        output_bytes = output.read_bytes()
+        output_samples = struct.unpack("<" + "f" * frame_count,
+                                       output_bytes[44:44 + frame_count * 4])
+        if not all(math.isfinite(value) for value in output_samples):
+            raise AssertionError("Vibratone produced non-finite output")
+        input_samples = [value / 32768.0 for value in source_samples]
+        difference = max(abs(before - after)
+                         for before, after in zip(input_samples, output_samples))
+        if difference < 0.01:
+            raise AssertionError("Vibratone CLI smoke did not change the guitar signal")
+
+
 def check_stereo_crossover(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 4096
@@ -3003,6 +3034,7 @@ def main() -> None:
     check_eq5_graphic(args.executable.resolve())
     check_optical_tremolo(args.executable.resolve())
     check_fractal_bias_trem(args.executable.resolve())
+    check_vibratone(args.executable.resolve())
     check_stereo_crossover(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())

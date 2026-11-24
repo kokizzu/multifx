@@ -18,6 +18,7 @@
 #include "tabletfx/effects/eq5_graphic.hpp"
 #include "tabletfx/effects/optical_tremolo.hpp"
 #include "tabletfx/effects/fractal_bias_trem.hpp"
+#include "tabletfx/effects/vibratone.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -121,7 +122,9 @@ public:
                        static_cast<std::uint16_t>(channels)),
           optical_tremolo_(std::make_unique<tabletfx::OpticalTremolo>(
               static_cast<float>(sample_rate))),
-          fractal_bias_trem_(static_cast<float>(sample_rate)) {
+          fractal_bias_trem_(static_cast<float>(sample_rate)),
+          vibratone_(static_cast<float>(sample_rate),
+                     static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -479,6 +482,11 @@ public:
             if (!enabled) fractal_bias_trem_.reset();
             return true;
         }
+        if (index == 106U) {
+            vibratone_enabled_ = enabled;
+            if (!enabled) vibratone_.reset();
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -645,6 +653,13 @@ public:
             }
             return;
         }
+        if (index == 106U) {
+            if (vibratone_enabled_) {
+                vibratone_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -718,6 +733,7 @@ public:
         double_take_.reset();
         optical_tremolo_->reset();
         fractal_bias_trem_.reset();
+        vibratone_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -3069,6 +3085,24 @@ public:
         fractal_bias_trem_.set_parameters(parameters);
     }
 
+    void configure_vibratone(float drive, float tone, float level_db,
+                             float fast_speed_hz, float slow_speed_hz,
+                             std::uint32_t speed_fast, float ramp_ms,
+                             float sensitivity,
+                             std::uint32_t dynamics_switch) noexcept {
+        tabletfx::VibratoneParameters parameters;
+        parameters.drive = drive;
+        parameters.tone = tone;
+        parameters.level_db = level_db;
+        parameters.fast_speed_hz = fast_speed_hz;
+        parameters.slow_speed_hz = slow_speed_hz;
+        parameters.speed_fast = speed_fast != 0U;
+        parameters.ramp_ms = ramp_ms;
+        parameters.sensitivity = sensitivity;
+        parameters.dynamics_switch = dynamics_switch != 0U;
+        vibratone_.set_parameters(parameters);
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -3085,6 +3119,7 @@ public:
         bytes += eq5_graphic_.memory_bytes();
         bytes += optical_tremolo_->memory_bytes();
         bytes += fractal_bias_trem_.memory_bytes();
+        bytes += vibratone_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3148,6 +3183,12 @@ public:
         if (index == 105U) {
             return static_cast<std::uint32_t>(fractal_bias_trem_.memory_bytes());
         }
+        if (index == 106U) {
+            const std::size_t bytes = vibratone_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3183,6 +3224,7 @@ private:
     tabletfx::EQ5Graphic eq5_graphic_;
     std::unique_ptr<tabletfx::OpticalTremolo> optical_tremolo_;
     tabletfx::BiasTrem fractal_bias_trem_;
+    tabletfx::Vibratone vibratone_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3196,6 +3238,7 @@ private:
     bool optical_tremolo_enabled_ = false;
     bool optical_tremolo_mute_bypass_ = false;
     bool fractal_bias_trem_enabled_ = false;
+    bool vibratone_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4214,6 +4257,17 @@ TABLETFX_WASM_EXPORT void tf_chain_set_fractal_bias_trem(
             rate_hz, depth, waveform, tempo_sync, tempo_bpm, beats_per_cycle,
             trigger_sync, trigger_threshold_db, ducking, bias_drive, mix,
             level_db, balance, bypass);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_vibratone(
+    void* opaque, float drive, float tone, float level_db,
+    float fast_speed_hz, float slow_speed_hz, std::uint32_t speed_fast,
+    float ramp_ms, float sensitivity, std::uint32_t dynamics_switch) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_vibratone(
+            drive, tone, level_db, fast_speed_hz, slow_speed_hz, speed_fast,
+            ramp_ms, sensitivity, dynamics_switch);
     }
 }
 

@@ -2056,6 +2056,29 @@ FRACTAL_BIAS_TREM_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_VIBRATONE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/vibratone.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/vibratone.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_vibratone.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2409,6 +2432,10 @@ CHECKPOINTS = {
     "fractal-bias-trem": (
         FRACTAL_BIAS_TREM_CHECKPOINT_PATHS,
         "feat: add categorized Bias Trem processor",
+    ),
+    "fender-vibratone": (
+        FENDER_VIBRATONE_CHECKPOINT_PATHS,
+        "feat: add categorized Fender Vibratone-inspired effect",
     ),
 }
 
