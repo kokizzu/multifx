@@ -32,6 +32,7 @@ PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe line6-four-osc-gene
 PUBLISH_CHECKPOINTS += fractal-poly-pitch-range
 PUBLISH_CHECKPOINTS += fractal-diatonic-custom-scale
 PUBLISH_CHECKPOINTS += fender-pedal-shifter
+PUBLISH_CHECKPOINTS += fender-pedal-detune
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -42,6 +43,12 @@ inspect-effect-api:
 inspect-web-effect-path:
 	python3 scripts/inspect_web_effect_path.py
 .PHONY: test-convolution-reverb
+.PHONY: test-fender-pedal-detune web-test-fender-pedal-detune
+test-fender-pedal-detune:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_pedal_detune_tests
+
+web-test-fender-pedal-detune: web-build
+	$(PYTHON) scripts/web.py test-fender-pedal-detune
 .PHONY: test-pitch-sequence test-poly-sustain
 .PHONY: test-volume-pan test-stereo-filter web-test-volume-pan web-test-stereo-filter
 

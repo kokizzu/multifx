@@ -200,6 +200,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="107"><span class="effect-number">108</span><span class="effect-name">Uni-Verse Vibe · project-authored</span><span class="effect-default">Speed · Intensity · Vintage/Modern · Chorus/Vibrato</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="108"><span class="effect-number">109</span><span class="effect-name">4 OSC Generator · project-authored controls</span><span class="effect-default">Four free-running voices · disabled by default</span><span class="effect-category-tag">Synth</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="109"><span class="effect-number">110</span><span class="effect-name">Poly Detune · project-authored micro-delay</span><span class="effect-default">Modulated short delay · no pitch tracking</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="110"><span class="effect-number">111</span><span class="effect-name">Pedal Detune · project-authored position blend</span><span class="effect-default">Shallow · 50% position · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1431,6 +1432,14 @@
           <label class="mix-control" for="poly-detune-width"><span>Stereo width</span><output id="poly-detune-width-value" for="poly-detune-width">75%</output><input id="poly-detune-width" type="range" min="0" max="1" step="0.01" value="0.75"></label>
           <label class="mix-control" for="poly-detune-mix"><span>Mix</span><output id="poly-detune-mix-value" for="poly-detune-mix">25%</output><input id="poly-detune-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
           <label class="mix-control" for="poly-detune-level-db"><span>Level</span><output id="poly-detune-level-db-value" for="poly-detune-level-db">0.0 dB</output><input id="poly-detune-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Pedal Detune controls">
+        <h3>Fender Tone Master Pro Pedal Detune · project-authored interpretation</h3>
+        <p class="hint">The Tone Master Pro <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Model Guide v1.1.100 / Rev. A, p. 68</a> documents a SHALLOW/DEEP mode switch and POSITION blend, but no numeric values or DSP topology. Here POSITION blends the dry sound with the existing modulated micro-delay core; Shallow/Deep map to project-authored 0.35/1.4 ms modulation depths. It does not track notes, and is not Fender DSP or sound parity. Dry audio is immediate; the wet path uses about 5 ms of micro-delay.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="pedal-detune-mode"><span>Mode</span><output id="pedal-detune-mode-value" for="pedal-detune-mode">Shallow</output><select id="pedal-detune-mode"><option value="0" selected>Shallow</option><option value="1">Deep</option></select></label>
+          <label class="mix-control" for="pedal-detune-position"><span>POSITION</span><output id="pedal-detune-position-value" for="pedal-detune-position">50%</output><input id="pedal-detune-position" type="range" min="0" max="1" step="0.01" value="0.5"></label>
         </div>
       </div>
       <div class="effect-parameter-group" aria-label="Three-Voice Tracked Synth controls">

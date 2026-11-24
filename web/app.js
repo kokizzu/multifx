@@ -111,6 +111,7 @@ const EFFECT_NAMES = [
   "Uni-Verse Vibe · project-authored",
   "4 OSC Generator · project-authored free-running source",
   "Poly Detune · project-authored modulated micro-delay",
+  "Pedal Detune · project-authored position blend",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -168,6 +169,7 @@ const DEFAULT_PARAMETERS = {
   fourOscGenerator: [0, 48, 0, 0.15, 0, 55, 0, 0.15,
     0, 60, 0, 0.15, 0, 64, 0, 0.15, 0.35],
   polyDetune: [2, 0.25, 0.75, 0.75, 0.25, 0],
+  pedalDetune: [0, 0.5],
   fractalThreeVoiceSynth: [
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -436,6 +438,10 @@ const polyDetuneControls = [
   document.querySelector("#poly-detune-width"),
   document.querySelector("#poly-detune-mix"),
   document.querySelector("#poly-detune-level-db"),
+];
+const pedalDetuneControls = [
+  document.querySelector("#pedal-detune-mode"),
+  document.querySelector("#pedal-detune-position"),
 ];
 const fractalThreeVoiceSynthControls = [];
 const enhancerControls = [
@@ -5327,6 +5333,28 @@ for (const control of polyDetuneControls) {
 }
 updatePolyDetune();
 
+function updatePedalDetune() {
+  const values = pedalDetuneControls.map((control) => Number(control.value));
+  values[0] = values[0] >= 0.5 ? 1 : 0;
+  DEFAULT_PARAMETERS.pedalDetune = values;
+  const formatters = [
+    (value) => value === 1 ? "Deep" : "Shallow",
+    (value) => `${Math.round(value * 100)}%`,
+  ];
+  pedalDetuneControls.forEach((control, index) => {
+    control.parentElement.querySelector("output").value = formatters[index](values[index]);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "pedal-detune", value: values });
+  }
+}
+
+for (const control of pedalDetuneControls) {
+  control.addEventListener("input", updatePedalDetune);
+  control.addEventListener("change", updatePedalDetune);
+}
+updatePedalDetune();
+
 function updateFractalThreeVoiceSynth() {
   const values = fractalThreeVoiceSynthControls.map((control) => Number(control.value));
   DEFAULT_PARAMETERS.fractalThreeVoiceSynth = values;
@@ -10036,7 +10064,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 110 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -10138,7 +10166,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 110 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -10245,7 +10273,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 110 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10358,7 +10386,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 110 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10470,7 +10498,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 110 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -10578,7 +10606,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-        effectMemory.length !== 110 || !(effectMemory[107] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -10677,7 +10705,7 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
         !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
-        effectMemory.length !== 110 || !(effectMemory[108] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[108] > 0) ||
         DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
           "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
       throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
@@ -10776,7 +10804,7 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
         !checkbox || pitchSemitones.min !== "-24" ||
-        pitchSemitones.max !== "24" || effectMemory.length !== 110 ||
+        pitchSemitones.max !== "24" || effectMemory.length !== 111 ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Polyphonic pitch control mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -10893,7 +10921,7 @@ async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, cap
         !checkbox || pitchMode.querySelector('option[value="pedal-shifter"]') === null ||
         pitchExpressionTarget.min !== "-24" || pitchExpressionTarget.max !== "24" ||
         pitchExpressionPosition.min !== "0" || pitchExpressionPosition.max !== "100" ||
-        effectMemory.length !== 110 || !(effectMemory[22] > 0)) {
+        effectMemory.length !== 111 || !(effectMemory[22] > 0)) {
       throw new Error("Pedal Shifter controls are missing or incorrectly categorized.");
     }
 
@@ -11059,7 +11087,7 @@ async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureV
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmonizer") ||
-        !checkbox || !customOption || effectMemory.length !== 110 ||
+        !checkbox || !customOption || effectMemory.length !== 111 ||
         !(effectMemory[effectIndex] > 0) || diatonicCustomScaleNotes.length !== 8) {
       throw new Error("Diatonic custom scale is missing its categorized picker row or controls.");
     }
@@ -11189,7 +11217,7 @@ async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuff
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Poly Detune") ||
         !checkbox || checkbox.checked || polyDetuneControls.length !== 6 ||
-        effectMemory.length !== 110 || !(effectMemory[109] > 0) ||
+        effectMemory.length !== 111 || !(effectMemory[109] > 0) ||
         DEFAULT_PARAMETERS.polyDetune.join(",") !== "2,0.25,0.75,0.75,0.25,0") {
       throw new Error("Poly Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -11257,6 +11285,142 @@ async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuff
         control.value = previousControls[index];
       });
       updatePolyDetune();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFenderPedalDetuneBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = pedalDetuneControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Pedal Detune browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    updatePedalDetune();
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="110"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Pedal Detune") ||
+        !checkbox || checkbox.checked || pedalDetuneControls.length !== 2 ||
+        effectMemory.length !== 111 || !(effectMemory[110] > 0) ||
+        DEFAULT_PARAMETERS.pedalDetune.join(",") !== "0,0.5") {
+      throw new Error("Pedal Detune is missing its categorized row, safe defaults, or controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    let barrierSequence = 0;
+    const waitForWorkletBarrier = () => new Promise((resolve, reject) => {
+      const port = workletNode.port;
+      const token = `pedal-detune-${++barrierSequence}`;
+      const timeout = setTimeout(() => {
+        port.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for Pedal Detune worklet barrier."));
+      }, 5000);
+      const onMessage = (event) => {
+        if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+        clearTimeout(timeout);
+        port.removeEventListener("message", onMessage);
+        resolve();
+      };
+      port.addEventListener("message", onMessage);
+      port.postMessage({ type: "test-barrier", token });
+    });
+
+    const captureAt = async (mode, position, label) => {
+      pedalDetuneControls[0].value = String(mode);
+      pedalDetuneControls[0].dispatchEvent(new Event("change", { bubbles: true }));
+      pedalDetuneControls[1].value = String(position);
+      pedalDetuneControls[1].dispatchEvent(new Event("input", { bubbles: true }));
+      await waitForWorkletBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForWorkletBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting Pedal Detune ${label} playback.`)), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const dry = await captureAt(0, 0, "dry-position");
+    checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Pedal Detune picker row did not enable from its click handler.");
+    }
+    const shallow = await captureAt(0, 1, "Shallow");
+    const deep = await captureAt(1, 1, "Deep");
+    const positionDry = await captureAt(1, 0, "zero-position");
+    const compare = (first, second, label) => {
+      let differenceSquares = 0;
+      let changedSamples = 0;
+      let peak = 0;
+      for (let index = 0; index < second.length; index += 1) {
+        if (!Number.isFinite(first[index]) || !Number.isFinite(second[index])) {
+          throw new Error(`${label} contains non-finite audio.`);
+        }
+        peak = Math.max(peak, Math.abs(second[index]));
+        const difference = second[index] - first[index];
+        differenceSquares += difference * difference;
+        if (Math.abs(difference) > 1e-6) changedSamples += 1;
+      }
+      const differenceRms = second.length > 0
+        ? Math.sqrt(differenceSquares / second.length) : 0;
+      if (differenceRms < 1e-5 || changedSamples < 32 || peak > 2) {
+        throw new Error(`${label} did not produce a safe, distinct output (RMS ${differenceRms}).`);
+      }
+      return { differenceRms, changedSamples, peak };
+    };
+    return {
+      category: "Pitch", enabledEffectIndex: 110,
+      projectAuthoredMicroDelay: true, noteTracking: false,
+      controls: { mode: "Shallow/Deep", position: "0–100% project scale" },
+      dryToShallow: compare(dry, shallow, "Shallow detune"),
+      shallowToDeep: compare(shallow, deep, "Deep mode"),
+      fullToDryBlend: compare(positionDry, deep, "POSITION blend"),
+      effectMemoryBytes: effectMemory[110], playOutputCaptured: true,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      pedalDetuneControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updatePedalDetune();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -12123,8 +12287,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 110 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 110 || effectRows.length !== 110 ||
+    const expectedEffectIds = Array.from({ length: 111 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 111 || effectRows.length !== 111 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -12207,6 +12371,9 @@ async function runBrowserSelfTest() {
                !EFFECT_NAMES[109]?.startsWith("Poly Detune") ||
                effectRows[109]?.dataset.category !== "modulation" ||
                effectRows[109]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+               !EFFECT_NAMES[110]?.startsWith("Pedal Detune") ||
+               effectRows[110]?.dataset.category !== "pitch" ||
+               effectRows[110]?.querySelector(".effect-category-tag")?.textContent !== "Pitch" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -12226,7 +12393,7 @@ async function runBrowserSelfTest() {
         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
         initialEffectState[103] || initialEffectState[104] ||
         initialEffectState[105] || initialEffectState[106] || initialEffectState[107] ||
-         initialEffectState[108] || initialEffectState[109] ||
+         initialEffectState[108] || initialEffectState[109] || initialEffectState[110] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -12243,7 +12410,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 109 ordered, categorized effects (IDs 0–108), including Uni-Verse Vibe in Modulation and 4 OSC Generator in Synth; existing effect IDs and optional-disabled defaults must stay stable.");
+      throw new Error("The effect picker must list 111 ordered, categorized effects (IDs 0–110), including Uni-Verse Vibe in Modulation, 4 OSC Generator in Synth, Poly Detune in Modulation, and Pedal Detune in Pitch; existing effect IDs and optional-disabled defaults must stay stable.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -13496,7 +13663,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (pitchIds.join(",") !== "22,50,51,74,99,101" || effectCount.value !== `6 of ${effectRows.length}` ||
+    if (pitchIds.join(",") !== "22,50,51,74,99,101,110" || effectCount.value !== `7 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, harmonizer, pitch sequencers, and Chromatic Pitch Delay.");
     }
@@ -13855,6 +14022,8 @@ async function runBrowserSelfTest() {
     parityEnabled[108] = false;
     // Poly Detune is covered by a separate focused browser smoke.
     parityEnabled[109] = false;
+    // Pedal Detune has a separate focused browser/WASM Play test.
+    parityEnabled[110] = false;
        // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, Celestial/Cloud Reverb, and Fractal synth have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
@@ -13910,7 +14079,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 110 || activeProcessorIndices.length !== 78 ||
+    if (parityEnabled.length !== 111 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -14442,6 +14611,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Pedal Shifter browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-pedal-detune") {
+          testResult.textContent = "Checking Pedal Detune POSITION and mode with local guitar audio…";
+          const pedalDetuneSmoke = await runFenderPedalDetuneBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            pedalDetune: pedalDetuneSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Pedal Detune browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-custom-scale") {

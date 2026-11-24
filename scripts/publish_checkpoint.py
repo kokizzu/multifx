@@ -2198,6 +2198,27 @@ FENDER_PEDAL_SHIFTER_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_PEDAL_DETUNE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/pedal_detune.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/pedal_detune.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_pedal_detune.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2579,6 +2600,10 @@ CHECKPOINTS = {
     "fender-pedal-shifter": (
         FENDER_PEDAL_SHIFTER_CHECKPOINT_PATHS,
         "feat: add categorized expression-controlled pitch sweep",
+    ),
+    "fender-pedal-detune": (
+        FENDER_PEDAL_DETUNE_CHECKPOINT_PATHS,
+        "feat: add categorized Fender-style pedal detune",
     ),
 }
 

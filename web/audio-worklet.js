@@ -31,6 +31,7 @@ EFFECTS.push("vibratone");
 EFFECTS.push("uni-verse-vibe");
 EFFECTS.push("four-osc-generator");
 EFFECTS.push("poly-detune");
+EFFECTS.push("pedal-detune");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -475,6 +476,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           0, 64, 0, 0.15, 0.35]);
       this.configurePolyDetune(parameters.polyDetune ||
         [2, 0.25, 0.75, 0.75, 0.25, 0]);
+      this.configurePedalDetune(parameters.pedalDetune || [0, 0.5]);
       this.configureFractalThreeVoiceSynth(parameters.fractalThreeVoiceSynth ||
         [3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
           3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -1030,6 +1032,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_set_poly_detune(this.chain, ...values);
   }
 
+  configurePedalDetune(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 2) {
+      return;
+    }
+    this.module._tf_chain_set_pedal_detune(this.chain, ...values);
+  }
+
   configureFractalThreeVoiceSynth(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
       return;
@@ -1339,6 +1348,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFourOscGenerator(message.value);
     } else if (message.type === "poly-detune" && this.ready) {
       this.configurePolyDetune(message.value);
+    } else if (message.type === "pedal-detune" && this.ready) {
+      this.configurePedalDetune(message.value);
     } else if (message.type === "fractal-three-voice-synth" && this.ready) {
       this.configureFractalThreeVoiceSynth(message.value);
     } else if (message.type === "enhancer" && this.ready) {

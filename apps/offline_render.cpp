@@ -6,6 +6,7 @@
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
+#include "tabletfx/effects/pedal_detune.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
@@ -5078,6 +5079,13 @@ void run_bench() {
     benchmark_one("line6-poly-detune-project-authored", [=] {
         return std::make_unique<tabletfx::PolyDetune>(
             static_cast<float>(sample_rate), channels);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fender-pedal-detune-project-authored", [=] {
+        tabletfx::PedalDetuneParameters parameters;
+        parameters.mode = tabletfx::PedalDetuneMode::Deep;
+        parameters.position = 1.0F;
+        return std::make_unique<tabletfx::PedalDetune>(
+            static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("ring-modulator", [=] {
         tabletfx::RingModulatorParameters parameters;

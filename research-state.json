@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "c1c59886230138b694feb61f55434090d6707826",
+  "previous_checkpoint_commit": "78fd2d94c09dd57379419cac96a1365ca1c1956e",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -338,33 +338,33 @@
         "notes": "The feature changes pitch on the existing shifter; expression mode adds no processor-state memory or latency. The project-authored linear sweep is not a Fender settings/sound/DSP reproduction. The underlying 5.333 ms shifter latency remains within the provisional 20 ms budget before host/device buffering, but physical round-trip latency, live expression routing, target-device performance, and human listening are unverified."
       },
       "picker_rows": 110
+    },
+    {
+      "name": "Fender Tone Master Pro Pedal Detune position effect",
+      "status": "verified",
+      "picker_index": 110,
+      "category": "Pitch",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and Fender firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide documents SHALLOW/DEEP mode and a POSITION dry/detuned blend but not depth values, rate, voice count, numeric ranges/defaults, or DSP topology. Firmware history through v1.8.85 contains no Pedal Detune-specific change; installed firmware is unknown."
+      },
+      "documented_controls": "MODE SWITCH selects SHALLOW or DEEP. POSITION blends the detuned signal with dry. The guide publishes no numeric ranges/defaults, modulation values, or algorithm/topology details.",
+      "project_controls": "A disabled-by-default Pitch picker row at index 110 wraps the existing modulated-delay core. Shallow/Deep use project-selected detune depths of 0.35/1.4 ms, 0.25 Hz, two voices, 75% width, and a 10 ms POSITION ramp. It performs no note tracking and is not Fender settings, DSP, or sound parity. Native state is 3,672 B; browser effect memory is 3,632 B. Dry audio is immediate; the wet path uses about a 5 ms micro-delay.",
+      "verification": {
+        "native": "make test-fender-pedal-detune passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases, including bounds, reset, irregular blocks, finite recovery, reported memory, and zero process allocations.",
+        "focused_browser": "make web-test-fender-pedal-detune passed using the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. Pitch category/index 110 and captured Play output were verified: dry-to-Shallow difference RMS 0.0265534681; Shallow-to-Deep 0.0916219280; full POSITION versus zero POSITION 0.0906947512. Effect memory 3,632 B.",
+        "full_browser": "make web-test passed. Browser/native chain comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; browser reported 80,350,308 B processor memory and 100,663,296 B WASM linear memory.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3 Release, 48 kHz stereo/128-frame (2.667 ms) blocks, 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.0563/0.0570/0.0836/0.2460/0.6330% of callback. Native state 3,672 B. Desktop processor-call timing, not target-device performance.",
+        "notes": "Automated native, focused browser/WASM Play, full browser/native parity, Windows cross-build, and benchmark checks pass. Human listening, real hardware, and end-to-end target-device latency remain open. Manufacturer parameter, DSP, and sound parity are not claimed."
+      },
+      "picker_rows": 111
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Diatonic custom-scale editor",
-    "status": "verified",
-    "picker_index": 50,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "November 2026 cover, checked 2026-11-24; printed p.81 custom-scale parameters; FM9-family guide. Firmware v12.0 dated 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The current guide describes FM9-family blocks and documents 4–8-note custom scales for Diatonic Harmony types. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown. The feature is a project-authored one-voice scale editor, not Fractal's separate Custom Shifter or multi-voice routing."
-    },
-    "documented_controls": "Each Diatonic Harmony type supports a custom scale with 4–8 notes. Note entries are semitone offsets relative to Tonic; each scale degree must be at least a half step above the previous one. Tonic changes only the displayed example and not the scale's sound. The guide distinguishes two-/four-voice types and says Diatonic shifting is intelligent/monophonic; it does not guarantee input-tracking quality or simultaneous availability.",
-    "project_controls": "The existing project-authored Diatonic Harmonizer at Pitch picker index 50 adds Custom selection plus 4–8 ascending semitone offsets, key transposition, and browser/WASM and CLI controls. It retains one monophonic-tracked harmony voice, its existing shifter and delay path, and adds no processor, voice, or fixed latency. It does not claim Fractal DSP/settings/sound parity.",
-    "verification": {
-      "native_ctest": "make test passed: documentation validation (333 requirements/346 rows), 11/11 audio-fixture safety tests, and 111/111 CTest tests including custom-scale mapping, sanitization, audio path, and no-allocation coverage.",
-      "focused_browser": "make web-test-fractal-diatonic-custom-scale passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. It verifies Pitch category/index 50, the Custom selector, eight note controls, a four-note pattern [0,2,5,7], and captured Play output (peak 0.314677, difference RMS 0.0705676, 93,944 changed samples). Browser-reported effect memory: 1,020,012 B.",
-      "full_browser": "`make web-test` passed: 111/111 CTest tests and 11/11 fixture-safety checks, then the 110-entry browser and 78-processor native/WASM chain comparison. Maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. The full-chain profile uses the default preset scale; focused Custom-mode Play is recorded separately.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Custom 4-note mode p50/p95/p99/p99.9/max 15.9815/19.8729/24.5211/29.4923/34.2197% of callback; 13-preset C-major mode from the same run 15.9001/21.1528/26.7656/33.0583/46.7383%. Both report 1,024,664 B owned stereo state; this feature adds no processor or voice. Desktop processor-call timing only.",
-      "notes": "Automated native, focused browser/WASM, Windows, and benchmark checks pass. Estimated first-note response remains 26.7 ms at 48 kHz, above the provisional 20 ms gate. Manual listening, real guitar transients/chords, and target-device checks remain open. No Fractal DSP/settings/sound parity."
-    },
-    "picker_rows": 110
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Pedal Shifter expression-position mode",
     "status": "verified",
     "picker_index": 22,
@@ -388,19 +388,31 @@
     },
     "picker_rows": 110
   },
-  "next_research": [
-    {
-      "device": "Fender Tone Master Pro",
-      "feature": "Pedal Detune position effect",
-      "source": "Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history through v1.8.85 (2026-11-18)",
-      "source_urls": [
-        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
-      ],
-      "status": "Manual documents a SHALLOW/DEEP mode selector and POSITION blend for detuned signal; exact ranges, defaults, curve, and implementation topology are not specified. Candidate requires separate modeling and benchmark.",
-      "known_controls": "MODE SWITCH selects SHALLOW or DEEP. POSITION blends in detuned signal. No numeric ranges/defaults or algorithm details published.",
-      "qualification": "Implement only as a clearly project-authored interpretation if it can reuse efficient existing DSP without claiming Fender parity; keep separate from Line 6 Poly Detune and the Pedal Shifter."
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Pedal Detune position effect",
+    "status": "verified",
+    "picker_index": 110,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and Fender firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents SHALLOW/DEEP mode and a POSITION dry/detuned blend but not depth values, rate, voice count, numeric ranges/defaults, or DSP topology. Firmware history through v1.8.85 contains no Pedal Detune-specific change; installed firmware is unknown."
     },
+    "documented_controls": "MODE SWITCH selects SHALLOW or DEEP. POSITION blends the detuned signal with dry. The guide publishes no numeric ranges/defaults, modulation values, or algorithm/topology details.",
+    "project_controls": "A disabled-by-default Pitch picker row at index 110 wraps the existing modulated-delay core. Shallow/Deep use project-selected detune depths of 0.35/1.4 ms, 0.25 Hz, two voices, 75% width, and a 10 ms POSITION ramp. It performs no note tracking and is not Fender settings, DSP, or sound parity. Native state is 3,672 B; browser effect memory is 3,632 B. Dry audio is immediate; the wet path uses about a 5 ms micro-delay.",
+    "verification": {
+      "native": "make test-fender-pedal-detune passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases, including bounds, reset, irregular blocks, finite recovery, reported memory, and zero process allocations.",
+      "focused_browser": "make web-test-fender-pedal-detune passed using the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. Pitch category/index 110 and captured Play output were verified: dry-to-Shallow difference RMS 0.0265534681; Shallow-to-Deep 0.0916219280; full POSITION versus zero POSITION 0.0906947512. Effect memory 3,632 B.",
+      "full_browser": "make web-test passed. Browser/native chain comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; browser reported 80,350,308 B processor memory and 100,663,296 B WASM linear memory.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3 Release, 48 kHz stereo/128-frame (2.667 ms) blocks, 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.0563/0.0570/0.0836/0.2460/0.6330% of callback. Native state 3,672 B. Desktop processor-call timing, not target-device performance.",
+      "notes": "Automated native, focused browser/WASM Play, full browser/native parity, Windows cross-build, and benchmark checks pass. Human listening, real hardware, and end-to-end target-device latency remain open. Manufacturer parameter, DSP, and sound parity are not claimed."
+    },
+    "picker_rows": 111
+  },
+  "next_research": [
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",

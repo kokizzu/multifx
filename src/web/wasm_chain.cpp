@@ -25,6 +25,7 @@
 #include "tabletfx/effects/megatap_delay.hpp"
 #include "tabletfx/effects/de_esser.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
+#include "tabletfx/effects/pedal_detune.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -131,7 +132,9 @@ public:
                           tabletfx::VibeModel::UniVerse),
           four_osc_generator_(static_cast<float>(sample_rate)),
           poly_detune_(static_cast<float>(sample_rate),
-                       static_cast<std::uint16_t>(channels)) {
+                       static_cast<std::uint16_t>(channels)),
+          pedal_detune_(static_cast<float>(sample_rate),
+                        static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -422,7 +425,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 14; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 15; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -507,6 +510,11 @@ public:
         if (index == 109U) {
             poly_detune_enabled_ = enabled;
             if (!enabled) poly_detune_.reset();
+            return true;
+        }
+        if (index == 110U) {
+            pedal_detune_enabled_ = enabled;
+            if (!enabled) pedal_detune_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -700,6 +708,13 @@ public:
         if (index == 109U) {
             if (poly_detune_enabled_) {
                 poly_detune_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
+        if (index == 110U) {
+            if (pedal_detune_enabled_) {
+                pedal_detune_.process(
                     std::span<float>(output_.data(), samples), channels_);
             }
             return;
@@ -2215,6 +2230,14 @@ public:
         poly_detune_.set_parameters(parameters);
     }
 
+    void configure_pedal_detune(std::uint32_t mode, float position) noexcept {
+        tabletfx::PedalDetuneParameters parameters;
+        parameters.mode = mode == 1U ? tabletfx::PedalDetuneMode::Deep
+                                     : tabletfx::PedalDetuneMode::Shallow;
+        parameters.position = position;
+        pedal_detune_.set_parameters(parameters);
+    }
+
     void configure_fractal_three_voice_synth(
         const float* values, std::uint32_t value_count) noexcept {
         constexpr std::uint32_t kParameterCount = 33U;
@@ -3272,6 +3295,7 @@ public:
         bytes += uni_verse_vibe_.memory_bytes();
         bytes += four_osc_generator_.memory_bytes();
         bytes += poly_detune_.memory_bytes();
+        bytes += pedal_detune_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3359,6 +3383,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 110U) {
+            const std::size_t bytes = pedal_detune_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3398,6 +3428,7 @@ private:
     tabletfx::Vibe uni_verse_vibe_;
     tabletfx::effects::FourOscGenerator four_osc_generator_;
     tabletfx::PolyDetune poly_detune_;
+    tabletfx::PedalDetune pedal_detune_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3415,6 +3446,7 @@ private:
     bool uni_verse_vibe_enabled_ = false;
     bool four_osc_generator_enabled_ = false;
     bool poly_detune_enabled_ = false;
+    bool pedal_detune_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4198,6 +4230,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_poly_detune(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_poly_detune(
             voice_count, rate_hz, depth_ms, width, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pedal_detune(
+    void* opaque, std::uint32_t mode, float position) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pedal_detune(mode, position);
     }
 }
 

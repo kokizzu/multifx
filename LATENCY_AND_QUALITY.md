@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Pedal Detune interpretation (2026-11-24)
+
+Pedal Detune at Pitch picker index 110 reuses the existing `PolyDetune` core. The project defaults to Shallow, 50% POSITION, a 0.25 Hz modulation rate, two voices, 75% width, and 0 dB level; project depths are 0.35 ms in Shallow and 1.4 ms in Deep. These mappings are not published Fender settings. The dry signal is immediate and the wet micro-delay is about 5 ms. At 48 kHz stereo the processor owns 3,672 B natively and the browser reports 3,632 B. The native test confirms no processing-time allocations.
+
+`make bench` on AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), with 2,000 warm-up and 5,000 measured blocks, measured p50/p95/p99/p99.9/max at **0.0563/0.0570/0.0836/0.2460/0.6330%** of the callback deadline. This is an isolated processor-call estimate on that desktop, not full-chain or target-device performance. Focused browser/WASM Play used the local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames; dry-to-Shallow difference RMS was 0.02655, Shallow-to-Deep was 0.09162, and full POSITION to zero-POSITION was 0.09069. Peak output remained below 0.241. Full chain parity, listening, and hardware checks remain open.
+
 ## Fractal-family Diatonic custom-scale extension (2026-11-24)
 
 The existing Diatonic Harmonizer now supports a project-authored custom scale of 4–8 ascending semitone offsets in the native processor, offline CLI, and categorized Pitch browser/WASM control at picker index 50. It reuses the same one-voice processor and audio path; no separate block, voice, sample buffer, or fixed latency was added. Native owned state is 1,024,664 B in stereo (the focused browser reports 1,020,012 B effect memory). Processing remains allocation-free. The shared shifter contributes 5.333 ms nominal buffering at 48 kHz, while the tracker frame plus shifter gives an estimated 26.7 ms first-note response before host/device buffers; this exceeds the provisional ≤20 ms live-transposition target.

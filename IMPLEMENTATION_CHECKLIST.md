@@ -9,6 +9,16 @@
 - [x] Full project tests, Windows MinGW core/offline build, and DSP benchmark pass; measurements and interpretation are recorded in [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
 - [ ] Physical expression-pedal routing, device performance, and human listening remain manual checks. No Fender parameter, interval-list, DSP, or sound parity is claimed.
 
+## Fender Tone Master Pro — Pedal Detune (2026-11-24)
+
+- [x] Verified the exact-model Model Guide v1.1.100 / Rev. A, printed p. 68: MODE SWITCH selects SHALLOW or DEEP, and POSITION blends the detuned signal with dry. The guide does not publish ranges, defaults, modulation values, or DSP topology. Firmware history checked through v1.8.85 (2026-11-18); installed firmware is unknown.
+- [x] Added a separate disabled-by-default Pitch picker row at index 110, with Shallow/Deep and POSITION controls. It wraps the existing modulated-delay core: 0.35/1.4 ms project-selected depths, 0.25 Hz rate, two voices, 75% width, and a 10 ms position ramp. This performs no note tracking and is not Fender DSP or sound parity.
+- [x] Native tests pass for wet/dry behavior, mode distinction, smoothing, irregular blocks, reset, finite recovery, bounds, reported memory, and zero process allocations.
+- [x] Focused browser/WASM Play passes on the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. It verifies Pitch category/index 110 and captured changes for Shallow/Deep and zero/full POSITION: dry-to-Shallow difference RMS 0.02655; Shallow-to-Deep 0.09162; effect memory 3,632 B.
+- [x] Windows MinGW core/offline build passes. `make bench` on Ryzen 9 5950X Release at 48 kHz stereo/128 frames reports p50/p95/p99/p99.9/max at 0.0563/0.0570/0.0836/0.2460/0.6330% of the 2.667 ms deadline, with 3,672 B native state. Dry audio is immediate; the wet path uses about 5 ms of micro-delay. Measurements are desktop processor-call timing, not target-device performance.
+- [x] Full `make web-test` regression passes, including browser/native chain comparison across 78 optional processor stages (maximum absolute error 3.40097e-6; RMS error 5.88049e-7). `make test` passes documentation validation, 11/11 fixture-safety checks, and 112/112 CTest cases.
+- [ ] Human listening on guitar and target-device/round-trip latency checks remain open. No Fender parameter, DSP, or sound parity is claimed.
+
 ## Line 6 Helix Stadium XL — Poly Detune-inspired Modulation (2026-11-24)
 
 - [x] Checked the official model catalogue and current live manual. The catalogue calls Poly Detune Mono and lists it as a Line 6 Original first appearing in Stadium 1.0. The Dynamic DSP page groups it with high-DSP Poly effects, limited to two per preset and one per primary path; this DSP grouping does not establish polyphonic note tracking. Installed firmware is unknown.
