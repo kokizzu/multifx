@@ -41,6 +41,11 @@ public:
     // explicit ±24/±60 profiles for wider-range processors). Parameter updates
     // are intended to be applied by the audio thread or while processing is
     // stopped.
+    // Maps an expression position to a target pitch: 0 is unison and 1
+    // reaches the selected target. Both values saturate to this instance's
+    // supported range; NaN inputs leave the current pitch unchanged.
+    void set_expression_position(float target_semitones, float position) noexcept;
+
     void set_pitch_semitones(float semitones) noexcept;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;

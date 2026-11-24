@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "4da741f7052d4bcbfaf29d4d26a8ad57cb1f4ac1",
+  "previous_checkpoint_commit": "c1c59886230138b694feb61f55434090d6707826",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -314,33 +314,33 @@
         "notes": "Automated native, focused browser/WASM, Windows, and benchmark checks pass. Estimated first-note response remains 26.7 ms at 48 kHz, above the provisional 20 ms gate. Manual listening, real guitar transients/chords, and target-device checks remain open. No Fractal DSP/settings/sound parity."
       },
       "picker_rows": 110
+    },
+    {
+      "name": "Fender Tone Master Pro Pedal Shifter expression-position mode",
+      "status": "verified",
+      "picker_index": 22,
+      "category": "Pitch",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and Fender firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide documents the effect behavior but does not name its ten intervals, numeric parameter ranges/defaults, or sweep curve. Firmware history through v1.8.85 contains no Pedal Shifter-specific change; installed firmware is unknown."
+      },
+      "documented_controls": "PITCH selects one of ten intervals at maximum POSITION. POSITION moves from unison at minimum to the selected interval at maximum. The effect removes the dry signal and may be assigned to an expression pedal or Parameter Change footswitch. The manual publishes no interval names, numeric bounds/defaults, or sweep law.",
+      "project_controls": "Existing categorized Poly Pitch row 22 gains a software Pedal Shifter mode with project-authored target −24…+24 semitones and linear position 0…1. It reuses the current wet-only stereo PolyPitchShifter; no second processor, buffer, state, or fixed latency is added. No physical expression/MIDI route is connected. Underlying shifter state is 494,016 B native at 48 kHz stereo, nominally 256 samples / 5.333 ms buffering.",
+      "verification": {
+        "native": "make test-fender-pedal-shifter passed 1/1 focused CTest; make test passed 111/111 CTest cases, documentation validation (333 requirements/346 rows), and 11/11 audio-fixture safety tests.",
+        "focused_browser": "make web-test-fender-pedal-shifter passed with the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. It verifies Pitch categorization and index 22, enabled worklet processing, heel/mid/toe output, and exact waveform equivalence to static +6/+12 semitones (max/RMS error 0/0) after worklet message barriers; 95,598/95,596 samples changed for heel-to-mid/toe; effect memory 489,416 B.",
+        "full_browser": "make web-test passed: 111/111 CTest cases, 11/11 fixture-safety tests, and browser/native comparison across 78 optional processor stages. Maximum absolute error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
+        "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
+        "isolated_benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame / 2.667 ms blocks, 2,000 warm-up and 5,000 measured blocks: expression midpoint p50/p95/p99/p99.9/max 11.1318/14.1837/16.5968/22.5467/70.4258% of callback deadline; owned state 494,016 B. The ordinary shifter in the same run measured 11.2316/14.6498/17.4455/25.0946/37.6191%. Isolated desktop processor-call timings; the high max is an observed scheduling/timing outlier, not a device-performance guarantee.",
+        "notes": "The feature changes pitch on the existing shifter; expression mode adds no processor-state memory or latency. The project-authored linear sweep is not a Fender settings/sound/DSP reproduction. The underlying 5.333 ms shifter latency remains within the provisional 20 ms budget before host/device buffering, but physical round-trip latency, live expression routing, target-device performance, and human listening are unverified."
+      },
+      "picker_rows": 110
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Poly Pitch transpose-range extension",
-    "status": "verified",
-    "picker_index": 22,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "June 2023 cover; printed pp. 66 and 69; no separate revision number. FM9-family documentation. Firmware v12.0 dated 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide describes Dual Chromatic (two voices), Quad Chromatic (four voices), and Quad Chromatic Delay (four voices), each with individual Shift range ±24 semitones. This work extends the project's existing single shifter range; it does not implement independent Fractal voice layouts. Exact Mark II Turbo firmware applicability and installed firmware remain unknown."
-    },
-    "documented_controls": "The guide lists Shift 1–4 as applicable to the selected algorithm, each ±24 semitones, and per-voice Detune ±50 cents. Quad Chromatic Delay also documents Delay 0–2,000 ms and feedback after pitch shifting; Quad Chromatic has no feedback. Voice count and control availability depend on Dual/Quad algorithm. Documentation does not establish tracking quality, latency, or simultaneous availability with other effects.",
-    "project_controls": "Project-authored extension of the existing Pitch row at picker index 22, with ±24-semitone UI/CLI/browser range. Browser and offline renderer select the existing shifter's ±24 profile; global transpose default remains zero and no new processor is added. Independent two-/four-voice routing remains unimplemented.",
-    "verification": {
-      "native_ctest": "make web-test passed 111/111 CTest tests and 11/11 audio-fixture safety checks; added native chord tests at ±24 endpoints.",
-      "focused_browser": "make web-test-fractal-poly-pitch-range passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. UI range and Pitch index 22 were checked. Captured ±12-versus-±24 output differences: positive peak 0.72953057 / RMS 0.14669138 / 95,598 changed samples; negative peak 0.10692947 / RMS 0.03783733 / 95,580 changed samples. Effect memory 489,416 B.",
-      "full_browser": "make web-test passed: 111 picker entries and 78 browser/native processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,346,468 B plus 10,364 B tuner state within fixed 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Existing shifter in ±24 profile: p50/p95/p99/p99.9/max 10.2614/13.7768/17.9694/26.8763/40.8795% of callback; native state 494,016 B; about 5.333 ms algorithmic latency. Desktop processor-call timing only; high tail load needs target-device checks.",
-      "notes": "Automated native, browser/WASM, Windows, and benchmark checks pass. Human listening and target-device checks remain open. No Fractal DSP/settings/sound parity."
-    },
-    "picker_rows": 110
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Diatonic custom-scale editor",
     "status": "verified",
     "picker_index": 50,
@@ -364,7 +364,43 @@
     },
     "picker_rows": 110
   },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Pedal Shifter expression-position mode",
+    "status": "verified",
+    "picker_index": 22,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and Fender firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents the effect behavior but does not name its ten intervals, numeric parameter ranges/defaults, or sweep curve. Firmware history through v1.8.85 contains no Pedal Shifter-specific change; installed firmware is unknown."
+    },
+    "documented_controls": "PITCH selects one of ten intervals at maximum POSITION. POSITION moves from unison at minimum to the selected interval at maximum. The effect removes the dry signal and may be assigned to an expression pedal or Parameter Change footswitch. The manual publishes no interval names, numeric bounds/defaults, or sweep law.",
+    "project_controls": "Existing categorized Poly Pitch row 22 gains a software Pedal Shifter mode with project-authored target −24…+24 semitones and linear position 0…1. It reuses the current wet-only stereo PolyPitchShifter; no second processor, buffer, state, or fixed latency is added. No physical expression/MIDI route is connected. Underlying shifter state is 494,016 B native at 48 kHz stereo, nominally 256 samples / 5.333 ms buffering.",
+    "verification": {
+      "native": "make test-fender-pedal-shifter passed 1/1 focused CTest; make test passed 111/111 CTest cases, documentation validation (333 requirements/346 rows), and 11/11 audio-fixture safety tests.",
+      "focused_browser": "make web-test-fender-pedal-shifter passed with the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. It verifies Pitch categorization and index 22, enabled worklet processing, heel/mid/toe output, and exact waveform equivalence to static +6/+12 semitones (max/RMS error 0/0) after worklet message barriers; 95,598/95,596 samples changed for heel-to-mid/toe; effect memory 489,416 B.",
+      "full_browser": "make web-test passed: 111/111 CTest cases, 11/11 fixture-safety tests, and browser/native comparison across 78 optional processor stages. Maximum absolute error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
+      "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
+      "isolated_benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame / 2.667 ms blocks, 2,000 warm-up and 5,000 measured blocks: expression midpoint p50/p95/p99/p99.9/max 11.1318/14.1837/16.5968/22.5467/70.4258% of callback deadline; owned state 494,016 B. The ordinary shifter in the same run measured 11.2316/14.6498/17.4455/25.0946/37.6191%. Isolated desktop processor-call timings; the high max is an observed scheduling/timing outlier, not a device-performance guarantee.",
+      "notes": "The feature changes pitch on the existing shifter; expression mode adds no processor-state memory or latency. The project-authored linear sweep is not a Fender settings/sound/DSP reproduction. The underlying 5.333 ms shifter latency remains within the provisional 20 ms budget before host/device buffering, but physical round-trip latency, live expression routing, target-device performance, and human listening are unverified."
+    },
+    "picker_rows": 110
+  },
   "next_research": [
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Pedal Detune position effect",
+      "source": "Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history through v1.8.85 (2026-11-18)",
+      "source_urls": [
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+      ],
+      "status": "Manual documents a SHALLOW/DEEP mode selector and POSITION blend for detuned signal; exact ranges, defaults, curve, and implementation topology are not specified. Candidate requires separate modeling and benchmark.",
+      "known_controls": "MODE SWITCH selects SHALLOW or DEEP. POSITION blends in detuned signal. No numeric ranges/defaults or algorithm details published.",
+      "qualification": "Implement only as a clearly project-authored interpretation if it can reuse efficient existing DSP without claiming Fender parity; keep separate from Line 6 Poly Detune and the Pedal Shifter."
+    },
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",

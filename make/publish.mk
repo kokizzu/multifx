@@ -31,6 +31,7 @@ PUBLISH_CHECKPOINTS += fractal-bias-trem
 PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe line6-four-osc-generator line6-poly-detune
 PUBLISH_CHECKPOINTS += fractal-poly-pitch-range
 PUBLISH_CHECKPOINTS += fractal-diatonic-custom-scale
+PUBLISH_CHECKPOINTS += fender-pedal-shifter
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -73,7 +74,7 @@ web-test-stereo-filter:
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
 .PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem
-.PHONY: test-vibe test-vibratone test-note-generator web-test-fender-vibratone web-test-fender-universe-vibe web-test-line6-four-osc-generator test-poly-detune web-test-line6-poly-detune web-test-fractal-poly-pitch-range web-test-fractal-diatonic-custom-scale
+.PHONY: test-vibe test-vibratone test-note-generator web-test-fender-vibratone web-test-fender-universe-vibe web-test-line6-four-osc-generator test-poly-detune web-test-line6-poly-detune web-test-fractal-poly-pitch-range web-test-fender-pedal-shifter web-test-fractal-diatonic-custom-scale test-fender-pedal-shifter
 test-vibe:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_vibe_tests
 
@@ -112,6 +113,12 @@ web-test-line6-poly-detune: web-build
 
 web-test-fractal-poly-pitch-range: web-build
 	$(PYTHON) scripts/web.py test-fractal-poly-pitch-range
+
+test-fender-pedal-shifter:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_poly_pitch_shifter_tests
+
+web-test-fender-pedal-shifter: web-build
+	$(PYTHON) scripts/web.py test-fender-pedal-shifter
 
 web-test-fractal-diatonic-custom-scale: web-build
 	$(PYTHON) scripts/web.py test-fractal-diatonic-custom-scale

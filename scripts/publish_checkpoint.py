@@ -2178,6 +2178,26 @@ FRACTAL_DIATONIC_CUSTOM_SCALE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_PEDAL_SHIFTER_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "include/tabletfx/effects/poly_pitch_shifter.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/poly_pitch_shifter.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_poly_pitch_shifter.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2555,6 +2575,10 @@ CHECKPOINTS = {
     "fractal-diatonic-custom-scale": (
         FRACTAL_DIATONIC_CUSTOM_SCALE_CHECKPOINT_PATHS,
         "feat: add categorized custom-scale harmonizer mode",
+    ),
+    "fender-pedal-shifter": (
+        FENDER_PEDAL_SHIFTER_CHECKPOINT_PATHS,
+        "feat: add categorized expression-controlled pitch sweep",
     ),
 }
 

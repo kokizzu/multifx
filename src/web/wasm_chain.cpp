@@ -1767,6 +1767,12 @@ public:
             ->set_pitch_semitones(semitones);
     }
 
+    void configure_pitch_expression(float target_semitones,
+                                    float position) noexcept {
+        static_cast<tabletfx::PolyPitchShifter*>(effects_[22].effect.get())
+            ->set_expression_position(target_semitones, position);
+    }
+
     void configure_chromatic_pitch_delay(
         tabletfx::ChromaticPitchDelayParameters parameters) noexcept {
         chromatic_pitch_delay_->configure(parameters);
@@ -4989,6 +4995,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_tape_heads(
 TABLETFX_WASM_EXPORT void tf_chain_set_pitch(void* opaque, float semitones) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pitch(semitones);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch_expression(
+    void* opaque, float target_semitones, float position) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch_expression(target_semitones, position);
     }
 }
 

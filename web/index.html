@@ -112,7 +112,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="19"><span class="effect-number">20</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="20"><span class="effect-number">21</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="21"><span class="effect-number">22</span><span class="effect-name">Digital delay</span><span class="effect-default">350 ms · 25% feedback · 25% wet</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−24…+24 semitones · neutral by default</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Poly Pitch / Pedal Shifter</span><span class="effect-default">Static transpose or wet-only expression sweep · neutral by default</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="23"><span class="effect-number">24</span><span class="effect-name">Optical-style compressor</span><span class="effect-default">Linked RMS · program-dependent release</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="24"><span class="effect-number">25</span><span class="effect-name">FET-style compressor</span><span class="effect-default">Fast peak detector · fixed release</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
@@ -203,11 +203,27 @@
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
+        <label class="mix-control" for="pitch-mode">
+          <span>Pitch mode</span>
+          <select id="pitch-mode">
+            <option value="static" selected>Static polyphonic transpose</option>
+            <option value="pedal-shifter">Pedal Shifter sweep</option>
+          </select>
+        </label>
         <label class="mix-control" for="pitch-semitones">
           <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
           <input id="pitch-semitones" type="range" min="-24" max="24" step="0.5" value="0">
         </label>
-        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">June 2023 FM9-family Blocks Guide</a> documents up to ±24 semitones for its chromatic pitch voices. This project uses its own polyphonic pitch engine and extends the same UI range; it does not claim Fractal algorithm, sound, tracking quality, or DSP parity. The current <a href="https://www.fractalaudio.com/fm9-downloads/" target="_blank" rel="noreferrer">FM9 firmware page</a> names Original and Turbo, not Mark II Turbo; that model's applicability and installed firmware remain unconfirmed.</p>
+        <label class="mix-control" for="pitch-expression-target">
+          <span>Pedal Shifter · PITCH target</span><output id="pitch-expression-target-value" for="pitch-expression-target">+12.0 semitones</output>
+          <input id="pitch-expression-target" type="range" min="-24" max="24" step="0.5" value="12" disabled>
+        </label>
+        <label class="mix-control" for="pitch-expression-position">
+          <span>Pedal Shifter · POSITION</span><output id="pitch-expression-position-value" for="pitch-expression-position">0%</output>
+          <input id="pitch-expression-position" type="range" min="0" max="100" step="1" value="0" disabled>
+        </label>
+        <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 68</a> describes PEDAL SHIFTER as wet-only: PITCH selects one of 10 intervals at full POSITION, which sweeps from unison at minimum to that interval at maximum. The guide does not expose the interval labels, numeric bounds, or sweep curve. This project uses its existing ±24-semitone engine and linearly maps POSITION to a continuous target; it does not reproduce Fender's interval list or DSP. The POSITION slider is software control only and is not connected to a physical expression pedal.</p>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">November 2026 FM9-family Blocks Guide</a> documents up to ±24 semitones for several pitch voices. The project uses its own polyphonic pitch engine and range; it does not claim Fractal algorithm, sound, tracking quality, or DSP parity. The current <a href="https://www.fractalaudio.com/fm9-downloads/" target="_blank" rel="noreferrer">FM9 firmware page</a> names Original and Turbo, not Mark II Turbo; that model's applicability and installed firmware remain unconfirmed.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Optical-style compressor controls">
         <h3>Optical-style compressor · project-authored</h3>

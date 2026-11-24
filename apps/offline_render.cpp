@@ -5332,6 +5332,12 @@ void run_bench() {
         effect->set_pitch_semitones(5.0F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fender-pedal-shifter-expression-midpoint", [=] {
+        auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
+            static_cast<float>(sample_rate), channels, 24.0F);
+        effect->set_expression_position(12.0F, 0.5F);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("poly-pitch-shifter-fractal-24-semitone", [=] {
         auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
             static_cast<float>(sample_rate), channels, 24.0F);

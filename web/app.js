@@ -312,6 +312,7 @@ const DEFAULT_PARAMETERS = {
   delayTapeHeadsEnabled: false,
   delayTapeHeads: [110, 15],
   pitchSemitones: 0,
+  pitchExpression: { enabled: false, targetSemitones: 12, position: 0 },
   chromaticPitchDelay: [0, 350, 0.25, 0.65, 0.25, 0, 120, 4, 0],
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
@@ -902,8 +903,13 @@ const inputTrim = document.querySelector("#input-trim-db");
 const inputTrimValue = document.querySelector("#input-trim-value");
 const outputGain = document.querySelector("#output-gain-db");
 const outputGainValue = document.querySelector("#output-gain-value");
+const pitchMode = document.querySelector("#pitch-mode");
 const pitchSemitones = document.querySelector("#pitch-semitones");
 const pitchSemitonesValue = document.querySelector("#pitch-semitones-value");
+const pitchExpressionTarget = document.querySelector("#pitch-expression-target");
+const pitchExpressionTargetValue = document.querySelector("#pitch-expression-target-value");
+const pitchExpressionPosition = document.querySelector("#pitch-expression-position");
+const pitchExpressionPositionValue = document.querySelector("#pitch-expression-position-value");
 const volumePosition = document.querySelector("#volume-position");
 const volumePositionValue = document.querySelector("#volume-position-value");
 const volumeMinimum = document.querySelector("#volume-min-db");
@@ -4381,6 +4387,35 @@ pitchSemitones.addEventListener("input", () => {
   pitchSemitonesValue.value = `${value > 0 ? "+" : ""}${value.toFixed(1)} semitones`;
   if (workletNode) workletNode.port.postMessage({ type: "pitch-semitones", value });
 });
+
+function updatePitchExpressionPosition() {
+  const enabled = pitchMode.value === "pedal-shifter";
+  const targetSemitones = Number(pitchExpressionTarget.value);
+  const position = Number(pitchExpressionPosition.value) / 100;
+  pitchSemitones.disabled = enabled;
+  pitchExpressionTarget.disabled = !enabled;
+  pitchExpressionPosition.disabled = !enabled;
+  pitchExpressionTargetValue.value = `${targetSemitones > 0 ? "+" : ""}${targetSemitones.toFixed(1)} semitones`;
+  pitchExpressionPositionValue.value = `${Math.round(position * 100)}%`;
+  DEFAULT_PARAMETERS.pitchExpression = { enabled, targetSemitones, position };
+  if (!workletNode) return;
+  if (enabled) {
+    workletNode.port.postMessage({
+      type: "pitch-expression-position", targetSemitones, position,
+    });
+  } else {
+    workletNode.port.postMessage({
+      type: "pitch-semitones", value: Number(pitchSemitones.value),
+    });
+  }
+}
+
+pitchMode.addEventListener("change", updatePitchExpressionPosition);
+for (const control of [pitchExpressionTarget, pitchExpressionPosition]) {
+  control.addEventListener("input", updatePitchExpressionPosition);
+  control.addEventListener("change", updatePitchExpressionPosition);
+}
+updatePitchExpressionPosition();
 
 function updateVolumePedal() {
   const values = [
@@ -10832,6 +10867,174 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
   }
 }
 
+async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousPitch = pitchSemitones.value;
+  const previousMode = pitchMode.value;
+  const previousTarget = pitchExpressionTarget.value;
+  const previousPosition = pitchExpressionPosition.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Pedal Shifter smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="22"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Pedal Shifter") ||
+        !checkbox || pitchMode.querySelector('option[value="pedal-shifter"]') === null ||
+        pitchExpressionTarget.min !== "-24" || pitchExpressionTarget.max !== "24" ||
+        pitchExpressionPosition.min !== "0" || pitchExpressionPosition.max !== "100" ||
+        effectMemory.length !== 110 || !(effectMemory[22] > 0)) {
+      throw new Error("Pedal Shifter controls are missing or incorrectly categorized.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 22;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    let barrierSequence = 0;
+    const waitForWorkletBarrier = () => new Promise((resolve, reject) => {
+      const port = workletNode.port;
+      const token = `pedal-shifter-${++barrierSequence}`;
+      const timeout = setTimeout(() => {
+        port.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for worklet test barrier."));
+      }, 5000);
+      const onMessage = (event) => {
+        if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+        clearTimeout(timeout);
+        port.removeEventListener("message", onMessage);
+        resolve();
+      };
+      port.addEventListener("message", onMessage);
+      port.postMessage({ type: "test-barrier", token });
+    });
+
+    const captureAt = async ({ mode, semitones = 0, target = 12, position = 0 }) => {
+      pitchSemitones.value = String(semitones);
+      pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+      pitchExpressionTarget.value = String(target);
+      pitchExpressionTarget.dispatchEvent(new Event("input", { bubbles: true }));
+      pitchExpressionPosition.value = String(position);
+      pitchExpressionPosition.dispatchEvent(new Event("input", { bubbles: true }));
+      pitchMode.value = mode;
+      pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+      await waitForWorkletBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForWorkletBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${mode} pitch playback.`)), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const pedalHeel = await captureAt({ mode: "pedal-shifter", target: 12, position: 0 });
+    const pedalMid = await captureAt({ mode: "pedal-shifter", target: 12, position: 50 });
+    const staticMid = await captureAt({ mode: "static", semitones: 6 });
+    const pedalToe = await captureAt({ mode: "pedal-shifter", target: 12, position: 100 });
+    const staticToe = await captureAt({ mode: "static", semitones: 12 });
+
+    const compareEquivalent = (first, second, label) => {
+      let maxError = 0;
+      let errorSquares = 0;
+      for (let index = 0; index < first.length; index += 1) {
+        if (!Number.isFinite(first[index]) || !Number.isFinite(second[index])) {
+          throw new Error(`${label} contains non-finite audio.`);
+        }
+        const error = first[index] - second[index];
+        maxError = Math.max(maxError, Math.abs(error));
+        errorSquares += error * error;
+      }
+      const rmsError = Math.sqrt(errorSquares / first.length);
+      return { maxError, rmsError };
+    };
+    const midpointMatch = compareEquivalent(pedalMid, staticMid, "50% expression position");
+    const toeMatch = compareEquivalent(pedalToe, staticToe, "100% expression position");
+    if (midpointMatch.maxError >= 2e-5 || midpointMatch.rmsError >= 2e-6 ||
+        toeMatch.maxError >= 2e-5 || toeMatch.rmsError >= 2e-6) {
+      throw new Error("Expression pitch does not match the equivalent static pitch.");
+    }
+    const compareSweep = (first, second) => {
+      let squares = 0;
+      let changedSamples = 0;
+      for (let index = 0; index < first.length; index += 1) {
+        if (!Number.isFinite(first[index]) || !Number.isFinite(second[index])) {
+          throw new Error("Pedal Shifter sweep contains non-finite audio.");
+        }
+        const difference = first[index] - second[index];
+        squares += difference * difference;
+        if (Math.abs(difference) > 1e-6) changedSamples += 1;
+      }
+      return { differenceRms: Math.sqrt(squares / first.length), changedSamples };
+    };
+    const heelToMid = compareSweep(pedalHeel, pedalMid);
+    const heelToToe = compareSweep(pedalHeel, pedalToe);
+    if (heelToMid.differenceRms < 1e-5 || heelToMid.changedSamples < 32 ||
+        heelToToe.differenceRms < 1e-5 || heelToToe.changedSamples < 32) {
+      throw new Error("Pedal Shifter POSITION did not produce distinct heel, midpoint, and toe output.");
+    }
+    let sweepDifference = 0;
+    for (let index = 0; index < pedalHeel.length; index += 1) {
+      sweepDifference = Math.max(sweepDifference, Math.abs(pedalMid[index] - pedalHeel[index]));
+    }
+    if (sweepDifference < 1e-5) {
+      throw new Error("Pedal Shifter POSITION did not change the captured guitar output.");
+    }
+    return {
+      category: "Pitch", pickerIndex: 22, mode: "Pedal Shifter",
+      targetSemitones: 12, positionsPercent: [0, 50, 100],
+      midpointStaticWaveformDiagnostic: midpointMatch,
+      toeStaticWaveformDiagnostic: toeMatch, heelToMid, heelToToe, sweepDifference,
+      expressionControl: "software slider; no physical controller route", playOutputCaptured: true,
+      effectMemoryBytes: effectMemory[22],
+    };
+  } finally {
+    stopSource(false);
+    pitchMode.value = previousMode;
+    pitchExpressionTarget.value = previousTarget;
+    pitchExpressionPosition.value = previousPosition;
+    pitchSemitones.value = previousPitch;
+    pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+    pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -14221,6 +14424,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX poly-pitch range browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-pedal-shifter") {
+          testResult.textContent = "Checking Pedal Shifter POSITION sweep with local guitar audio…";
+          const pedalShifterSmoke = await runFenderPedalShifterBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            pedalShifter: pedalShifterSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Pedal Shifter browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-custom-scale") {

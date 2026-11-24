@@ -238,10 +238,22 @@ std::uint32_t PolyPitchShifter::analysis_interval_samples() const noexcept {
     return static_cast<std::uint32_t>(kAnalysisHop);
 }
 
+void PolyPitchShifter::set_expression_position(float target_semitones,
+                                               float position) noexcept {
+    if (std::isnan(target_semitones) || std::isnan(position)) return;
+
+    const float target = std::clamp(target_semitones, -max_shift_semitones_,
+                                    max_shift_semitones_);
+    const float clamped_position = std::clamp(position, 0.0F, 1.0F);
+    set_pitch_semitones(target * clamped_position);
+}
+
 void PolyPitchShifter::set_pitch_semitones(float semitones) noexcept {
     if (!std::isfinite(semitones)) return;
-    pitch_semitones_ = std::clamp(semitones, -max_shift_semitones_,
-                                  max_shift_semitones_);
+    const float clamped = std::clamp(semitones, -max_shift_semitones_,
+                                     max_shift_semitones_);
+    if (clamped == pitch_semitones_) return;
+    pitch_semitones_ = clamped;
     impl_->set_factor(std::exp2(static_cast<double>(pitch_semitones_) / 12.0));
 }
 

@@ -326,7 +326,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       if (parameters.delayTapeHeadsEnabled) {
         module._tf_chain_set_delay_tape_heads(this.chain, 1, tapeHeads[0], tapeHeads[1]);
       }
-      module._tf_chain_set_pitch(this.chain, parameters.pitchSemitones ?? 0);
+      const pitchExpression = parameters.pitchExpression || {};
+      if (pitchExpression.enabled) {
+        module._tf_chain_set_pitch_expression(
+          this.chain,
+          Number(pitchExpression.targetSemitones ?? 12),
+          Number(pitchExpression.position ?? 0),
+        );
+      } else {
+        module._tf_chain_set_pitch(this.chain, parameters.pitchSemitones ?? 0);
+      }
       const filters = parameters.filters || [80, 12000];
       module._tf_chain_set_filters(this.chain, ...filters);
       const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
@@ -1070,6 +1079,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.port.postMessage({ type: "disposed" });
       return;
     }
+    if (message.type === "test-barrier") {
+      this.port.postMessage({ type: "test-barrier-ack", token: message.token });
+      return;
+    }
     if (message.type === "active") {
       this.active = Boolean(message.value);
     } else if (message.type === "capture-reset") {
@@ -1103,6 +1116,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
     } else if (message.type === "pitch-semitones" && this.ready) {
       this.module._tf_chain_set_pitch(this.chain, Number(message.value));
+    } else if (message.type === "pitch-expression-position" && this.ready) {
+      this.module._tf_chain_set_pitch_expression(
+        this.chain, Number(message.targetSemitones), Number(message.position),
+      );
     } else if (message.type === "optical-compressor" && this.ready) {
       this.module._tf_chain_set_optical_compressor(this.chain, ...message.value);
     } else if (message.type === "fet-compressor" && this.ready) {

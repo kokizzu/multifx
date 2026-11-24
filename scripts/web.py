@@ -143,7 +143,7 @@ def build_web() -> None:
         "_tf_chain_set_delay_dual",
         "_tf_chain_set_delay_multitap", "_tf_chain_set_delay_multitap_tap",
         "_tf_chain_set_delay_tape_heads",
-        "_tf_chain_set_pitch",
+        "_tf_chain_set_pitch", "_tf_chain_set_pitch_expression",
         "_tf_chain_set_filters",
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
@@ -732,6 +732,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   four_osc_only: bool = False,
                   poly_detune_only: bool = False,
                   fractal_poly_pitch_only: bool = False,
+                  fender_pedal_shifter_only: bool = False,
                   fractal_diatonic_custom_scale_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
@@ -1238,6 +1239,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=poly-detune"
         elif fractal_poly_pitch_only:
             url = base_url + "/web/index.html?selftest=fractal-poly-pitch-range"
+        elif fender_pedal_shifter_only:
+            url = base_url + "/web/index.html?selftest=fender-pedal-shifter"
         elif fractal_diatonic_custom_scale_only:
             url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
         elif stereo_filter_only:
@@ -1439,7 +1442,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 None if volume_pan_only or stereo_filter_only or step_tremolo_only or
                 fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
                 or four_osc_only or poly_detune_only or fractal_poly_pitch_only
-                or fractal_diatonic_custom_scale_only
+                or fender_pedal_shifter_only or fractal_diatonic_custom_scale_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1483,6 +1486,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif fractal_poly_pitch_only:
             print("Focused Fractal-family poly-pitch ±24 browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fender_pedal_shifter_only:
+            print("Focused Fender-inspired Pedal Shifter browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         elif fractal_diatonic_custom_scale_only:
             print("Focused Fractal-family custom-scale browser/WASM local-guitar Play smoke passed.")
@@ -1546,6 +1552,7 @@ def main() -> None:
         "test-line6-four-osc-generator",
         "test-line6-poly-detune",
         "test-fractal-poly-pitch-range",
+        "test-fender-pedal-shifter",
         "test-fractal-diatonic-custom-scale",
         "inspect-build-path", "inspect-smoke-path",
     ))
@@ -1576,6 +1583,8 @@ def main() -> None:
         browser_test(poly_detune_only=True)
     elif action == "test-fractal-poly-pitch-range":
         browser_test(fractal_poly_pitch_only=True)
+    elif action == "test-fender-pedal-shifter":
+        browser_test(fender_pedal_shifter_only=True)
     elif action == "test-fractal-diatonic-custom-scale":
         browser_test(fractal_diatonic_custom_scale_only=True)
     elif action == "inspect-build-path":

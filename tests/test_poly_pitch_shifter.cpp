@@ -195,6 +195,81 @@ void test_wider_pitch_range_is_opt_in_and_per_instance() {
             "only the documented 12- and opt-in 24-semitone profiles are valid");
 }
 
+void test_expression_position_mapping() {
+    tabletfx::PolyPitchShifter shifter(kSampleRate, 1);
+
+    shifter.set_pitch_semitones(4.0F);
+    shifter.set_expression_position(12.0F, 0.0F);
+    require(shifter.pitch_semitones() == 0.0F,
+            "expression heel must map to unison");
+    shifter.set_expression_position(12.0F, 0.5F);
+    require(shifter.pitch_semitones() == 6.0F,
+            "expression midpoint must map halfway to the positive target");
+    shifter.set_expression_position(12.0F, 1.0F);
+    require(shifter.pitch_semitones() == 12.0F,
+            "expression toe must reach the positive target");
+
+    shifter.set_expression_position(-12.0F, 0.5F);
+    require(shifter.pitch_semitones() == -6.0F,
+            "expression midpoint must map halfway to a negative target");
+    shifter.set_expression_position(-12.0F, 1.0F);
+    require(shifter.pitch_semitones() == -12.0F,
+            "expression toe must reach a negative target");
+
+    shifter.set_expression_position(24.0F, 0.5F);
+    require(shifter.pitch_semitones() == 6.0F,
+            "target must clamp to this instance range before interpolation");
+    shifter.set_expression_position(-24.0F, 1.0F);
+    require(shifter.pitch_semitones() == -12.0F,
+            "reverse target beyond the instance range must clamp safely");
+    shifter.set_expression_position(12.0F, -0.5F);
+    require(shifter.pitch_semitones() == 0.0F,
+            "expression position below zero must clamp to unison");
+    shifter.set_expression_position(12.0F, 1.5F);
+    require(shifter.pitch_semitones() == 12.0F,
+            "expression position above one must clamp to the target");
+
+    shifter.set_pitch_semitones(4.0F);
+    shifter.set_expression_position(std::numeric_limits<float>::quiet_NaN(),
+                                    0.5F);
+    require(shifter.pitch_semitones() == 4.0F,
+            "NaN target must preserve the last valid pitch");
+    shifter.set_expression_position(12.0F,
+                                    std::numeric_limits<float>::quiet_NaN());
+    require(shifter.pitch_semitones() == 4.0F,
+            "NaN position must preserve the last valid pitch");
+    shifter.set_expression_position(
+        std::numeric_limits<float>::infinity(), 1.0F);
+    require(shifter.pitch_semitones() == 12.0F,
+            "infinite positive target must saturate at the supported limit");
+    shifter.set_expression_position(
+        -std::numeric_limits<float>::infinity(), 1.0F);
+    require(shifter.pitch_semitones() == -12.0F,
+            "infinite negative target must saturate at the supported limit");
+}
+
+void test_pedal_sweep_matches_static_pitch_without_extra_state() {
+    tabletfx::PolyPitchShifter pedal_mode(kSampleRate, 1, 24.0F);
+    tabletfx::PolyPitchShifter static_mode(kSampleRate, 1, 24.0F);
+    require(pedal_mode.memory_bytes() == static_mode.memory_bytes(),
+            "expression control must not add shifter state or another processing path");
+
+    for (const float position : {0.0F, 0.5F, 1.0F}) {
+        pedal_mode.reset();
+        static_mode.reset();
+        pedal_mode.set_expression_position(12.0F, position);
+        static_mode.set_pitch_semitones(12.0F * position);
+        const auto pedal_output = render_tones(pedal_mode, {110.0, 220.0}, 1, 0.3);
+        const auto static_output = render_tones(static_mode, {110.0, 220.0}, 1, 0.3);
+        require(pedal_output.size() == static_output.size(),
+                "pedal sweep and static render lengths differ");
+        for (std::size_t i = 0; i < pedal_output.size(); ++i) {
+            require(std::abs(pedal_output[i] - static_output[i]) <= 1.0e-6F,
+                    "expression sweep output must match the equivalent static pitch");
+        }
+    }
+}
+
 void test_six_semitone_pitch_accuracy() {
     for (const float semitones : {-6.0F, 6.0F}) {
         tabletfx::PolyPitchShifter shifter(kSampleRate, 1);
@@ -283,6 +358,8 @@ void test_process_does_not_allocate() {
     for (int i = 0; i < 256; ++i) {
         const std::size_t frames = frame_counts[static_cast<std::size_t>(i) % frame_counts.size()];
         auto variable_block = std::span<float>(block.data(), frames * 2);
+        shifter.set_expression_position(12.0F,
+                                        static_cast<float>(i % 101) / 100.0F);
         shifter.process(variable_block, 2);
         for (float sample : variable_block) {
             if (!std::isfinite(sample)) {
@@ -371,6 +448,8 @@ int main() {
     try {
         test_neutral_default_latency_and_memory();
         test_wider_pitch_range_is_opt_in_and_per_instance();
+        test_expression_position_mapping();
+        test_pedal_sweep_matches_static_pitch_without_extra_state();
         test_six_semitone_pitch_accuracy();
         test_chord_components_and_stereo_independence();
         test_process_does_not_allocate();
