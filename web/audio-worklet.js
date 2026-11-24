@@ -21,6 +21,11 @@ EFFECTS.push("stereo-filter");
 EFFECTS.push("step-tremolo");
 EFFECTS.push("deluxe-looper");
 EFFECTS.push("chromatic-pitch-delay");
+EFFECTS.push("cabinet-ir");
+const EFFECT_PIPELINE_EFFECT_COUNT = 96;
+const FIRST_EXTRA_EFFECT_INDEX = 96;
+const OUTPUT_LEVEL_INDEX = 94;
+const PEAK_LIMITER_INDEX = 95;
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -168,8 +173,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.tunerGeneration = 0;
     this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
     this.enabled = config.enabled || Array.from(
-      { length: EFFECTS.length }, (_, index) => [0, 1, 6, EFFECTS.length - 2,
-        EFFECTS.length - 1].includes(index),
+      { length: EFFECTS.length }, (_, index) => [0, 1, 6, OUTPUT_LEVEL_INDEX,
+        PEAK_LIMITER_INDEX].includes(index),
     );
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
@@ -765,6 +770,59 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
   }
 
+  loadCabinetIR(message) {
+    const requestId = Number(message.requestId);
+    let pointer = 0;
+    try {
+      if (this.active) {
+        throw new Error("Stop playback before replacing the Cabinet IR.");
+      }
+      const frames = Number(message.frames);
+      const channels = Number(message.channels);
+      const sampleRate = Number(message.sampleRate);
+      const bitsPerSample = Number(message.bitsPerSample);
+      if (frames !== 2048 || channels !== 1 || sampleRate !== 48000 ||
+          bitsPerSample !== 24 || !(message.samples instanceof ArrayBuffer)) {
+        throw new Error("Cabinet IR requires mono 24-bit PCM at 48 kHz with exactly 2,048 samples.");
+      }
+      const samples = new Float32Array(message.samples);
+      if (samples.length !== frames) {
+        throw new Error("Cabinet IR sample count does not match the 2,048-frame WAV shape.");
+      }
+      pointer = this.module._malloc(frames * Float32Array.BYTES_PER_ELEMENT);
+      if (!pointer) throw new Error("The fixed WASM heap has no room for the Cabinet IR.");
+      this.module.HEAPF32.set(samples, pointer >>> 2);
+      const loaded = this.module._tf_chain_load_cabinet_ir(
+        this.chain, pointer, frames, channels, sampleRate, bitsPerSample,
+      );
+      if (loaded !== 1) {
+        throw new Error("The WASM processor rejected this Cabinet IR format.");
+      }
+      this.port.postMessage({
+        type: "cabinet-ir-loaded",
+        requestId,
+        version: Number(message.version),
+        frames,
+        channels,
+        sampleRate,
+        bitsPerSample,
+        latencyFrames: this.module._tf_chain_cabinet_ir_latency_frames(),
+        memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+        effectMemoryBytes: this.module._tf_chain_effect_memory_bytes(this.chain, 100),
+        wasmMemoryBytes: this.module.HEAPF32.buffer.byteLength,
+      });
+    } catch (error) {
+      this.port.postMessage({
+        type: "cabinet-ir-error",
+        requestId,
+        version: Number(message.version),
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      if (pointer) this.module._free(pointer);
+    }
+  }
+
   configurePitchArpeggiator(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 31) {
       return;
@@ -1209,6 +1267,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_convolution_reverb(this.chain, ...message.value);
     } else if (message.type === "convolution-ir" && this.ready) {
       this.loadConvolutionIR(message);
+    } else if (message.type === "cabinet-ir" && this.ready) {
+      this.loadCabinetIR(message);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {
@@ -1302,25 +1362,27 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_tuner(this.chain);
     const tunerElapsedMs = nowMs() - tunerStartMs;
     if (this.stats) this.stats[ringOffset + TUNER_TIME] = Math.round(tunerElapsedMs * 1000000);
-    for (let effect = 0; effect < EFFECTS.length - 4; effect += 1) {
+    for (let effect = 0; effect < EFFECT_PIPELINE_EFFECT_COUNT; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
       const elapsedMs = nowMs() - startMs;
       if (this.stats) this.stats[ringOffset + effect] = Math.round(elapsedMs * 1000000);
     }
     this.module._tf_chain_finish(this.chain, frames);
-    this.module._tf_chain_process_effect(this.chain, 96);
-    this.module._tf_chain_process_effect(this.chain, 97);
-    this.module._tf_chain_process_effect(this.chain, 98);
-    this.module._tf_chain_process_effect(this.chain, 99);
+    for (let effect = FIRST_EXTRA_EFFECT_INDEX; effect < EFFECTS.length; effect += 1) {
+      const startMs = nowMs();
+      this.module._tf_chain_process_effect(this.chain, effect);
+      const elapsedMs = nowMs() - startMs;
+      if (this.stats) this.stats[ringOffset + effect] = Math.round(elapsedMs * 1000000);
+    }
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;
-    if (this.stats) this.stats[ringOffset + EFFECTS.length - 2] = Math.round(outputGainElapsedMs * 1000000);
+    if (this.stats) this.stats[ringOffset + OUTPUT_LEVEL_INDEX] = Math.round(outputGainElapsedMs * 1000000);
     const limiterStartMs = nowMs();
     this.module._tf_chain_process_output_limiter(this.chain);
     const limiterElapsedMs = nowMs() - limiterStartMs;
-    if (this.stats) this.stats[ringOffset + EFFECTS.length - 1] = Math.round(limiterElapsedMs * 1000000);
+    if (this.stats) this.stats[ringOffset + PEAK_LIMITER_INDEX] = Math.round(limiterElapsedMs * 1000000);
 
     const tunerGeneration = this.module._tf_chain_tuner_generation(this.chain) >>> 0;
     if (tunerGeneration !== this.tunerGeneration) {

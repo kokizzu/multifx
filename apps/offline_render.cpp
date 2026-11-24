@@ -14,6 +14,7 @@
 #include "tabletfx/effects/plate_reverb.hpp"
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/convolution_reverb.hpp"
+#include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -4600,6 +4601,20 @@ void run_bench() {
               << " warmup_blocks=" << warmup_blocks << " measured_blocks=" << measured_blocks
               << " metric=elapsed_block_us/callback_deadline_us*100\n";
     std::cout << "processor,median_pct,p95_pct,p99_pct,p99_9_pct,max_pct,owned_memory_bytes,output_rms\n";
+    benchmark_one("cabinet-ir-xr1-format", [=] {
+        auto effect = std::make_unique<tabletfx::CabinetIr>(
+            static_cast<float>(sample_rate), channels);
+        std::array<float, tabletfx::CabinetIr::kRequiredIrFrames> impulse{};
+        for (std::size_t frame = 0; frame < impulse.size(); ++frame) {
+            const float t = static_cast<float>(frame);
+            impulse[frame] = 0.8F * std::exp(-t / 400.0F) *
+                             std::cos(t * 0.043F);
+        }
+        if (!effect->load_impulse_response(impulse, 1, sample_rate, 24)) {
+            throw std::runtime_error("Could not prepare cabinet IR benchmark processor");
+        }
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));
     },

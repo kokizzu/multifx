@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "dc69dc0392c421bb2092e00131f18a7ca78b2fbc",
+  "previous_checkpoint_commit": "38b10551b974dd2049ce8a2f71e62c5b912752cf",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -14,7 +14,11 @@
       "official_source": {
         "title": "Fractal Audio Systems Blocks Guide",
         "revision": "June 2023",
-        "pages": [3, 4, 51],
+        "pages": [
+          3,
+          4,
+          51
+        ],
         "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
         "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
         "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
@@ -35,25 +39,25 @@
     },
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
-    "status": "verified",
-    "picker_index": 58,
-    "category": "Reverb",
-    "official_source": {
-      "title": "HeadRush Prime User Guide",
-      "revision": "v5.0.0 guide checked for C-Verb details; official downloads page listed v5.2 guide and firmware as current on 2026-11-23",
-      "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
-      "downloads_url": "https://www.headrushfx.com/downloads.html",
-      "qualification": "C-Verb controls, 10-second maximum, one-instance limit, and first-two-channel rule are documented in the v5.0.0 manual; project ranges and DSP are not HeadRush settings or parity."
-    },
-    "documented_controls": "Preset, Reverb File, High Pass, Low Pass, Wet, and Tails On/Off. The guide documents WAV/AIF/OPUS, first two channels of a multichannel IR, one C-Verb per rig, a 10-second maximum, and CPU use dependent on IR length; it gives no numeric control ranges.",
-    "project_controls": "Existing Reverb row/index 58; local mono/stereo WAV only; project-authored Mix, Wet Level, wet High Pass/Low Pass and Tails; max 480,000 frames at target rate (10 s at 48 kHz); 1,024-frame fixed latency; independent stereo kernels; no bundled IR, AIF/OPUS, multichannel import, or cross-rig spillover.",
-    "verification": {
-      "native_ctest": "make test passed: 96/96 CTest cases and 11 audio-fixture safety tests; Convolution Reverb tests cover partition timing, stereo kernels, 10-second acceptance, filters, tails, zero allocation, and offline CLI latency/output",
-      "web_build": "passed; generated tabletfx_wasm.js is 761,197 bytes",
-      "browser": "passed with local stereo Guitar-TECHS DI; full 71-stage native/browser comparison max absolute error 0.000006970898652980395 and RMS error 0.0000014077249412678672; C-Verb test loaded/replaced 480,000-frame stereo PCM WAV, checked separate L/R output (0.25/0.125), 1,024-frame latency, Reverb category, worklet guard, and 64 MiB heap",
-      "isolated_benchmark": "15,461,240 B maximum stereo processor state; Ryzen 9 5950X at 48 kHz stereo/128 frames: p50 0.0382%, p95 79.4286%, p99 92.2945%, p99.9 108.1668%, max 130.4420% of 2.667 ms callback; occasional deadline overruns mean glitch-free real-time use is not established",
-      "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
-      "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
+      "status": "verified",
+      "picker_index": 58,
+      "category": "Reverb",
+      "official_source": {
+        "title": "HeadRush Prime User Guide",
+        "revision": "v5.0.0 guide checked for C-Verb details; official downloads page listed v5.2 guide and firmware as current on 2026-11-23",
+        "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "downloads_url": "https://www.headrushfx.com/downloads.html",
+        "qualification": "C-Verb controls, 10-second maximum, one-instance limit, and first-two-channel rule are documented in the v5.0.0 manual; project ranges and DSP are not HeadRush settings or parity."
+      },
+      "documented_controls": "Preset, Reverb File, High Pass, Low Pass, Wet, and Tails On/Off. The guide documents WAV/AIF/OPUS, first two channels of a multichannel IR, one C-Verb per rig, a 10-second maximum, and CPU use dependent on IR length; it gives no numeric control ranges.",
+      "project_controls": "Existing Reverb row/index 58; local mono/stereo WAV only; project-authored Mix, Wet Level, wet High Pass/Low Pass and Tails; max 480,000 frames at target rate (10 s at 48 kHz); 1,024-frame fixed latency; independent stereo kernels; no bundled IR, AIF/OPUS, multichannel import, or cross-rig spillover.",
+      "verification": {
+        "native_ctest": "make test passed: 96/96 CTest cases and 11 audio-fixture safety tests; Convolution Reverb tests cover partition timing, stereo kernels, 10-second acceptance, filters, tails, zero allocation, and offline CLI latency/output",
+        "web_build": "passed; generated tabletfx_wasm.js is 761,197 bytes",
+        "browser": "passed with local stereo Guitar-TECHS DI; full 71-stage native/browser comparison max absolute error 0.000006970898652980395 and RMS error 0.0000014077249412678672; C-Verb test loaded/replaced 480,000-frame stereo PCM WAV, checked separate L/R output (0.25/0.125), 1,024-frame latency, Reverb category, worklet guard, and 64 MiB heap",
+        "isolated_benchmark": "15,461,240 B maximum stereo processor state; Ryzen 9 5950X at 48 kHz stereo/128 frames: p50 0.0382%, p95 79.4286%, p99 92.2945%, p99.9 108.1668%, max 130.4420% of 2.667 ms callback; occasional deadline overruns mean glitch-free real-time use is not established",
+        "audio_regression": "passed using existing local fixtures: five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full 70-stage chain includes Convolution Reverb; separate Tape Echo, Multi-head Echo, Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
+        "notes": "Project-authored convolution/control values; not HeadRush DSP/settings parity. No hardware listening or live-route performance check."
       }
     },
     {
@@ -76,34 +80,31 @@
         "browser": "make web-test-stereo-filter verified Touch-Ladder controls at Stereo Filter ID 96 in Filters & wah; the following checkpoint also tests the Touch-Ladder configuration.",
         "notes": "No Fractal DSP/settings parity, device test, or human listening result."
       }
+    },
+    {
+      "name": "Fractal FM9-family Rotary Speaker Hi Depth / Rotor Length behavior",
+      "status": "verified",
+      "picker_index": 33,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+        "revision": "June 2023 cover date; printed p. 87; FM9-family documentation. Firmware v12.0 posted 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Guide content is family-level evidence and the current linked PDF has a June 2023 cover date. Applicability to FM9 Mark II Turbo is family-level inference; the firmware page does not name Mark II Turbo and does not establish installed firmware."
+      },
+      "documented_controls": "Rate/Tempo, Drive, Hi/Low Depth, Hi Level, Rotor Length, Low Rate Multiplier, separate Low/Hi Time Constants, separate LF/HF Mic Spacing, Mic Distance, Stereo Spread, Mix, Level, Balance, and Input Select. The guide says zero Hi Depth can simulate drum-only operation but gives no numeric ranges or control mappings.",
+      "project_controls": "Project-authored dual-rotor model. Hi Depth now controls both horn level modulation and high-rotor Doppler motion; at zero the horn is parked and Rotor Length cannot move it. Project bounds, crossover, motor model, mapping, and DSP are not Fractal settings or sound parity. Zero fixed algorithmic latency; no process allocation; 1,208 B owned state.",
+      "verification": {
+        "native_ctest": "make test passed: 104/104 CTest tests and 11/11 audio-fixture safety checks, including a zero-Hi-Depth/Rotor-Length regression.",
+        "browser": "make web-test passed: full 104/104 native suite plus browser/WASM chain comparison using local prerecorded Guitar-TECHS DI. Rotary is active in the chain; no isolated Rotary browser Play measurement is claimed.",
+        "windows": "make windows-cross-build passed for the native core and offline renderer.",
+        "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up plus 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of a 2.667 ms callback; 1,208 B object state; zero fixed latency; no per-block allocation. Processor-call estimate, not live device performance."
+      },
+      "notes": "Project-authored behavior only. No Fractal DSP/settings parity, hardware test, or human listening result. Manual listening and device comparison remain open."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Chromatic Pitch Delay and Fractal Arpeggiator ±24 range",
-    "status": "verified",
-    "picker_index": 99,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide",
-      "revision": "v1.1.100 / Rev. A, printed p. 66; firmware history checked through v1.8.85 dated 2026-11-18.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide recommends single-note use but does not establish input-note polyphony, tracking quality, or internal DSP. Installed Fender and Fractal firmware is unknown; exact FM9 Mark II Turbo firmware applicability remains family-level only."
-    },
-    "documented_controls": "Mix, Pitch (−2…+2 octaves), Delay, Tap Division, Feedback, Tone, and Spillover. No ranges/defaults are published for the other controls.",
-    "project_controls": "Project-authored Chromatic Pitch Delay: Pitch −24…+24 semitones (0 default), free time 10…2,000 ms (350 ms) or tempo sync 20…300 BPM with 14 divisions, Feedback 0…0.95 (0.25), Tone 0…1 (0.65), Mix 0…1 (0.25), optional block-bypass Spillover off by default. Wet pitch processing adds 256 samples (5.333 ms at 48 kHz); dry is immediate. The Fractal-inspired Pitch Arpeggiator now supports ±24 scale degrees and remains monophonic; ordinary Diatonic Harmonizer limits remain unchanged.",
-    "verification": {
-      "native_ctest": "make test passed 103/103 CTest cases and 11 audio-fixture safety checks, including Chromatic Pitch Delay and Arpeggiator ±24 bounds.",
-      "picker_rows": 100,
-      "browser_native_comparison": "73 active stages passed at 48 kHz stereo; maximum absolute error 0.00000668335 and RMS error 0.00000121755.",
-      "chromatic_pitch_delay_playback": "Local prerecorded Guitar-TECHS DI Play at Pitch index 99, +12 semitones, 120 BPM/eighth, Feedback 20%, Mix 100%; output peak 0.5477338, 72,142 active samples, difference RMS 0.0974454.",
-      "wasm_memory": "Fixed 96 MiB heap; browser-reported processor state 80,246,224 B plus 10,364 B tuner state.",
-      "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks. Chromatic Pitch Delay p50/p95/p99/p99.9/max 10.4013/14.0888/16.7569/22.0945/26.3696%; Arpeggiator 15.8172/25.3743/26.5185/38.7033/63.0741%; state 1,262,216 B and 1,024,888 B respectively.",
-      "windows": "make windows-cross-build passed for the native core and offline renderer.",
-      "notes": "Automated project implementation verified; controls/DSP are project-authored and do not claim manufacturer parity. Human listening, actual guitar tracking feel, tablet performance, and live device checks remain open."
-    }
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Rotary Speaker Hi Depth / Rotor Length behavior",
     "status": "verified",
     "picker_index": 33,
@@ -125,16 +126,58 @@
     },
     "notes": "Project-authored behavior only. No Fractal DSP/settings parity, hardware test, or human listening result. Manual listening and device comparison remain open."
   },
+  "current_checkpoint": {
+    "name": "XRecer XR1 Cabinet IR Loader single-mono path",
+    "status": "verified",
+    "picker_index": 100,
+    "category": "IR Loader",
+    "official_source": {
+      "title": "XRecer XR1 FAQ",
+      "revision": "Checked 2026-11-23; the linked exact-model manual portal remained unreadable on 2026-11-24; installed device firmware is unknown.",
+      "url": "https://www.xrecer.com/pages/faq",
+      "qualification": "FAQ specifies 24-bit/48 kHz WAV with exactly 2,048 samples and single/dual Cabinet and Reverb IR-loader entries, but does not define file channel count, dual semantics, per-loader controls, latency, or DSP."
+    },
+    "documented_controls": "No numeric IR-loader controls/ranges/defaults are published. The FAQ describes single/dual variants and IR file requirements only.",
+    "project_controls": "Project-authored Cabinet IR loader accepts one mono integer PCM WAV IR at 24-bit/48 kHz and exactly 2,048 frames. It applies that kernel independently to mono/stereo host channels; mono-only import is a project limit pending documented channel semantics. The IR is resampled off the callback to host rate. 64-frame uniform FFT partition; 1.333 ms fixed latency at 48 kHz; 54,248 B measured stereo state; no process-time allocation. No XR1 DSP/settings parity.",
+    "verification": {
+      "native_ctest": "make test passed 104/104 CTest tests and 11/11 audio-fixture safety checks, including Cabinet IR format/load/convolution/stereo/reset/bypass/no-allocation coverage.",
+      "browser": "make web-test passed; categorized 101-entry picker, browser/WASM local-file validation and playback using local prerecorded Guitar-TECHS DI; invalid format/encoding/channel/rate/bit-depth/frame-count cases are covered.",
+      "windows": "make windows-cross-build passed for the native core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 1.1652/1.4802/2.2793/3.1640/4.4071% of a 2.667 ms callback; owned stereo state 54,248 B; fixed algorithmic latency 64 frames / 1.333 ms at 48 kHz; no per-block allocation. Processor-call estimate, not live-device performance.",
+      "notes": "Project implementation and file contract validation only. XR1 channel count, dual-loader semantics, DSP and latency remain unknown; no device test or human listening result."
+    }
+  },
   "next_research": [
     {
-      "device": "XRecer XR1",
-      "feature": "Cabinet IR Loader single-IR path integration",
-      "source": "Official XR1 FAQ checked 2026-11-23; exact-model manual portal remains unreadable in current web reader",
+      "device": "Fractal FM9 Mark II Turbo",
+      "feature": "Pitch / Octave Divider",
+      "source": "Fractal Audio Systems Blocks Guide, June 2023 cover date, printed p. 73; FM9 downloads checked 2026-11-24",
       "source_urls": [
-        "https://www.xrecer.com/pages/faq",
-        "https://www.xrecer.com/products/xr1"
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/"
       ],
-      "status": "A project-authored mono CabinetIr draft validates one 24-bit/48 kHz/2,048-frame IR and uses zero-fixed-latency direct FIR with no callback allocation. Integration remains: safe WAV metadata handling, categorized Cabinet/IR picker, browser/WASM load path, focused tests, CPU/memory measurement, offline regression, and Windows build. XR1 does not document dual-loader channel semantics; implement only one mono IR and do not claim XRecer DSP parity."
+      "status": "The guide documents fixed −1 and −2 octave divided voices with independent Pan and Level. It recommends single notes and usually placing the effect before distortion. Exact algorithm behavior, numeric bounds/defaults, and firmware applicability to Mark II Turbo remain qualified."
+    },
+    {
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Modulation / Double Take",
+      "source": "Stadium live effect manual/model list and Line 6-hosted designer discussion checked 2026-11-23",
+      "source_urls": [
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://line6.com/helix-stadium-models/",
+        "https://line6.com/support/topic/34949-helix-models-%E2%80%9Cbased-on%E2%80%9D-full-listing-pdf-as-of-fw-260/"
+      ],
+      "status": "Documented roles include Doubles 1–4, Slop, Sensitivity, dry/wet level, and stereo Source choice. Exact DSP, latency, CPU use, numeric ranges/defaults, and installed firmware remain unknown."
+    },
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Equalizer / EQ5 Graphic",
+      "source": "Tone Master Pro Model Guide v1.1.100 / Rev A, printed pp. 60–61",
+      "source_urls": [
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+      ],
+      "status": "The guide documents fixed bands at 80/240/750/2,200/6,600 Hz plus overall Gain; numeric ranges/defaults and DSP are not published. Check for a distinct categorized row; existing parametric or differently centered graphic EQ is not control parity."
     },
     {
       "device": "Line 6 Helix Stadium XL",

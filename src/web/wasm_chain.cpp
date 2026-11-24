@@ -13,6 +13,7 @@
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/shimmer_reverb.hpp"
 #include "tabletfx/effects/convolution_reverb.hpp"
+#include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -105,7 +106,9 @@ public:
           output_gain_(0.0F, static_cast<float>(sample_rate), 10.0F),
           output_limiter_(static_cast<float>(sample_rate), -1.0F, 80.0F),
           signal_controls_(static_cast<float>(sample_rate)),
-          tuner_(static_cast<float>(sample_rate)) {
+          tuner_(static_cast<float>(sample_rate)),
+          cabinet_ir_(static_cast<float>(sample_rate),
+                      static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -396,7 +399,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 6; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 7; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -431,6 +434,11 @@ public:
         if (index == 99U) {
             chromatic_pitch_delay_enabled_ = enabled;
             if (!enabled) chromatic_pitch_delay_->reset();
+            return true;
+        }
+        if (index == 100U) {
+            cabinet_ir_enabled_ = enabled;
+            if (!enabled) cabinet_ir_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -553,6 +561,15 @@ public:
             }
             return;
         }
+        if (index == 100U) {
+            const auto output = std::span<float>(output_.data(), samples);
+            if (cabinet_ir_enabled_) {
+                cabinet_ir_.process(output, channels_);
+            } else {
+                cabinet_ir_.process_bypassed(output, channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -621,6 +638,7 @@ public:
         step_tremolo_->reset();
         deluxe_looper_->reset();
         chromatic_pitch_delay_->reset();
+        cabinet_ir_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2324,6 +2342,26 @@ public:
                 static_cast<std::uint16_t>(ir_channels), ir_sample_rate);
     }
 
+    [[nodiscard]] bool load_cabinet_ir(
+        const float* samples, std::uint32_t frames,
+        std::uint32_t ir_channels, std::uint32_t ir_sample_rate,
+        std::uint32_t bits_per_sample) noexcept {
+        if (samples == nullptr || frames != tabletfx::CabinetIr::kRequiredIrFrames ||
+            ir_channels != 1U ||
+            ir_sample_rate != tabletfx::CabinetIr::kRequiredIrSampleRate ||
+            bits_per_sample != tabletfx::CabinetIr::kRequiredIrBitsPerSample) {
+            return false;
+        }
+        return cabinet_ir_.load_impulse_response(
+            std::span<const float>(samples, frames),
+            static_cast<std::uint16_t>(ir_channels), ir_sample_rate,
+            static_cast<std::uint16_t>(bits_per_sample));
+    }
+
+    [[nodiscard]] static constexpr std::uint32_t cabinet_ir_latency_frames() noexcept {
+        return static_cast<std::uint32_t>(tabletfx::CabinetIr::kLatencyFrames);
+    }
+
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
                            float feedback, std::uint32_t feedback_polarity,
                            float mix) noexcept {
@@ -2863,6 +2901,7 @@ public:
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
         bytes += chromatic_pitch_delay_->memory_bytes();
+        bytes += cabinet_ir_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2902,6 +2941,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 100U) {
+            const std::size_t bytes = cabinet_ir_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -2931,12 +2976,14 @@ private:
     tabletfx::ChromaticTuner tuner_;
     tabletfx::LevelMeter input_meter_;
     tabletfx::LevelMeter output_meter_;
+    tabletfx::CabinetIr cabinet_ir_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
     bool step_tremolo_enabled_ = false;
     bool deluxe_looper_enabled_ = false;
     bool chromatic_pitch_delay_enabled_ = false;
+    bool cabinet_ir_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -3880,6 +3927,21 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_load_convolution_reverb_ir(
                samples, frames, ir_channels, ir_sample_rate)
         ? 1U
         : 0U;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_load_cabinet_ir(
+    void* opaque, const float* samples, std::uint32_t frames,
+    std::uint32_t ir_channels, std::uint32_t ir_sample_rate,
+    std::uint32_t bits_per_sample) noexcept {
+    if (opaque == nullptr) return 0;
+    return as_chain(opaque)->load_cabinet_ir(
+               samples, frames, ir_channels, ir_sample_rate, bits_per_sample)
+        ? 1U
+        : 0U;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_cabinet_ir_latency_frames() noexcept {
+    return WasmChain::cabinet_ir_latency_frames();
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_flanger(

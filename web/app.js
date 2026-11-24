@@ -1,4 +1,4 @@
-import { decodePcmWave } from "./wav_decoder.js";
+import { decodePcmWave, decodeCabinetIrWave } from "./wav_decoder.js";
 
 const EFFECT_NAMES = [
   "Input trim",
@@ -101,6 +101,7 @@ const EFFECT_NAMES = [
   "Step Tremolo · project-authored controls",
   "Deluxe Looper · project-authored",
   "Chromatic Pitch Delay · project-authored Fender-inspired control roles",
+  "Cabinet IR · project-authored mono impulse response",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -317,6 +318,8 @@ const MAX_CONVOLUTION_IR_FRAMES = 480000;
 const fileInput = document.querySelector("#audio-file");
 const convolutionIrFileInput = document.querySelector("#convolution-ir-file");
 const convolutionIrStatus = document.querySelector("#convolution-ir-status");
+const cabinetIrFileInput = document.querySelector("#cabinet-ir-file");
+const cabinetIrStatus = document.querySelector("#cabinet-ir-status");
 const effectCategoryFilter = document.querySelector("#effect-category-filter");
 const effectSearch = document.querySelector("#effect-search");
 const effectsList = document.querySelector("#effects-list");
@@ -1839,8 +1842,14 @@ let decodedConvolutionIR = null;
 let convolutionIRVersion = 0;
 let convolutionIRUploadedVersion = -1;
 let convolutionIRRequestId = 0;
+let decodedCabinetIR = null;
+let cabinetIRVersion = 0;
+let cabinetIRUploadedVersion = -1;
+let cabinetIRRequestId = 0;
+let cabinetIRLatencyFrames = 0;
 let shufflingLooperStatusTimeout = 0;
 const pendingConvolutionIRLoads = new Map();
+const pendingCabinetIRLoads = new Map();
 
 function setAudioStatus(text, state = "") {
   audioStatus.textContent = text;
@@ -3157,6 +3166,60 @@ async function ensureConvolutionIRLoaded() {
   await result;
 }
 
+function settleCabinetIRLoad(message) {
+  const requestId = Number(message.requestId);
+  const request = pendingCabinetIRLoads.get(requestId);
+  if (!request) return;
+  pendingCabinetIRLoads.delete(requestId);
+  clearTimeout(request.timeout);
+  if (message.type === "cabinet-ir-loaded") {
+    if (request.version === cabinetIRVersion) {
+      cabinetIRUploadedVersion = request.version;
+      cabinetIRLatencyFrames = Number(message.latencyFrames) || 0;
+      chainMemoryBytes = Number(message.memoryBytes) || chainMemoryBytes;
+      wasmMemoryBytes = Number(message.wasmMemoryBytes) || wasmMemoryBytes;
+      if (Array.isArray(effectMemory) && effectMemory.length > 100) {
+        effectMemory[100] = Number(message.effectMemoryBytes) || 0;
+      }
+      document.querySelector("#wasm-memory-use").textContent = bytesLabel(wasmMemoryBytes);
+      document.querySelector("#memory-use").textContent = bytesLabel(chainMemoryBytes);
+      renderLoadRows(null);
+      cabinetIrStatus.textContent =
+        `${decodedCabinetIR.fileName} · mono PCM24 · 48 kHz · 2,048 samples · ${cabinetIRLatencyFrames}-frame project latency · local only`;
+    }
+    request.resolve(message);
+  } else {
+    request.reject(new Error(message.message || "The browser processor rejected the Cabinet IR."));
+  }
+}
+
+async function ensureCabinetIRLoaded() {
+  if (!decodedCabinetIR || !workletNode) return;
+  if (cabinetIRUploadedVersion === cabinetIRVersion) return;
+
+  const version = cabinetIRVersion;
+  const samples = new Float32Array(decodedCabinetIR.samples);
+  const requestId = ++cabinetIRRequestId;
+  const result = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingCabinetIRLoads.delete(requestId);
+      reject(new Error("Timed out loading the local Cabinet IR into the browser processor."));
+    }, 10000);
+    pendingCabinetIRLoads.set(requestId, { resolve, reject, timeout, version });
+  });
+  workletNode.port.postMessage({
+    type: "cabinet-ir",
+    requestId,
+    version,
+    frames: decodedCabinetIR.frames,
+    channels: decodedCabinetIR.channels,
+    sampleRate: decodedCabinetIR.sampleRate,
+    bitsPerSample: decodedCabinetIR.bitsPerSample,
+    samples: samples.buffer,
+  }, [samples.buffer]);
+  await result;
+}
+
 async function disposeProcessorNode(node) {
   if (!node) return;
   await new Promise((resolve) => {
@@ -3194,6 +3257,12 @@ async function setupProcessor(testOptions = null) {
     }
     pendingConvolutionIRLoads.clear();
     convolutionIRUploadedVersion = -1;
+    for (const request of pendingCabinetIRLoads.values()) {
+      clearTimeout(request.timeout);
+      request.reject(new Error("The audio processor was rebuilt while loading the Cabinet IR."));
+    }
+    pendingCabinetIRLoads.clear();
+    cabinetIRUploadedVersion = -1;
     await disposeProcessorNode(workletNode);
     workletNode = null;
   }
@@ -3275,6 +3344,9 @@ async function setupProcessor(testOptions = null) {
     } else if (message?.type === "convolution-ir-loaded" ||
                message?.type === "convolution-ir-error") {
       settleConvolutionIRLoad(message);
+     } else if (message?.type === "cabinet-ir-loaded" ||
+                message?.type === "cabinet-ir-error") {
+       settleCabinetIRLoad(message);
     } else if (message?.type === "error") {
       setAudioStatus(message.message || "Audio processor failed", "error");
       rejectReady(new Error(message.message || "Audio processor failed"));
@@ -3368,6 +3440,32 @@ async function loadConvolutionIRFile(file) {
   }
 }
 
+async function loadCabinetIRFile(file) {
+  if (!file) return;
+  stopSource(true);
+  try {
+    const bytes = await file.arrayBuffer();
+    const ir = decodeCabinetIrWave(bytes);
+    decodedCabinetIR = { ...ir, fileName: file.name };
+    cabinetIRVersion += 1;
+    cabinetIRUploadedVersion = -1;
+    cabinetIrStatus.textContent =
+      `${file.name} · mono PCM24 · 48 kHz · 2,048 samples · 64-frame project latency · local only`;
+    if (workletNode) {
+      await processorReady;
+      await ensureCabinetIRLoaded();
+      setAudioStatus("Cabinet IR loaded locally", "ready");
+    } else {
+      setAudioStatus("Cabinet IR ready; it will load before playback", "ready");
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    cabinetIrStatus.textContent = message;
+    setAudioStatus(message, "error");
+    throw error;
+  }
+}
+
 function updateProgress() {
   if (!audioContext || !decodedAudio || !activeSource) return;
   const seconds = playbackOffset + audioContext.currentTime - playbackStartedAt;
@@ -3390,6 +3488,7 @@ async function startPlayback() {
   pendingProcessorOptions = null;
   await processorReady;
   await ensureConvolutionIRLoaded();
+  await ensureCabinetIRLoaded();
   stopSource(false);
   if (playbackOffset >= decodedAudio.duration) playbackOffset = 0;
   workletNode.port.postMessage({ type: "reset" });
@@ -3593,6 +3692,12 @@ fileInput.addEventListener("change", () => {
 convolutionIrFileInput.addEventListener("change", () => {
   const file = convolutionIrFileInput.files?.[0] || null;
   const task = loadConvolutionIRFile(file);
+  task.catch(() => {});
+});
+
+cabinetIrFileInput.addEventListener("change", () => {
+  const file = cabinetIrFileInput.files?.[0] || null;
+  const task = loadCabinetIRFile(file);
   task.catch(() => {});
 });
 
@@ -8953,6 +9058,185 @@ async function runChromaticPitchDelayBrowserSmokeTest(reference, captureView, ca
   }
 }
 
+async function runCabinetIrBrowserSmokeTest(
+  reference, captureView, captureBuffer, cabinetIRBytes,
+) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const makeCopy = () => cabinetIRBytes.slice(0);
+  const expectFormatError = (name, bytes, messagePart) => {
+    try {
+      decodeCabinetIrWave(bytes);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes(messagePart)) return error.message;
+      throw new Error(`${name} failed with an unexpected format message: ${String(error)}`);
+    }
+    throw new Error(`${name} Cabinet IR format was incorrectly accepted.`);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Cabinet IR smoke requires the local prerecorded guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(true);
+
+    const decodedIR = decodeCabinetIrWave(cabinetIRBytes);
+    if (decodedIR.frames !== 2048 || decodedIR.channels !== 1 ||
+        decodedIR.sampleRate !== 48000 || decodedIR.bitsPerSample !== 24 ||
+        Math.abs(decodedIR.samples[0] - 0.5) > 1e-6 ||
+        Math.abs(decodedIR.samples[1] + 0.125) > 1e-6) {
+      throw new Error("Synthetic Cabinet IR did not decode as signed mono PCM24 samples.");
+    }
+
+    const malformed = makeCopy();
+    new DataView(malformed).setUint32(0, 0x42414421, false);
+    const wrongEncoding = makeCopy();
+    new DataView(wrongEncoding).setUint16(20, 3, true);
+    const wrongChannels = makeCopy();
+    new DataView(wrongChannels).setUint16(22, 2, true);
+    const wrongRate = makeCopy();
+    new DataView(wrongRate).setUint32(24, 44100, true);
+    const wrongDepth = makeCopy();
+    new DataView(wrongDepth).setUint16(34, 16, true);
+    // RIFF chunks with an odd payload size include one zero padding byte. Keep
+    // that byte in the 2,047-frame case so the test reaches frame validation.
+    const cabinetIRView = new Uint8Array(cabinetIRBytes);
+    const short = new ArrayBuffer(cabinetIRView.byteLength - 2);
+    new Uint8Array(short).set(
+      cabinetIRView.subarray(0, cabinetIRView.byteLength - 3),
+    );
+    const shortView = new DataView(short);
+    shortView.setUint32(4, short.byteLength - 8, true);
+    shortView.setUint32(40, 2047 * 3, true);
+    const rejectedFormats = [
+      expectFormatError("bad RIFF signature", malformed, "RIFF/WAVE"),
+      expectFormatError("non-PCM encoding", wrongEncoding, "integer PCM"),
+      expectFormatError("stereo input", wrongChannels, "mono"),
+      expectFormatError("44.1 kHz input", wrongRate, "48 kHz"),
+      expectFormatError("16-bit input", wrongDepth, "24-bit PCM"),
+      expectFormatError("2,047-frame input", short, "exactly 2,048 samples"),
+    ];
+
+    const previousChainMemory = chainMemoryBytes;
+    const invalidFile = new File([wrongDepth], "invalid-cabinet-ir.wav", {
+      type: "audio/wav",
+    });
+    try {
+      await loadCabinetIRFile(invalidFile);
+      throw new Error("Cabinet IR file picker accepted a 16-bit WAV.");
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("24-bit PCM")) throw error;
+    }
+    if (!cabinetIrStatus.textContent.includes("24-bit PCM")) {
+      throw new Error("Cabinet IR UI did not report the rejected PCM bit depth.");
+    }
+
+    const file = new File([cabinetIRBytes], "browser-cabinet-ir-pcm24.wav", {
+      type: "audio/wav",
+    });
+    await loadCabinetIRFile(file);
+    if (cabinetIRUploadedVersion !== cabinetIRVersion ||
+        effectMemory.length <= 100 || effectMemory[100] <= 0 ||
+        chainMemoryBytes <= previousChainMemory || cabinetIRLatencyFrames !== 64) {
+      throw new Error("Cabinet IR load did not update processor memory totals or report the fixed 64-frame latency.");
+    }
+
+    effectCategoryFilter.value = "ir-loader";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="100"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "ir-loader" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "IR Loader" ||
+        row.hidden || !checkbox) {
+      throw new Error("Cabinet IR is missing from the IR Loader picker category.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 100;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) throw new Error("Cabinet IR picker row did not enable its processor.");
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Cabinet IR guitar playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let differenceSquares = 0;
+    let changedSamples = 0;
+    for (let frame = 0; frame < decodedAudio.length; frame += 1) {
+      for (let channel = 0; channel < reference.channels; channel += 1) {
+        const sampleIndex = frame * reference.channels + channel;
+        const value = actual[sampleIndex];
+        const dry = decodedAudio.getChannelData(
+          Math.min(channel, decodedAudio.numberOfChannels - 1),
+        )[frame];
+        if (!Number.isFinite(value)) {
+          throw new Error("Cabinet IR produced a non-finite sample from prerecorded guitar audio.");
+        }
+        peak = Math.max(peak, Math.abs(value));
+        const difference = value - dry;
+        differenceSquares += difference * difference;
+        if (Math.abs(difference) > 1e-6) changedSamples += 1;
+      }
+    }
+    const differenceRms = Math.sqrt(
+      differenceSquares / Math.max(1, decodedAudio.length * reference.channels),
+    );
+    if (peak < 1e-5 || differenceRms < 1e-5 || changedSamples < 32) {
+      throw new Error("Cabinet IR did not produce changed local guitar playback: " +
+        JSON.stringify({ peak, differenceRms, changedSamples }));
+    }
+    return {
+      category: "IR Loader",
+      enabledEffectIndex: 100,
+      format: "mono PCM24 · 48 kHz · 2,048 samples",
+      latencyFrames: cabinetIRLatencyFrames,
+      latencyMsAt48000Hz: cabinetIRLatencyFrames * 1000 / 48000,
+      rejectedFormats,
+      playOutputCaptured: true,
+      peak,
+      differenceRms,
+      changedSamples,
+      effectMemoryBytes: effectMemory[100],
+      processorMemoryBytes: chainMemoryBytes,
+      wasmLinearMemoryBytes: wasmMemoryBytes,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStepTremoloBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = stepTremoloControls.map((control) => control.value);
@@ -9911,8 +10195,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 100 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 100 || effectRows.length !== 100 ||
+        const expectedEffectIds = Array.from({ length: 101 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 101 || effectRows.length !== 101 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -9971,6 +10255,9 @@ async function runBrowserSelfTest() {
                 !EFFECT_NAMES[98]?.startsWith("Deluxe Looper") ||
                 effectRows[98]?.dataset.category !== "loop" ||
                 effectRows[98]?.querySelector(".effect-category-tag")?.textContent !== "Loop & performance" ||
+              !EFFECT_NAMES[100]?.startsWith("Cabinet IR") ||
+              effectRows[100]?.dataset.category !== "ir-loader" ||
+              effectRows[100]?.querySelector(".effect-category-tag")?.textContent !== "IR Loader" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -9985,8 +10272,9 @@ async function runBrowserSelfTest() {
                    initialEffectState[88] || initialEffectState[89] ||
                    initialEffectState[90] || initialEffectState[91] ||
                     initialEffectState[92] || initialEffectState[93] ||
-                     !initialEffectState[94] || !initialEffectState[95] ||
-                       initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
+                      !initialEffectState[94] || !initialEffectState[95] ||
+                        initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
+                        initialEffectState[100] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -10003,7 +10291,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-             throw new Error("The effect picker must list 99 ordered, categorized effects (IDs 0–98), with Asheville Pattrn in Filters & wah, both Rock Box processors in Drive & fuzz, Stereo Panner and Step Tremolo in Modulation, Poly Sustain and Step Filter Delay in Delay, Volume/Pan in Utility, and Deluxe Looper in Loop & performance; optional effects must be disabled by default.");
+              throw new Error("The effect picker must list 101 ordered, categorized effects (IDs 0–100), including Cabinet IR in IR Loader; existing effect IDs and optional-disabled defaults must stay stable.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -11534,7 +11822,7 @@ async function runBrowserSelfTest() {
     ]);
     testResult.textContent = "Reading local guitar fixture and native reference…";
     if (!inputResponse.ok || !referenceResponse.ok) throw new Error("Browser test fixtures were not served.");
-     const [inputBytes, referenceBytes, tunerBytes, convolutionIRBytes] = await Promise.all([
+    const [inputBytes, referenceBytes, tunerBytes, convolutionIRBytes, cabinetIRBytes] = await Promise.all([
       inputResponse.arrayBuffer(),
       referenceResponse.arrayBuffer(),
       fetch("/__test_tuner.wav").then((response) => {
@@ -11543,6 +11831,10 @@ async function runBrowserSelfTest() {
       }),
       fetch("/__test_convolution_ir.wav").then((response) => {
         if (!response.ok) throw new Error("Browser convolution IR fixture was not served.");
+        return response.arrayBuffer();
+      }),
+      fetch("/__test_cabinet_ir.wav").then((response) => {
+        if (!response.ok) throw new Error("Browser Cabinet IR fixture was not served.");
         return response.arrayBuffer();
       }),
     ]);
@@ -11591,11 +11883,13 @@ async function runBrowserSelfTest() {
     // Chromatic Pitch Delay has its dedicated local guitar Play smoke; it is
     // not part of the offline CLI reference chain.
     parityEnabled[99] = false;
+    // Cabinet IR has a focused browser/WASM Play smoke and no shared offline CLI stage.
+    parityEnabled[100] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-        if (parityEnabled.length !== 100 || activeProcessorIndices.length !== 73 ||
+        if (parityEnabled.length !== 101 || activeProcessorIndices.length !== 73 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 98) {
              throw new Error("The all-effect chain must contain 73 optional processors between input trim and output utilities.");
     }
@@ -12219,6 +12513,10 @@ async function runBrowserSelfTest() {
         Math.abs(meters.output.rms - measuredOutputRms) > 1e-6) {
       throw new Error("Output meter does not match the final processed audio block.");
     }
+    testResult.textContent = "Checking Cabinet IR format, loading, memory, and playback on local guitar audio…";
+    const cabinetIRSmoke = await runCabinetIrBrowserSmokeTest(
+      reference, captureView, captureBuffer, cabinetIRBytes,
+    );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -12465,6 +12763,7 @@ async function runBrowserSelfTest() {
       levelMeters: { capturedBlock: meters, latestBlock: readLatestMeters() },
       localFileDecode: localFileDecoded,
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
+      cabinetIR: cabinetIRSmoke,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

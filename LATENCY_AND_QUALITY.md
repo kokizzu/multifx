@@ -6,6 +6,12 @@ The June 2023 FM9-family Blocks Guide (printed p. 87) says setting Hi Depth to z
 
 `make bench` on an AMD Ryzen 9 5950X, Release build, 48 kHz stereo, 128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks reports p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of the callback deadline. Owned state is 1,208 B; there is no fixed algorithmic latency, and `process()` does not allocate. This is a desktop processor-call estimate. FM9-family v12.0 download listings name FM9 Original and Turbo but not Mark II Turbo; installed firmware and device performance are unknown. [Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) · [FM9 downloads](https://www.fractalaudio.com/fm9-downloads/)
 
+## XRecer Cabinet IR loader (2026-11-24)
+
+The project-authored IR Loader at picker ID 100 uses a user-supplied mono 24-bit/48 kHz PCM WAV with exactly 2,048 frames, matching the file shape stated in the XR1 FAQ. The FAQ does not state channel count or explain its “dual” variant; the project accepts one mono IR and applies it separately to mono/stereo host channels. A 64-frame uniform FFT partition adds 1.333 ms at 48 kHz, with no allocation in process(); measured owned stereo state is 54,248 B. Import, validation, resampling, and kernel setup occur off the audio callback.
+
+make bench on an AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks reports p50/p95/p99/p99.9/max 1.1652/1.4802/2.2793/3.1640/4.4071% of the deadline. This desktop processor-call estimate is not a live-device guarantee or a measurement of XR1 DSP. The project path passes native tests, browser/WASM local guitar-DI loading/playback checks, and a Windows MinGW core cross-build. Manual listening and hardware checks remain open. [XR1 FAQ](https://www.xrecer.com/pages/faq)
+
 ## Chromatic Pitch Delay and extended Arpeggiator range (2026-11-24)
 
 The project-authored Chromatic Pitch Delay was measured in a Release build on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks). Its processor-call p50/p95/p99/p99.9/max was 10.4013/14.0888/16.7569/22.0945/26.3696% of one callback, with 1,262,216 B directly owned state. A wet pitch repeat has 256 samples (5.333 ms) of pitch-engine latency; dry remains immediate. `process()` allocates no memory. These are one desktop benchmark run and do not predict Android tablet load or end-to-end route latency.

@@ -215,6 +215,8 @@ def build_web() -> None:
         "_tf_chain_set_stereo_crossover",
         "_tf_chain_set_convolution_reverb",
         "_tf_chain_load_convolution_reverb_ir",
+        "_tf_chain_load_cabinet_ir",
+        "_tf_chain_cabinet_ir_latency_frames",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -294,6 +296,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
         str(ROOT / "src" / "effects" / "shimmer_reverb.cpp"),
         str(ROOT / "src" / "effects" / "convolution_reverb.cpp"),
+        str(ROOT / "src" / "effects" / "cabinet_ir.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -503,6 +506,23 @@ def make_convolution_test_ir(destination: Path, sample_rate: int = 48000) -> Non
         output.writeframes(struct.pack("<4h", *samples))
 
 
+def make_cabinet_ir_test_wav(destination: Path) -> None:
+    """Write the exact mono PCM24/48 kHz/2,048-frame Cabinet IR test shape."""
+    frames = 2048
+    samples = [0] * frames
+    samples[0] = 4_194_304
+    samples[1] = -1_048_576
+    samples[3] = 524_288
+    pcm = b"".join(value.to_bytes(3, "little", signed=True) for value in samples)
+    fmt = struct.pack("<HHIIHH", 1, 1, 48_000, 144_000, 3, 24)
+    chunks = (
+        b"fmt " + struct.pack("<I", len(fmt)) + fmt
+        + b"data" + struct.pack("<I", len(pcm)) + pcm
+    )
+    body = b"WAVE" + chunks
+    destination.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+
+
 def make_long_convolution_test_ir(destination: Path, sample_rate: int = 48000) -> int:
     frames = 10 * sample_rate
     samples = bytearray(frames * 4)
@@ -710,6 +730,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         plex_delay_input_select_reference_path = temp_dir / "plex-delay-input-select-reference.wav"
         tuner_path = temp_dir / "tuner-a4.wav"
         convolution_ir_path = temp_dir / "convolution-ir.wav"
+        cabinet_ir_path = temp_dir / "cabinet-ir-pcm24.wav"
         long_convolution_ir_path = temp_dir / "convolution-ir-10s.wav"
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
@@ -719,6 +740,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(f"Browser guitar input: local prerecorded DI {prerecorded_guitar_source}")
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
+        make_cabinet_ir_test_wav(cabinet_ir_path)
         make_long_convolution_test_ir(long_convolution_ir_path)
         make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)
         make_stereo_plex_delay_impulse(plex_delay_input_select_input_path)
@@ -1121,6 +1143,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "/__test_plex_delay_input_select_expected.wav": plex_delay_input_select_reference_path,
             "/__test_tuner.wav": tuner_path,
             "/__test_convolution_ir.wav": convolution_ir_path,
+            "/__test_cabinet_ir.wav": cabinet_ir_path,
             "/__test_convolution_ir_10s.wav": long_convolution_ir_path,
         }
         server = ThreadingHTTPServer(("127.0.0.1", 0), LocalWebHandler)

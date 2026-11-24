@@ -64,3 +64,100 @@ export function decodePcmWave(audioContext, bytes) {
   }
   return audio;
 }
+
+export function decodeCabinetIrWave(bytes) {
+  const view = new DataView(bytes);
+  if (view.byteLength < 12 || view.getUint32(0, false) !== 0x52494646 ||
+      view.getUint32(8, false) !== 0x57415645) {
+    throw new Error("Cabinet IR must be a RIFF/WAVE PCM file.");
+  }
+
+  const riffEnd = view.getUint32(4, true) + 8;
+  if (riffEnd < 12 || riffEnd > view.byteLength) {
+    throw new Error("Cabinet IR WAV has a truncated or invalid RIFF length.");
+  }
+
+  let format = null;
+  let dataOffset = -1;
+  let dataLength = 0;
+  for (let offset = 12; offset < riffEnd;) {
+    if (offset + 8 > riffEnd) {
+      throw new Error("Cabinet IR WAV contains a truncated RIFF chunk header.");
+    }
+    const id = view.getUint32(offset, false);
+    const length = view.getUint32(offset + 4, true);
+    const body = offset + 8;
+    const end = body + length;
+    if (end > riffEnd) {
+      throw new Error("Cabinet IR WAV contains a truncated RIFF chunk.");
+    }
+    if (id === 0x666d7420) {
+      if (format || length < 16) {
+        throw new Error("Cabinet IR WAV must contain one valid PCM format chunk.");
+      }
+      format = {
+        encoding: view.getUint16(body, true),
+        channels: view.getUint16(body + 2, true),
+        sampleRate: view.getUint32(body + 4, true),
+        byteRate: view.getUint32(body + 8, true),
+        blockAlign: view.getUint16(body + 12, true),
+        bitsPerSample: view.getUint16(body + 14, true),
+      };
+    } else if (id === 0x64617461) {
+      if (dataOffset >= 0) {
+        throw new Error("Cabinet IR WAV must contain one audio data chunk.");
+      }
+      dataOffset = body;
+      dataLength = length;
+    }
+    offset = end + (length & 1);
+    if (offset > riffEnd) {
+      throw new Error("Cabinet IR WAV has an invalid RIFF chunk padding byte.");
+    }
+  }
+
+  if (!format || dataOffset < 0) {
+    throw new Error("Cabinet IR WAV must contain PCM format and audio data chunks.");
+  }
+  if (format.encoding !== 1) {
+    throw new Error("Cabinet IR WAV must use integer PCM encoding.");
+  }
+  if (format.channels !== 1) {
+    throw new Error(`Cabinet IR must be mono; this file has ${format.channels} channels.`);
+  }
+  if (format.bitsPerSample !== 24) {
+    throw new Error(`Cabinet IR must be 24-bit PCM; this file is ${format.bitsPerSample}-bit.`);
+  }
+  if (format.sampleRate !== 48000) {
+    throw new Error(`Cabinet IR must be 48 kHz; this file is ${format.sampleRate} Hz.`);
+  }
+  if (format.blockAlign !== 3 || format.byteRate !== 144000) {
+    throw new Error("Cabinet IR WAV has inconsistent 24-bit mono PCM alignment.");
+  }
+  if (dataLength % format.blockAlign !== 0) {
+    throw new Error("Cabinet IR WAV data is not aligned to complete PCM frames.");
+  }
+
+  const frames = dataLength / format.blockAlign;
+  if (frames !== 2048) {
+    throw new Error(`Cabinet IR must contain exactly 2,048 samples; this file has ${frames}.`);
+  }
+
+  const samples = new Float32Array(frames);
+  for (let frame = 0; frame < frames; frame += 1) {
+    const sampleOffset = dataOffset + frame * 3;
+    let value = view.getUint8(sampleOffset) +
+      view.getUint8(sampleOffset + 1) * 256 +
+      view.getUint8(sampleOffset + 2) * 65536;
+    if (value >= 0x800000) value -= 0x1000000;
+    samples[frame] = value / 8388608;
+  }
+
+  return {
+    samples,
+    frames,
+    channels: format.channels,
+    sampleRate: format.sampleRate,
+    bitsPerSample: format.bitsPerSample,
+  };
+}

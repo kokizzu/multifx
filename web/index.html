@@ -80,12 +80,13 @@
             <option value="loop">Loop &amp; performance</option>
             <option value="resonator">Resonator</option>
             <option value="reverb">Reverb</option>
+            <option value="ir-loader">IR Loader</option>
           </select>
         </label>
         <label for="effect-search">Search processors
           <input id="effect-search" type="search" placeholder="e.g. chorus, compressor" autocomplete="off" aria-controls="effects-list">
         </label>
-          <output id="effect-count" class="effect-count" aria-live="polite">100 of 100</output>
+          <output id="effect-count" class="effect-count" aria-live="polite">101 of 101</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
       <div id="effects-list" class="effects-list">
@@ -189,6 +190,7 @@
                 <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="97"><span class="effect-number">98</span><span class="effect-name">Step Tremolo · project-authored controls</span><span class="effect-default">1–16 steps · rate · depth · smoothing</span><span class="effect-category-tag">Modulation</span></label>
                 <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="98"><span class="effect-number">99</span><span class="effect-name">Deluxe Looper · project-authored</span><span class="effect-default">120 s mono / 60 s stereo at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="99"><span class="effect-number">100</span><span class="effect-name">Chromatic Pitch Delay · project-authored</span><span class="effect-default">±24 semitones · tempo sync · 10–2,000 ms</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="ir-loader"><input type="checkbox" data-effect="100"><span class="effect-number">101</span><span class="effect-name">Cabinet IR · project-authored mono FIR</span><span class="effect-default">24-bit PCM · 48 kHz · 2,048 samples</span><span class="effect-category-tag">IR Loader</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -708,6 +710,16 @@
           <label class="mix-control" for="convolution-reverb-low-pass"><span>Wet low-pass</span><output id="convolution-reverb-low-pass-value" for="convolution-reverb-low-pass">Off</output><input id="convolution-reverb-low-pass" type="range" min="0" max="20000" step="10" value="0"></label>
           <label class="mix-control" for="convolution-reverb-tails"><span>Keep tail when bypassed</span><output for="convolution-reverb-tails">Off</output><input id="convolution-reverb-tails" type="checkbox"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Cabinet IR controls">
+        <h3>Cabinet IR · project-authored mono FIR</h3>
+        <p class="hint">Loads a local mono 24-bit integer PCM WAV at 48 kHz with exactly 2,048 samples. This project applies the mono impulse independently to each active channel and adds 64 frames of fixed project latency (1.33 ms at 48 kHz); it does not implement an unspecified dual or stereo loader.</p>
+        <label class="file-picker" for="cabinet-ir-file">
+          <span class="file-icon" aria-hidden="true">IR</span>
+          <span><strong>Open a Cabinet IR WAV</strong><small>Mono · PCM24 · 48 kHz · 2,048 samples · local only</small></span>
+          <input id="cabinet-ir-file" type="file" accept=".wav,audio/wav">
+        </label>
+        <p id="cabinet-ir-status" class="hint" role="status">No Cabinet IR loaded; the enabled block passes audio through.</p>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">

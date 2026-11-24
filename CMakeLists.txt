@@ -23,6 +23,7 @@ add_library(tabletfx_core
     src/effects/feedback_generator.cpp
     src/effects/shimmer_reverb.cpp
     src/effects/convolution_reverb.cpp
+    src/effects/cabinet_ir.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
@@ -233,6 +234,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_convolution_reverb_tests tests/test_convolution_reverb.cpp)
     target_link_libraries(tabletfx_convolution_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_convolution_reverb_tests COMMAND tabletfx_convolution_reverb_tests)
+
+    add_executable(tabletfx_cabinet_ir_tests tests/test_cabinet_ir.cpp)
+    target_link_libraries(tabletfx_cabinet_ir_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_cabinet_ir_tests COMMAND tabletfx_cabinet_ir_tests)
 
     add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
     target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)
