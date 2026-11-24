@@ -124,7 +124,10 @@ public:
               static_cast<float>(sample_rate))),
           fractal_bias_trem_(static_cast<float>(sample_rate)),
           vibratone_(static_cast<float>(sample_rate),
-                     static_cast<std::uint16_t>(channels)) {
+                     static_cast<std::uint16_t>(channels)),
+          uni_verse_vibe_(static_cast<float>(sample_rate),
+                          static_cast<std::uint16_t>(channels), {},
+                          tabletfx::VibeModel::UniVerse) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -487,6 +490,11 @@ public:
             if (!enabled) vibratone_.reset();
             return true;
         }
+        if (index == 107U) {
+            uni_verse_vibe_enabled_ = enabled;
+            if (!enabled) uni_verse_vibe_.reset();
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -660,6 +668,13 @@ public:
             }
             return;
         }
+        if (index == 107U) {
+            if (uni_verse_vibe_enabled_) {
+                uni_verse_vibe_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -734,6 +749,7 @@ public:
         optical_tremolo_->reset();
         fractal_bias_trem_.reset();
         vibratone_.reset();
+        uni_verse_vibe_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -1334,6 +1350,36 @@ public:
             : tabletfx::VibeNoteDivision::Quarter;
         parameters.tempo_bpm = tempo_bpm;
         vibe->set_parameters(parameters);
+    }
+
+    void configure_uni_verse_vibe(float speed_hz, float intensity,
+                                  float volume, std::uint32_t rate_mode,
+                                  std::uint32_t note_division,
+                                  float tempo_bpm,
+                                  std::uint32_t tone_mode,
+                                  std::uint32_t modulation_mode) noexcept {
+        tabletfx::VibeParameters parameters;
+        parameters.rate_hz = speed_hz;
+        parameters.depth = intensity;
+        parameters.trem = 0.0F;
+        parameters.stages = 2;
+        parameters.spread = 0.0F;
+        parameters.level = volume;
+        parameters.rate_mode = rate_mode == 1U
+            ? tabletfx::VibeRateMode::TempoNote
+            : tabletfx::VibeRateMode::Free;
+        parameters.note_division = note_division <= static_cast<std::uint32_t>(
+                tabletfx::VibeNoteDivision::SixteenthTriplet)
+            ? static_cast<tabletfx::VibeNoteDivision>(note_division)
+            : tabletfx::VibeNoteDivision::Quarter;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.tone_mode = tone_mode == 1U
+            ? tabletfx::VibeToneMode::Vintage
+            : tabletfx::VibeToneMode::Modern;
+        parameters.modulation_mode = modulation_mode == 1U
+            ? tabletfx::VibeModulationMode::Vibrato
+            : tabletfx::VibeModulationMode::Chorus;
+        uni_verse_vibe_.set_parameters(parameters);
     }
 
     void configure_multi_delay_line(
@@ -3120,6 +3166,7 @@ public:
         bytes += optical_tremolo_->memory_bytes();
         bytes += fractal_bias_trem_.memory_bytes();
         bytes += vibratone_.memory_bytes();
+        bytes += uni_verse_vibe_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3189,6 +3236,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 107U) {
+            const std::size_t bytes = uni_verse_vibe_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3225,6 +3278,7 @@ private:
     std::unique_ptr<tabletfx::OpticalTremolo> optical_tremolo_;
     tabletfx::BiasTrem fractal_bias_trem_;
     tabletfx::Vibratone vibratone_;
+    tabletfx::Vibe uni_verse_vibe_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3239,6 +3293,7 @@ private:
     bool optical_tremolo_mute_bypass_ = false;
     bool fractal_bias_trem_enabled_ = false;
     bool vibratone_enabled_ = false;
+    bool uni_verse_vibe_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4599,6 +4654,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_vibe(
         as_chain(opaque)->configure_vibe(rate_hz, depth, trem,
                                          stages, spread, level,
                                          rate_mode, note_division, tempo_bpm);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_uni_verse_vibe(
+    void* opaque, float speed_hz, float intensity, float volume,
+    std::uint32_t rate_mode, std::uint32_t note_division,
+    float tempo_bpm, std::uint32_t tone_mode,
+    std::uint32_t modulation_mode) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_uni_verse_vibe(
+            speed_hz, intensity, volume, rate_mode, note_division,
+            tempo_bpm, tone_mode, modulation_mode);
     }
 }
 

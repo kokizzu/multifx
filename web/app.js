@@ -108,6 +108,7 @@ const EFFECT_NAMES = [
   "Optical Tremolo · project-authored Fractal FM9-family controls",
   "Bias Trem · project-authored Fractal Blocks Guide-inspired controls",
   "Vibratone · project-authored rotating-baffle effect",
+  "Uni-Verse Vibe · project-authored",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -180,6 +181,7 @@ const DEFAULT_PARAMETERS = {
   deEsser: [6500, 1.5, -30, 12, 2, 80],
   dualEngineDistortion: [0.25, 0.7, 0.6, 0.5, 0.5, 0, 0, 0],
   vibe: [1.5, 0.7, 0.2, 2, 0.5, 1, 0, 4, 120],
+  uniVerseVibe: [1.5, 0.65, 1, 0, 4, 120, 0, 0],
   multiDelay: {
     topology: 0,
     lines: [
@@ -1127,6 +1129,19 @@ const vibeTempoBpm = document.querySelector("#vibe-tempo-bpm");
 const vibeControls = [
   vibeRate, vibeDepth, vibeTrem, vibeStages, vibeSpread, vibeLevel,
   vibeRateMode, vibeRateDivision, vibeTempoBpm,
+];
+const uniVerseVibeSpeed = document.querySelector("#uni-verse-vibe-speed-hz");
+const uniVerseVibeIntensity = document.querySelector("#uni-verse-vibe-intensity");
+const uniVerseVibeVolume = document.querySelector("#uni-verse-vibe-volume");
+const uniVerseVibeRateMode = document.querySelector("#uni-verse-vibe-rate-mode");
+const uniVerseVibeRateDivision = document.querySelector("#uni-verse-vibe-rate-division");
+const uniVerseVibeTempoBpm = document.querySelector("#uni-verse-vibe-tempo-bpm");
+const uniVerseVibeToneMode = document.querySelector("#uni-verse-vibe-tone-mode");
+const uniVerseVibeModulationMode = document.querySelector("#uni-verse-vibe-modulation-mode");
+const uniVerseVibeControls = [
+  uniVerseVibeSpeed, uniVerseVibeIntensity, uniVerseVibeVolume,
+  uniVerseVibeRateMode, uniVerseVibeRateDivision, uniVerseVibeTempoBpm,
+  uniVerseVibeToneMode, uniVerseVibeModulationMode,
 ];
 const portaPreampGain1 = document.querySelector("#porta-preamp-gain1-db");
 const portaPreampGain2 = document.querySelector("#porta-preamp-gain2-db");
@@ -2588,6 +2603,47 @@ function updateVibeOptions() {
   vibeRateDivision.disabled = rateMode !== 1;
   vibeTempoBpm.disabled = rateMode !== 1;
   if (workletNode) workletNode.port.postMessage({ type: "vibe", value: values });
+}
+
+function updateUniVerseVibeOptions() {
+  const rateMode = Number(uniVerseVibeRateMode.value);
+  const noteDivision = Number(uniVerseVibeRateDivision.value);
+  const tempoBpm = Number(uniVerseVibeTempoBpm.value);
+  const cycleBeats = [4, 3, 2, 1.5, 1, 2 / 3, 0.75, 0.5, 1 / 3,
+    0.375, 0.25, 1 / 6][noteDivision] ?? 1;
+  const effectiveRateHz = rateMode === 1
+    ? Math.min(30, Math.max(0.05, tempoBpm / (60 * cycleBeats)))
+    : Number(uniVerseVibeSpeed.value);
+  const values = [
+    Number(uniVerseVibeSpeed.value),
+    Number(uniVerseVibeIntensity.value) / 100,
+    Number(uniVerseVibeVolume.value),
+    rateMode, noteDivision, tempoBpm,
+    Number(uniVerseVibeToneMode.value),
+    Number(uniVerseVibeModulationMode.value),
+  ];
+  DEFAULT_PARAMETERS.uniVerseVibe = values;
+  const show = (control, text) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = text;
+  };
+  show(uniVerseVibeSpeed, rateMode === 1
+    ? `${uniVerseVibeRateDivision.selectedOptions[0].text} · ${tempoBpm} BPM · ${effectiveRateHz.toFixed(2)} Hz`
+    : `${values[0].toFixed(1)} Hz`);
+  show(uniVerseVibeIntensity, `${Math.round(values[1] * 100)}%`);
+  show(uniVerseVibeVolume, values[2].toFixed(2));
+  show(uniVerseVibeRateMode, rateMode === 1 ? "Tempo note" : "Free Hz");
+  show(uniVerseVibeRateDivision, uniVerseVibeRateDivision.selectedOptions[0].text);
+  show(uniVerseVibeTempoBpm, `${tempoBpm} BPM`);
+  show(uniVerseVibeToneMode, uniVerseVibeToneMode.selectedOptions[0].text);
+  show(uniVerseVibeModulationMode,
+    uniVerseVibeModulationMode.selectedOptions[0].text);
+  uniVerseVibeSpeed.disabled = rateMode === 1;
+  uniVerseVibeRateDivision.disabled = rateMode !== 1;
+  uniVerseVibeTempoBpm.disabled = rateMode !== 1;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "uni-verse-vibe", value: values });
+  }
 }
 
 function updatePortaPreampOptions() {
@@ -4058,6 +4114,14 @@ for (const control of vibeControls) {
   }
 }
 updateVibeOptions();
+for (const control of uniVerseVibeControls) {
+  control.addEventListener(control.type === "range" ? "input" : "change",
+    updateUniVerseVibeOptions);
+  if (control.type === "range") {
+    control.addEventListener("change", updateUniVerseVibeOptions);
+  }
+}
+updateUniVerseVibeOptions();
 for (const control of portaPreampControls) {
   control.addEventListener("input", updatePortaPreampOptions);
   control.addEventListener("change", updatePortaPreampOptions);
@@ -9755,7 +9819,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 107 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 108 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9857,7 +9921,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 107 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 108 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -9964,7 +10028,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 107 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 108 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10077,7 +10141,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 107 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 108 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10189,7 +10253,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 107 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== 108 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -10256,6 +10320,109 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
         }
       });
       updateVibratoneOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = uniVerseVibeControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Uni-Verse Vibe browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const smokeValues = [4.2, 82, 1.1, 0, 4, 120, 1, 1];
+    uniVerseVibeControls.forEach((control, index) => {
+      control.value = String(smokeValues[index]);
+    });
+    updateUniVerseVibeOptions();
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="107"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
+        !checkbox || uniVerseVibeControls.length !== 8 ||
+        effectMemory.length !== 108 || !(effectMemory[107] > 0) ||
+        DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
+      throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 107;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Uni-Verse Vibe picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Uni-Verse Vibe playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      peak = Math.max(peak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Uni-Verse Vibe produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 107,
+      speedHz: 4.2, intensity: 0.82, volume: 1.1,
+      toneMode: "Vintage", modulationMode: "Vibrato",
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[107],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      uniVerseVibeControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateUniVerseVibeOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -11122,8 +11289,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 107 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 107 || effectRows.length !== 107 ||
+        const expectedEffectIds = Array.from({ length: 108 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 108 || effectRows.length !== 108 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -11197,6 +11364,9 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[104]?.startsWith("Optical Tremolo") ||
               effectRows[104]?.dataset.category !== "modulation" ||
               effectRows[104]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+              !EFFECT_NAMES[107]?.startsWith("Uni-Verse Vibe") ||
+              effectRows[107]?.dataset.category !== "modulation" ||
+              effectRows[107]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -11215,6 +11385,7 @@ async function runBrowserSelfTest() {
                         initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
         initialEffectState[103] || initialEffectState[104] ||
+        initialEffectState[105] || initialEffectState[106] || initialEffectState[107] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -11231,7 +11402,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-              throw new Error("The effect picker must list 101 ordered, categorized effects (IDs 0–100), including Cabinet IR in IR Loader; existing effect IDs and optional-disabled defaults must stay stable.");
+              throw new Error("The effect picker must list 108 ordered, categorized effects (IDs 0–107), including Uni-Verse Vibe in Modulation; existing effect IDs and optional-disabled defaults must stay stable.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -11920,6 +12091,40 @@ async function runBrowserSelfTest() {
     }
     if (DEFAULT_PARAMETERS.vibe.join(",") !== vibeDefaults.join(",")) {
       throw new Error("Vibe self-test must restore project-authored defaults.");
+    }
+    const uniVerseVibeDefaults = [...DEFAULT_PARAMETERS.uniVerseVibe];
+    const uniVerseVibeControlSnapshot = uniVerseVibeControls.map((control) => control.value);
+    const previousUniVerseVibeWorklet = workletNode;
+    const uniVerseVibeMessages = [];
+    try {
+      workletNode = { port: { postMessage: (message) => uniVerseVibeMessages.push(message) } };
+      [uniVerseVibeSpeed.value, uniVerseVibeIntensity.value,
+        uniVerseVibeVolume.value, uniVerseVibeRateMode.value,
+        uniVerseVibeRateDivision.value, uniVerseVibeTempoBpm.value,
+        uniVerseVibeToneMode.value, uniVerseVibeModulationMode.value] =
+        ["2.3", "82", "1.1", "1", "7", "90", "1", "1"];
+      uniVerseVibeIntensity.dispatchEvent(new Event("input", { bubbles: true }));
+      const message = uniVerseVibeMessages.at(-1);
+      if (message?.type !== "uni-verse-vibe" ||
+          message.value.join(",") !== "2.3,0.82,1.1,1,7,90,1,1" ||
+          uniVerseVibeSpeed.parentElement.querySelector("output").value !== "Eighth · 90 BPM · 3.00 Hz" ||
+          uniVerseVibeIntensity.parentElement.querySelector("output").value !== "82%" ||
+          uniVerseVibeVolume.parentElement.querySelector("output").value !== "1.10" ||
+          uniVerseVibeToneMode.parentElement.querySelector("output").value !== "Vintage" ||
+          uniVerseVibeModulationMode.parentElement.querySelector("output").value !== "Vibrato" ||
+          !uniVerseVibeSpeed.disabled || uniVerseVibeRateDivision.disabled ||
+          uniVerseVibeTempoBpm.disabled) {
+        throw new Error("Uni-Verse Vibe controls must send project settings in WASM parameter order and display their values.");
+      }
+    } finally {
+      workletNode = previousUniVerseVibeWorklet;
+      uniVerseVibeControls.forEach((control, index) => {
+        control.value = uniVerseVibeControlSnapshot[index];
+      });
+      updateUniVerseVibeOptions();
+    }
+    if (DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== uniVerseVibeDefaults.join(",")) {
+      throw new Error("Uni-Verse Vibe self-test must restore project-authored defaults.");
     }
     const multiDelayDefaults = JSON.stringify(DEFAULT_PARAMETERS.multiDelay);
     const multiDelayControlSnapshot = multiDelayControls.map((control) => control.value);
@@ -12832,11 +13037,13 @@ async function runBrowserSelfTest() {
     parityEnabled[105] = true;
     // Vibratone has a native CLI reference stage as well.
     parityEnabled[106] = true;
+    // Uni-Verse Vibe has a focused browser Play test, but no offline CLI stage.
+    parityEnabled[107] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 107 || activeProcessorIndices.length !== 78 ||
+    if (parityEnabled.length !== 108 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -13281,6 +13488,23 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "uni-verse-vibe") {
+          testResult.textContent = "Checking Uni-Verse Vibe browser Play with the local guitar fixture…";
+          const uniVerseVibeSmoke = await runUniVerseVibeBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            fixtureFrames: reference.frames,
+            ...uniVerseVibeSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Uni-Verse Vibe browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {
           testResult.textContent = "Checking Bias Trem browser Play with the local guitar fixture…";
           const fractalBiasTremSmoke = await runFractalBiasTremBrowserSmokeTest(

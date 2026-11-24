@@ -28,12 +28,23 @@ float beats_per_vibe_cycle(VibeNoteDivision division) noexcept {
 } // namespace
 
 Vibe::Vibe(float sample_rate, std::uint16_t channels,
-           VibeParameters parameters)
-    : sample_rate_(sample_rate), channels_(channels) {
+           VibeParameters parameters, VibeModel model)
+    : sample_rate_(sample_rate), channels_(channels), model_(model) {
     if (!std::isfinite(sample_rate_) || sample_rate_ < kMinimumSampleRate ||
         sample_rate_ > kMaximumSampleRate || channels_ == 0 || channels_ > 2) {
         throw std::invalid_argument(
             "Vibe requires 8–384 kHz and mono or stereo channels");
+    }
+    if (static_cast<std::uint8_t>(model_) >
+        static_cast<std::uint8_t>(VibeModel::UniVerse)) {
+        model_ = VibeModel::Essex;
+    }
+    const float tone_cutoff = std::min(6000.0F, sample_rate_ * 0.45F);
+    vintage_filter_coefficient_ =
+        1.0F - std::exp(-kTwoPi * tone_cutoff / sample_rate_);
+    if (model_ == VibeModel::UniVerse) {
+        parameters.trem = 0.0F;
+        parameters.spread = 0.0F;
     }
     set_parameters(parameters);
     retarget(true);
@@ -59,6 +70,20 @@ void Vibe::set_parameters(VibeParameters parameters) noexcept {
         parameters.note_division = VibeNoteDivision::Quarter;
     }
     parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F, 20.0F, 300.0F);
+    if (static_cast<std::uint8_t>(parameters.tone_mode) >
+        static_cast<std::uint8_t>(VibeToneMode::Vintage)) {
+        parameters.tone_mode = VibeToneMode::Modern;
+    }
+    if (static_cast<std::uint8_t>(parameters.modulation_mode) >
+        static_cast<std::uint8_t>(VibeModulationMode::Vibrato)) {
+        parameters.modulation_mode = VibeModulationMode::Chorus;
+    }
+    if (model_ == VibeModel::UniVerse) {
+        // Tremolo, stereo spread, and stage count are not Uni-Verse Vibe controls.
+        parameters.trem = 0.0F;
+        parameters.spread = 0.0F;
+        parameters.stages = 2;
+    }
     if (parameters.stages != previous_stages) {
         stages_ = {};
     }
@@ -73,6 +98,10 @@ void Vibe::set_parameters(VibeParameters parameters) noexcept {
                                      kMaximumTempoRateHz);
     }
     target_depth_ = parameters_.depth;
+    target_vintage_mix_ = parameters_.tone_mode == VibeToneMode::Vintage
+        ? 1.0F : 0.0F;
+    target_vibrato_mix_ = parameters_.modulation_mode == VibeModulationMode::Vibrato
+        ? 1.0F : 0.0F;
     target_trem_ = parameters_.trem;
     target_level_ = parameters_.level;
 
@@ -94,6 +123,8 @@ void Vibe::process(std::span<float> interleaved,
     for (std::size_t frame = 0; frame < frames; ++frame) {
         if (ramp_remaining_ > 0) {
             current_depth_ += depth_step_;
+            current_vintage_mix_ += vintage_mix_step_;
+            current_vibrato_mix_ += vibrato_mix_step_;
             current_trem_ += trem_step_;
             current_spread_cosine_ += spread_cosine_step_;
             current_spread_sine_ += spread_sine_step_;
@@ -103,6 +134,8 @@ void Vibe::process(std::span<float> interleaved,
             --ramp_remaining_;
             if (ramp_remaining_ == 0) {
                 current_depth_ = target_depth_;
+                current_vintage_mix_ = target_vintage_mix_;
+                current_vibrato_mix_ = target_vibrato_mix_;
                 current_trem_ = target_trem_;
                 current_spread_cosine_ = target_spread_cosine_;
                 current_spread_sine_ = target_spread_sine_;
@@ -110,6 +143,8 @@ void Vibe::process(std::span<float> interleaved,
                 current_sine_increment_ = target_sine_increment_;
                 current_cosine_increment_ = target_cosine_increment_;
                 depth_step_ = 0.0F;
+                vintage_mix_step_ = 0.0F;
+                vibrato_mix_step_ = 0.0F;
                 trem_step_ = 0.0F;
                 spread_cosine_step_ = 0.0F;
                 spread_sine_step_ = 0.0F;
@@ -144,8 +179,19 @@ void Vibe::process(std::span<float> interleaved,
                 phase_shifted = state.previous_output;
             }
 
-            const float phase_mix = (1.0F - current_depth_) * sample +
-                                    current_depth_ * phase_shifted;
+            const float wet_mix = current_depth_ + current_vibrato_mix_ *
+                (1.0F - current_depth_);
+            const float phase_mix = (1.0F - wet_mix) * sample +
+                                    wet_mix * phase_shifted;
+            float& vintage_state = vintage_filter_state_[channel];
+            const float filtered = vintage_state + vintage_filter_coefficient_ *
+                (phase_mix - vintage_state);
+            vintage_state = std::isfinite(filtered)
+                ? std::clamp(filtered, -kMaximumInternalSample,
+                             kMaximumInternalSample)
+                : 0.0F;
+            const float tone_mix = phase_mix * (1.0F - current_vintage_mix_) +
+                                   vintage_state * current_vintage_mix_;
             float trem_lfo = sine_phase_;
             if (channels_ == 2 && channel == 1) {
                 trem_lfo = sine_phase_ * current_spread_cosine_ +
@@ -153,7 +199,7 @@ void Vibe::process(std::span<float> interleaved,
             }
             const float trem_gain =
                 1.0F - 0.5F * current_trem_ * (1.0F - trem_lfo);
-            const float output = phase_mix * trem_gain * current_level_;
+            const float output = tone_mix * trem_gain * current_level_;
             interleaved[index] = std::isfinite(output)
                                      ? std::clamp(output,
                                                   -kMaximumInternalSample,
@@ -166,6 +212,7 @@ void Vibe::process(std::span<float> interleaved,
 
 void Vibe::reset() noexcept {
     stages_ = {};
+    vintage_filter_state_ = {};
     sine_phase_ = 0.0F;
     cosine_phase_ = 1.0F;
     normalization_counter_ = 0;
@@ -181,6 +228,8 @@ float Vibe::bounded(float value, float fallback,
 void Vibe::retarget(bool immediate) noexcept {
     if (immediate) {
         current_depth_ = target_depth_;
+        current_vintage_mix_ = target_vintage_mix_;
+        current_vibrato_mix_ = target_vibrato_mix_;
         current_trem_ = target_trem_;
         current_spread_cosine_ = target_spread_cosine_;
         current_spread_sine_ = target_spread_sine_;
@@ -188,6 +237,8 @@ void Vibe::retarget(bool immediate) noexcept {
         current_sine_increment_ = target_sine_increment_;
         current_cosine_increment_ = target_cosine_increment_;
         depth_step_ = 0.0F;
+        vintage_mix_step_ = 0.0F;
+        vibrato_mix_step_ = 0.0F;
         trem_step_ = 0.0F;
         spread_cosine_step_ = 0.0F;
         spread_sine_step_ = 0.0F;
@@ -208,6 +259,8 @@ void Vibe::retarget(bool immediate) noexcept {
 
     const float denominator = static_cast<float>(ramp_remaining_);
     depth_step_ = (target_depth_ - current_depth_) / denominator;
+    vintage_mix_step_ = (target_vintage_mix_ - current_vintage_mix_) / denominator;
+    vibrato_mix_step_ = (target_vibrato_mix_ - current_vibrato_mix_) / denominator;
     trem_step_ = (target_trem_ - current_trem_) / denominator;
     spread_cosine_step_ =
         (target_spread_cosine_ - current_spread_cosine_) / denominator;

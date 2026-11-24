@@ -185,6 +185,7 @@ def build_web() -> None:
         "_tf_chain_set_de_esser",
         "_tf_chain_set_dual_engine_distortion",
         "_tf_chain_set_vibe",
+        "_tf_chain_set_uni_verse_vibe",
         "_tf_chain_set_multi_delay_line",
         "_tf_chain_set_multi_delay_global",
         "_tf_chain_set_multi_delay_topology",
@@ -722,7 +723,8 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
                  step_tremolo_only: bool = False,
                  fractal_bias_trem_only: bool = False,
-                 vibratone_only: bool = False) -> None:
+                 vibratone_only: bool = False,
+                 uni_verse_vibe_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1220,6 +1222,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-bias-trem"
         elif vibratone_only:
             url = base_url + "/web/index.html?selftest=fender-vibratone"
+        elif uni_verse_vibe_only:
+            url = base_url + "/web/index.html?selftest=uni-verse-vibe"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1417,7 +1421,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
                 None if volume_pan_only or stereo_filter_only or step_tremolo_only or
-                fractal_bias_trem_only or vibratone_only
+                fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1449,6 +1453,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif vibratone_only:
             print("Focused Vibratone browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif uni_verse_vibe_only:
+            print("Focused Uni-Verse Vibe browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1505,6 +1512,7 @@ def main() -> None:
         "test-volume-pan", "test-stereo-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
+        "test-fender-universe-vibe",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1526,6 +1534,8 @@ def main() -> None:
         browser_test(fractal_bias_trem_only=True)
     elif action == "test-fender-vibratone":
         browser_test(vibratone_only=True)
+    elif action == "test-fender-universe-vibe":
+        browser_test(uni_verse_vibe_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

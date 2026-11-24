@@ -453,6 +453,13 @@ Latest integrated verification (2026-11-22) covers the 67-entry categorized brow
 
 Total source requirements: 327; approved additions: 12.
 
+## Fender Uni-Verse Vibe implementation checkpoint (2026-11-24)
+
+- [x] Verify the exact Tone Master Pro Model Guide v1.1.100 / Rev. A controls: Speed, Intensity, Volume, Tap Division, Vintage/Modern tone, and Chorus/Vibrato mode. The guide gives no numeric bounds/defaults, division list, DSP, latency, or block limit; firmware history is checked through v1.8.85 (2026-11-18), while installed firmware remains unknown.
+- [x] Add a separate project-authored Modulation row at picker index 107. Defaults are 1.5 Hz, 65% intensity, unity volume, Free Hz, quarter note at 120 BPM, Modern, and Chorus. Keep project ranges, 12 tempo-note divisions, 6 kHz Vintage filter, wet-only Vibrato path, and 10 ms control ramp distinct from Fender behavior.
+- [x] Native tests, focused local Guitar-TECHS DI browser/WASM Play, full `make web-test`, and the Windows MinGW core/offline-renderer cross-build pass. The full browser comparison covers 108 picker rows and 78 optional processor stages (max error 3.401e−6; RMS error 5.880e−7). `make bench` measures 0.0964/0.1032/0.1418/1.0774/2.8602% callback load at p50/p95/p99/p99.9/max on a Ryzen 9 5950X, with 240 B native state and 224 B WASM effect memory.
+- [ ] Human listen to Modern/Vintage × Chorus/Vibrato from guitar input, then verify latency/load on target hardware. Desktop benchmark results do not establish device performance.
+
 ## Fender Vibratone implementation checkpoint (2026-11-24)
 
 - [x] Exact-model guide and current checked firmware notes reviewed; missing vendor ranges, rotor details, DSP/latency, and installed firmware recorded as unknown.

@@ -54,7 +54,10 @@ void test_defaults_bounds_and_memory() {
                 defaults.spread == 0.5F && defaults.level == 1.0F &&
                 defaults.rate_mode == tabletfx::VibeRateMode::Free &&
                 defaults.note_division == tabletfx::VibeNoteDivision::Quarter &&
-                defaults.tempo_bpm == 120.0F,
+                defaults.tempo_bpm == 120.0F &&
+                defaults.tone_mode == tabletfx::VibeToneMode::Modern &&
+                defaults.modulation_mode ==
+                    tabletfx::VibeModulationMode::Chorus,
             "project Vibe defaults changed");
     require(vibe.effective_rate_hz() == defaults.rate_hz,
             "free-rate mode changed the selected Vibe rate");
@@ -92,8 +95,95 @@ void test_defaults_bounds_and_memory() {
                 finite.spread == 0.5F && finite.level == 1.0F &&
                 finite.rate_mode == tabletfx::VibeRateMode::Free &&
                 finite.note_division == tabletfx::VibeNoteDivision::Quarter &&
-                finite.tempo_bpm == 120.0F,
+                finite.tempo_bpm == 120.0F &&
+                finite.tone_mode == tabletfx::VibeToneMode::Modern &&
+                finite.modulation_mode ==
+                    tabletfx::VibeModulationMode::Chorus,
             "non-finite Vibe controls did not use safe project defaults");
+}
+
+void test_universe_modes_and_project_defaults() {
+    tabletfx::VibeParameters parameters;
+    parameters.depth = 0.0F;
+    parameters.trem = 1.0F;
+    parameters.spread = 1.0F;
+    tabletfx::Vibe universe(48000.0F, 1, parameters,
+                            tabletfx::VibeModel::UniVerse);
+    require(universe.id() == "uni-verse-vibe",
+            "Uni-Verse Vibe stable ID changed");
+    require(universe.parameters().trem == 0.0F &&
+                universe.parameters().spread == 0.0F &&
+                universe.parameters().stages == 2 &&
+                universe.memory_bytes() == sizeof(universe),
+            "Uni-Verse Vibe exposed unrelated controls or misreported state");
+
+    auto high_tone = make_tone(8000.0F, 48000);
+    auto modern_output = high_tone;
+    auto vintage_output = high_tone;
+    tabletfx::VibeParameters modern;
+    modern.depth = 0.0F;
+    modern.trem = 0.0F;
+    modern.modulation_mode = tabletfx::VibeModulationMode::Chorus;
+    tabletfx::Vibe modern_vibe(48000.0F, 1, modern,
+                               tabletfx::VibeModel::UniVerse);
+    modern_vibe.process(modern_output, 1);
+    auto vintage = modern;
+    vintage.tone_mode = tabletfx::VibeToneMode::Vintage;
+    tabletfx::Vibe vintage_vibe(48000.0F, 1, vintage,
+                                tabletfx::VibeModel::UniVerse);
+    vintage_vibe.process(vintage_output, 1);
+    require(rms(vintage_output) < rms(modern_output) * 0.82F,
+            "project Vintage tone did not attenuate high frequencies");
+
+    auto note = make_tone(440.0F, 48000);
+    auto chorus_output = note;
+    auto vibrato_output = note;
+    tabletfx::VibeParameters chorus;
+    chorus.rate_hz = 4.0F;
+    chorus.depth = 0.8F;
+    chorus.trem = 0.0F;
+    chorus.spread = 0.0F;
+    tabletfx::Vibe chorus_vibe(48000.0F, 1, chorus,
+                               tabletfx::VibeModel::UniVerse);
+    chorus_vibe.process(chorus_output, 1);
+    auto vibrato = chorus;
+    vibrato.modulation_mode = tabletfx::VibeModulationMode::Vibrato;
+    tabletfx::Vibe vibrato_vibe(48000.0F, 1, vibrato,
+                                tabletfx::VibeModel::UniVerse);
+    vibrato_vibe.process(vibrato_output, 1);
+    double mode_difference = 0.0;
+    for (std::size_t index = 0; index < note.size(); ++index) {
+        const double delta = static_cast<double>(chorus_output[index]) -
+                             static_cast<double>(vibrato_output[index]);
+        mode_difference += delta * delta;
+    }
+    const double mode_difference_rms =
+        std::sqrt(mode_difference / static_cast<double>(note.size()));
+    require(mode_difference_rms > 1.0e-5,
+            "project Chorus/Vibrato switch did not change the wet/dry path; RMS=" +
+                std::to_string(mode_difference_rms));
+
+    vibrato.tone_mode = static_cast<tabletfx::VibeToneMode>(255U);
+    vibrato.modulation_mode =
+        static_cast<tabletfx::VibeModulationMode>(255U);
+    vibrato_vibe.set_parameters(vibrato);
+    require(vibrato_vibe.parameters().tone_mode ==
+                tabletfx::VibeToneMode::Modern &&
+                vibrato_vibe.parameters().modulation_mode ==
+                    tabletfx::VibeModulationMode::Chorus,
+            "invalid Uni-Verse mode controls did not select safe defaults");
+
+    std::array<float, 512> block{};
+    block.fill(0.2F);
+    const std::size_t allocations_before =
+        allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        universe.process(block, 1);
+    }
+    const std::size_t allocations_after =
+        allocation_count.load(std::memory_order_relaxed);
+    require(allocations_before == allocations_after,
+            "Uni-Verse Vibe allocated during process()");
 }
 
 void test_tempo_note_rate_and_bounds() {
@@ -350,6 +440,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_universe_modes_and_project_defaults();
         test_tempo_note_rate_and_bounds();
         test_depth_and_selectable_stages();
         test_trem_spread_and_mono_behavior();

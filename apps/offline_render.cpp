@@ -5035,6 +5035,17 @@ void run_bench() {
         return std::make_unique<tabletfx::Vibratone>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("uni-verse-vibe-project-authored", [=] {
+        tabletfx::VibeParameters parameters;
+        parameters.rate_hz = 1.5F;
+        parameters.depth = 0.65F;
+        parameters.level = 1.0F;
+        parameters.tone_mode = tabletfx::VibeToneMode::Modern;
+        parameters.modulation_mode = tabletfx::VibeModulationMode::Chorus;
+        return std::make_unique<tabletfx::Vibe>(
+            static_cast<float>(sample_rate), channels, parameters,
+            tabletfx::VibeModel::UniVerse);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("ring-modulator", [=] {
         tabletfx::RingModulatorParameters parameters;
         parameters.frequency_hz = 713.0F;

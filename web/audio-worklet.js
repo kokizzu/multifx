@@ -28,6 +28,7 @@ EFFECTS.push("eq5-graphic");
 EFFECTS.push("optical-tremolo");
 EFFECTS.push("fractal-bias-trem");
 EFFECTS.push("vibratone");
+EFFECTS.push("uni-verse-vibe");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -419,6 +420,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [4.5, 0.35, 0, 0, 120, 1, 0, -36, 0, 0.18, 1, 0, 0, 0]);
       this.configureVibratone(parameters.vibratone ||
         [0, 0.8, 0, 6.5, 0.85, 0, 650, 0.5, 0]);
+      this.configureUniVerseVibe(parameters.uniVerseVibe ||
+        [1.5, 0.65, 1, 0, 4, 120, 0, 0]);
       this.configureStereoCrossover(parameters.stereoCrossover || {
         frequencyHz: 500, frequencyMultiplier: "x1",
         lowLevelLeftDb: 0, lowLevelRightDb: 0,
@@ -702,6 +705,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     this.module._tf_chain_set_vibratone(this.chain, ...values);
+  }
+
+  configureUniVerseVibe(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 8) {
+      return;
+    }
+    this.module._tf_chain_set_uni_verse_vibe(this.chain, ...values);
   }
 
   configureRockBoxDist(values) {
@@ -1143,6 +1153,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_dual_engine_distortion(this.chain, ...message.value);
     } else if (message.type === "vibe" && this.ready) {
       this.module._tf_chain_set_vibe(this.chain, ...message.value);
+    } else if (message.type === "uni-verse-vibe" && this.ready) {
+      this.configureUniVerseVibe(message.value);
     } else if (message.type === "multi-delay" && this.ready) {
       configureMultiDelay(this.module, this.chain, message.value);
     } else if (message.type === "porta-preamp" && this.ready) {

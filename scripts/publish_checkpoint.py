@@ -2079,6 +2079,26 @@ FENDER_VIBRATONE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_UNIVERSE_VIBE_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects/vibe.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/vibe.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_vibe.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2436,6 +2456,10 @@ CHECKPOINTS = {
     "fender-vibratone": (
         FENDER_VIBRATONE_CHECKPOINT_PATHS,
         "feat: add categorized Fender Vibratone-inspired effect",
+    ),
+    "fender-universe-vibe": (
+        FENDER_UNIVERSE_VIBE_CHECKPOINT_PATHS,
+        "feat: add categorized Uni-Verse Vibe controls",
     ),
 }
 

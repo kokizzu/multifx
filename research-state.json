@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "598456d5917c4c90f5e33198ba26352ac997fdc3",
+  "previous_checkpoint_commit": "ffb6d157f95159c2edbe63053c7e842e5ae688ab",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -193,31 +193,33 @@
         "notes": "Automated implementation verification only. No human listening, target-device test, or Fender DSP/settings/sound parity."
       },
       "picker_rows": 107
+    },
+    {
+      "name": "Fender Tone Master Pro Uni-Verse Vibe project-authored Modulation implementation",
+      "status": "verified",
+      "picker_index": 107,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and Fender firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide documents control roles and qualitative Vintage/Modern and Chorus/Vibrato distinctions but no numeric ranges/defaults, division list, algorithmic delay, DSP cost, or block limit. v1.8.85 release notes do not mention a Uni-Verse Vibe change. Installed firmware is unknown."
+      },
+      "documented_controls": "Speed (overall speed), Intensity (effect depth), Volume (output loudness), Tap Division (subdivision of current tempo), Vintage/Modern (darker/brighter), Chorus/Vibrato (lush Chorus/pitch-modulated Vibrato). No numeric ranges/defaults or available division list are published in the checked guide.",
+      "project_controls": "Separate project-authored Modulation row at picker index 107. Defaults: 1.5 Hz, 65% intensity, unity linear Volume, Free Hz, quarter note at 120 BPM, Modern, Chorus. Project ranges: 0.1–10 Hz, intensity 0–100%, linear Volume 0–2, tempo 20–300 BPM, 12 project note divisions. Tempo is local, not device tap/MIDI clock. Two first-order all-pass stages with a 10 ms control ramp; Vintage adds a project-selected 6 kHz one-pole low-pass; Vibrato selects the wet-only phase path. No fixed algorithmic delay, process-time allocation, Fender DSP/settings/sound parity, or device-performance claim.",
+      "verification": {
+        "native_ctest": "make web-test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests; make test-docs passed with 333 source requirements and 346 tracked rows.",
+        "focused_browser": "make web-test-fender-universe-vibe passed with local prerecorded Guitar-TECHS DI at 48 kHz/48,000 fixture frames; Modulation category, enabled index 107, Vintage/Vibrato self-test, captured Play output peak 0.2644857466, 96,000 active samples, difference RMS 0.065084842, and 224 B reported WASM effect memory.",
+        "full_browser": "make web-test passed: 108 picker entries, 78 optional processor stages, max absolute native/browser error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,342,360 B processor state plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
+        "windows": "make windows-cross-build passed, compiling the shared Vibe DSP and offline renderer with MinGW.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0964/0.1032/0.1418/1.0774/2.8602% of deadline; native sizeof 240 B; no fixed delay or process allocation. Desktop processor-call measurement, not target-device performance.",
+        "notes": "Automated verification is complete. Human listening and physical target-device checks remain open."
+      },
+      "picker_rows": 108
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Bias Trem project-authored Modulation implementation",
-    "status": "verified",
-    "picker_index": 105,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "November 2026 cover date checked 2026-11-24; printed pp. 106–107; FM9-family guide. Firmware v12.0 is listed for FM9 Original/Turbo but does not name Mark II Turbo separately; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide describes Bias Trem qualitatively and lists shared tremolo controls but no numeric ranges/defaults or circuit details. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown."
-    },
-    "documented_controls": "Distinct Bias Trem type, described as an organic tube-bias tremolo that may add distortion. Shared tremolo controls: Rate/Tempo, Depth, LFO Type, Duty, Shape, Phase, Start Phase, Trigger Threshold, Ducking; Mix-page Level, Balance, Bypass, Bypass Mode.",
-    "project_controls": "Project-authored Modulation row at picker index 105. Defaults: 4.5 Hz, 0.35 depth, Sine, tempo off at 120 BPM/1 beat, trigger off with −36 dBFS stored threshold, zero ducking, 0.18 bias-drive, Mix 1.0, 0 dB Level, centered Balance, bypass off. Ranges: 0.05–20 Hz, depth/ducking/drive/mix 0–1, tempo 30–300 BPM, beat length 1/16–16, trigger −80–0 dBFS, Level −24…+12 dB, Balance −1…+1. Project bounded nonlinear curve and DSP do not emulate tube-bias hardware or claim Fractal parity.",
-    "verification": {
-      "native_ctest": "make test passed 109/109 CTest tests and 11/11 audio-fixture safety checks.",
-      "browser": "Focused make web-test-fractal-bias-trem and full make web-test passed with local prerecorded Guitar-TECHS DI, 106 categorized picker rows, and browser/native parity across available optional processors. Focused capture: peak 0.166132, 95,980 active samples, difference RMS 0.0388875. Full comparison max absolute error 5.6019e-6; RMS error 7.2461e-7. Browser reports 132 B effect state.",
-      "windows": "make windows-cross-build passed for the MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0570/0.1118/0.1256/0.7474/1.7708% of a 2.667 ms deadline; native sizeof 136 B, zero fixed latency, no process allocation. Desktop processor-call estimate, not target-device performance.",
-      "notes": "Automated implementation checks only. No Fractal DSP/settings/sound parity, human listening, or physical-device test."
-    }
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Vibratone project-authored Modulation implementation",
     "status": "verified",
     "picker_index": 106,
@@ -240,6 +242,30 @@
       "notes": "Automated implementation verification only. No human listening, target-device test, or Fender DSP/settings/sound parity."
     },
     "picker_rows": 107
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Uni-Verse Vibe project-authored Modulation implementation",
+    "status": "verified",
+    "picker_index": 107,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and Fender firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents control roles and qualitative Vintage/Modern and Chorus/Vibrato distinctions but no numeric ranges/defaults, division list, algorithmic delay, DSP cost, or block limit. v1.8.85 release notes do not mention a Uni-Verse Vibe change. Installed firmware is unknown."
+    },
+    "documented_controls": "Speed (overall speed), Intensity (effect depth), Volume (output loudness), Tap Division (subdivision of current tempo), Vintage/Modern (darker/brighter), Chorus/Vibrato (lush Chorus/pitch-modulated Vibrato). No numeric ranges/defaults or available division list are published in the checked guide.",
+    "project_controls": "Separate project-authored Modulation row at picker index 107. Defaults: 1.5 Hz, 65% intensity, unity linear Volume, Free Hz, quarter note at 120 BPM, Modern, Chorus. Project ranges: 0.1–10 Hz, intensity 0–100%, linear Volume 0–2, tempo 20–300 BPM, 12 project note divisions. Tempo is local, not device tap/MIDI clock. Two first-order all-pass stages with a 10 ms control ramp; Vintage adds a project-selected 6 kHz one-pole low-pass; Vibrato selects the wet-only phase path. No fixed algorithmic delay, process-time allocation, Fender DSP/settings/sound parity, or device-performance claim.",
+    "verification": {
+      "native_ctest": "make web-test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests; make test-docs passed with 333 source requirements and 346 tracked rows.",
+      "focused_browser": "make web-test-fender-universe-vibe passed with local prerecorded Guitar-TECHS DI at 48 kHz/48,000 fixture frames; Modulation category, enabled index 107, Vintage/Vibrato self-test, captured Play output peak 0.2644857466, 96,000 active samples, difference RMS 0.065084842, and 224 B reported WASM effect memory.",
+      "full_browser": "make web-test passed: 108 picker entries, 78 optional processor stages, max absolute native/browser error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,342,360 B processor state plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
+      "windows": "make windows-cross-build passed, compiling the shared Vibe DSP and offline renderer with MinGW.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0964/0.1032/0.1418/1.0774/2.8602% of deadline; native sizeof 240 B; no fixed delay or process allocation. Desktop processor-call measurement, not target-device performance.",
+      "notes": "Automated verification is complete. Human listening and physical target-device checks remain open."
+    },
+    "picker_rows": 108
   },
   "next_research": [
     {

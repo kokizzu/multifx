@@ -1,5 +1,17 @@
 # Research and source audit
 
+## Fender Tone Master Pro Uni-Verse Vibe audit and implementation (2026-11-24)
+
+The exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A lists Speed (overall effect speed), Intensity (depth), Volume (output loudness), Tap Division (subdivision of current tempo), Vintage/Modern (darker/brighter tone), and Chorus/Vibrato (lush Chorus/pitch-modulated Vibrato). The guide publishes no numeric ranges/defaults, selectable-division inventory, latency, DSP cost, or block limit. Fender firmware history was checked through v1.8.85 dated 2026-11-18; those notes do not mention a Uni-Verse Vibe change. The installed firmware is unknown.
+
+TabletFX adds a project-authored Modulation processor at picker index 107 using the existing fixed-state Vibe core. Defaults are 1.5 Hz, 65% intensity, unity linear volume, Free Hz, quarter note at 120 BPM, Modern, and Chorus. Project ranges are 0.1–10 Hz, 0–100% intensity, linear volume 0–2, tempo 20–300 BPM, and 12 local note divisions; tempo is not linked to device tap or MIDI clock. The project core uses two first-order all-pass stages with a swept phase coefficient and a 10 ms control ramp. Vintage applies a project-selected 6 kHz one-pole low-pass; Vibrato selects the wet-only phase-shifted path. These are authored choices, not a Fender circuit/model/DSP or sound-parity claim.
+
+At 48 kHz stereo the native state is 240 B and the focused browser/WASM report shows 224 B effect memory. It adds no fixed algorithmic delay and allocates no memory in processing. An AMD Ryzen 9 5950X Release benchmark at 48 kHz stereo/128-frame blocks (2.667 ms deadline, 2,000 warm-up and 5,000 measured blocks) reports p50/p95/p99/p99.9/max of 0.0964/0.1032/0.1418/1.0774/2.8602% of deadline. These are desktop processor-call timings, not a device guarantee.
+
+`make test`, focused local prerecorded Guitar-TECHS DI browser Play, and full `make web-test` pass. The full browser comparison covers 108 picker entries and 78 optional processors; maximum absolute error is 3.400965e−6 and RMS error is 5.880495e−7. Human listening and physical target-device performance remain open.
+
+Sources: [Tone Master Pro Model Guide](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf) · [Fender firmware and app update history](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates)
+
 ## Fender Tone Master Pro Vibratone audit and implementation (2026-11-24)
 
 The exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A (printed pp. 36–37) lists Vibratone's Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, and Dynamics Switch. It does not publish numerical ranges/defaults, rotor geometry, speed-ramp or detector behavior, stereo details, latency, DSP use, or block limits. Fender's firmware-history page was checked through v1.8.85 dated 2026-11-18; those release notes do not mention Vibratone, and the installed firmware is unknown.

@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Fender Uni-Verse Vibe-inspired Modulation (2026-11-24)
+
+The project implementation uses two first-order all-pass stages, a swept phase coefficient, and a 10 ms control ramp. Defaults are 1.5 Hz, 65% intensity, unity linear Volume, Modern tone, and Chorus. Project bounds are 0.1–10 Hz, 0–100% intensity, and 0–2 linear Volume; local tempo sync uses 20–300 BPM and 12 project-chosen divisions. Vintage adds a project-selected 6 kHz one-pole low-pass. Vibrato selects the project wet-only phase path. These DSP choices are independent of Fender's documented control roles and do not claim algorithm or sound parity. The processor adds zero fixed algorithmic delay, owns 240 B of native state (224 B reported for the WASM effect), and allocates nothing during processing.
+
+On an AMD Ryzen 9 5950X Release build at 48 kHz stereo with 128-frame callbacks (2.667 ms deadline, 2,000 warm-up and 5,000 measured blocks), the isolated processor recorded p50/p95/p99/p99.9/max of 0.0964/0.1032/0.1418/1.0774/2.8602% of callback deadline. This is desktop processor-call timing, not whole-chain or target-device load.
+
+`make test`, focused browser/WASM Play with the local prerecorded Guitar-TECHS DI fixture, and the full `make web-test` pass. The full comparison has 108 picker entries and 78 optional active processors; maximum absolute native/browser error is 3.400965e−6 and RMS error is 5.880495e−7. Human listening and device-route verification remain open.
+
 ## Project-authored Fender Vibratone-inspired Modulation (2026-11-24)
 
 The project effect reuses the Rotary Speaker processor with a project-selected single-pole output Tone filter and envelope-controlled Fast/Slow switching. Defaults: Drive 0%, Tone 80%, Level 0 dB, Fast 6.5 Hz, Slow 0.85 Hz, Speed Switch Slow, Ramp 650 ms, Sensitivity 50%, Dynamics off. Project ranges: Drive 0–100%, Tone mapped to 800 Hz–20 kHz, Level −24…+12 dB, Fast 1–10 Hz, Slow 0.1–5 Hz capped at half Fast, Ramp 50–3,000 ms, and Sensitivity mapped to a −5…−45 dB threshold. Dynamics uses project-selected 20 ms attack, 250 ms release, and 0.75 hysteresis. These are not Fender settings, topology, or sound parity. The product guide lists controls but no numerical bounds, dynamics behavior, rotor geometry, DSP, or latency.
