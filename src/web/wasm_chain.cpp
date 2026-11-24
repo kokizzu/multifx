@@ -16,6 +16,7 @@
 #include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
+#include "tabletfx/effects/optical_tremolo.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -116,7 +117,9 @@ public:
           double_take_(static_cast<float>(sample_rate),
                        static_cast<std::uint16_t>(channels)),
           eq5_graphic_(static_cast<float>(sample_rate),
-                       static_cast<std::uint16_t>(channels)) {
+                       static_cast<std::uint16_t>(channels)),
+          optical_tremolo_(std::make_unique<tabletfx::OpticalTremolo>(
+              static_cast<float>(sample_rate))) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -407,7 +410,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 8; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 11; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -462,6 +465,11 @@ public:
         if (index == 103U) {
             eq5_graphic_enabled_ = enabled;
             if (!enabled) eq5_graphic_.reset();
+            return true;
+        }
+        if (index == 104U) {
+            optical_tremolo_enabled_ = enabled;
+            if (!enabled) optical_tremolo_->reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -614,6 +622,15 @@ public:
             }
             return;
         }
+        if (index == 104U) {
+            if (optical_tremolo_enabled_) {
+                optical_tremolo_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            } else if (optical_tremolo_mute_bypass_) {
+                std::fill_n(output_.data(), samples, 0.0F);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -685,6 +702,7 @@ public:
         cabinet_ir_.reset();
         octave_divider_.reset();
         double_take_.reset();
+        optical_tremolo_->reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2973,6 +2991,42 @@ public:
             overall_gain_db);
     }
 
+    void configure_optical_tremolo(
+        std::uint32_t variant, float rate_hz, float depth,
+        std::uint32_t lfo, std::uint32_t tempo_sync, float tempo_bpm,
+        float beats_per_cycle, float duty_cycle_percent, float shape_percent,
+        float phase_degrees, float start_phase_degrees,
+        std::uint32_t trigger_enabled, float trigger_threshold_dbfs,
+        float ducking_percent, float mix, float level_db,
+        float balance_percent, std::uint32_t bypass_mode) noexcept {
+        tabletfx::OpticalTremoloParameters parameters;
+        parameters.variant = variant <= static_cast<std::uint32_t>(
+            tabletfx::OpticalTremoloVariant::Neon)
+            ? static_cast<tabletfx::OpticalTremoloVariant>(variant)
+            : static_cast<tabletfx::OpticalTremoloVariant>(255U);
+        parameters.rate_hz = rate_hz;
+        parameters.depth = depth;
+        parameters.lfo = lfo <= static_cast<std::uint32_t>(
+            tabletfx::OpticalTremoloWaveform::Astable)
+            ? static_cast<tabletfx::OpticalTremoloWaveform>(lfo)
+            : static_cast<tabletfx::OpticalTremoloWaveform>(255U);
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.beats_per_cycle = beats_per_cycle;
+        parameters.duty_cycle_percent = duty_cycle_percent;
+        parameters.shape_percent = shape_percent;
+        parameters.phase_degrees = phase_degrees;
+        parameters.start_phase_degrees = start_phase_degrees;
+        parameters.trigger_enabled = trigger_enabled != 0U;
+        parameters.trigger_threshold_dbfs = trigger_threshold_dbfs;
+        parameters.ducking_percent = ducking_percent;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        parameters.balance_percent = balance_percent;
+        optical_tremolo_->set_parameters(parameters);
+        optical_tremolo_mute_bypass_ = bypass_mode != 0U;
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -2987,6 +3041,7 @@ public:
         bytes += octave_divider_.memory_bytes();
         bytes += double_take_.memory_bytes();
         bytes += eq5_graphic_.memory_bytes();
+        bytes += optical_tremolo_->memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3044,6 +3099,9 @@ public:
         if (index == 103U) {
             return static_cast<std::uint32_t>(eq5_graphic_.memory_bytes());
         }
+        if (index == 104U) {
+            return static_cast<std::uint32_t>(optical_tremolo_->memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3077,6 +3135,7 @@ private:
     tabletfx::effects::OctaveDivider octave_divider_;
     tabletfx::DoubleTake double_take_;
     tabletfx::EQ5Graphic eq5_graphic_;
+    std::unique_ptr<tabletfx::OpticalTremolo> optical_tremolo_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3087,6 +3146,8 @@ private:
     bool octave_divider_enabled_ = false;
     bool double_take_enabled_ = false;
     bool eq5_graphic_enabled_ = false;
+    bool optical_tremolo_enabled_ = false;
+    bool optical_tremolo_mute_bypass_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4073,6 +4134,24 @@ TABLETFX_WASM_EXPORT void tf_chain_set_eq5_graphic(
         as_chain(opaque)->configure_eq5_graphic(
             band1_db, band2_db, band3_db, band4_db, band5_db,
             overall_gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_optical_tremolo(
+    void* opaque, std::uint32_t variant, float rate_hz, float depth,
+    std::uint32_t lfo, std::uint32_t tempo_sync, float tempo_bpm,
+    float beats_per_cycle, float duty_cycle_percent, float shape_percent,
+    float phase_degrees, float start_phase_degrees,
+    std::uint32_t trigger_enabled, float trigger_threshold_dbfs,
+    float ducking_percent, float mix, float level_db,
+    float balance_percent, std::uint32_t bypass_mode) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_optical_tremolo(
+            variant, rate_hz, depth, lfo, tempo_sync, tempo_bpm,
+            beats_per_cycle, duty_cycle_percent, shape_percent,
+            phase_degrees, start_phase_degrees, trigger_enabled,
+            trigger_threshold_dbfs, ducking_percent, mix, level_db,
+            balance_percent, bypass_mode);
     }
 }
 

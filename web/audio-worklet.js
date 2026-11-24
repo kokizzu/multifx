@@ -25,6 +25,7 @@ EFFECTS.push("cabinet-ir");
 EFFECTS.push("octave-divider");
 EFFECTS.push("double-take");
 EFFECTS.push("eq5-graphic");
+EFFECTS.push("optical-tremolo");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -410,6 +411,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureOctaveFuzz(parameters.octaveFuzz || [0.55, 0.75, 1]);
       this.configureDoubleTake(parameters.doubleTake || [2, 0.25, 0.55, 0.85, 0.15, 0]);
       this.configureEQ5Graphic(parameters.eq5Graphic || [0, 0, 0, 0, 0, 0]);
+      this.configureOpticalTremolo(parameters.opticalTremolo ||
+        [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0]);
       this.configureStereoCrossover(parameters.stereoCrossover || {
         frequencyHz: 500, frequencyMultiplier: "x1",
         lowLevelLeftDb: 0, lowLevelRightDb: 0,
@@ -672,6 +675,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
 
   configureEQ5Graphic(values) {
     this.module._tf_chain_set_eq5_graphic(this.chain, ...values);
+  }
+
+  configureOpticalTremolo(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 18) {
+      return;
+    }
+    this.module._tf_chain_set_optical_tremolo(this.chain, ...values);
   }
 
   configureRockBoxDist(values) {
@@ -1288,6 +1298,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureDoubleTake(message.value);
     } else if (message.type === "eq5-graphic" && this.ready) {
       this.configureEQ5Graphic(message.value);
+    } else if (message.type === "optical-tremolo" && this.ready) {
+      this.configureOpticalTremolo(message.value);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

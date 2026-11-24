@@ -26,6 +26,7 @@ PUBLISH_CHECKPOINTS += xr1-cabinet-ir
 PUBLISH_CHECKPOINTS += fractal-octave-divider
 PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic
+PUBLISH_CHECKPOINTS += fractal-optical-tremolo
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -67,8 +68,12 @@ web-test-stereo-filter:
 	$(PYTHON) scripts/web.py test-stereo-filter
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
+.PHONY: test-optical-tremolo
 test-step-tremolo:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_step_tremolo_tests
+
+test-optical-tremolo:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_optical_tremolo_tests
 
 web-test-step-tremolo:
 	$(PYTHON) scripts/web.py test-step-tremolo

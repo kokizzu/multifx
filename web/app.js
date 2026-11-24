@@ -105,6 +105,7 @@ const EFFECT_NAMES = [
   "Octave Divider · project-authored Fractal-inspired controls",
   "Double Take · project-authored dynamic double",
   "EQ5 Graphic · project-authored five-band EQ",
+  "Optical Tremolo · project-authored Fractal FM9-family controls",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -113,6 +114,7 @@ const DEFAULT_PARAMETERS = {
   octaveDivider: [1, 0.45, -0.25, 0.2, 0.25, 0.65, 1],
   doubleTake: [2, 0.25, 0.55, 0.85, 0.15, 0],
   eq5Graphic: [0, 0, 0, 0, 0, 0],
+  opticalTremolo: [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1238,6 +1240,26 @@ const eq5GraphicControls = [
   document.querySelector("#eq5-band-4-db"),
   document.querySelector("#eq5-band-5-db"),
   document.querySelector("#eq5-overall-gain-db"),
+];
+const opticalTremoloControls = [
+  document.querySelector("#optical-tremolo-variant"),
+  document.querySelector("#optical-tremolo-rate-hz"),
+  document.querySelector("#optical-tremolo-depth"),
+  document.querySelector("#optical-tremolo-lfo"),
+  document.querySelector("#optical-tremolo-tempo-sync"),
+  document.querySelector("#optical-tremolo-tempo-bpm"),
+  document.querySelector("#optical-tremolo-beats-per-cycle"),
+  document.querySelector("#optical-tremolo-duty-percent"),
+  document.querySelector("#optical-tremolo-shape-percent"),
+  document.querySelector("#optical-tremolo-phase-degrees"),
+  document.querySelector("#optical-tremolo-start-phase-degrees"),
+  document.querySelector("#optical-tremolo-trigger-enabled"),
+  document.querySelector("#optical-tremolo-trigger-threshold-dbfs"),
+  document.querySelector("#optical-tremolo-ducking-percent"),
+  document.querySelector("#optical-tremolo-mix"),
+  document.querySelector("#optical-tremolo-level-db"),
+  document.querySelector("#optical-tremolo-balance-percent"),
+  document.querySelector("#optical-tremolo-bypass-mode"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -2910,6 +2932,58 @@ function updateEQ5GraphicOptions() {
   }
 }
 
+function updateOpticalTremoloOptions() {
+  const variant = Number(opticalTremoloControls[0].value);
+  const values = [
+    variant,
+    Number(opticalTremoloControls[1].value),
+    Number(opticalTremoloControls[2].value) / 100,
+    Number(opticalTremoloControls[3].value),
+    Number(opticalTremoloControls[4].checked),
+    Number(opticalTremoloControls[5].value),
+    Number(opticalTremoloControls[6].value),
+    Number(opticalTremoloControls[7].value),
+    Number(opticalTremoloControls[8].value),
+    Number(opticalTremoloControls[9].value),
+    Number(opticalTremoloControls[10].value),
+    Number(opticalTremoloControls[11].checked),
+    Number(opticalTremoloControls[12].value),
+    Number(opticalTremoloControls[13].value),
+    Number(opticalTremoloControls[14].value) / 100,
+    Number(opticalTremoloControls[15].value),
+    Number(opticalTremoloControls[16].value),
+    Number(opticalTremoloControls[17].value),
+  ];
+  DEFAULT_PARAMETERS.opticalTremolo = values;
+  const lfoNames = [
+    "Sine", "Triangle", "Square", "Saw Up", "Saw Down", "Random",
+    "Logarithmic", "Exponential", "Trapezoid", "Astable",
+  ];
+  const labels = [
+    ["Optical 1", "Optical 2", "Neon Trem"][variant] || "Optical 1",
+    `${values[1].toFixed(2)} Hz`, `${Math.round(values[2] * 100)}%`,
+    lfoNames[values[3]] || "Sine", values[4] ? "On" : "Off",
+    `${Math.round(values[5])} BPM`, `${values[6]} beats`,
+    `${Math.round(values[7])}%`, `${Math.round(values[8])}%`,
+    `${Math.round(values[9])}°`, `${Math.round(values[10])}°`,
+    values[11] ? "On" : "Off", `${Math.round(values[12])} dBFS`,
+    `${Math.round(values[13])}%`, `${Math.round(values[14] * 100)}%`,
+    `${values[15].toFixed(1)} dB`, `${Math.round(values[16])}%`,
+    values[17] === 0 ? "Pass" : "Mute",
+  ];
+  opticalTremoloControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = labels[index];
+  });
+  const neon = variant === 2;
+  opticalTremoloControls[3].disabled = neon;
+  opticalTremoloControls[7].disabled = neon;
+  opticalTremoloControls[8].disabled = neon;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "optical-tremolo", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -3955,6 +4029,11 @@ for (const control of eq5GraphicControls) {
   control.addEventListener("change", updateEQ5GraphicOptions);
 }
 updateEQ5GraphicOptions();
+for (const control of opticalTremoloControls) {
+  control.addEventListener("input", updateOpticalTremoloOptions);
+  control.addEventListener("change", updateOpticalTremoloOptions);
+}
+updateOpticalTremoloOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9568,7 +9647,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 104 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 105 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9670,7 +9749,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 104 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 105 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -9732,6 +9811,119 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
         control.value = previousControls[index];
       });
       updateEQ5GraphicOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runOpticalTremoloBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = opticalTremoloControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Optical Tremolo browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const smokeValues = [1, 5.2, 65, 4, 0, 120, 1, 35, 58, 18, 10, 0, -36, 25, 75, -1, 0, 0];
+    opticalTremoloControls.forEach((control, index) => {
+      if (control.type === "checkbox") {
+        control.checked = Boolean(smokeValues[index]);
+      } else {
+        control.value = String(smokeValues[index]);
+      }
+    });
+    updateOpticalTremoloOptions();
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="104"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !checkbox || opticalTremoloControls.length !== 18 ||
+        effectMemory.length !== 105 || !(effectMemory[104] > 0) ||
+        opticalTremoloControls[3].disabled ||
+        DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
+          "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
+      throw new Error("Optical Tremolo is missing its Modulation row or documented control roles.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 104;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Optical Tremolo picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Optical Tremolo playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Optical Tremolo produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 104,
+      variant: "Optical 2", lfo: "Saw Down", rateHz: 5.2, depth: 0.65,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[104],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      opticalTremoloControls.forEach((control, index) => {
+        if (control.type === "checkbox") {
+          control.checked = previousControls[index];
+        } else {
+          control.value = previousControls[index];
+        }
+      });
+      updateOpticalTremoloOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -10598,8 +10790,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 104 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 104 || effectRows.length !== 104 ||
+        const expectedEffectIds = Array.from({ length: 105 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 105 || effectRows.length !== 105 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -10670,6 +10862,9 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[103]?.startsWith("EQ5 Graphic") ||
               effectRows[103]?.dataset.category !== "eq" ||
               effectRows[103]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
+              !EFFECT_NAMES[104]?.startsWith("Optical Tremolo") ||
+              effectRows[104]?.dataset.category !== "modulation" ||
+              effectRows[104]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -10687,7 +10882,7 @@ async function runBrowserSelfTest() {
                       !initialEffectState[94] || !initialEffectState[95] ||
                         initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
-        initialEffectState[103] ||
+        initialEffectState[103] || initialEffectState[104] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -12305,9 +12500,9 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 104 || activeProcessorIndices.length !== 75 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 103) {
-             throw new Error("The all-effect chain must contain 75 optional processors between input trim and output utilities.");
+    if (parityEnabled.length !== 105 || activeProcessorIndices.length !== 76 ||
+            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 104) {
+             throw new Error("The all-effect chain must contain 76 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -12330,6 +12525,7 @@ async function runBrowserSelfTest() {
         stereoCrossover: { ...DEFAULT_PARAMETERS.stereoCrossover },
         doubleTake: [3, 0.65, 0.55, 0.75, 0.45, 0],
         eq5Graphic: [2, -3, 6, -3, 2, 0],
+        opticalTremolo: [1, 5.2, 0.65, 4, 0, 120, 1, 35, 58, 18, 10, 0, -36, 25, 0.75, -1, 0, 0],
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
@@ -12947,6 +13143,10 @@ async function runBrowserSelfTest() {
     const eq5GraphicSmoke = await runEQ5GraphicBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Optical Tremolo Modulation-category playback on local guitar audio…";
+    const opticalTremoloSmoke = await runOpticalTremoloBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -13197,6 +13397,7 @@ async function runBrowserSelfTest() {
       octaveDivider: octaveDividerSmoke,
       doubleTake: doubleTakeSmoke,
       eq5Graphic: eq5GraphicSmoke,
+      opticalTremolo: opticalTremoloSmoke,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

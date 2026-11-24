@@ -27,6 +27,7 @@ add_library(tabletfx_core
     src/effects/octave_divider.cpp
     src/effects/double_take.cpp
     src/effects/eq5_graphic.cpp
+    src/effects/optical_tremolo.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
     src/effects/flanger.cpp
@@ -253,6 +254,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_eq5_graphic_tests tests/test_eq5_graphic.cpp)
     target_link_libraries(tabletfx_eq5_graphic_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_eq5_graphic_tests COMMAND tabletfx_eq5_graphic_tests)
+
+    add_executable(tabletfx_optical_tremolo_tests tests/test_optical_tremolo.cpp)
+    target_link_libraries(tabletfx_optical_tremolo_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_optical_tremolo_tests COMMAND tabletfx_optical_tremolo_tests)
 
     add_executable(tabletfx_grain_delay_tests tests/test_grain_delay.cpp)
     target_link_libraries(tabletfx_grain_delay_tests PRIVATE tabletfx_core)

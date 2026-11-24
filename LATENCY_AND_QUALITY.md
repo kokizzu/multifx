@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Fractal Optical / Neon Tremolo (2026-11-24)
+
+At 48 kHz stereo the fixed processor object owns 216 B. Its process path has no fixed algorithmic latency and performs no allocation. A Ryzen 9 5950X Release benchmark with 128-frame blocks (2.667 ms callback deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.0743/0.0746/0.1204/0.2895/0.3638% of the deadline. These are isolated desktop processor-call timings, not Android, Windows, or end-to-end device measurements.
+
+Native tests cover defaults/bounds, three distinct variants, all ten LFO mappings, deterministic random reset, tempo/phase/mix, stereo behavior, trigger, finite recovery, irregular callback sizes, and zero allocation. Offline CLI, local prerecorded Guitar-TECHS DI browser Play smoke, and full browser/native parity pass; the comparison's max absolute error is 6.2784e-6 and RMS error 1.2600e-6 across 76 optional processors. The chain reports 80,340,048 B processor state plus 10,364 B tuner state within fixed 100,663,296 B WASM memory. Windows MinGW core and offline renderer build pass. Optical response curves, LFO mappings, Neon pulse width, ranges, defaults, tempo/trigger/ducking behavior are project-authored. The Fractal guide does not publish exact Optical response curves or numeric ranges. No Fractal DSP/sound parity, human listening, or device test is claimed.
+
 ## Fender Tone Master Pro EQ5 Graphic-inspired Equalizer (2026-11-24)
 
 The project-authored five-band peaking EQ uses fixed 80/240/750/2,200/6,600 Hz centers and a separate overall Gain control. Bands and overall Gain default to 0 dB with project-selected ±12 dB bounds and fixed Q=1. It has 224 B owned state at 48 kHz stereo, no fixed algorithmic latency, and no process-time allocation. These topology and controls do not reproduce Fender DSP or settings.

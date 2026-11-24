@@ -18,6 +18,7 @@
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
+#include "tabletfx/effects/optical_tremolo.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -110,6 +111,8 @@ struct Options {
     tabletfx::TremoloParameters tremolo{};
     bool harmonic_tremolo_enabled = false;
     tabletfx::HarmonicTremoloParameters harmonic_tremolo{};
+    bool optical_tremolo_enabled = false;
+    tabletfx::OpticalTremoloParameters optical_tremolo{};
     bool auto_swell_delay_enabled = false;
     tabletfx::AutoSwellDelayParameters auto_swell_delay{};
     bool chorus_enabled = false;
@@ -637,6 +640,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.eq5_graphic_enabled = true;
             continue;
         }
+        if (key == "--optical-tremolo") {
+            options.optical_tremolo_enabled = true;
+            continue;
+        }
         if (key == "--double-take-source") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --double-take-source");
@@ -823,6 +830,75 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--manual-thru-zero-flanger") {
             options.manual_thru_zero_flanger_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--optical-tremolo-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            const std::string_view setting = key.substr(
+                std::string_view("--optical-tremolo-").size());
+            if (setting == "variant" || setting == "lfo" ||
+                setting == "tempo-sync" || setting == "trigger") {
+                const std::string_view value(argv[++i]);
+                if (setting == "variant") {
+                    if (value == "optical-1") {
+                        options.optical_tremolo.variant =
+                            tabletfx::OpticalTremoloVariant::Optical1;
+                    } else if (value == "optical-2") {
+                        options.optical_tremolo.variant =
+                            tabletfx::OpticalTremoloVariant::Optical2;
+                    } else if (value == "neon") {
+                        options.optical_tremolo.variant =
+                            tabletfx::OpticalTremoloVariant::Neon;
+                    } else {
+                        throw std::invalid_argument(
+                            "Optical tremolo variant must be optical-1, optical-2, or neon");
+                    }
+                } else if (setting == "lfo") {
+                    using Waveform = tabletfx::OpticalTremoloWaveform;
+                    if (value == "sine") options.optical_tremolo.lfo = Waveform::Sine;
+                    else if (value == "triangle") options.optical_tremolo.lfo = Waveform::Triangle;
+                    else if (value == "square") options.optical_tremolo.lfo = Waveform::Square;
+                    else if (value == "saw-up") options.optical_tremolo.lfo = Waveform::SawUp;
+                    else if (value == "saw-down") options.optical_tremolo.lfo = Waveform::SawDown;
+                    else if (value == "random") options.optical_tremolo.lfo = Waveform::Random;
+                    else if (value == "logarithmic") options.optical_tremolo.lfo = Waveform::Logarithmic;
+                    else if (value == "exponential") options.optical_tremolo.lfo = Waveform::Exponential;
+                    else if (value == "trapezoid") options.optical_tremolo.lfo = Waveform::Trapezoid;
+                    else if (value == "astable") options.optical_tremolo.lfo = Waveform::Astable;
+                    else throw std::invalid_argument(
+                        "Optical tremolo LFO must be sine, triangle, square, saw-up, saw-down, random, logarithmic, exponential, trapezoid, or astable");
+                } else {
+                    if (value != "on" && value != "off") {
+                        throw std::invalid_argument(
+                            "Optical tremolo tempo-sync and trigger must be on or off");
+                    }
+                    const bool enabled = value == "on";
+                    if (setting == "tempo-sync") {
+                        options.optical_tremolo.tempo_sync = enabled;
+                    } else {
+                        options.optical_tremolo.trigger_enabled = enabled;
+                    }
+                }
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "rate-hz") options.optical_tremolo.rate_hz = value;
+                else if (setting == "depth") options.optical_tremolo.depth = value;
+                else if (setting == "tempo-bpm") options.optical_tremolo.tempo_bpm = value;
+                else if (setting == "beats-per-cycle") options.optical_tremolo.beats_per_cycle = value;
+                else if (setting == "duty-percent") options.optical_tremolo.duty_cycle_percent = value;
+                else if (setting == "shape-percent") options.optical_tremolo.shape_percent = value;
+                else if (setting == "phase-degrees") options.optical_tremolo.phase_degrees = value;
+                else if (setting == "start-phase-degrees") options.optical_tremolo.start_phase_degrees = value;
+                else if (setting == "trigger-threshold-dbfs") options.optical_tremolo.trigger_threshold_dbfs = value;
+                else if (setting == "ducking-percent") options.optical_tremolo.ducking_percent = value;
+                else if (setting == "mix") options.optical_tremolo.mix = value;
+                else if (setting == "level-db") options.optical_tremolo.level_db = value;
+                else if (setting == "balance-percent") options.optical_tremolo.balance_percent = value;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.optical_tremolo_enabled = true;
             continue;
         }
         if (key.starts_with("--manual-thru-zero-flanger-")) {
@@ -3711,6 +3787,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
                           options.eq5_graphic_overall_gain_db);
         effects.push_back(std::move(effect));
     }
+    if (options.optical_tremolo_enabled) {
+        effects.push_back(std::make_unique<tabletfx::OpticalTremolo>(
+            static_cast<float>(sample_rate), options.optical_tremolo));
+    }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
             static_cast<float>(sample_rate), channels, options.high_pass_hz));
@@ -4759,6 +4839,10 @@ void run_bench() {
         effect->configure({4.0F, -3.0F, 6.0F, -2.0F, 3.0F}, 0.0F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("optical-tremolo-project-authored", [=] {
+        return std::make_unique<tabletfx::OpticalTremolo>(
+            static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));
     },
@@ -5291,6 +5375,16 @@ void print_usage() {
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
+                  " [--optical-tremolo] [--optical-tremolo-variant optical-1|optical-2|neon]"
+                  " [--optical-tremolo-rate-hz Hz] [--optical-tremolo-depth 0..1]"
+                  " [--optical-tremolo-lfo sine|triangle|square|saw-up|saw-down|random|logarithmic|exponential|trapezoid|astable]"
+                  " [--optical-tremolo-tempo-sync on|off] [--optical-tremolo-tempo-bpm BPM]"
+                  " [--optical-tremolo-beats-per-cycle beats] [--optical-tremolo-duty-percent 5..95]"
+                  " [--optical-tremolo-shape-percent 0..100] [--optical-tremolo-phase-degrees 0..360]"
+                  " [--optical-tremolo-start-phase-degrees 0..360] [--optical-tremolo-trigger on|off]"
+                  " [--optical-tremolo-trigger-threshold-dbfs -90..0] [--optical-tremolo-ducking-percent 0..100]"
+                  " [--optical-tremolo-mix 0..1] [--optical-tremolo-level-db -24..12]"
+                  " [--optical-tremolo-balance-percent -100..100]"
                   " [--harmonic-tremolo-rate-hz Hz] [--harmonic-tremolo-depth 0..1]"
                   " [--harmonic-tremolo-crossover-hz Hz]"
                   " [--harmonic-tremolo-waveform sine|triangle|square]"
