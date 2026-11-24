@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 
 namespace tabletfx::effects {
 namespace {
@@ -20,6 +21,19 @@ constexpr float kMinTrackedHz = 55.0F;
 constexpr float kMaxTrackedHz = 1100.0F;
 constexpr float kMinPitchConfidence = 0.62F;
 constexpr float kMaxPitchDifference = 1.0F - kMinPitchConfidence;
+constexpr int kMaximumScaleDegreeShift = 24;
+constexpr float kStandardShiftSemitones = 12.0F;
+constexpr float kExtendedShiftSemitones = 60.0F;
+constexpr float kMinimumExtendedOutputHz = 20.0F;
+constexpr float kMaximumOutputNyquistFraction = 0.45F;
+
+int checked_pitch_interval_range(int scale_degrees) {
+    if (scale_degrees != 7 && scale_degrees != kMaximumScaleDegreeShift) {
+        throw std::invalid_argument(
+            "DiatonicHarmonizer scale-degree range must be 7 or 24");
+    }
+    return scale_degrees;
+}
 
 float clamp_finite(float value, float fallback, float low, float high) noexcept {
     if (!std::isfinite(value)) {
@@ -112,10 +126,16 @@ float tap_multiplier(TapDivision division) noexcept {
 
 }  // namespace
 
-DiatonicHarmonizer::DiatonicHarmonizer(float sample_rate)
+DiatonicHarmonizer::DiatonicHarmonizer(
+    float sample_rate, int max_pitch_interval_scale_degrees)
     : sample_rate_(clamp_finite(sample_rate, 48000.0F,
                                 kMinSampleRate, kMaxSampleRate)),
-      pitch_shifter_(sample_rate_, 2),
+      max_pitch_interval_scale_degrees_(
+          checked_pitch_interval_range(max_pitch_interval_scale_degrees)),
+      pitch_shifter_(sample_rate_, 2,
+                     max_pitch_interval_scale_degrees_ > 7
+                         ? kExtendedShiftSemitones
+                         : kStandardShiftSemitones),
       detector_rate_(0.0F),
       decimation_(1),
       analysis_latency_samples_(0),
@@ -133,7 +153,9 @@ void DiatonicHarmonizer::configure(
     const bool old_spillover = config_.spillover;
     config_ = requested;
     config_.mix = clamp_finite(config_.mix, 0.35F, 0.0F, 1.0F);
-    config_.pitch_interval = std::clamp(config_.pitch_interval, -7, 7);
+    config_.pitch_interval = std::clamp(
+        config_.pitch_interval, -max_pitch_interval_scale_degrees_,
+        max_pitch_interval_scale_degrees_);
     config_.key = std::clamp(config_.key, 0, 11);
     if (!valid_scale(config_.scale)) {
         config_.scale = DiatonicScale::Major;
@@ -246,7 +268,12 @@ void DiatonicHarmonizer::process(const float* input_left,
             if (!std::isfinite(smoothed_ratio_)) {
                 smoothed_ratio_ = 1.0F;
             }
-            smoothed_ratio_ = std::clamp(smoothed_ratio_, 0.5F, 2.0F);
+            float minimum_ratio = 0.5F;
+            float maximum_ratio = 2.0F;
+            pitch_ratio_bounds(detected_input_frequency_hz_,
+                               minimum_ratio, maximum_ratio);
+            smoothed_ratio_ = std::clamp(smoothed_ratio_,
+                                         minimum_ratio, maximum_ratio);
             const float semitones = 12.0F * std::log2(smoothed_ratio_);
             if (std::isfinite(semitones)) {
                 pitch_shifter_.set_pitch_semitones(semitones);
@@ -353,6 +380,38 @@ float DiatonicHarmonizer::detected_input_frequency_hz() const noexcept {
     return detected_input_frequency_hz_;
 }
 
+void DiatonicHarmonizer::pitch_ratio_bounds(float input_frequency_hz,
+                                           float& minimum,
+                                           float& maximum) const noexcept {
+    if (max_pitch_interval_scale_degrees_ <= 7) {
+        minimum = 0.5F;
+        maximum = 2.0F;
+        return;
+    }
+
+    if (!(input_frequency_hz > 0.0F) ||
+        !std::isfinite(input_frequency_hz)) {
+        minimum = 1.0F;
+        maximum = 1.0F;
+        return;
+    }
+
+    const float shifter_minimum = std::exp2(
+        -kExtendedShiftSemitones / 12.0F);
+    const float shifter_maximum = std::exp2(
+        kExtendedShiftSemitones / 12.0F);
+    minimum = std::max(shifter_minimum,
+                       kMinimumExtendedOutputHz / input_frequency_hz);
+    maximum = std::min(shifter_maximum,
+                       (kMaximumOutputNyquistFraction * sample_rate_) /
+                           input_frequency_hz);
+    if (!(minimum <= maximum) || !std::isfinite(minimum) ||
+        !std::isfinite(maximum)) {
+        minimum = 1.0F;
+        maximum = 1.0F;
+    }
+}
+
 int DiatonicHarmonizer::harmony_midi_note(int midi_note,
                                          int key,
                                          DiatonicScale scale,
@@ -361,7 +420,8 @@ int DiatonicHarmonizer::harmony_midi_note(int midi_note,
     if (!valid_scale(scale)) {
         scale = DiatonicScale::Major;
     }
-    interval_steps = std::clamp(interval_steps, -7, 7);
+    interval_steps = std::clamp(interval_steps, -kMaximumScaleDegreeShift,
+                                 kMaximumScaleDegreeShift);
     const int scale_root = nearest_scale_note(midi_note, key, scale);
     return move_scale_degrees(scale_root, key, scale, interval_steps);
 }
@@ -516,7 +576,11 @@ void DiatonicHarmonizer::detect_pitch() noexcept {
     // scale note. Including the correction from an out-of-scale input note
     // keeps the generated voice on the intended target scale degree.
     const float semitone_shift = static_cast<float>(target_note - nearest_midi);
-    target_ratio_ = std::clamp(std::exp2(semitone_shift / 12.0F), 0.5F, 2.0F);
+    float minimum_ratio = 0.5F;
+    float maximum_ratio = 2.0F;
+    pitch_ratio_bounds(frequency, minimum_ratio, maximum_ratio);
+    target_ratio_ = std::clamp(std::exp2(semitone_shift / 12.0F),
+                               minimum_ratio, maximum_ratio);
     if (!std::isfinite(target_ratio_)) {
         target_ratio_ = 1.0F;
     }

@@ -39,6 +39,16 @@ std::uint16_t checked_channels(std::uint16_t channels) {
     return channels;
 }
 
+float checked_max_shift(float semitones) {
+    if (!std::isfinite(semitones) ||
+        (semitones != 12.0F && semitones != 24.0F &&
+         semitones != 60.0F)) {
+        throw std::invalid_argument(
+            "PolyPitchShifter maximum range must be 12, 24, or 60 semitones");
+    }
+    return semitones;
+}
+
 } // namespace
 
 struct PolyPitchShifter::Impl {
@@ -203,10 +213,12 @@ struct PolyPitchShifter::Impl {
     std::size_t output_count = 0;
 };
 
-PolyPitchShifter::PolyPitchShifter(float sample_rate, std::uint16_t channels)
+PolyPitchShifter::PolyPitchShifter(float sample_rate, std::uint16_t channels,
+                                   float max_shift_semitones)
     : impl_(std::make_unique<Impl>(checked_sample_rate(sample_rate),
                                   checked_channels(channels))),
-      sample_rate_(sample_rate), channels_(channels) {}
+      sample_rate_(sample_rate), channels_(channels),
+      max_shift_semitones_(checked_max_shift(max_shift_semitones)) {}
 
 PolyPitchShifter::~PolyPitchShifter() = default;
 
@@ -228,7 +240,8 @@ std::uint32_t PolyPitchShifter::analysis_interval_samples() const noexcept {
 
 void PolyPitchShifter::set_pitch_semitones(float semitones) noexcept {
     if (!std::isfinite(semitones)) return;
-    pitch_semitones_ = std::clamp(semitones, -12.0F, 12.0F);
+    pitch_semitones_ = std::clamp(semitones, -max_shift_semitones_,
+                                  max_shift_semitones_);
     impl_->set_factor(std::exp2(static_cast<double>(pitch_semitones_) / 12.0));
 }
 

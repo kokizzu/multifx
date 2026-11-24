@@ -97,6 +97,8 @@ double peak_frequency_near(const std::vector<float>& samples,
 void test_neutral_default_latency_and_memory() {
     tabletfx::PolyPitchShifter shifter(kSampleRate, 1);
     require(shifter.id() == "poly-pitch-shifter", "effect ID is not stable");
+    require(shifter.max_shift_semitones() == 12.0F,
+            "existing pitch-shifter instances must retain the ±12 default");
     require(shifter.pitch_semitones() == 0.0F,
             "sane default must be neutral pitch");
     require(shifter.analysis_block_samples() == 2048,
@@ -128,6 +130,59 @@ void test_neutral_default_latency_and_memory() {
 
     std::cout << "Pitch latency: " << shifter.algorithmic_latency_ms()
               << " ms; state: " << shifter.memory_bytes() << " bytes\n";
+}
+
+void test_wider_pitch_range_is_opt_in_and_per_instance() {
+    tabletfx::PolyPitchShifter default_range(kSampleRate, 1);
+    tabletfx::PolyPitchShifter wide_range(kSampleRate, 1, 24.0F);
+    tabletfx::PolyPitchShifter scale_degree_range(kSampleRate, 1, 60.0F);
+    require(default_range.max_shift_semitones() == 12.0F &&
+                wide_range.max_shift_semitones() == 24.0F &&
+                scale_degree_range.max_shift_semitones() == 60.0F,
+            "a wider range must be opt-in for that processor instance only");
+
+    for (const float semitones : {-24.0F, 24.0F}) {
+        wide_range.reset();
+        wide_range.set_pitch_semitones(semitones);
+        require(wide_range.pitch_semitones() == semitones,
+                "the opt-in instance must accept both two-octave endpoints");
+        const double input_frequency = 220.0;
+        const double expected = input_frequency *
+            std::exp2(static_cast<double>(semitones) / 12.0);
+        const auto output = render_tones(wide_range, {input_frequency});
+        const double actual = peak_frequency_near(output, expected);
+        const double cents = 1200.0 * std::log2(actual / expected);
+        require(std::abs(cents) <= 45.0,
+                "±24-semitone output deviates more than 45 cents on a steady tone");
+        require(amplitude_near(output, expected) > 0.025,
+                "±24-semitone output level is too weak for the focused test tone");
+    }
+
+    default_range.set_pitch_semitones(24.0F);
+    require(default_range.pitch_semitones() == 12.0F,
+            "existing processor instances must remain clamped to ±12");
+    wide_range.set_pitch_semitones(std::numeric_limits<float>::infinity());
+    require(wide_range.pitch_semitones() == 24.0F,
+            "non-finite updates must preserve the last valid wide-range pitch");
+
+    scale_degree_range.set_pitch_semitones(60.0F);
+    require(scale_degree_range.pitch_semitones() == 60.0F,
+            "the scale-degree profile must accept its +60-semitone limit");
+    const auto extended_output = render_tones(scale_degree_range, {220.0});
+    require(amplitude_near(extended_output, 7040.0) > 0.015,
+            "the scale-degree profile must render its +60-semitone limit");
+    scale_degree_range.set_pitch_semitones(-60.0F);
+    require(scale_degree_range.pitch_semitones() == -60.0F,
+            "the scale-degree profile must accept its -60-semitone limit");
+
+    bool rejected = false;
+    try {
+        tabletfx::PolyPitchShifter invalid(kSampleRate, 1, 18.0F);
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    require(rejected,
+            "only the documented 12- and opt-in 24-semitone profiles are valid");
 }
 
 void test_six_semitone_pitch_accuracy() {
@@ -305,6 +360,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_neutral_default_latency_and_memory();
+        test_wider_pitch_range_is_opt_in_and_per_instance();
         test_six_semitone_pitch_accuracy();
         test_chord_components_and_stereo_independence();
         test_process_does_not_allocate();

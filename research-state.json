@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "74fd0475d9f9e6024693d06fcc90eb92f58be8c7",
+  "previous_checkpoint_commit": "68873ffa2bc54d57cd2642ada1c88e52cb9132d2",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -79,32 +79,6 @@
     }
   ],
   "previous_checkpoint": {
-    "name": "Line 6 Helix Stadium Poly Sustain-inspired hold",
-    "status": "verified",
-    "picker_index": 91,
-    "category": "Delay",
-    "official_source": {
-      "title": "Helix Stadium model catalogue, current manual, and older Helix release notes",
-      "revision": "Stadium online manual Rev E / v1.4.1 as shown on 2026-11-23; hardware release notes v1.4.2; Helix 3.0/3.10 notes are role references only",
-      "url": "https://line6.com/helix-stadium-models/",
-      "manual_url": "https://manuals.line6.com/en/helix-stadium/live",
-      "legacy_controls_url": "https://line6.com/support/page/kb/effects-controllers/helix/helix-30-release-notes-r934/",
-      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "The catalogue marks Stadium Poly Sustain mono, polyphonic, DSP-intensive, and introduced in Stadium 1.0. Older Helix notes describe control roles but do not establish Stadium numeric ranges/defaults or exact current controls. Stadium DSP guidance allows at most two Poly effects per preset and one per primary path."
-    },
-    "documented_controls": "Older Helix notes list Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, and Level; v3.10 adds Auto EQ and Normal/Dry Kill/Mute All operation. These are not a Stadium parameter table. Stadium-specific bounds/defaults remain unknown.",
-    "project_controls": "Project-authored 80 ms time-domain hold reuses PitchSequence capture and the polyphonic shifter. Controls: interval -12..+12 semitones, Attack 0..2,000 ms, Decay after bypass 0..10,000 ms, FX Level 0..1, project Level -24..+12 dB, and Normal/Dry Kill/Mute All. Modulation/random controls, Auto EQ, Line 6 spectral processing, settings/DSP/sound parity are not implemented or claimed.",
-    "verification": {
-      "native_ctest": "make web-test passed 97/97 CTest cases",
-      "fixture_safety": "11 existing-audio fixture safety checks passed",
-      "picker_rows": 94,
-      "browser_native_comparison": "71 active stages passed at 48 kHz stereo; max absolute error 0.0000067345867762469425, RMS error 0.0000012094738996969572",
-      "poly_sustain_playback": "make web-browser-test passed the categorized Delay picker and captured changed output from the project-authored Poly Sustain using existing local prerecorded guitar audio",
-      "wasm_build": "768,729 bytes; fixed 64 MiB heap",
-      "notes": "Project-only Poly Sustain is excluded from native parity because the offline renderer has no matching option. Human listening, physical device checks, and Line 6 DSP/settings/sound parity remain open."
-    }
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Dynamic Delay timing, filters, and modulation",
     "status": "verified",
     "picker_index": 39,
@@ -117,29 +91,40 @@
       "qualification": "The guide names Dynamic Delay controls. Firmware v1.6.34 is the latest checked source here to state a Time range of 30–2,000 ms; the other numeric ranges/defaults and any unit-installed firmware remain unknown."
     },
     "documented_controls": "Time, Feedback, Mix, Tap Division, repeat Low Cut and High Cut, Threshold, Attenuation, Release, Mod Rate, Mod Depth, Mod Mode (SINE/TRI/RAND/TRIG), and Spillover Switch.",
-    "project_controls": "The project-authored Ducking Delay retains Free Time with 20–300 BPM Tempo Sync and 14 divisions; repeat Low/High Cut are in the feedback path; block-bypass Spillover is optional. Defaults remain 350 ms Time, 0.25 Feedback/Mix, −30 dB Threshold, 12 dB Attenuation, 250 ms Release, 0.8 Hz Mod Rate, 0 ms Mod Depth, and Sine mode. Project modulation modes are Sine/Triangle/Random/Triggered Ramp; rate is 0.05–10 Hz, depth 0–50 ms and capped by available delay headroom. Triggered Ramp resets on the existing threshold crossing and rearms below threshold. All numeric ranges, defaults, division choices, filtering, and DSP are project choices. Preset/scene transition tails are not implemented.",
+    "project_controls": "Project-authored Ducking Delay with free/tempo time, repeat filters, Sine/Triangle/Random/Triggered Ramp modulation, and optional block-bypass Spillover. Project ranges/defaults/DSP are not Fender settings or parity.",
     "verification": {
-      "native_ctest": "make test passed 102/102 CTest cases, including Ducking Delay timing, feedback-cut, ducking, spillover, stereo, bounds, and finite-input tests.",
-      "fixture_safety": "11 fixture-safety checks passed.",
       "picker_rows": 99,
-      "browser": "make web-browser-test passed the 73-active-stage browser/native comparison at 48 kHz; max absolute error 0.00000668335, RMS error 0.00000121755. Local prerecorded Guitar-TECHS DI Play at Delay index 39 used 120 BPM/eighth, cuts 150/7,000 Hz, and 1.25 Hz/6.5 ms Sine modulation; peak 0.0614053, 71,430 active samples, difference RMS 0.0138586.",
-      "wasm_memory": "Fixed 96 MiB heap; processor state 78,988,648 B plus 10,364 B tuner state.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X, Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks. Ducking Delay default p50/p95/p99/p99.9/max 0.1331/0.1335/0.1797/1.7003/2.8043%; feedback cuts 150/7,000 Hz plus 1.25 Hz/6.5 ms Sine modulation 0.1823/0.1838/0.2355/1.6733/1.7640% of the 2.667 ms callback deadline. Both configurations own 768,296 B; process() allocates nothing.",
-      "windows": "make windows-cross-build passed for the native core and offline renderer with Ducking Delay.",
-      "notes": "Automated implementation verified; project-authored controls/DSP, with no Fender algorithm/settings/sound parity. Browser/native and desktop processor measurements do not establish live round-trip latency. Human listening and hardware checks remain open."
+      "browser": "Local Guitar-TECHS DI Play at Delay index 39 captured modulated output; browser/native comparison passed.",
+      "isolated_benchmark": "Ryzen 9 5950X, 48 kHz stereo/128 frames. Default p50/p95/p99/p99.9/max 0.1331/0.1335/0.1797/1.7003/2.8043%; filtered/modulated 0.1823/0.1838/0.2355/1.6733/1.7640%; 768,296 B owned state.",
+      "notes": "Published on main as 68873ffa2bc54d57cd2642ada1c88e52cb9132d2. Human listening and device behavior remained open."
+    }
+  },
+  "current_checkpoint": {
+    "name": "Fender Chromatic Pitch Delay and Fractal Arpeggiator ±24 range",
+    "status": "verified",
+    "picker_index": 99,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide",
+      "revision": "v1.1.100 / Rev. A, printed p. 66; firmware history checked through v1.8.85 dated 2026-11-18.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide recommends single-note use but does not establish input-note polyphony, tracking quality, or internal DSP. Installed Fender and Fractal firmware is unknown; exact FM9 Mark II Turbo firmware applicability remains family-level only."
+    },
+    "documented_controls": "Mix, Pitch (−2…+2 octaves), Delay, Tap Division, Feedback, Tone, and Spillover. No ranges/defaults are published for the other controls.",
+    "project_controls": "Project-authored Chromatic Pitch Delay: Pitch −24…+24 semitones (0 default), free time 10…2,000 ms (350 ms) or tempo sync 20…300 BPM with 14 divisions, Feedback 0…0.95 (0.25), Tone 0…1 (0.65), Mix 0…1 (0.25), optional block-bypass Spillover off by default. Wet pitch processing adds 256 samples (5.333 ms at 48 kHz); dry is immediate. The Fractal-inspired Pitch Arpeggiator now supports ±24 scale degrees and remains monophonic; ordinary Diatonic Harmonizer limits remain unchanged.",
+    "verification": {
+      "native_ctest": "make test passed 103/103 CTest cases and 11 audio-fixture safety checks, including Chromatic Pitch Delay and Arpeggiator ±24 bounds.",
+      "picker_rows": 100,
+      "browser_native_comparison": "73 active stages passed at 48 kHz stereo; maximum absolute error 0.00000668335 and RMS error 0.00000121755.",
+      "chromatic_pitch_delay_playback": "Local prerecorded Guitar-TECHS DI Play at Pitch index 99, +12 semitones, 120 BPM/eighth, Feedback 20%, Mix 100%; output peak 0.5477338, 72,142 active samples, difference RMS 0.0974454.",
+      "wasm_memory": "Fixed 96 MiB heap; browser-reported processor state 80,246,224 B plus 10,364 B tuner state.",
+      "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks. Chromatic Pitch Delay p50/p95/p99/p99.9/max 10.4013/14.0888/16.7569/22.0945/26.3696%; Arpeggiator 15.8172/25.3743/26.5185/38.7033/63.0741%; state 1,262,216 B and 1,024,888 B respectively.",
+      "windows": "make windows-cross-build passed for the native core and offline renderer.",
+      "notes": "Automated project implementation verified; controls/DSP are project-authored and do not claim manufacturer parity. Human listening, actual guitar tracking feel, tablet performance, and live device checks remain open."
     }
   },
   "next_research": [
-    {
-      "device": "Fender Tone Master Pro",
-      "feature": "Fender Chromatic Pitch Shifter: integrate the native ±24-semitone draft into categorized picker, browser/WASM, offline audio, and Windows build",
-      "source": "Tone Master Pro Model Guide v1.1.100 Rev. A, p.66; firmware history current through v1.8.85 (2026-11-18)",
-      "source_urls": [
-        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
-      ],
-      "status": "A project-authored native ChromaticPitchDelay module and opt-in ±24-semitone capability have been drafted and native tests pass. Shared PolyPitchShifter defaults remain ±12. Still integrate CMake, categorized Pitch picker, browser/WASM/offline paths, focused local-DI playback, CPU/memory measurements, and Windows cross-build. Fender's guide does not establish polyphony, tracking quality, numeric defaults, or DSP; do not claim parity."
-    },
     {
       "device": "XRecer XR1",
       "feature": "Cabinet IR Loader single-IR path integration",
@@ -181,7 +166,7 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan and the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah are implemented as project-authored features. Touch-Wah MIX and physical detector selection remain open; pitch ±24 vs project ±12, voice harmonies/custom scales, arpeggiator range ±24 vs ±7, bass tracking, and Bias/Optical/Neon Tremolo variants remain unresolved.",
+      "status": "Volume/Pan, the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah, and the project Arpeggiator ±24-scale-degree range are implemented. Ring Mod and the three-voice synth also expose project-authored Guitar/Bass tracking-range controls, but bass tracking quality is unverified. Touch-Wah MIX, physical detector selection, Fractal's separate ±24-semitone polyphonic pitch shift, multi-voice/custom-scale Diatonic harmonies, and Bias/Optical/Neon Tremolo variants remain open.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
       "qualification": "The current guide cover includes FM9-family products and is dated November 2026. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },

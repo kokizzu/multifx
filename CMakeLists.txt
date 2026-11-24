@@ -46,6 +46,7 @@ add_library(tabletfx_core
     src/effects/shelf_tilt_eq.cpp
     src/effects/peak_limiter.cpp
     src/effects/poly_pitch_shifter.cpp
+    src/effects/chromatic_pitch_delay.cpp
     src/effects/tremolo.cpp
     src/effects/harmonic_tremolo.cpp
     src/effects/auto_swell_delay.cpp
@@ -298,6 +299,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_poly_pitch_shifter_tests tests/test_poly_pitch_shifter.cpp)
     target_link_libraries(tabletfx_poly_pitch_shifter_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_poly_pitch_shifter_tests COMMAND tabletfx_poly_pitch_shifter_tests)
+
+    add_executable(tabletfx_chromatic_pitch_delay_tests tests/test_chromatic_pitch_delay.cpp)
+    target_link_libraries(tabletfx_chromatic_pitch_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_chromatic_pitch_delay_tests COMMAND tabletfx_chromatic_pitch_delay_tests)
 
     add_executable(tabletfx_gain_tests tests/test_gain.cpp)
     target_link_libraries(tabletfx_gain_tests PRIVATE tabletfx_core)

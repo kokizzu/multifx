@@ -391,9 +391,12 @@ public:
             static_cast<float>(sample_rate));
         deluxe_looper_ = std::make_unique<tabletfx::DeluxeLooper>(
             channels, static_cast<float>(sample_rate));
+        chromatic_pitch_delay_ =
+            std::make_unique<tabletfx::ChromaticPitchDelay>(
+                static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 5; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 6; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -423,6 +426,11 @@ public:
         }
         if (index == 98U) {
             deluxe_looper_enabled_ = enabled;
+            return true;
+        }
+        if (index == 99U) {
+            chromatic_pitch_delay_enabled_ = enabled;
+            if (!enabled) chromatic_pitch_delay_->reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -536,6 +544,15 @@ public:
             }
             return;
         }
+        if (index == 99U) {
+            const auto output = std::span<float>(output_.data(), samples);
+            if (chromatic_pitch_delay_enabled_) {
+                chromatic_pitch_delay_->process(output, channels_);
+            } else {
+                chromatic_pitch_delay_->process_bypassed(output, channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -603,6 +620,7 @@ public:
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
+        chromatic_pitch_delay_->reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -1559,6 +1577,11 @@ public:
             ->set_pitch_semitones(semitones);
     }
 
+    void configure_chromatic_pitch_delay(
+        tabletfx::ChromaticPitchDelayParameters parameters) noexcept {
+        chromatic_pitch_delay_->configure(parameters);
+    }
+
     void configure_filters(float high_pass_hz, float low_pass_hz) noexcept {
         static_cast<tabletfx::HighPassFilter*>(effects_[2].effect.get())->configure(high_pass_hz);
         static_cast<tabletfx::LowPassFilter*>(effects_[3].effect.get())->configure(low_pass_hz);
@@ -1864,7 +1887,7 @@ public:
         for (std::size_t step = 0; step < parameters.stage_shift_scale_degrees.size(); ++step) {
             const float requested = values[14U + step];
             parameters.stage_shift_scale_degrees[step] = std::isfinite(requested)
-                ? static_cast<int>(std::lround(std::clamp(requested, -7.0F, 7.0F)))
+                ? static_cast<int>(std::lround(std::clamp(requested, -24.0F, 24.0F)))
                 : 0;
         }
         static_cast<tabletfx::effects::PitchArpeggiator*>(effects_[51].effect.get())
@@ -2839,6 +2862,7 @@ public:
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
+        bytes += chromatic_pitch_delay_->memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2872,6 +2896,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 99U) {
+            const std::size_t bytes = chromatic_pitch_delay_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -2894,6 +2924,7 @@ private:
     std::unique_ptr<tabletfx::StereoFilter> stereo_filter_;
     std::unique_ptr<tabletfx::StepTremolo> step_tremolo_;
     std::unique_ptr<tabletfx::DeluxeLooper> deluxe_looper_;
+    std::unique_ptr<tabletfx::ChromaticPitchDelay> chromatic_pitch_delay_;
     tabletfx::Gain output_gain_;
     tabletfx::PeakLimiter output_limiter_;
     tabletfx::SignalControls signal_controls_;
@@ -2905,6 +2936,7 @@ private:
     bool stereo_filter_enabled_ = false;
     bool step_tremolo_enabled_ = false;
     bool deluxe_looper_enabled_ = false;
+    bool chromatic_pitch_delay_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4359,6 +4391,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pitch(void* opaque, float semitones) noex
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pitch(semitones);
     }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_chromatic_pitch_delay(
+    void* opaque, float pitch_semitones, float time_ms, float feedback,
+    float tone, float mix, std::uint32_t time_mode, float tempo_bpm,
+    std::uint32_t tap_division, std::uint32_t spillover) noexcept {
+    if (opaque == nullptr) return;
+    tabletfx::ChromaticPitchDelayParameters parameters;
+    parameters.pitch_semitones = pitch_semitones;
+    parameters.time_ms = time_ms;
+    parameters.feedback = feedback;
+    parameters.tone = tone;
+    parameters.mix = mix;
+    parameters.time_mode =
+        static_cast<tabletfx::ChromaticPitchDelayTimeMode>(time_mode);
+    parameters.tempo_bpm = tempo_bpm;
+    parameters.tap_division =
+        static_cast<tabletfx::ChromaticPitchDelayTapDivision>(tap_division);
+    parameters.spillover = spillover != 0U;
+    as_chain(opaque)->configure_chromatic_pitch_delay(parameters);
 }
 
 } // extern "C"

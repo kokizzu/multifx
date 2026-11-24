@@ -38,6 +38,7 @@ DiatonicHarmonizer reset_check(48000.0F);
 DiatonicHarmonizer latency_44100(44100.0F);
 DiatonicHarmonizer latency_96000(96000.0F);
 DiatonicHarmonizer pitch_check(48000.0F);
+DiatonicHarmonizer wide_pitch_check(48000.0F, 24);
 DiatonicHarmonizer adapter_reference(48000.0F);
 DiatonicHarmonizer adapter_in_place(48000.0F);
 
@@ -66,6 +67,26 @@ float estimate_tone_hz(const float* samples, std::size_t count,
     return best_frequency;
 }
 
+double tone_amplitude_at(const float* samples, std::size_t start,
+                         std::size_t count, double frequency,
+                         double sample_rate) {
+    double cosine = 0.0;
+    double sine = 0.0;
+    double window_sum = 0.0;
+    for (std::size_t i = 0; i < count; ++i) {
+        const double window = 0.5 - 0.5 * std::cos(
+            2.0 * 3.14159265358979323846 * static_cast<double>(i) /
+            static_cast<double>(count - 1U));
+        const double angle = 2.0 * 3.14159265358979323846 * frequency *
+                             static_cast<double>(i) / sample_rate;
+        const double sample = static_cast<double>(samples[start + i]) * window;
+        cosine += sample * std::cos(angle);
+        sine += sample * std::sin(angle);
+        window_sum += window;
+    }
+    return 2.0 * std::hypot(cosine, sine) / window_sum;
+}
+
 void test_scale_mapping() {
     assert(DiatonicHarmonizer::harmony_midi_note(
                60, 0, DiatonicScale::Major, 2) == 64);  // C to E
@@ -82,10 +103,53 @@ void test_scale_mapping() {
     assert(DiatonicHarmonizer::harmony_midi_note(
                61, 0, DiatonicScale::Major, 0) == 60); // tie chooses lower C
     assert(DiatonicHarmonizer::harmony_midi_note(
-               60, 0, DiatonicScale::Major, 99) == 72); // clamped to +7 degrees
+               60, 0, DiatonicScale::Major, 99) == 101); // clamped to +24 degrees
+    assert(DiatonicHarmonizer::harmony_midi_note(
+               60, 0, DiatonicScale::Major, -99) == 19); // clamped to -24 degrees
     assert(DiatonicHarmonizer::harmony_midi_note(
                60, -1, DiatonicScale::Major, 1) == 62); // key clamped to C
     assert(DiatonicHarmonizer::scale_name(DiatonicScale::Blues) == "Blues");
+}
+
+void test_extended_scale_degree_audio_bounds() {
+    constexpr std::size_t kFrames = 48000U;
+    constexpr std::size_t kMeasureStart = 24000U;
+    constexpr std::size_t kMeasureFrames = 24000U;
+    constexpr float kSampleRate = 48000.0F;
+    constexpr int kInputMidi = 60;
+    constexpr double kInputHz = 440.0 *
+                                0.5946035575013605;  // C4, MIDI 60
+    std::array<float, kFrames> input{};
+    std::array<float, kFrames> output{};
+
+    for (const int interval : {-24, 24}) {
+        DiatonicHarmonizerConfig config;
+        config.mix = 1.0F;
+        config.pitch_interval = interval;
+        config.key = 0;
+        config.scale = DiatonicScale::Major;
+        wide_pitch_check.configure(config);
+        assert(wide_pitch_check.config().pitch_interval == interval);
+        wide_pitch_check.reset();
+
+        for (std::size_t frame = 0; frame < kFrames; ++frame) {
+            input[frame] = 0.25F * std::sin(
+                2.0 * 3.14159265358979323846 * kInputHz *
+                static_cast<double>(frame) / kSampleRate);
+        }
+        wide_pitch_check.process(input.data(), nullptr, output.data(), nullptr,
+                                 kFrames);
+
+        const int target_midi = DiatonicHarmonizer::harmony_midi_note(
+            kInputMidi, 0, DiatonicScale::Major, interval);
+        const double target_hz = 440.0 * std::exp2(
+            static_cast<double>(target_midi - 69) / 12.0);
+        assert(target_hz >= 20.0 && target_hz < 0.45 * kSampleRate);
+        const double amplitude = tone_amplitude_at(
+            output.data(), kMeasureStart, kMeasureFrames, target_hz,
+            kSampleRate);
+        assert(std::isfinite(amplitude) && amplitude > 0.01);
+    }
 }
 
 void test_config_bounds_and_latency() {
@@ -376,6 +440,7 @@ void test_in_place_effect_api() {
 
 int main() {
     test_scale_mapping();
+    test_extended_scale_degree_audio_bounds();
     test_config_bounds_and_latency();
     test_block_partition_and_finite_recovery();
     test_stereo_link_and_reset();

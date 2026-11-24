@@ -199,6 +199,7 @@ def build_web() -> None:
         "_tf_chain_set_resonant_delay",
         "_tf_chain_set_grain_delay",
         "_tf_chain_set_pitch_feedback_delay",
+        "_tf_chain_set_chromatic_pitch_delay",
         "_tf_chain_set_feedback_generator",
         "_tf_chain_set_shimmer_reverb",
         "_tf_chain_set_celestial_reverb",
@@ -259,6 +260,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "filters.cpp"),
         str(ROOT / "src" / "effects" / "peak_limiter.cpp"),
         str(ROOT / "src" / "effects" / "poly_pitch_shifter.cpp"),
+        str(ROOT / "src" / "effects" / "chromatic_pitch_delay.cpp"),
         str(ROOT / "src" / "effects" / "pedal_compressor.cpp"),
         str(ROOT / "src" / "effects" / "optical_compressor.cpp"),
         str(ROOT / "src" / "effects" / "fet_compressor.cpp"),
@@ -1153,12 +1155,20 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "const left=document.querySelector('#tape-echo-time-left-ms');"
             "const right=document.querySelector('#tape-echo-time-right-ms');"
             "assert(independent&&shared&&split&&left&&right,'Independent Tape Echo UI controls are missing');"
-            "const posted=[];const portPrototype=MessagePort.prototype;"
+            "const posted=[],arpeggiatorPosted=[];const portPrototype=MessagePort.prototype;"
             "const originalPost=portPrototype.postMessage;"
             "portPrototype.postMessage=function(message,...transfer){"
+            "if(message?.type==='pitch-arpeggiator')arpeggiatorPosted.push(message.value);"
             "if(message?.type==='tape-echo')posted.push(message.value);"
             "return originalPost.call(this,message,...transfer)};"
-            "try{independent.checked=true;independent.dispatchEvent(new Event('change',{bubbles:true}));"
+            "try{const arpShift=document.querySelector('#pitch-arpeggiator-step-1');"
+            "assert(arpShift?.min==='-24'&&arpShift?.max==='24',"
+            "'Pitch Arpeggiator UI does not expose the documented ±24-degree step range');"
+            "arpShift.value='24';arpShift.dispatchEvent(new Event('input',{bubbles:true}));"
+            "assert(arpeggiatorPosted.at(-1)?.[14]===24&&"
+            "arpShift.parentElement.querySelector('output').value==='+24 degrees',"
+            "'Pitch Arpeggiator UI did not send +24 degrees to the AudioWorklet');"
+            "independent.checked=true;independent.dispatchEvent(new Event('change',{bubbles:true}));"
             "left.value='10';left.dispatchEvent(new Event('input',{bubbles:true}));"
             "right.value='20';right.dispatchEvent(new Event('input',{bubbles:true}));"
             "assert(shared.hidden&& !split.hidden,'Independent L/R controls did not become visible');"

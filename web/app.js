@@ -100,6 +100,7 @@ const EFFECT_NAMES = [
   "Stereo Filter · project-authored controls",
   "Step Tremolo · project-authored controls",
   "Deluxe Looper · project-authored",
+  "Chromatic Pitch Delay · project-authored Fender-inspired control roles",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -290,6 +291,7 @@ const DEFAULT_PARAMETERS = {
   delayTapeHeadsEnabled: false,
   delayTapeHeads: [110, 15],
   pitchSemitones: 0,
+  chromaticPitchDelay: [0, 350, 0.25, 0.65, 0.25, 0, 120, 4, 0],
   filters: [80, 12000],
   pedalCompressor: [0.45, 0.45, 0.25, 0],
 };
@@ -428,6 +430,17 @@ const pitchFeedbackDelayControls = [
   document.querySelector("#pitch-feedback-delay-feedback"),
   document.querySelector("#pitch-feedback-delay-mix"),
   document.querySelector("#pitch-feedback-delay-pitch"),
+];
+const chromaticPitchDelayControls = [
+  document.querySelector("#chromatic-pitch-delay-pitch"),
+  document.querySelector("#chromatic-pitch-delay-time-ms"),
+  document.querySelector("#chromatic-pitch-delay-feedback"),
+  document.querySelector("#chromatic-pitch-delay-tone"),
+  document.querySelector("#chromatic-pitch-delay-mix"),
+  document.querySelector("#chromatic-pitch-delay-time-mode"),
+  document.querySelector("#chromatic-pitch-delay-tempo-bpm"),
+  document.querySelector("#chromatic-pitch-delay-tap-division"),
+  document.querySelector("#chromatic-pitch-delay-spillover"),
 ];
 const feedbackGeneratorControls = [
   document.querySelector("#feedback-generator-type"),
@@ -4791,6 +4804,39 @@ for (const control of pitchFeedbackDelayControls) {
 }
 updatePitchFeedbackDelay();
 
+function updateChromaticPitchDelay() {
+  const [pitch, time, feedback, tone, mix, timeMode, tempo, division, spillover] =
+    chromaticPitchDelayControls.map((control, index) =>
+      index === 8 ? Number(control.checked) : Number(control.value));
+  const values = [pitch, time, feedback / 100, tone / 100, mix / 100,
+    timeMode, tempo, division, spillover];
+  chromaticPitchDelayControls[1].disabled = timeMode === 1;
+  chromaticPitchDelayControls[0].parentElement.querySelector("output").value =
+    `${pitch > 0 ? "+" : ""}${pitch.toFixed(0)} semitones`;
+  chromaticPitchDelayControls[1].parentElement.querySelector("output").value =
+    `${time.toFixed(0)} ms${timeMode === 1 ? " · saved" : ""}`;
+  chromaticPitchDelayControls[2].parentElement.querySelector("output").value =
+    `${Math.round(feedback)}%`;
+  chromaticPitchDelayControls[3].parentElement.querySelector("output").value =
+    `${Math.round(tone)}%`;
+  chromaticPitchDelayControls[4].parentElement.querySelector("output").value =
+    `${Math.round(mix)}%`;
+  chromaticPitchDelayControls[6].parentElement.querySelector("output").value =
+    `${tempo.toFixed(0)} BPM`;
+  chromaticPitchDelayControls[7].parentElement.querySelector("output").value =
+    chromaticPitchDelayControls[7].selectedOptions[0].textContent;
+  DEFAULT_PARAMETERS.chromaticPitchDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "chromatic-pitch-delay", value: values });
+  }
+}
+
+for (const control of chromaticPitchDelayControls) {
+  control.addEventListener("input", updateChromaticPitchDelay);
+  control.addEventListener("change", updateChromaticPitchDelay);
+}
+updateChromaticPitchDelay();
+
 function updateFeedbackGenerator() {
   const values = feedbackGeneratorControls.map((control) => Number(control.value));
   DEFAULT_PARAMETERS.feedbackGenerator = values;
@@ -8796,6 +8842,117 @@ async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBu
   }
 }
 
+async function runChromaticPitchDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const controls = chromaticPitchDelayControls;
+  const previousControls = controls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Chromatic Pitch Delay browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    controls[0].value = "12";
+    controls[1].value = "350";
+    controls[2].value = "20";
+    controls[3].value = "70";
+    controls[4].value = "100";
+    controls[5].value = "1";
+    controls[6].value = "120";
+    controls[7].value = "7";
+    controls[8].checked = false;
+    updateChromaticPitchDelay();
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="99"]')?.closest(".effect-row");
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    const checkbox = checkboxes[99];
+    const sampleCount = Math.min(reference.samples.length,
+      audioContext.sampleRate * reference.channels);
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !checkbox || !controls[1].disabled ||
+        DEFAULT_PARAMETERS.chromaticPitchDelay[0] !== 12 ||
+        DEFAULT_PARAMETERS.chromaticPitchDelay[5] !== 1 ||
+        DEFAULT_PARAMETERS.chromaticPitchDelay[6] !== 120 ||
+        DEFAULT_PARAMETERS.chromaticPitchDelay[7] !== 7 ||
+        sampleCount < 256) {
+      throw new Error("Chromatic Pitch Delay controls, tempo sync, or Pitch category did not reach the browser chain.");
+    }
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 99;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Chromatic Pitch Delay picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Chromatic Pitch Delay playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, sampleCount);
+    stopSource(false);
+
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      peak = Math.max(peak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = Math.sqrt(differenceSquares / sampleCount);
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Chromatic Pitch Delay produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Pitch", enabledEffectIndex: 99, pitchSemitones: 12,
+      timeMode: "tempo-sync", tempoBpm: 120, tapDivision: "eighth",
+      feedbackPercent: 20, mixPercent: 100, playOutputCaptured: true,
+      sampleCount, peak, activeSamples, differenceRms,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      controls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateChromaticPitchDelay();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStepTremoloBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = stepTremoloControls.map((control) => control.value);
@@ -9754,8 +9911,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 99 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 99 || effectRows.length !== 99 ||
+        const expectedEffectIds = Array.from({ length: 100 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 100 || effectRows.length !== 100 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -11065,9 +11222,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (pitchIds.join(",") !== "22,50,51,74" || effectCount.value !== `4 of ${effectRows.length}` ||
+                   if (pitchIds.join(",") !== "22,50,51,74,99" || effectCount.value !== `5 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Pitch category must list the polyphonic shifter, monophonic harmonizer, and scale arpeggiator.");
+      throw new Error("The Pitch category must list the polyphonic shifter, harmonizer, pitch sequencers, and Chromatic Pitch Delay.");
     }
     effectCategoryFilter.value = "synth";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -11431,11 +11588,14 @@ async function runBrowserSelfTest() {
      parityEnabled[93] = false;
       // Stereo Filter has its own browser Play smoke; it is not in the offline CLI reference chain.
       parityEnabled[96] = false;
+    // Chromatic Pitch Delay has its dedicated local guitar Play smoke; it is
+    // not part of the offline CLI reference chain.
+    parityEnabled[99] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-        if (parityEnabled.length !== 99 || activeProcessorIndices.length !== 73 ||
+        if (parityEnabled.length !== 100 || activeProcessorIndices.length !== 73 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 98) {
              throw new Error("The all-effect chain must contain 73 optional processors between input trim and output utilities.");
     }
@@ -12177,6 +12337,11 @@ async function runBrowserSelfTest() {
     const duckingDelaySmoke = await runDuckingDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Chromatic Pitch Delay playback on local guitar audio…";
+    const chromaticPitchDelaySmoke =
+      await runChromaticPitchDelayBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
     testResult.textContent = "Checking Volume/Pan playback on local guitar audio…";
     const volumePanSmoke = await runVolumePanBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -12330,6 +12495,7 @@ async function runBrowserSelfTest() {
       deluxeLooper: deluxeLooperSmoke,
       stepFilterDelay: stepFilterDelaySmoke,
       duckingDelay: duckingDelaySmoke,
+      chromaticPitchDelay: chromaticPitchDelaySmoke,
       volumePan: volumePanSmoke,
       stepTremolo: stepTremoloSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },

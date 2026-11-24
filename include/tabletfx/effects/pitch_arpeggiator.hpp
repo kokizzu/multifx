@@ -11,7 +11,7 @@
 
 namespace tabletfx::effects {
 
-// The June 2023 Fractal Audio Blocks Guide (Pitch block, pp. 76–82;
+// The November 2026 Fractal Audio Blocks Guide (Pitch block, pp. 76–82;
 // Arpeggiator p. 81 and scale table p. 82)
 // describes an intelligent, scale-aware 16-step Arpeggiator with Key, Scale,
 // Run, Trigger Thresh, Steps, Repeats, tempo-synchronized step duration,
@@ -24,16 +24,18 @@ namespace tabletfx::effects {
 // This module is a project-authored analog, not Fractal DSP, tracking, timing,
 // parameter-range, or sound parity. The guide's p. 76 Pitch type table lists
 // the Fractal Arpeggiator as one voice, with no voice delay and a ±24 scale-
-// degree range. This implementation currently clamps steps to ±7 because its
-// shared DiatonicHarmonizer processing path supports no wider interval; that is
-// a known range gap. The input tracker is monophonic. It reuses
+// degree range. This implementation supports project-authored ±24-degree
+// steps through an explicit wide-range DiatonicHarmonizer profile. Its pitch
+// shifter is limited to ±60 semitones for the current project scales, with the
+// output bounded above 20 Hz and below 0.45×sample rate. The input tracker is
+// monophonic. It reuses
 // the project DiatonicHarmonizer pitch tracker and scale mapping; its nominal
 // pitch-control response is above the project's provisional 20 ms live gate.
 // Notes outside the selected scale are snapped to its nearest tone by that
 // shared mapper, with ties choosing the lower note. Project-authored
 // bounds/defaults are documented on PitchArpeggiatorParameters.
 // Primary references: https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf
-// and https://www.fractalaudio.com/fm9-downloads/ (firmware listing checked 2026-11-22).
+// and https://www.fractalaudio.com/fm9-downloads/ (firmware listing checked 2026-11-24).
 enum class PitchArpeggiatorDivision : std::uint8_t {
     Free,
     Whole,
@@ -71,8 +73,9 @@ struct PitchArpeggiatorParameters {
     std::array<int, 16> stage_shift_scale_degrees{
         0, 2, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    // Project-authored bounds: Steps 1–16; each implemented shift −7…+7 scale
-    // degrees. Fractal documents ±24 degrees; its wider range remains a gap.
+    // Project-authored bounds: Steps 1–16; each implemented shift −24…+24
+    // scale degrees. This is an interval limit, not a guarantee that every
+    // source note/scale maps to a realizable frequency below Nyquist.
     // Repeats 0…64 where 0 means infinite; tempo 30…300 BPM; Free step time
     // 10…2000 ms. A tempo division sets one step relative to the supplied tempo.
     std::uint8_t steps = 4;

@@ -4956,6 +4956,16 @@ void run_bench() {
         effect->set_pitch_semitones(5.0F);
         return effect;
     }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    tabletfx::ChromaticPitchDelayParameters chromatic_pitch_delay_parameters;
+    chromatic_pitch_delay_parameters.pitch_semitones = 12.0F;
+    chromatic_pitch_delay_parameters.feedback = 0.20F;
+    chromatic_pitch_delay_parameters.tone = 0.70F;
+    chromatic_pitch_delay_parameters.mix = 0.25F;
+    benchmark_one("chromatic-pitch-delay", [=] {
+        return std::make_unique<tabletfx::ChromaticPitchDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F,
+            chromatic_pitch_delay_parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     tabletfx::CompressorParameters compressor_parameters;
     compressor_parameters.threshold_db = -24.0F;
     compressor_parameters.ratio = 4.0F;

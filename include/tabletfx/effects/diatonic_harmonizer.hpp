@@ -45,10 +45,11 @@ enum class TapDivision : std::uint8_t {
 };
 
 struct DiatonicHarmonizerConfig {
-// Project-authored defaults and bounds:
-    // Linear Mix [0, 1], interval [-7, +7] scale degrees, key [0, 11] (C..B),
-    // tone cutoff [500, 12000] Hz, delay [0, 600] ms, feedback [0, 0.85],
-    // tempo [30, 300] BPM. The Fender guide does not specify numeric ranges.
+    // Project-authored defaults and bounds: linear Mix [0, 1], interval [-7,
+    // +7] scale degrees in the normal profile or [-24, +24] in the explicit
+    // wide profile, key [0, 11] (C..B), tone cutoff [500, 12000] Hz, delay
+    // [0, 600] ms, feedback [0, 0.85], tempo [30, 300] BPM. The Fender guide
+    // does not specify numeric ranges.
     float mix = 0.35F;
     int pitch_interval = 2;
     int key = 0;
@@ -85,7 +86,12 @@ struct DiatonicHarmonizerConfig {
 // is fixed-memory and performs no heap allocation after construction.
 class DiatonicHarmonizer final : public tabletfx::Effect {
 public:
-    explicit DiatonicHarmonizer(float sample_rate = 48000.0F);
+    // The normal profile retains its ±7-degree config clamp and ±12-semitone
+    // shifter. The explicit 24-degree profile is used by PitchArpeggiator and
+    // supports up to ±60 semitones for the project's current scale set.
+    explicit DiatonicHarmonizer(
+        float sample_rate = 48000.0F,
+        int max_pitch_interval_scale_degrees = 7);
 
     [[nodiscard]] std::string_view id() const noexcept override {
         return "diatonic-harmonizer";
@@ -149,12 +155,16 @@ private:
     static constexpr std::size_t kDelaySize = 65536;
 
     void detect_pitch() noexcept;
+    void pitch_ratio_bounds(float input_frequency_hz,
+                            float& minimum,
+                            float& maximum) const noexcept;
     [[nodiscard]] float delayed_sample(std::size_t channel,
                                        std::size_t age) const noexcept;
     void clear_delay() noexcept;
     void update_derived_parameters() noexcept;
 
     float sample_rate_;
+    int max_pitch_interval_scale_degrees_;
     tabletfx::PolyPitchShifter pitch_shifter_;
     float detector_rate_;
     std::size_t decimation_;

@@ -35,6 +35,7 @@ tabletfx::effects::PitchArpeggiator threshold_whole(8000.0F);
 tabletfx::effects::PitchArpeggiator threshold_split(8000.0F);
 tabletfx::effects::PitchArpeggiator allocation_effect(8000.0F);
 tabletfx::effects::PitchArpeggiator pitch_effect(48000.0F);
+tabletfx::effects::PitchArpeggiator wide_pitch_effect(16000.0F);
 
 void configure_free_run(tabletfx::effects::PitchArpeggiator& effect,
                         std::uint8_t steps,
@@ -92,11 +93,17 @@ void test_scale_mapping_and_pitch_sequence() {
                 62, 7, DiatonicScale::Major, 2) == 66,
             "G-major arpeggio steps must follow the selected scale");
     require(PitchArpeggiator::sequence_midi_note(
-                60, 0, DiatonicScale::Major, 24) == 72,
-            "the current tracker must cap large positive shifts at seven degrees");
+                60, 0, DiatonicScale::Major, 24) == 101,
+            "a positive 24-degree C-major shift must reach F7");
     require(PitchArpeggiator::sequence_midi_note(
-                60, 0, DiatonicScale::Major, -24) == 48,
-            "the current tracker must cap large negative shifts at seven degrees");
+                60, 0, DiatonicScale::Major, -24) == 19,
+            "a negative 24-degree C-major shift must reach G0");
+    require(PitchArpeggiator::sequence_midi_note(
+                57, 0, DiatonicScale::MajorPentatonic, 24) == 115,
+            "a positive 24-degree pentatonic shift must use the selected scale");
+    require(PitchArpeggiator::sequence_midi_note(
+                81, 0, DiatonicScale::MajorPentatonic, -24) == 24,
+            "a negative 24-degree pentatonic shift must use the selected scale");
 
     configure_free_run(pitch_effect, 2U, 250.0F);
     auto parameters = pitch_effect.parameters();
@@ -124,6 +131,65 @@ void test_scale_mapping_and_pitch_sequence() {
             "the second scale-degree stage must produce its shifted pitch");
     require(pitch_effect.current_scale_shift() == 2,
             "the active step must expose its configured scale-degree shift");
+}
+
+void test_wide_scale_degree_extremes_reach_audio_output() {
+    using tabletfx::effects::DiatonicScale;
+    using tabletfx::effects::PitchArpeggiator;
+    using tabletfx::effects::PitchArpeggiatorParameters;
+
+    struct Case {
+        int input_midi;
+        DiatonicScale scale;
+        int scale_degrees;
+    };
+    constexpr std::array<Case, 4> cases{{
+        {60, DiatonicScale::Major, 24},
+        {60, DiatonicScale::Major, -24},
+        {57, DiatonicScale::MajorPentatonic, 24},
+        {81, DiatonicScale::MajorPentatonic, -24},
+    }};
+    constexpr float sample_rate = 16000.0F;
+    constexpr std::size_t frames = 32000U;
+    constexpr std::size_t measure_start = 12000U;
+    constexpr std::size_t measure_frames = 16000U;
+    std::vector<float> audio(frames);
+
+    for (const Case& test_case : cases) {
+        PitchArpeggiatorParameters parameters;
+        parameters.key = 0;
+        parameters.scale = test_case.scale;
+        parameters.steps = 1U;
+        parameters.stage_shift_scale_degrees[0] = test_case.scale_degrees;
+        parameters.run = true;
+        parameters.step_division =
+            tabletfx::effects::PitchArpeggiatorDivision::Free;
+        parameters.free_step_ms = 2000.0F;
+        parameters.mix = 1.0F;
+        wide_pitch_effect.configure(parameters);
+        wide_pitch_effect.reset();
+
+        const double input_hz = 440.0 * std::exp2(
+            static_cast<double>(test_case.input_midi - 69) / 12.0);
+        const int target_midi = PitchArpeggiator::sequence_midi_note(
+            test_case.input_midi, parameters.key, parameters.scale,
+            test_case.scale_degrees);
+        const double target_hz = 440.0 * std::exp2(
+            static_cast<double>(target_midi - 69) / 12.0);
+        require(target_hz >= 20.0 && target_hz < 0.45 * sample_rate,
+                "extreme degree test tones must remain in the wide shifter's safe output band");
+
+        for (std::size_t frame = 0; frame < frames; ++frame) {
+            audio[frame] = static_cast<float>(0.25 * std::sin(
+                2.0 * kPi * input_hz * static_cast<double>(frame) /
+                sample_rate));
+        }
+        wide_pitch_effect.process(audio, 1U);
+        const double amplitude = tone_amplitude(
+            audio, measure_start, measure_frames, target_hz, sample_rate);
+        require(std::isfinite(amplitude) && amplitude > 0.005,
+                "the ±24-degree arpeggiator steps must produce their mapped output pitches");
+    }
 }
 
 void test_step_timing_finite_repeats_and_trigger() {
@@ -414,9 +480,9 @@ void test_amplitude_pan_shapes_and_bounds() {
     supported_range.stage_shift_scale_degrees[0] = 24;
     supported_range.stage_shift_scale_degrees[1] = -24;
     shape_effect.configure(supported_range);
-    require(shape_effect.parameters().stage_shift_scale_degrees[0] == 7 &&
-                shape_effect.parameters().stage_shift_scale_degrees[1] == -7,
-            "the project sequence must clamp to the currently supported ±7 degrees");
+    require(shape_effect.parameters().stage_shift_scale_degrees[0] == 24 &&
+                shape_effect.parameters().stage_shift_scale_degrees[1] == -24,
+            "the project sequence must clamp to ±24 scale degrees");
 
     parameters.key = 99;
     parameters.scale = static_cast<tabletfx::effects::DiatonicScale>(255U);
@@ -443,9 +509,9 @@ void test_amplitude_pan_shapes_and_bounds() {
                 safe.scale == tabletfx::effects::DiatonicScale::Major &&
                 safe.steps == 1U && safe.repeats == 64U,
             "key, scale, step-count, and repeat controls must be bounded");
-    require(safe.stage_shift_scale_degrees[0] == 7 &&
-                safe.stage_shift_scale_degrees[1] == -7,
-            "per-step scale shifts must clamp to the supported ±7 range");
+    require(safe.stage_shift_scale_degrees[0] == 24 &&
+                safe.stage_shift_scale_degrees[1] == -24,
+            "per-step scale shifts must clamp to the supported ±24 range");
     require(safe.trigger_threshold_dbfs == -90.0F,
             "a non-finite threshold must recover to the disabled project default");
     require(safe.step_division ==
@@ -583,6 +649,7 @@ void operator delete[](void* allocation, std::size_t) noexcept {
 int main() {
     try {
         test_scale_mapping_and_pitch_sequence();
+        test_wide_scale_degree_extremes_reach_audio_output();
         test_step_timing_finite_repeats_and_trigger();
         test_threshold_trigger_manual_mode_release_and_retrigger();
         test_threshold_trigger_partition_invariance();

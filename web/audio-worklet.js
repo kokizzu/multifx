@@ -20,6 +20,7 @@ EFFECTS.splice(EFFECTS.indexOf("output-level"), 0, "volume-pan");
 EFFECTS.push("stereo-filter");
 EFFECTS.push("step-tremolo");
 EFFECTS.push("deluxe-looper");
+EFFECTS.push("chromatic-pitch-delay");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -444,6 +445,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_grain_delay(this.chain, ...grainDelay);
       this.configurePitchFeedbackDelay(parameters.pitchFeedbackDelay ||
         [350, 0.35, 0.25, 7]);
+      this.configureChromaticPitchDelay(parameters.chromaticPitchDelay ||
+        [0, 350, 0.25, 0.65, 0.25, 0, 120, 4, 0]);
       this.configureFeedbackGenerator(parameters.feedbackGenerator ||
         [1, 0.35, 15, 600, 0, 1, -48]);
       const convolutionReverb = parameters.convolutionReverb || [0.25, 0, 0, 0, 0];
@@ -555,6 +558,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     this.module._tf_chain_set_pitch_feedback_delay(this.chain, ...values);
+  }
+
+  configureChromaticPitchDelay(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 9) {
+      return;
+    }
+    this.module._tf_chain_set_chromatic_pitch_delay(this.chain, ...values);
   }
 
   configureFeedbackGenerator(values) {
@@ -1167,6 +1177,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureGrainDelay(message.value);
     } else if (message.type === "pitch-feedback-delay" && this.ready) {
       this.configurePitchFeedbackDelay(message.value);
+    } else if (message.type === "chromatic-pitch-delay" && this.ready) {
+      this.configureChromaticPitchDelay(message.value);
     } else if (message.type === "feedback-generator" && this.ready) {
       this.configureFeedbackGenerator(message.value);
     } else if (message.type === "shimmer-reverb" && this.ready) {
@@ -1290,7 +1302,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_tuner(this.chain);
     const tunerElapsedMs = nowMs() - tunerStartMs;
     if (this.stats) this.stats[ringOffset + TUNER_TIME] = Math.round(tunerElapsedMs * 1000000);
-    for (let effect = 0; effect < EFFECTS.length - 3; effect += 1) {
+    for (let effect = 0; effect < EFFECTS.length - 4; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
       const elapsedMs = nowMs() - startMs;
@@ -1300,6 +1312,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_effect(this.chain, 96);
     this.module._tf_chain_process_effect(this.chain, 97);
     this.module._tf_chain_process_effect(this.chain, 98);
+    this.module._tf_chain_process_effect(this.chain, 99);
     const outputGainStartMs = nowMs();
     this.module._tf_chain_process_output_gain(this.chain);
     const outputGainElapsedMs = nowMs() - outputGainStartMs;

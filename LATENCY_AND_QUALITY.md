@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Chromatic Pitch Delay and extended Arpeggiator range (2026-11-24)
+
+The project-authored Chromatic Pitch Delay was measured in a Release build on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks). Its processor-call p50/p95/p99/p99.9/max was 10.4013/14.0888/16.7569/22.0945/26.3696% of one callback, with 1,262,216 B directly owned state. A wet pitch repeat has 256 samples (5.333 ms) of pitch-engine latency; dry remains immediate. `process()` allocates no memory. These are one desktop benchmark run and do not predict Android tablet load or end-to-end route latency.
+
+The project Pitch Arpeggiator's ±24 scale-degree range benchmarked at 15.8172/25.3743/26.5185/38.7033/63.0741% p50/p95/p99/p99.9/max, with 1,024,888 B owned state, under the same settings. It is still monophonic and retains an approximately 26.7 ms first-note response estimate at 48 kHz. Its higher tail latency/load deserves device testing and optimization if the target tablet cannot maintain the audio deadline. The wider scale-degree clamp did not add per-callback memory or a new processor. Both figures are isolated processor-call measurements; multiple simultaneous effects add cost, and browser millisecond timing is too coarse for precise per-effect real-time guarantees.
+
 ## Dynamic Delay controls and modulation (2026-11-24)
 
 The Fender-informed, project-authored controls were measured with the Release build on an AMD Ryzen 9 5950X at 48 kHz stereo and 128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks). Default Free Time with repeat cuts and modulation depth off measured p50/p95/p99/p99.9/max processor-call time of 0.1331/0.1335/0.1797/1.7003/2.8043% of that deadline. The filtered/modulated case (150/7,000 Hz repeat cuts, 1.25 Hz, 6.5 ms, Sine) measured 0.1823/0.1838/0.2355/1.6733/1.7640%. The fixed 2-second stereo processor owns 768,296 B in either case; `process()` performs no allocation. At this tested setting the additional filters and modulation stay below 0.24% p99 of the callback deadline on this desktop CPU. These are synthetic processor-call measurements, not Android/Windows live-route or round-trip latency evidence.

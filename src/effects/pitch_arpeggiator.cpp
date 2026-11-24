@@ -18,7 +18,7 @@ PitchArpeggiator::PitchArpeggiator(
     float sample_rate, PitchArpeggiatorParameters parameters)
     : sample_rate_(bounded(sample_rate, 48000.0F,
                            kMinimumSampleRate, kMaximumSampleRate)),
-      tracker_(sample_rate_) {
+      tracker_(sample_rate_, 24) {
     trigger_attack_coefficient_ = static_cast<float>(
         1.0 - std::exp(-1.0 /
                        (static_cast<double>(sample_rate_) *
@@ -121,10 +121,7 @@ void PitchArpeggiator::configure(
         ? std::pow(10.0F, parameters_.trigger_threshold_dbfs / 20.0F)
         : 0.0F;
     for (int& shift : parameters_.stage_shift_scale_degrees) {
-        // The shared monophonic tracker limits one harmonizer interval to
-        // seven scale degrees. Fractal's Pitch type table p. 76 lists ±24 for
-        // its Arpeggiator; that wider range remains a known project gap.
-        shift = std::clamp(shift, -7, 7);
+        shift = std::clamp(shift, -24, 24);
     }
     if (!valid_division(parameters_.step_division)) {
         parameters_.step_division = PitchArpeggiatorDivision::Eighth;
@@ -355,7 +352,7 @@ int PitchArpeggiator::sequence_midi_note(int input_midi_note,
                                          DiatonicScale scale,
                                          int scale_degrees) noexcept {
     const int note = std::clamp(input_midi_note, 0, 127);
-    const int bounded_degrees = std::clamp(scale_degrees, -7, 7);
+    const int bounded_degrees = std::clamp(scale_degrees, -24, 24);
     return DiatonicHarmonizer::harmony_midi_note(
         note, key, scale, bounded_degrees);
 }
