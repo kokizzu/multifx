@@ -105,8 +105,8 @@
     }
   },
   "current_checkpoint": {
-    "name": "Fender Tone Master Pro Dynamic Delay timing and repeat filters",
-    "status": "partial_verified",
+    "name": "Fender Tone Master Pro Dynamic Delay timing, filters, and modulation",
+    "status": "verified",
     "picker_index": 39,
     "category": "Delay",
     "official_source": {
@@ -117,38 +117,38 @@
       "qualification": "The guide names Dynamic Delay controls. Firmware v1.6.34 is the latest checked source here to state a Time range of 30–2,000 ms; the other numeric ranges/defaults and any unit-installed firmware remain unknown."
     },
     "documented_controls": "Time, Feedback, Mix, Tap Division, repeat Low Cut and High Cut, Threshold, Attenuation, Release, Mod Rate, Mod Depth, Mod Mode (SINE/TRI/RAND/TRIG), and Spillover Switch.",
-    "project_controls": "The existing project-authored Ducking Delay retains Free Time when switching to tempo sync; offers 20–300 BPM and 14 divisions from whole to 1/64 including dotted/triplet options; repeat Low/High Cut filters are inside the feedback path; block-bypass Spillover is optional. Existing project controls remain 350 ms Time, 0.25 Feedback/Mix, −30 dB Threshold, 12 dB Attenuation, and 250 ms Release. Numeric ranges/defaults, filter and ducking response, and DSP are project choices. Mod Rate/Depth/Mode and preset/scene transition tails are not implemented.",
+    "project_controls": "The project-authored Ducking Delay retains Free Time with 20–300 BPM Tempo Sync and 14 divisions; repeat Low/High Cut are in the feedback path; block-bypass Spillover is optional. Defaults remain 350 ms Time, 0.25 Feedback/Mix, −30 dB Threshold, 12 dB Attenuation, 250 ms Release, 0.8 Hz Mod Rate, 0 ms Mod Depth, and Sine mode. Project modulation modes are Sine/Triangle/Random/Triggered Ramp; rate is 0.05–10 Hz, depth 0–50 ms and capped by available delay headroom. Triggered Ramp resets on the existing threshold crossing and rearms below threshold. All numeric ranges, defaults, division choices, filtering, and DSP are project choices. Preset/scene transition tails are not implemented.",
     "verification": {
       "native_ctest": "make test passed 102/102 CTest cases, including Ducking Delay timing, feedback-cut, ducking, spillover, stereo, bounds, and finite-input tests.",
       "fixture_safety": "11 fixture-safety checks passed.",
       "picker_rows": 99,
-      "browser": "make web-test passed the 73-active-stage browser/native comparison at 48 kHz; max absolute error 0.00000668335, RMS error 0.00000121755. Local prerecorded Guitar-TECHS DI Play at Delay index 39 used tempo sync (120 BPM/eighth), cuts 150/7,000 Hz, peak 0.0605055, 71,996 active samples, difference RMS 0.0145135.",
-      "wasm_memory": "Fixed 96 MiB heap; processor state 78,988,508 B plus 10,364 B tuner state.",
-      "isolated_benchmark": "Updated Ducking Delay, default configuration, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks on AMD Ryzen 9 5950X: p50/p95/p99/p99.9/max 0.1215/0.1688/0.1812/0.7481/1.5525% of 2.667 ms callback deadline; 768,240 B owned stereo state. New cuts were disabled during this isolated benchmark, so their incremental CPU cost remains unmeasured.",
+      "browser": "make web-browser-test passed the 73-active-stage browser/native comparison at 48 kHz; max absolute error 0.00000668335, RMS error 0.00000121755. Local prerecorded Guitar-TECHS DI Play at Delay index 39 used 120 BPM/eighth, cuts 150/7,000 Hz, and 1.25 Hz/6.5 ms Sine modulation; peak 0.0614053, 71,430 active samples, difference RMS 0.0138586.",
+      "wasm_memory": "Fixed 96 MiB heap; processor state 78,988,648 B plus 10,364 B tuner state.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X, Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks. Ducking Delay default p50/p95/p99/p99.9/max 0.1331/0.1335/0.1797/1.7003/2.8043%; feedback cuts 150/7,000 Hz plus 1.25 Hz/6.5 ms Sine modulation 0.1823/0.1838/0.2355/1.6733/1.7640% of the 2.667 ms callback deadline. Both configurations own 768,296 B; process() allocates nothing.",
       "windows": "make windows-cross-build passed for the native core and offline renderer with Ducking Delay.",
-      "notes": "Project-authored controls and DSP; no Fender algorithm/settings/sound parity. Browser/native and desktop processor measurements do not establish live round-trip latency. Human listening and hardware checks remain open."
+      "notes": "Automated implementation verified; project-authored controls/DSP, with no Fender algorithm/settings/sound parity. Browser/native and desktop processor measurements do not establish live round-trip latency. Human listening and hardware checks remain open."
     }
   },
   "next_research": [
     {
       "device": "Fender Tone Master Pro",
-      "feature": "Dynamic Delay: Mod Rate, Mod Depth, and Mod Mode",
-      "source": "Tone Master Pro Model Guide v1.1.100 Rev. A, p.45; firmware history current through v1.8.85 (2026-11-18); v1.6.34 explicitly extends Time to 30–2,000 ms",
+      "feature": "Fender Chromatic Pitch Shifter: integrate the native ±24-semitone draft into categorized picker, browser/WASM, offline audio, and Windows build",
+      "source": "Tone Master Pro Model Guide v1.1.100 Rev. A, p.66; firmware history current through v1.8.85 (2026-11-18)",
       "source_urls": [
         "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
         "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
       ],
-      "status": "A partial project-authored implementation is now wired at existing Delay picker index 39 with retained free time, tempo sync, 14 divisions, feedback-path Low/High Cut, and block-bypass Spillover; native/browser Play tests, CPU/memory benchmark, and MinGW cross-build pass. The remaining controls named in the guide are Mod Rate, Mod Depth, and Mod Mode (SINE/TRI/RAND/TRIG). Add and test those before marking this model feature complete; preserve the same project-authored versus manufacturer distinctions and do not claim Fender DSP/range parity."
+      "status": "A project-authored native ChromaticPitchDelay module and opt-in ±24-semitone capability have been drafted and native tests pass. Shared PolyPitchShifter defaults remain ±12. Still integrate CMake, categorized Pitch picker, browser/WASM/offline paths, focused local-DI playback, CPU/memory measurements, and Windows cross-build. Fender's guide does not establish polyphony, tracking quality, numeric defaults, or DSP; do not claim parity."
     },
     {
-      "device": "Fender Tone Master Pro",
-      "feature": "Chromatic Pitch Shifter: ±2-octave pitch plus delay, feedback, tone and spillover",
-      "source": "Tone Master Pro Model Guide v1.1.100, p.66; update page lists v1.8.85 but no changed controls for this model",
+      "device": "XRecer XR1",
+      "feature": "Cabinet IR Loader single-IR path integration",
+      "source": "Official XR1 FAQ checked 2026-11-23; exact-model manual portal remains unreadable in current web reader",
       "source_urls": [
-        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+        "https://www.xrecer.com/pages/faq",
+        "https://www.xrecer.com/products/xr1"
       ],
-      "status": "Guide documents Mix, Pitch −2 to +2 octaves, Delay, Tap Division, Feedback, Tone, Spillover Switch, and recommends single-note playing without establishing polyphony or tracking quality. Current project PolyPitchShifter clamps ±12 semitones; implementation feasibility and latency need measurement before adding a new categorized Pitch stage."
+      "status": "A project-authored mono CabinetIr draft validates one 24-bit/48 kHz/2,048-frame IR and uses zero-fixed-latency direct FIR with no callback allocation. Integration remains: safe WAV metadata handling, categorized Cabinet/IR picker, browser/WASM load path, focused tests, CPU/memory measurement, offline regression, and Windows build. XR1 does not document dual-loader channel semantics; implement only one mono IR and do not claim XRecer DSP parity."
     },
     {
       "device": "Line 6 Helix Stadium XL",

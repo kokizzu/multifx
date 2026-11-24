@@ -2,14 +2,19 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <new>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
+
+std::atomic<std::size_t> allocation_count{};
 
 void require(bool condition, const std::string& message) {
     if (!condition) throw std::runtime_error(message);
@@ -183,6 +188,149 @@ void test_repeat_cuts_leave_first_echo_and_filter_feedback_repeats() {
             "Low Cut and High Cut must shape the signal fed into later repeats");
 }
 
+std::size_t first_nonzero(const std::array<float, 120>& audio,
+                          std::size_t begin, std::size_t end) {
+    for (std::size_t index = begin; index < end; ++index) {
+        if (std::abs(audio[index]) > 1.0e-5F) return index;
+    }
+    return audio.size();
+}
+
+std::array<float, 120> render_modulated_impulses(
+    tabletfx::DuckingDelayModulationMode mode,
+    float first_impulse = 0.8F,
+    float second_impulse = 0.0F) {
+    tabletfx::DuckingDelayParameters parameters;
+    parameters.time_ms = 20.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.threshold_db = -6.0F;
+    parameters.attenuation_db = 0.0F;
+    parameters.mod_rate_hz = 10.0F;
+    parameters.mod_depth_ms = 8.0F;
+    parameters.modulation_mode = mode;
+    tabletfx::DuckingDelay delay(1000.0F, 1, 100.0F, parameters);
+    std::array<float, 120> audio{};
+    audio[0] = first_impulse;
+    audio[50] = second_impulse;
+    delay.process(audio, 1);
+    return audio;
+}
+
+void test_modulation_modes_are_distinct_bounded_and_deterministic() {
+    using Mode = tabletfx::DuckingDelayModulationMode;
+    const auto sine = render_modulated_impulses(Mode::sine);
+    const auto triangle = render_modulated_impulses(Mode::triangle);
+    const auto random_first = render_modulated_impulses(Mode::random);
+    const auto random_second = render_modulated_impulses(Mode::random);
+    const auto is_finite = [](const auto& samples) {
+        return std::all_of(samples.begin(), samples.end(), [](float sample) {
+            return std::isfinite(sample);
+        });
+    };
+
+    require(first_nonzero(triangle, 5, 50) < first_nonzero(sine, 5, 50),
+            "triangle and sine modes must modulate delay time differently");
+    require(random_first == random_second,
+            "random delay modulation must be deterministic after reset/construction");
+    require(is_finite(sine) && is_finite(triangle) && is_finite(random_first),
+            "all free-running modulation modes must produce finite samples");
+
+    tabletfx::DuckingDelay delay;
+    auto parameters = delay.parameters();
+    parameters.mod_rate_hz = 100.0F;
+    parameters.mod_depth_ms = 100.0F;
+    parameters.modulation_mode = static_cast<Mode>(255);
+    delay.configure(parameters);
+    const auto safe = delay.parameters();
+    require(safe.mod_rate_hz == 10.0F && safe.mod_depth_ms == 50.0F &&
+                safe.modulation_mode == Mode::sine,
+            "modulation controls must clamp to project bounds and invalid modes must fall back safely");
+
+    parameters = safe;
+    parameters.time_ms = 20.0F;
+    parameters.mod_depth_ms = 50.0F;
+    delay.configure(parameters);
+    require(delay.parameters().mod_depth_ms <= 19.0F,
+            "modulation depth must leave the selected delay inside the ring bounds");
+}
+
+void test_triggered_ramp_threshold_and_retrigger_behavior() {
+    using Mode = tabletfx::DuckingDelayModulationMode;
+    const auto below_threshold = render_modulated_impulses(Mode::triggered_ramp, 0.1F);
+    const auto first_trigger = render_modulated_impulses(Mode::triggered_ramp, 0.8F);
+    const auto retriggered = render_modulated_impulses(Mode::triggered_ramp, 0.8F, 0.8F);
+    const auto not_retriggered = render_modulated_impulses(Mode::triggered_ramp, 0.8F, 0.4F);
+
+    const auto quiet_echo = first_nonzero(below_threshold, 5, 45);
+    const auto triggered_echo = first_nonzero(first_trigger, 5, 45);
+    require(quiet_echo == 20U && triggered_echo > quiet_echo,
+            "Triggered Ramp must remain unmodulated before Threshold and start its rising ramp after a crossing");
+
+    const auto retriggered_echo = first_nonzero(retriggered, 60, 100);
+    const auto continuing_echo = first_nonzero(not_retriggered, 60, 100);
+    require(retriggered_echo < continuing_echo,
+            "a second above-threshold onset must restart the Triggered Ramp while a quiet input does not");
+}
+
+void test_stereo_modulation_is_linked_resettable_and_allocation_free() {
+    using Mode = tabletfx::DuckingDelayModulationMode;
+    tabletfx::DuckingDelayParameters parameters;
+    parameters.time_ms = 20.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.threshold_db = -6.0F;
+    parameters.attenuation_db = 0.0F;
+    parameters.mod_rate_hz = 10.0F;
+    parameters.mod_depth_ms = 8.0F;
+    parameters.modulation_mode = Mode::triggered_ramp;
+    tabletfx::DuckingDelay delay(1000.0F, 2, 100.0F, parameters);
+
+    std::array<float, 120U * 2U> audio{};
+    audio[0] = 0.8F;
+    audio[1] = 0.4F;
+    const auto before = allocation_count.load(std::memory_order_relaxed);
+    delay.process(audio, 2);
+    const auto after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before,
+            "Ducking Delay modulation must not allocate while processing");
+
+    std::size_t left_echo = audio.size();
+    std::size_t right_echo = audio.size();
+    for (std::size_t frame = 1; frame < 60; ++frame) {
+        if (left_echo == audio.size() && std::abs(audio[frame * 2U]) > 1.0e-5F) {
+            left_echo = frame;
+        }
+        if (right_echo == audio.size() && std::abs(audio[frame * 2U + 1U]) > 1.0e-5F) {
+            right_echo = frame;
+        }
+    }
+    require(left_echo == right_echo && left_echo != audio.size(),
+            "stereo channels must share the same modulation phase and trigger event");
+
+    delay.reset();
+    std::array<float, 120U * 2U> after_reset{};
+    after_reset[0] = 0.8F;
+    after_reset[1] = 0.4F;
+    delay.process(after_reset, 2);
+    require(after_reset == audio,
+            "reset must restore modulation phase, trigger state, and delay history");
+
+    // Exercise arbitrary callback partitioning with deterministic Random mode.
+    parameters.modulation_mode = Mode::random;
+    tabletfx::DuckingDelay one_block(1000.0F, 1, 100.0F, parameters);
+    tabletfx::DuckingDelay split_blocks(1000.0F, 1, 100.0F, parameters);
+    std::array<float, 120> whole{};
+    whole[0] = 0.8F;
+    auto split = whole;
+    one_block.process(whole, 1);
+    split_blocks.process(std::span<float>(split).first(13), 1);
+    split_blocks.process(std::span<float>(split).subspan(13, 37), 1);
+    split_blocks.process(std::span<float>(split).subspan(50), 1);
+    require(whole == split,
+            "modulation state and output must not depend on callback partitioning");
+}
+
 void test_controls_are_bounded_and_invalid_samples_recover() {
     tabletfx::DuckingDelay delay;
     auto parameters = delay.parameters();
@@ -234,6 +382,9 @@ int main() {
         test_spillover_off_bypass_is_transparent_and_clears_the_tail();
         test_tempo_sync_uses_tap_division_and_keeps_free_time();
         test_repeat_cuts_leave_first_echo_and_filter_feedback_repeats();
+        test_modulation_modes_are_distinct_bounded_and_deterministic();
+        test_triggered_ramp_threshold_and_retrigger_behavior();
+        test_stereo_modulation_is_linked_resettable_and_allocation_free();
         test_controls_are_bounded_and_invalid_samples_recover();
         std::cout << "Ducking Delay tests passed\n";
     } catch (const std::exception& exception) {
@@ -242,3 +393,24 @@ int main() {
     }
     return EXIT_SUCCESS;
 }
+
+void* operator new(std::size_t size) {
+    allocation_count.fetch_add(1, std::memory_order_relaxed);
+    if (void* memory = std::malloc(size == 0 ? 1 : size); memory != nullptr) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+void* operator new[](std::size_t size) {
+    allocation_count.fetch_add(1, std::memory_order_relaxed);
+    if (void* memory = std::malloc(size == 0 ? 1 : size); memory != nullptr) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+void operator delete(void* memory) noexcept { std::free(memory); }
+void operator delete[](void* memory) noexcept { std::free(memory); }
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }

@@ -2743,7 +2743,9 @@ public:
                                  std::uint32_t spillover,
                                  std::uint32_t time_mode, float tempo_bpm,
                                  std::uint32_t tap_division,
-                                 float low_cut_hz, float high_cut_hz) noexcept {
+                                 float low_cut_hz, float high_cut_hz,
+                                 float mod_rate_hz, float mod_depth_ms,
+                                 std::uint32_t modulation_mode) noexcept {
         tabletfx::DuckingDelayParameters parameters;
         parameters.time_ms = time_ms;
         parameters.feedback = feedback;
@@ -2759,6 +2761,10 @@ public:
             static_cast<tabletfx::DuckingDelayTapDivision>(tap_division);
         parameters.low_cut_hz = low_cut_hz;
         parameters.high_cut_hz = high_cut_hz;
+        parameters.mod_rate_hz = mod_rate_hz;
+        parameters.mod_depth_ms = mod_depth_ms;
+        parameters.modulation_mode =
+            static_cast<tabletfx::DuckingDelayModulationMode>(modulation_mode);
         static_cast<tabletfx::DuckingDelay*>(effects_[39].effect.get())->configure(
             parameters);
     }
@@ -3488,12 +3494,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_ducking_delay(
     void* opaque, float time_ms, float feedback, float mix,
     float threshold_db, float attenuation_db, float release_ms,
     std::uint32_t spillover, std::uint32_t time_mode, float tempo_bpm,
-    std::uint32_t tap_division, float low_cut_hz, float high_cut_hz) noexcept {
+    std::uint32_t tap_division, float low_cut_hz, float high_cut_hz,
+    float mod_rate_hz, float mod_depth_ms,
+    std::uint32_t modulation_mode) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ducking_delay(
             time_ms, feedback, mix, threshold_db, attenuation_db, release_ms,
             spillover, time_mode, tempo_bpm, tap_division, low_cut_hz,
-            high_cut_hz);
+            high_cut_hz, mod_rate_hz, mod_depth_ms, modulation_mode);
     }
 }
 

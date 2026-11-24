@@ -4632,6 +4632,20 @@ void run_bench() {
         return std::make_unique<tabletfx::DuckingDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("ducking-delay-modulated-filtered", [=] {
+        tabletfx::DuckingDelayParameters parameters;
+        parameters.threshold_db = -30.0F;
+        parameters.attenuation_db = 18.0F;
+        parameters.release_ms = 250.0F;
+        parameters.low_cut_hz = 150.0F;
+        parameters.high_cut_hz = 7000.0F;
+        parameters.mod_rate_hz = 1.25F;
+        parameters.mod_depth_ms = 6.5F;
+        parameters.modulation_mode =
+            tabletfx::DuckingDelayModulationMode::sine;
+        return std::make_unique<tabletfx::DuckingDelay>(
+            static_cast<float>(sample_rate), channels, 2000.0F, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("modulated-delay", [=] {
         return std::make_unique<tabletfx::ModulatedDelay>(
             static_cast<float>(sample_rate), channels, 2000.0F);

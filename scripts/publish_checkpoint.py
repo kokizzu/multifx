@@ -500,6 +500,7 @@ REVERSE_DELAY_CHECKPOINT_PATHS = (
     "web/style.css",
 )
 DUCKING_DELAY_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
     "include/tabletfx/effects/ducking_delay.hpp",
     "src/effects/ducking_delay.cpp",
     "tests/test_ducking_delay.cpp",

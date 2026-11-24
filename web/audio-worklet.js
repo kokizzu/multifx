@@ -460,7 +460,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_reverse_delay_run(this.chain,
         parameters.reverseDelayRun === false ? 0 : 1);
       const duckingDelay = parameters.duckingDelay ||
-        [350, 0.25, 0.25, -30, 12, 250, 0, 0, 120, 4, 0, 0];
+        [350, 0.25, 0.25, -30, 12, 250, 0, 0, 120, 4, 0, 0, 0.8, 0, 0];
       module._tf_chain_set_ducking_delay(this.chain, ...duckingDelay);
       const modulatedDelay = parameters.modulatedDelay || [350, 0.25, 0.25, 0.8, 2, 0, 180, -24];
       module._tf_chain_set_modulated_delay(this.chain, ...modulatedDelay);

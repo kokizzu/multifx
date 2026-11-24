@@ -1736,6 +1736,11 @@ const duckingDelayLowCut = document.querySelector("#ducking-delay-low-cut-hz");
 const duckingDelayLowCutValue = document.querySelector("#ducking-delay-low-cut-hz-value");
 const duckingDelayHighCut = document.querySelector("#ducking-delay-high-cut-hz");
 const duckingDelayHighCutValue = document.querySelector("#ducking-delay-high-cut-hz-value");
+const duckingDelayModRate = document.querySelector("#ducking-delay-mod-rate-hz");
+const duckingDelayModRateValue = document.querySelector("#ducking-delay-mod-rate-hz-value");
+const duckingDelayModDepth = document.querySelector("#ducking-delay-mod-depth-ms");
+const duckingDelayModDepthValue = document.querySelector("#ducking-delay-mod-depth-ms-value");
+const duckingDelayModMode = document.querySelector("#ducking-delay-mod-mode");
 const modulatedDelayTime = document.querySelector("#modulated-delay-time-ms");
 const modulatedDelayTimeValue = document.querySelector("#modulated-delay-time-ms-value");
 const modulatedDelayFeedback = document.querySelector("#modulated-delay-feedback");
@@ -5731,6 +5736,9 @@ function updateDuckingDelay() {
   const tapDivision = Number(duckingDelayTapDivision.value);
   const lowCutHz = Number(duckingDelayLowCut.value);
   const highCutHz = Number(duckingDelayHighCut.value);
+  const modRateHz = Number(duckingDelayModRate.value);
+  const modDepthMs = Number(duckingDelayModDepth.value);
+  const modulationMode = Number(duckingDelayModMode.value);
   const values = [
     Number(duckingDelayTime.value),
     Number(duckingDelayFeedback.value) / 100,
@@ -5744,6 +5752,9 @@ function updateDuckingDelay() {
     tapDivision,
     lowCutHz,
     highCutHz,
+    modRateHz,
+    modDepthMs,
+    modulationMode,
   ];
   duckingDelayTime.disabled = timeMode === 1;
   duckingDelayTimeValue.value = `${values[0].toFixed(0)} ms${timeMode === 1 ? " · saved" : ""}`;
@@ -5755,6 +5766,8 @@ function updateDuckingDelay() {
   duckingDelayReleaseValue.value = `${values[5].toFixed(0)} ms`;
   duckingDelayLowCutValue.value = lowCutHz === 0 ? "Off" : `${lowCutHz.toFixed(0)} Hz`;
   duckingDelayHighCutValue.value = highCutHz === 0 ? "Off" : `${highCutHz.toFixed(0)} Hz`;
+  duckingDelayModRateValue.value = `${modRateHz.toFixed(2)} Hz`;
+  duckingDelayModDepthValue.value = `${modDepthMs.toFixed(1)} ms`;
   DEFAULT_PARAMETERS.duckingDelay = values;
   if (workletNode) workletNode.port.postMessage({ type: "ducking-delay", value: values });
 }
@@ -5972,12 +5985,13 @@ for (const input of [reverseDelayTimeMode, reverseDelayDivision,
 }
 for (const input of [duckingDelayTime, duckingDelayFeedback, duckingDelayMix,
   duckingDelayThreshold, duckingDelayAttenuation, duckingDelayRelease,
-  duckingDelayTempo, duckingDelayLowCut, duckingDelayHighCut]) {
+  duckingDelayTempo, duckingDelayLowCut, duckingDelayHighCut,
+  duckingDelayModRate, duckingDelayModDepth]) {
   input.addEventListener("input", updateDuckingDelay);
   input.addEventListener("change", updateDuckingDelay);
 }
 for (const input of [duckingDelayTimeMode, duckingDelayTapDivision,
-  duckingDelaySpillover]) {
+  duckingDelaySpillover, duckingDelayModMode]) {
   input.addEventListener("change", updateDuckingDelay);
 }
 for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayMix,
@@ -8662,7 +8676,8 @@ async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBu
   const controls = [duckingDelayTime, duckingDelayTimeMode, duckingDelayTempo,
     duckingDelayTapDivision, duckingDelayFeedback, duckingDelayMix,
     duckingDelayThreshold, duckingDelayAttenuation, duckingDelayRelease,
-    duckingDelaySpillover, duckingDelayLowCut, duckingDelayHighCut];
+    duckingDelaySpillover, duckingDelayLowCut, duckingDelayHighCut,
+    duckingDelayModRate, duckingDelayModDepth, duckingDelayModMode];
   const previousControls = controls.map((control) =>
     control.type === "checkbox" ? control.checked : control.value);
   const previousCategory = effectCategoryFilter.value;
@@ -8686,6 +8701,9 @@ async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBu
     duckingDelaySpillover.checked = false;
     duckingDelayLowCut.value = "150";
     duckingDelayHighCut.value = "7000";
+    duckingDelayModRate.value = "1.25";
+    duckingDelayModDepth.value = "6.5";
+    duckingDelayModMode.value = "0";
     updateDuckingDelay();
     effectCategoryFilter.value = "delay";
     updateEffectBrowser();
@@ -8700,8 +8718,11 @@ async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBu
         DEFAULT_PARAMETERS.duckingDelay[8] !== 120 ||
         DEFAULT_PARAMETERS.duckingDelay[9] !== 7 ||
         DEFAULT_PARAMETERS.duckingDelay[10] !== 150 ||
-        DEFAULT_PARAMETERS.duckingDelay[11] !== 7000) {
-      throw new Error("Ducking Delay tempo, repeat-cut controls, or Delay picker category did not reach the browser chain.");
+        DEFAULT_PARAMETERS.duckingDelay[11] !== 7000 ||
+        DEFAULT_PARAMETERS.duckingDelay[12] !== 1.25 ||
+        DEFAULT_PARAMETERS.duckingDelay[13] !== 6.5 ||
+        DEFAULT_PARAMETERS.duckingDelay[14] !== 0) {
+      throw new Error("Ducking Delay tempo, repeat-cut, modulation controls, or Delay picker category did not reach the browser chain.");
     }
     checkboxes.forEach((box, index) => {
       const enabled = index === 0 || index === 39;
@@ -8747,7 +8768,8 @@ async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBu
     return {
       category: "Delay", enabledEffectIndex: 39, timeMode: "tempo-sync",
       tempoBpm: 120, tapDivision: "eighth", repeatLowCutHz: 150,
-      repeatHighCutHz: 7000, playOutputCaptured: true,
+      repeatHighCutHz: 7000, modRateHz: 1.25, modDepthMs: 6.5,
+      modMode: "sine", playOutputCaptured: true,
       peak, activeSamples, differenceRms,
     };
   } finally {
@@ -10752,6 +10774,9 @@ async function runBrowserSelfTest() {
       duckingDelayTapDivision.value,
       duckingDelayLowCut.value,
       duckingDelayHighCut.value,
+      duckingDelayModRate.value,
+      duckingDelayModDepth.value,
+      duckingDelayModMode.value,
     ];
     duckingDelayTimeMode.value = "1";
     duckingDelayTimeMode.dispatchEvent(new Event("change", { bubbles: true }));
@@ -10763,20 +10788,32 @@ async function runBrowserSelfTest() {
     duckingDelayLowCut.dispatchEvent(new Event("input", { bubbles: true }));
     duckingDelayHighCut.value = "7000";
     duckingDelayHighCut.dispatchEvent(new Event("input", { bubbles: true }));
+    duckingDelayModRate.value = "1.25";
+    duckingDelayModRate.dispatchEvent(new Event("input", { bubbles: true }));
+    duckingDelayModDepth.value = "6.5";
+    duckingDelayModDepth.dispatchEvent(new Event("input", { bubbles: true }));
+    duckingDelayModMode.value = "3";
+    duckingDelayModMode.dispatchEvent(new Event("change", { bubbles: true }));
     if (DEFAULT_PARAMETERS.duckingDelay[7] !== 1 ||
         DEFAULT_PARAMETERS.duckingDelay[8] !== 90 ||
         DEFAULT_PARAMETERS.duckingDelay[9] !== 7 ||
         DEFAULT_PARAMETERS.duckingDelay[10] !== 150 ||
         DEFAULT_PARAMETERS.duckingDelay[11] !== 7000 ||
+        DEFAULT_PARAMETERS.duckingDelay[12] !== 1.25 ||
+        DEFAULT_PARAMETERS.duckingDelay[13] !== 6.5 ||
+        DEFAULT_PARAMETERS.duckingDelay[14] !== 3 ||
         !duckingDelayTime.disabled ||
         duckingDelayTempoValue.value !== "90 BPM" ||
         duckingDelayLowCutValue.value !== "150 Hz" ||
-        duckingDelayHighCutValue.value !== "7000 Hz") {
-      throw new Error("Ducking Delay tempo, tap division, and repeat-cut controls must reach browser parameters and display their values.");
+        duckingDelayHighCutValue.value !== "7000 Hz" ||
+        duckingDelayModRateValue.value !== "1.25 Hz" ||
+        duckingDelayModDepthValue.value !== "6.5 ms") {
+      throw new Error("Ducking Delay tempo, repeat-cut, and modulation controls must reach browser parameters and display their values.");
     }
     [duckingDelayTimeMode.value, duckingDelayTempo.value,
       duckingDelayTapDivision.value, duckingDelayLowCut.value,
-      duckingDelayHighCut.value] = duckingDelayTempoDefaults;
+      duckingDelayHighCut.value, duckingDelayModRate.value,
+      duckingDelayModDepth.value, duckingDelayModMode.value] = duckingDelayTempoDefaults;
     updateDuckingDelay();
     const defaultDuckSpillover = duckingDelaySpillover.checked;
     duckingDelaySpillover.checked = true;
@@ -11481,7 +11518,7 @@ async function runBrowserSelfTest() {
            8000, 0.5, 0.7, 4, 24],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
-          duckingDelay: [350, 0.25, 0.25, -30, 12, 250, 0, 0, 120, 4, 0, 0],
+  duckingDelay: [350, 0.25, 0.25, -30, 12, 250, 0, 0, 120, 4, 0, 0, 0.8, 0, 0],
         sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -12136,7 +12173,7 @@ async function runBrowserSelfTest() {
     const stepFilterDelaySmoke = await runStepFilterDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
-    testResult.textContent = "Checking Ducking Delay tempo sync and repeat cuts on local guitar audio…";
+    testResult.textContent = "Checking Ducking Delay tempo sync, repeat cuts, and modulation on local guitar audio…";
     const duckingDelaySmoke = await runDuckingDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );

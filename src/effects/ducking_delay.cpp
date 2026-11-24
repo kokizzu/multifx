@@ -11,6 +11,7 @@ namespace {
 
 constexpr double kMaximumFloat =
     static_cast<double>(std::numeric_limits<float>::max());
+constexpr float kTwoPi = 6.2831853071795864769F;
 
 float bounded_sample(double value) noexcept {
     return static_cast<float>(std::clamp(value, -kMaximumFloat, kMaximumFloat));
@@ -53,9 +54,14 @@ DuckingDelay::DuckingDelay(float sample_rate, std::uint16_t channels,
     configure(parameters);
     current_feedback_ = parameters_.feedback;
     current_mix_ = parameters_.mix;
+    current_mod_rate_hz_ = parameters_.mod_rate_hz;
+    current_mod_depth_samples_ = static_cast<float>(
+        static_cast<double>(sample_rate_) * parameters_.mod_depth_ms / 1000.0);
     parameter_ramp_remaining_ = 0;
     feedback_step_ = 0.0F;
     mix_step_ = 0.0F;
+    mod_rate_step_ = 0.0F;
+    mod_depth_step_ = 0.0F;
     reset();
 }
 
@@ -118,6 +124,31 @@ void DuckingDelay::configure(DuckingDelayParameters parameters) noexcept {
     parameters.release_ms = bounded(parameters.release_ms, 250.0F,
                                     kMinimumReleaseMs, kMaximumReleaseMs);
 
+    parameters.mod_rate_hz = bounded(parameters.mod_rate_hz, 0.8F,
+                                     kMinimumModRateHz, kMaximumModRateHz);
+    const float modulation_headroom_ms = std::max(
+        0.0F, std::min(selected_time_ms - kMinimumTimeMs,
+                       max_delay_ms_ - selected_time_ms));
+    parameters.mod_depth_ms = bounded(
+        parameters.mod_depth_ms, 0.0F, 0.0F,
+        std::min(kMaximumModDepthMs, modulation_headroom_ms));
+    switch (parameters.modulation_mode) {
+    case DuckingDelayModulationMode::sine:
+    case DuckingDelayModulationMode::triangle:
+    case DuckingDelayModulationMode::random:
+    case DuckingDelayModulationMode::triggered_ramp:
+        break;
+    default:
+        parameters.modulation_mode = DuckingDelayModulationMode::sine;
+        break;
+    }
+    if (parameters_.modulation_mode != parameters.modulation_mode &&
+        parameters.modulation_mode ==
+            DuckingDelayModulationMode::triggered_ramp) {
+        trigger_armed_ = true;
+        has_triggered_ = false;
+    }
+
     const float low_cut_max = std::max(
         20.0F, std::min(1000.0F, sample_rate_ * 0.15F));
     const float high_cut_max = std::max(
@@ -158,6 +189,12 @@ void DuckingDelay::configure(DuckingDelayParameters parameters) noexcept {
                      static_cast<float>(parameter_ramp_total_);
     mix_step_ = (parameters.mix - current_mix_) /
                 static_cast<float>(parameter_ramp_total_);
+    const float new_mod_depth_samples = static_cast<float>(
+        static_cast<double>(sample_rate_) * parameters.mod_depth_ms / 1000.0);
+    mod_rate_step_ = (parameters.mod_rate_hz - current_mod_rate_hz_) /
+                     static_cast<float>(parameter_ramp_total_);
+    mod_depth_step_ = (new_mod_depth_samples - current_mod_depth_samples_) /
+                      static_cast<float>(parameter_ramp_total_);
     parameters_ = parameters;
     parameter_ramp_remaining_ = parameter_ramp_total_;
 }
@@ -176,8 +213,25 @@ void DuckingDelay::process_audio(std::span<float> interleaved,
                 ? interleaved[index]
                 : 0.0F;
             input_peak = std::max(input_peak, std::abs(original[channel]));
-            delayed[channel] = read_fractional_delay(
-                current_delay_samples(), channel);
+        }
+
+        if (!bypassed && parameters_.modulation_mode ==
+                             DuckingDelayModulationMode::triggered_ramp) {
+            const bool above_threshold = input_peak >= threshold_amplitude_;
+            if (above_threshold && trigger_armed_) {
+                modulation_phase_ = 0.0F;
+                has_triggered_ = true;
+            }
+            trigger_armed_ = !above_threshold;
+        }
+
+        const float modulation = current_mod_depth_samples_ > 0.0F
+            ? modulation_value()
+            : 0.0F;
+        const float modulated_delay = current_delay_samples() +
+                                      modulation * current_mod_depth_samples_;
+        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+            delayed[channel] = read_fractional_delay(modulated_delay, channel);
         }
 
         const bool should_duck = !bypassed && parameters_.attenuation_db > 0.0F &&
@@ -207,6 +261,15 @@ void DuckingDelay::process_audio(std::span<float> interleaved,
         }
 
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;
+        modulation_phase_ += current_mod_rate_hz_ / sample_rate_;
+        if (modulation_phase_ >= 1.0F) {
+            modulation_phase_ -= std::floor(modulation_phase_);
+            if (parameters_.modulation_mode ==
+                DuckingDelayModulationMode::random) {
+                random_current_ = random_next_;
+                random_next_ = random_value(random_state_);
+            }
+        }
         advance_ramps();
     }
 }
@@ -236,14 +299,25 @@ void DuckingDelay::reset() noexcept {
     duck_gain_ = 1.0F;
     current_feedback_ = parameters_.feedback;
     current_mix_ = parameters_.mix;
+    current_mod_rate_hz_ = parameters_.mod_rate_hz;
+    current_mod_depth_samples_ = static_cast<float>(
+        static_cast<double>(sample_rate_) * parameters_.mod_depth_ms / 1000.0);
     feedback_step_ = 0.0F;
     mix_step_ = 0.0F;
+    mod_rate_step_ = 0.0F;
+    mod_depth_step_ = 0.0F;
     parameter_ramp_remaining_ = 0;
     delay_transition_from_samples_ = target_delay_samples_;
     delay_transition_remaining_ = 0;
     repeat_highpass_previous_input_.fill(0.0F);
     repeat_highpass_previous_output_.fill(0.0F);
     repeat_lowpass_state_.fill(0.0F);
+    modulation_phase_ = 0.0F;
+    random_state_ = 0x6d2b79f5U;
+    random_current_ = random_value(random_state_);
+    random_next_ = random_value(random_state_);
+    trigger_armed_ = true;
+    has_triggered_ = false;
 }
 
 float DuckingDelay::bounded(float value, float fallback,
@@ -286,6 +360,27 @@ float DuckingDelay::current_delay_samples() const noexcept {
             static_cast<float>(delay_transition_total_);
     return delay_transition_from_samples_ +
            (target_delay_samples_ - delay_transition_from_samples_) * progress;
+}
+
+float DuckingDelay::modulation_value() const noexcept {
+    switch (parameters_.modulation_mode) {
+    case DuckingDelayModulationMode::sine:
+        return std::sin(kTwoPi * modulation_phase_);
+    case DuckingDelayModulationMode::triangle:
+        return 1.0F - 4.0F * std::abs(modulation_phase_ - 0.5F);
+    case DuckingDelayModulationMode::random:
+        return random_current_ +
+               (random_next_ - random_current_) * modulation_phase_;
+    case DuckingDelayModulationMode::triggered_ramp:
+        return has_triggered_ ? modulation_phase_ : 0.0F;
+    }
+    return 0.0F;
+}
+
+float DuckingDelay::random_value(std::uint32_t& state) noexcept {
+    state = state * 1664525U + 1013904223U;
+    const float unit = static_cast<float>(state >> 8U) / 16777215.0F;
+    return unit * 2.0F - 1.0F;
 }
 
 float DuckingDelay::filter_repeat_sample(float sample,
@@ -333,9 +428,14 @@ void DuckingDelay::advance_ramps() noexcept {
         if (parameter_ramp_remaining_ == 0U) {
             current_feedback_ = parameters_.feedback;
             current_mix_ = parameters_.mix;
+            current_mod_rate_hz_ = parameters_.mod_rate_hz;
+            current_mod_depth_samples_ = static_cast<float>(
+                static_cast<double>(sample_rate_) * parameters_.mod_depth_ms / 1000.0);
         } else {
             current_feedback_ += feedback_step_;
             current_mix_ += mix_step_;
+            current_mod_rate_hz_ += mod_rate_step_;
+            current_mod_depth_samples_ += mod_depth_step_;
         }
     }
     if (delay_transition_remaining_ != 0U) {
