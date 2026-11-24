@@ -4,28 +4,33 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "8d9a9745d2ee2e13811da8876abb739ab9a8e6a4",
+  "previous_checkpoint_commit": "60cad900f07e479b303c80a5056f660a48c3102e",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium XL seven-band Parametric EQ audit and project implementation",
-    "status": "verified; automated checks pass; human listening and device checks remain",
+    "name": "Line 6 Helix Stadium XL 3 OSC Synth source audit",
+    "status": "model identity verified; exact controls and input tracking remain undocumented; no model-specific code added",
     "date": "2026-11-25",
-    "picker_index": 114,
-    "category": "Equalizer",
-    "official_source": "Current model catalogue lists Parametric as Mono/Stereo, Line 6 Original, first v1.0. Current manual selector is v1.4 Rev D / v1.3 Rev B / v1.2. Manual migration notes identify the seven-band PEQ and improved peak Q/cut slopes; Native FAQ confirms seven bands, per-band bypass and adjustable slopes. No exact parameter table, ranges/defaults, DSP or latency are published. Device firmware is unknown.",
-    "project_controls": "Project-authored seven-band Equalizer at picker ID 114, disabled by default. Per band: Enable, Bell/Low Cut/High Cut, Frequency 20–20,000 Hz (sample-rate capped), Gain ±18 dB, Q 0.25–10, slope 6–36 dB/oct in 6 dB steps. Default frequencies 63/160/400/1,000/2,500/6,300/12,500 Hz; 0 dB, Q 0.707, 12 dB/oct. Fixed state 944 B, zero added latency, no process-time allocation. No Line 6 settings/DSP/sound parity.",
+    "picker_index": null,
+    "category": "Pitch/Synth",
+    "official_source": "The live Line 6 model catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. It separately lists 3 Note Generator and 4 OSC Generator; only those generators are explicitly said to produce sound without an instrument. The current Effects manual is v1.4 Rev D / v1.3 Rev B - v1.2 and says it does not document every effect's individual parameters, directing users to inspect Home > Edit on the device. Stadium 1.4 release notes report only that 3 OSC Synth's FltPreset parameter could lock to value 4; no range or behavior is given. Hardware v1.4.2 was released 2026-10-27 and Native 1.4.1 on 2026-10-29; installed hardware firmware is unknown.",
+    "source_urls": [
+      "https://line6.com/helix-stadium-models/",
+      "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "https://manuals.line6.com/en/helix-stadium/live/input-output-and-mix-blocks",
+      "https://kb.line6.com/helix-stadium-1-4-release-notes"
+    ],
+    "documented_controls": "Only the parameter name FltPreset appears in the 1.4 release notes, as part of a bug description. The manual does not provide a 3 OSC Synth control table. Its input requirement, tracked note polyphony, control ranges/defaults, DSP cost, and latency are unknown. The catalogue's no-instrument footnote applies to 3 Note Generator and 4 OSC Generator, not 3 OSC Synth.",
+    "project_controls": "No Stadium-specific processor or parameter mapping was added. Existing project-authored three-voice tracked synth and free-running note generators are separate effects and do not claim Line 6 algorithm, tracking, parameter, DSP, or sound parity.",
     "verification": {
-      "focused_native": "make test passed documentation validation, 11/11 fixture checks, and 116/116 CTest cases, including PEQ response, bounds, slope, stereo, reset, neutral passthrough, and no-allocation coverage.",
-      "browser": "make web-test passed categorized picker/WASM checks and Play on local prerecorded guitar DI through picker ID 114. Shared native/browser path max absolute error 3.37354e-6 and RMS error 5.84118e-7.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.7924/0.8295/1.0114/1.2855/1.7550%; 944 B state, zero fixed latency. Isolated desktop timing, not target-device performance."
+      "official_source_review": "Checked 2026-11-25: current Line 6 Stadium model list, v1.4 live manual, and Stadium 1.4 release notes. The model-specific parameter page was not available in the manual.",
+      "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
     },
-    "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
+    "remaining": "Obtain an exact 3 OSC Synth parameter screen/manual source or inspect the Stadium app/device to establish controls and input tracking. Do not mark synthesis implementation complete from this source audit alone."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "3 OSC Synth: exact control table, input note handling, and distinction from 4 OSC Generator",
-    "qualification": "The current official model catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. The distinct 4 OSC Generator is documented as free-running without an instrument. Do not infer 3 OSC Synth tracking, polyphony, controls, ranges/defaults, DSP, or latency from the 4 OSC Generator or unrelated synths; verify an exact-model source first."
+    "next_device": "Fractal FM9 Mk II Turbo",
+    "next_feature": "Independent two/four-voice diatonic harmonizer controls and low-cost shared pitch tracking",
+    "qualification": "The November 2026 Blocks Guide documents separate Dual/Quad Diatonic pitch modes and user scales; the project has only one monophonic tracked Diatonic voice, while its four-voice chromatic effect does not track notes. Preserve the single-note tracker limitation, benchmark added CPU/memory, and keep FM9 Mark II Turbo firmware applicability qualified."
   },
   "completed_checkpoints": [
     {
@@ -613,6 +618,30 @@
       },
       "picker_rows": 115,
       "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
+    },
+    {
+      "name": "Line 6 Helix Stadium XL 3 OSC Synth source audit",
+      "status": "research complete; no model-specific implementation due missing exact control and input-tracking documentation",
+      "picker_index": null,
+      "category": "Pitch/Synth",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model list, live v1.4 effects manual and 1.4 release notes",
+        "revision": "Checked 2026-11-25. Manual selector v1.4 Rev D / v1.3 Rev B - v1.2; hardware v1.4.2 released 2026-10-27; Native 1.4.1 released 2026-10-29. Installed device firmware unknown.",
+        "urls": [
+          "https://line6.com/helix-stadium-models/",
+          "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+          "https://manuals.line6.com/en/helix-stadium/live/input-output-and-mix-blocks",
+          "https://kb.line6.com/helix-stadium-1-4-release-notes"
+        ],
+        "qualification": "The catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. The no-instrument note applies only to 3 Note Generator and 4 OSC Generator. Release notes mention a FltPreset lock bug but no range or control behavior. Model-specific tracking/polyphony, parameters, DSP and latency remain unknown."
+      },
+      "documented_controls": "Only FltPreset is named in the release notes, as part of a bug description. The current manual does not publish a model-specific control table.",
+      "project_coverage": "The project's tracked three-voice synth and free-running note generators cover related concepts only; neither is claimed as a Stadium 3 OSC Synth match. No picker row added.",
+      "verification": {
+        "official_source_review": "Checked Line 6 model catalogue, current v1.4 manual pages and 1.4 release notes on 2026-11-25.",
+        "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
+      },
+      "remaining": "Exact control settings and whether ordinary pickups drive the synth require an exact-model parameter view or device/app inspection."
     }
   ],
   "previous_checkpoint": {
@@ -640,28 +669,28 @@
     "picker_rows": 114
   },
   "current_checkpoint": {
-    "name": "Line 6 Helix Stadium XL seven-band Parametric EQ audit and project implementation",
-    "status": "verified; automated checks pass; human listening and device checks remain",
-    "picker_index": 114,
-    "category": "Equalizer",
+    "name": "Line 6 Helix Stadium XL 3 OSC Synth source audit",
+    "status": "research complete; exact controls and input tracking remain undocumented; no model-specific code added",
+    "picker_index": null,
+    "category": "Pitch/Synth",
     "official_source": {
-      "title": "Line 6 Helix Stadium model catalogue, live v1.4 manual, and Native FAQ",
-      "revision": "Model catalogue checked 2026-11-25; manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 release notes dated 2026-10-27 and Native 1.4.1 dated 2026-10-29. Installed device firmware unknown.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/presets",
-      "faq_url": "https://kb.line6.com/helix-stadium-native-faq",
-      "qualification": "Catalogue establishes Mono/Stereo, Line 6 Original, first appearance v1.0. Manual migration note and FAQ establish seven bands, per-band bypass, adjustable slopes and improved peak Q/cut slopes, but no exact parameter table, numeric bounds/defaults, DSP cost, or latency."
+      "title": "Line 6 Helix Stadium model list, live v1.4 effects manual and 1.4 release notes",
+      "revision": "Checked 2026-11-25. Manual selector v1.4 Rev D / v1.3 Rev B - v1.2; hardware v1.4.2 released 2026-10-27; Native 1.4.1 released 2026-10-29. Installed device firmware unknown.",
+      "urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://manuals.line6.com/en/helix-stadium/live/input-output-and-mix-blocks",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+      ],
+      "qualification": "The catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. The no-instrument note applies only to 3 Note Generator and 4 OSC Generator. Release notes mention a FltPreset lock bug but no range or control behavior. Model-specific tracking/polyphony, parameters, DSP and latency remain unknown."
     },
-    "documented_controls": "Seven-band parametric EQ; per-band bypass; adjustable filter slopes. Manual migration note cites improved peak-filter Q and more precise low/high-cut slopes. Exact control names, supported shapes, ranges/defaults, DSP and latency are not published.",
-    "project_controls": "Project-authored seven-band Equalizer at picker ID 114, disabled by default. Per band: Enable, Bell/Low Cut/High Cut, Frequency 20–20,000 Hz (sample-rate capped), Gain ±18 dB, Q 0.25–10, slope 6–36 dB/oct in 6 dB steps. Default frequencies 63/160/400/1,000/2,500/6,300/12,500 Hz; 0 dB, Q 0.707, 12 dB/oct. Fixed state 944 B, zero added latency, no process-time allocation. No Line 6 settings/DSP/sound parity.",
+    "documented_controls": "Only FltPreset is named in the release notes, as part of a bug description. The current manual does not publish a model-specific control table.",
+    "project_controls": "No Stadium-specific processor or parameter mapping was added. Existing project-authored three-voice tracked synth and free-running note generators are separate effects and do not claim Line 6 algorithm, tracking, parameter, DSP, or sound parity.",
     "verification": {
-      "focused_native": "make test passed documentation validation, 11/11 fixture checks, and 116/116 CTest cases, including PEQ response, bounds, slope, stereo, reset, neutral passthrough, and no-allocation coverage.",
-      "browser": "make web-test passed categorized picker/WASM checks and Play on local prerecorded guitar DI through picker ID 114. Shared native/browser path max absolute error 3.37354e-6 and RMS error 5.84118e-7.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.7924/0.8295/1.0114/1.2855/1.7550%; 944 B state, zero fixed latency. Isolated desktop timing, not target-device performance."
+      "official_source_review": "Checked 2026-11-25: current Line 6 Stadium model list, v1.4 live manual, and Stadium 1.4 release notes.",
+      "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
     },
-    "picker_rows": 115,
-    "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
+    "remaining": "Obtain an exact 3 OSC Synth parameter screen/manual source or inspect the Stadium app/device to establish controls and input tracking. Do not mark synthesis implementation complete from this source audit alone."
   },
   "next_research": [
     {

@@ -2511,6 +2511,14 @@ FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS = (
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2817,6 +2825,10 @@ CHECKPOINTS = {
     "fractal-chromatic-harmonizer": (
         FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS,
         "feat: add project-authored four-voice chromatic harmonizer",
+    ),
+    "line6-stadium-3osc-research": (
+        LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS,
+        "docs: audit Stadium 3 OSC Synth model controls",
     ),
     "fender-pitch-sequence-audit": (
         FENDER_PITCH_SEQUENCE_AUDIT_CHECKPOINT_PATHS,
