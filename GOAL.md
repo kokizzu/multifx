@@ -34,6 +34,14 @@ Reuse existing open-source DSP as extensively as possible. Prefer adapting a mat
 5. Reliable USB input/output, stable performance, low measured latency, and affordable hardware.
 6. Amp/cabinet simulation, IRs, and open neural model formats as part of the complete product, without delaying the early pitch/effects feasibility work.
 
+### Implementation and verification requirements (2026-11-24)
+
+- Support Android, Linux, and **Windows desktop** as native hosts, plus the shared browser/WASM audition client. A Windows cross-build is necessary automated coverage, but it does not by itself prove a working Windows audio backend or native UI.
+- Add flagship-inspired effects under the project's existing effect categories and preserve the distinct model names, parameter evidence, firmware applicability, and unknowns in `FLAGSHIP_EFFECT_COMPARISON.md`, `IMPLEMENTATION_CHECKLIST.md`, `EFFECTS_MATRIX.md`, `RESEARCH.md`, and `research-state.json`.
+- Give each new processor safe, musical defaults and prioritize low latency, bounded memory, and low CPU cost. Measure its isolated DSP time as a percentage of the callback deadline, report owned memory, and test that `process()` performs no allocation. Record measurement rate, block size, channel layout, host CPU, and percentile/max cost; do not describe a desktop processor benchmark as device or round-trip latency.
+- Run relevant automated native tests, local prerecorded-audio regression, browser/WASM UI-to-audible-output and parity checks, and a Windows build for each applicable effect. Exercise parameter changes and bypass/tails, not just picker registration. Keep manual listening and physical-device checks visibly open until performed.
+- Update the checklist only for the portion that has working DSP, categorized UI wiring, and passing relevant automated tests. Commit and push each validated checkpoint on the verified primary branch before starting the next implementation unit. Do not add or run GitHub Actions workflows.
+
 Do not treat a moving meter, a rendered block, a menu entry, or an offline WAV transform as proof of working live processing.
 
 ## 2. Target hardware and feasibility boundary

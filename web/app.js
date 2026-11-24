@@ -1717,6 +1717,10 @@ const reverseDelaySpillover = document.querySelector("#reverse-delay-spillover")
 const reverseDelayRestart = document.querySelector("#reverse-delay-restart");
 const duckingDelayTime = document.querySelector("#ducking-delay-time-ms");
 const duckingDelayTimeValue = document.querySelector("#ducking-delay-time-ms-value");
+const duckingDelayTimeMode = document.querySelector("#ducking-delay-time-mode");
+const duckingDelayTempo = document.querySelector("#ducking-delay-tempo-bpm");
+const duckingDelayTempoValue = document.querySelector("#ducking-delay-tempo-bpm-value");
+const duckingDelayTapDivision = document.querySelector("#ducking-delay-tap-division");
 const duckingDelayFeedback = document.querySelector("#ducking-delay-feedback");
 const duckingDelayFeedbackValue = document.querySelector("#ducking-delay-feedback-value");
 const duckingDelayMix = document.querySelector("#ducking-delay-mix");
@@ -1728,6 +1732,10 @@ const duckingDelayAttenuationValue = document.querySelector("#ducking-delay-atte
 const duckingDelayRelease = document.querySelector("#ducking-delay-release-ms");
 const duckingDelayReleaseValue = document.querySelector("#ducking-delay-release-ms-value");
 const duckingDelaySpillover = document.querySelector("#ducking-delay-spillover");
+const duckingDelayLowCut = document.querySelector("#ducking-delay-low-cut-hz");
+const duckingDelayLowCutValue = document.querySelector("#ducking-delay-low-cut-hz-value");
+const duckingDelayHighCut = document.querySelector("#ducking-delay-high-cut-hz");
+const duckingDelayHighCutValue = document.querySelector("#ducking-delay-high-cut-hz-value");
 const modulatedDelayTime = document.querySelector("#modulated-delay-time-ms");
 const modulatedDelayTimeValue = document.querySelector("#modulated-delay-time-ms-value");
 const modulatedDelayFeedback = document.querySelector("#modulated-delay-feedback");
@@ -5718,6 +5726,11 @@ function restartReverseDelay() {
 }
 
 function updateDuckingDelay() {
+  const timeMode = Number(duckingDelayTimeMode.value);
+  const tempoBpm = Number(duckingDelayTempo.value);
+  const tapDivision = Number(duckingDelayTapDivision.value);
+  const lowCutHz = Number(duckingDelayLowCut.value);
+  const highCutHz = Number(duckingDelayHighCut.value);
   const values = [
     Number(duckingDelayTime.value),
     Number(duckingDelayFeedback.value) / 100,
@@ -5726,13 +5739,22 @@ function updateDuckingDelay() {
     Number(duckingDelayAttenuation.value),
     Number(duckingDelayRelease.value),
     duckingDelaySpillover.checked ? 1 : 0,
+    timeMode,
+    tempoBpm,
+    tapDivision,
+    lowCutHz,
+    highCutHz,
   ];
-  duckingDelayTimeValue.value = `${values[0].toFixed(0)} ms`;
+  duckingDelayTime.disabled = timeMode === 1;
+  duckingDelayTimeValue.value = `${values[0].toFixed(0)} ms${timeMode === 1 ? " · saved" : ""}`;
+  duckingDelayTempoValue.value = `${tempoBpm.toFixed(0)} BPM`;
   duckingDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
   duckingDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
   duckingDelayThresholdValue.value = `${values[3].toFixed(0)} dB`;
   duckingDelayAttenuationValue.value = `${values[4].toFixed(0)} dB`;
   duckingDelayReleaseValue.value = `${values[5].toFixed(0)} ms`;
+  duckingDelayLowCutValue.value = lowCutHz === 0 ? "Off" : `${lowCutHz.toFixed(0)} Hz`;
+  duckingDelayHighCutValue.value = highCutHz === 0 ? "Off" : `${highCutHz.toFixed(0)} Hz`;
   DEFAULT_PARAMETERS.duckingDelay = values;
   if (workletNode) workletNode.port.postMessage({ type: "ducking-delay", value: values });
 }
@@ -5949,11 +5971,15 @@ for (const input of [reverseDelayTimeMode, reverseDelayDivision,
   input.addEventListener("change", updateReverseDelay);
 }
 for (const input of [duckingDelayTime, duckingDelayFeedback, duckingDelayMix,
-  duckingDelayThreshold, duckingDelayAttenuation, duckingDelayRelease]) {
+  duckingDelayThreshold, duckingDelayAttenuation, duckingDelayRelease,
+  duckingDelayTempo, duckingDelayLowCut, duckingDelayHighCut]) {
   input.addEventListener("input", updateDuckingDelay);
   input.addEventListener("change", updateDuckingDelay);
 }
-duckingDelaySpillover.addEventListener("change", updateDuckingDelay);
+for (const input of [duckingDelayTimeMode, duckingDelayTapDivision,
+  duckingDelaySpillover]) {
+  input.addEventListener("change", updateDuckingDelay);
+}
 for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayMix,
   modulatedDelayRate, modulatedDelayDepth, modulatedDelaySpread,
   modulatedDelayTriggerThreshold]) {
@@ -8631,6 +8657,123 @@ async function runVolumePanBrowserSmokeTest(reference, captureView, captureBuffe
   }
 }
 
+async function runDuckingDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const controls = [duckingDelayTime, duckingDelayTimeMode, duckingDelayTempo,
+    duckingDelayTapDivision, duckingDelayFeedback, duckingDelayMix,
+    duckingDelayThreshold, duckingDelayAttenuation, duckingDelayRelease,
+    duckingDelaySpillover, duckingDelayLowCut, duckingDelayHighCut];
+  const previousControls = controls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Ducking Delay browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    duckingDelayTime.value = "350";
+    duckingDelayTimeMode.value = "1";
+    duckingDelayTempo.value = "120";
+    duckingDelayTapDivision.value = "7";
+    duckingDelayFeedback.value = "35";
+    duckingDelayMix.value = "100";
+    duckingDelayThreshold.value = "-24";
+    duckingDelayAttenuation.value = "12";
+    duckingDelayRelease.value = "250";
+    duckingDelaySpillover.checked = false;
+    duckingDelayLowCut.value = "150";
+    duckingDelayHighCut.value = "7000";
+    updateDuckingDelay();
+    effectCategoryFilter.value = "delay";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="39"]')?.closest(".effect-row");
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    const checkbox = checkboxes[39];
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !checkbox || !duckingDelayTime.disabled ||
+        DEFAULT_PARAMETERS.duckingDelay[7] !== 1 ||
+        DEFAULT_PARAMETERS.duckingDelay[8] !== 120 ||
+        DEFAULT_PARAMETERS.duckingDelay[9] !== 7 ||
+        DEFAULT_PARAMETERS.duckingDelay[10] !== 150 ||
+        DEFAULT_PARAMETERS.duckingDelay[11] !== 7000) {
+      throw new Error("Ducking Delay tempo, repeat-cut controls, or Delay picker category did not reach the browser chain.");
+    }
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 39;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Ducking Delay picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Ducking Delay playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      peak = Math.max(peak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount) : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Ducking Delay produced no measurable guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Delay", enabledEffectIndex: 39, timeMode: "tempo-sync",
+      tempoBpm: 120, tapDivision: "eighth", repeatLowCutHz: 150,
+      repeatHighCutHz: 7000, playOutputCaptured: true,
+      peak, activeSamples, differenceRms,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      controls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateDuckingDelay();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStepTremoloBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = stepTremoloControls.map((control) => control.value);
@@ -10603,6 +10746,38 @@ async function runBrowserSelfTest() {
     }
     duckingDelayThreshold.value = defaultDuckThreshold;
     duckingDelayThreshold.dispatchEvent(new Event("input", { bubbles: true }));
+    const duckingDelayTempoDefaults = [
+      duckingDelayTimeMode.value,
+      duckingDelayTempo.value,
+      duckingDelayTapDivision.value,
+      duckingDelayLowCut.value,
+      duckingDelayHighCut.value,
+    ];
+    duckingDelayTimeMode.value = "1";
+    duckingDelayTimeMode.dispatchEvent(new Event("change", { bubbles: true }));
+    duckingDelayTempo.value = "90";
+    duckingDelayTempo.dispatchEvent(new Event("input", { bubbles: true }));
+    duckingDelayTapDivision.value = "7";
+    duckingDelayTapDivision.dispatchEvent(new Event("change", { bubbles: true }));
+    duckingDelayLowCut.value = "150";
+    duckingDelayLowCut.dispatchEvent(new Event("input", { bubbles: true }));
+    duckingDelayHighCut.value = "7000";
+    duckingDelayHighCut.dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.duckingDelay[7] !== 1 ||
+        DEFAULT_PARAMETERS.duckingDelay[8] !== 90 ||
+        DEFAULT_PARAMETERS.duckingDelay[9] !== 7 ||
+        DEFAULT_PARAMETERS.duckingDelay[10] !== 150 ||
+        DEFAULT_PARAMETERS.duckingDelay[11] !== 7000 ||
+        !duckingDelayTime.disabled ||
+        duckingDelayTempoValue.value !== "90 BPM" ||
+        duckingDelayLowCutValue.value !== "150 Hz" ||
+        duckingDelayHighCutValue.value !== "7000 Hz") {
+      throw new Error("Ducking Delay tempo, tap division, and repeat-cut controls must reach browser parameters and display their values.");
+    }
+    [duckingDelayTimeMode.value, duckingDelayTempo.value,
+      duckingDelayTapDivision.value, duckingDelayLowCut.value,
+      duckingDelayHighCut.value] = duckingDelayTempoDefaults;
+    updateDuckingDelay();
     const defaultDuckSpillover = duckingDelaySpillover.checked;
     duckingDelaySpillover.checked = true;
     duckingDelaySpillover.dispatchEvent(new Event("change", { bubbles: true }));
@@ -11306,7 +11481,7 @@ async function runBrowserSelfTest() {
            8000, 0.5, 0.7, 4, 24],
           reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
          reverseDelayRun: true,
-          duckingDelay: [350, 0.25, 0.25, -30, 12, 250, 0],
+          duckingDelay: [350, 0.25, 0.25, -30, 12, 250, 0, 0, 120, 4, 0, 0],
         sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
         drive: 3,
         eq: [120, 2, 0.707, 800, -1.5, 0.707, 5000, 1, 0.707],
@@ -11455,6 +11630,11 @@ async function runBrowserSelfTest() {
     duckingDelayAttenuation.value = String(duckingDelayParameters[4]);
     duckingDelayRelease.value = String(duckingDelayParameters[5]);
     duckingDelaySpillover.checked = Boolean(duckingDelayParameters[6] ?? 0);
+    duckingDelayTimeMode.value = String(duckingDelayParameters[7] ?? 0);
+    duckingDelayTempo.value = String(duckingDelayParameters[8] ?? 120);
+    duckingDelayTapDivision.value = String(duckingDelayParameters[9] ?? 4);
+    duckingDelayLowCut.value = String(duckingDelayParameters[10] ?? 0);
+    duckingDelayHighCut.value = String(duckingDelayParameters[11] ?? 0);
     updateDuckingDelay();
     volumePosition.value = "92";
     volumeMinimum.value = "-96";
@@ -11956,6 +12136,10 @@ async function runBrowserSelfTest() {
     const stepFilterDelaySmoke = await runStepFilterDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Ducking Delay tempo sync and repeat cuts on local guitar audio…";
+    const duckingDelaySmoke = await runDuckingDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Volume/Pan playback on local guitar audio…";
     const volumePanSmoke = await runVolumePanBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -12108,6 +12292,7 @@ async function runBrowserSelfTest() {
       phraseLooperAutoRecord: phraseLooperAutoRecordSmoke,
       deluxeLooper: deluxeLooperSmoke,
       stepFilterDelay: stepFilterDelaySmoke,
+      duckingDelay: duckingDelaySmoke,
       volumePan: volumePanSmoke,
       stepTremolo: stepTremoloSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },

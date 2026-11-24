@@ -63,7 +63,42 @@ void DuckingDelay::configure(DuckingDelayParameters parameters) noexcept {
     parameters.time_ms = bounded(parameters.time_ms, 350.0F,
                                  kMinimumTimeMs,
                                  std::min(kMaximumTimeMs, max_delay_ms_));
-    const float new_delay = static_cast<float>(samples_for_ms(parameters.time_ms));
+    if (parameters.time_mode != DuckingDelayTimeMode::milliseconds &&
+        parameters.time_mode != DuckingDelayTimeMode::tempo_sync) {
+        parameters.time_mode = DuckingDelayTimeMode::milliseconds;
+    }
+    parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
+                                   kMinimumTempoBpm, kMaximumTempoBpm);
+    switch (parameters.tap_division) {
+    case DuckingDelayTapDivision::whole:
+    case DuckingDelayTapDivision::dotted_half:
+    case DuckingDelayTapDivision::half:
+    case DuckingDelayTapDivision::dotted_quarter:
+    case DuckingDelayTapDivision::quarter:
+    case DuckingDelayTapDivision::quarter_triplet:
+    case DuckingDelayTapDivision::dotted_eighth:
+    case DuckingDelayTapDivision::eighth:
+    case DuckingDelayTapDivision::eighth_triplet:
+    case DuckingDelayTapDivision::dotted_sixteenth:
+    case DuckingDelayTapDivision::sixteenth:
+    case DuckingDelayTapDivision::sixteenth_triplet:
+    case DuckingDelayTapDivision::thirty_second:
+    case DuckingDelayTapDivision::sixty_fourth:
+        break;
+    default:
+        parameters.tap_division = DuckingDelayTapDivision::quarter;
+        break;
+    }
+
+    float selected_time_ms = parameters.time_ms;
+    if (parameters.time_mode == DuckingDelayTimeMode::tempo_sync) {
+        selected_time_ms = 60000.0F / parameters.tempo_bpm *
+                           beats_for_division(parameters.tap_division);
+    }
+    selected_time_ms = bounded(selected_time_ms, parameters.time_ms,
+                                kMinimumTimeMs,
+                                std::min(kMaximumTimeMs, max_delay_ms_));
+    const float new_delay = static_cast<float>(samples_for_ms(selected_time_ms));
     if (target_delay_samples_ == 0.0F) {
         target_delay_samples_ = new_delay;
         delay_transition_from_samples_ = new_delay;
@@ -82,6 +117,39 @@ void DuckingDelay::configure(DuckingDelayParameters parameters) noexcept {
                                         0.0F, kMaximumAttenuationDb);
     parameters.release_ms = bounded(parameters.release_ms, 250.0F,
                                     kMinimumReleaseMs, kMaximumReleaseMs);
+
+    const float low_cut_max = std::max(
+        20.0F, std::min(1000.0F, sample_rate_ * 0.15F));
+    const float high_cut_max = std::max(
+        20.0F, std::min(20000.0F, sample_rate_ * 0.45F));
+    parameters.low_cut_hz = bounded(parameters.low_cut_hz, 0.0F,
+                                    0.0F, low_cut_max);
+    parameters.high_cut_hz = bounded(parameters.high_cut_hz, 0.0F,
+                                     0.0F, high_cut_max);
+    if (parameters.low_cut_hz > 0.0F) {
+        parameters.low_cut_hz = std::clamp(parameters.low_cut_hz,
+                                           20.0F, low_cut_max);
+    }
+    if (parameters.high_cut_hz > 0.0F) {
+        parameters.high_cut_hz = std::clamp(parameters.high_cut_hz,
+                                            20.0F, high_cut_max);
+    }
+
+    const float previous_low_cut = parameters_.low_cut_hz;
+    const float previous_high_cut = parameters_.high_cut_hz;
+    repeat_highpass_alpha_ = parameters.low_cut_hz > 0.0F
+        ? std::exp(-6.2831853071795864769F * parameters.low_cut_hz / sample_rate_)
+        : 1.0F;
+    repeat_lowpass_alpha_ = parameters.high_cut_hz > 0.0F
+        ? 1.0F - std::exp(-6.2831853071795864769F *
+                          parameters.high_cut_hz / sample_rate_)
+        : 1.0F;
+    if (previous_low_cut != parameters.low_cut_hz ||
+        previous_high_cut != parameters.high_cut_hz) {
+        repeat_highpass_previous_input_.fill(0.0F);
+        repeat_highpass_previous_output_.fill(0.0F);
+        repeat_lowpass_state_.fill(0.0F);
+    }
 
     threshold_amplitude_ = std::pow(10.0F, parameters.threshold_db / 20.0F);
     attenuation_gain_ = std::pow(10.0F, -parameters.attenuation_db / 20.0F);
@@ -130,9 +198,11 @@ void DuckingDelay::process_audio(std::span<float> interleaved,
                       static_cast<double>(1.0F - current_mix_) +
                       wet * static_cast<double>(current_mix_);
             interleaved[frame * channels_ + channel] = bounded_sample(output);
+            const float filtered_repeat = filter_repeat_sample(
+                delayed[channel], channel);
             const double recorded = (bypassed ? 0.0 :
                                      static_cast<double>(original[channel])) +
-                                    static_cast<double>(delayed[channel]) * current_feedback_;
+                                    static_cast<double>(filtered_repeat) * current_feedback_;
             storage_[write_offset + channel] = bounded_sample(recorded);
         }
 
@@ -171,11 +241,35 @@ void DuckingDelay::reset() noexcept {
     parameter_ramp_remaining_ = 0;
     delay_transition_from_samples_ = target_delay_samples_;
     delay_transition_remaining_ = 0;
+    repeat_highpass_previous_input_.fill(0.0F);
+    repeat_highpass_previous_output_.fill(0.0F);
+    repeat_lowpass_state_.fill(0.0F);
 }
 
 float DuckingDelay::bounded(float value, float fallback,
                             float minimum, float maximum) noexcept {
     return std::isfinite(value) ? std::clamp(value, minimum, maximum) : fallback;
+}
+
+float DuckingDelay::beats_for_division(
+    DuckingDelayTapDivision division) noexcept {
+    switch (division) {
+    case DuckingDelayTapDivision::whole: return 4.0F;
+    case DuckingDelayTapDivision::dotted_half: return 3.0F;
+    case DuckingDelayTapDivision::half: return 2.0F;
+    case DuckingDelayTapDivision::dotted_quarter: return 1.5F;
+    case DuckingDelayTapDivision::quarter: return 1.0F;
+    case DuckingDelayTapDivision::quarter_triplet: return 2.0F / 3.0F;
+    case DuckingDelayTapDivision::dotted_eighth: return 0.75F;
+    case DuckingDelayTapDivision::eighth: return 0.5F;
+    case DuckingDelayTapDivision::eighth_triplet: return 1.0F / 3.0F;
+    case DuckingDelayTapDivision::dotted_sixteenth: return 0.375F;
+    case DuckingDelayTapDivision::sixteenth: return 0.25F;
+    case DuckingDelayTapDivision::sixteenth_triplet: return 1.0F / 6.0F;
+    case DuckingDelayTapDivision::thirty_second: return 0.125F;
+    case DuckingDelayTapDivision::sixty_fourth: return 0.0625F;
+    }
+    return 1.0F;
 }
 
 std::size_t DuckingDelay::samples_for_ms(float time_ms) const noexcept {
@@ -192,6 +286,26 @@ float DuckingDelay::current_delay_samples() const noexcept {
             static_cast<float>(delay_transition_total_);
     return delay_transition_from_samples_ +
            (target_delay_samples_ - delay_transition_from_samples_) * progress;
+}
+
+float DuckingDelay::filter_repeat_sample(float sample,
+                                         std::uint16_t channel) noexcept {
+    if (channel >= channels_) return sample;
+    float filtered = sample;
+    if (parameters_.low_cut_hz > 0.0F) {
+        const float highpass = repeat_highpass_alpha_ *
+            (repeat_highpass_previous_output_[channel] + filtered -
+             repeat_highpass_previous_input_[channel]);
+        repeat_highpass_previous_input_[channel] = filtered;
+        repeat_highpass_previous_output_[channel] = highpass;
+        filtered = highpass;
+    }
+    if (parameters_.high_cut_hz > 0.0F) {
+        repeat_lowpass_state_[channel] += repeat_lowpass_alpha_ *
+            (filtered - repeat_lowpass_state_[channel]);
+        filtered = repeat_lowpass_state_[channel];
+    }
+    return filtered;
 }
 
 float DuckingDelay::read_fractional_delay(float delay_samples,

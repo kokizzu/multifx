@@ -2740,10 +2740,27 @@ public:
     void configure_ducking_delay(float time_ms, float feedback, float mix,
                                  float threshold_db, float attenuation_db,
                                  float release_ms,
-                                 std::uint32_t spillover) noexcept {
+                                 std::uint32_t spillover,
+                                 std::uint32_t time_mode, float tempo_bpm,
+                                 std::uint32_t tap_division,
+                                 float low_cut_hz, float high_cut_hz) noexcept {
+        tabletfx::DuckingDelayParameters parameters;
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.threshold_db = threshold_db;
+        parameters.attenuation_db = attenuation_db;
+        parameters.release_ms = release_ms;
+        parameters.spillover = spillover != 0U;
+        parameters.time_mode =
+            static_cast<tabletfx::DuckingDelayTimeMode>(time_mode);
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.tap_division =
+            static_cast<tabletfx::DuckingDelayTapDivision>(tap_division);
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
         static_cast<tabletfx::DuckingDelay*>(effects_[39].effect.get())->configure(
-            {time_ms, feedback, mix, threshold_db, attenuation_db, release_ms,
-             spillover != 0U});
+            parameters);
     }
 
     void configure_modulated_delay(float time_ms, float feedback, float mix,
@@ -3470,11 +3487,13 @@ TABLETFX_WASM_EXPORT void tf_chain_restart_reverse_delay(void* opaque) noexcept 
 TABLETFX_WASM_EXPORT void tf_chain_set_ducking_delay(
     void* opaque, float time_ms, float feedback, float mix,
     float threshold_db, float attenuation_db, float release_ms,
-    std::uint32_t spillover) noexcept {
+    std::uint32_t spillover, std::uint32_t time_mode, float tempo_bpm,
+    std::uint32_t tap_division, float low_cut_hz, float high_cut_hz) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_ducking_delay(
             time_ms, feedback, mix, threshold_db, attenuation_db, release_ms,
-            spillover);
+            spillover, time_mode, tempo_bpm, tap_division, low_cut_hz,
+            high_cut_hz);
     }
 }
 
