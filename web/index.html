@@ -218,6 +218,10 @@
           <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
           <input id="pitch-semitones" type="range" min="-24" max="24" step="0.5" value="0">
         </label>
+        <label class="mix-control" for="pitch-mix">
+          <span>Pitch Mix · shifted / original</span><output id="pitch-mix-value" for="pitch-mix">100% shifted / 0% original</output>
+          <input id="pitch-mix" type="range" min="0" max="100" step="1" value="100">
+        </label>
         <label class="mix-control" for="pitch-expression-target">
           <span>Pedal Shifter · PITCH target</span><output id="pitch-expression-target-value" for="pitch-expression-target">+12.0 semitones</output>
           <input id="pitch-expression-target" type="range" min="-24" max="24" step="0.5" value="12" disabled>
@@ -227,6 +231,7 @@
           <input id="pitch-expression-position" type="range" min="0" max="100" step="1" value="0" disabled>
         </label>
         <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 68</a> describes PEDAL SHIFTER as wet-only: PITCH selects one of 10 intervals at full POSITION, which sweeps from unison at minimum to that interval at maximum. The guide does not expose the interval labels, numeric bounds, or sweep curve. This project uses its existing ±24-semitone engine and linearly maps POSITION to a continuous target; it does not reproduce Fender's interval list or DSP. The POSITION slider is software control only and is not connected to a physical expression pedal.</p>
+        <p class="hint">Fender's Tone Master Pro firmware 1.8.85 introduced a rebuilt polyphonic Virtual Capo with a Mix control for blending shifted and original signals. Fender does not publish the Mix range or default. This project-authored control uses 0–100%, defaults to 100% shifted, and aligns the original path with the project's 256-sample (5.333 ms at 48 kHz) pitch-shifter latency. The aligned dry path adds no further latency; this is not a claim of Fender algorithm, latency, or DSP parity. Firmware 1.8.87 later fixed a semitone-selection issue in the earlier beta; installed firmware is unknown.</p>
         <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">November 2026 FM9-family Blocks Guide</a> documents up to ±24 semitones for several pitch voices. The project uses its own polyphonic pitch engine and range; it does not claim Fractal algorithm, sound, tracking quality, or DSP parity. The current <a href="https://www.fractalaudio.com/fm9-downloads/" target="_blank" rel="noreferrer">FM9 firmware page</a> names Original and Turbo, not Mark II Turbo; that model's applicability and installed firmware remain unconfirmed.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Fractal Chromatic harmonizer controls">

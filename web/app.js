@@ -332,6 +332,7 @@ const DEFAULT_PARAMETERS = {
   delayTapeHeadsEnabled: false,
   delayTapeHeads: [110, 15],
   pitchSemitones: 0,
+  pitchMix: 1,
   pitchExpression: { enabled: false, targetSemitones: 12, position: 0 },
   chromaticPitchDelay: [0, 350, 0.25, 0.65, 0.25, 0, 120, 4, 0],
   filters: [80, 12000],
@@ -937,6 +938,8 @@ const outputGainValue = document.querySelector("#output-gain-value");
 const pitchMode = document.querySelector("#pitch-mode");
 const pitchSemitones = document.querySelector("#pitch-semitones");
 const pitchSemitonesValue = document.querySelector("#pitch-semitones-value");
+const pitchMix = document.querySelector("#pitch-mix");
+const pitchMixValue = document.querySelector("#pitch-mix-value");
 const pitchExpressionTarget = document.querySelector("#pitch-expression-target");
 const pitchExpressionTargetValue = document.querySelector("#pitch-expression-target-value");
 const pitchExpressionPosition = document.querySelector("#pitch-expression-position");
@@ -4762,6 +4765,14 @@ pitchSemitones.addEventListener("input", () => {
   DEFAULT_PARAMETERS.pitchSemitones = value;
   pitchSemitonesValue.value = `${value > 0 ? "+" : ""}${value.toFixed(1)} semitones`;
   if (workletNode) workletNode.port.postMessage({ type: "pitch-semitones", value });
+});
+
+pitchMix.addEventListener("input", () => {
+  const percent = Number(pitchMix.value);
+  const mix = percent / 100;
+  DEFAULT_PARAMETERS.pitchMix = mix;
+  pitchMixValue.value = `${percent}% shifted / ${100 - percent}% original`;
+  if (workletNode) workletNode.port.postMessage({ type: "pitch-mix", value: mix });
 });
 
 function updatePitchExpressionPosition() {
@@ -11577,6 +11588,159 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
   }
 }
 
+async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousPitch = pitchSemitones.value;
+  const previousMix = pitchMix.value;
+  const previousMode = pitchMode.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Virtual Capo Mix smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="22"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !checkbox || pitchMix.min !== "0" || pitchMix.max !== "100" ||
+        pitchMix.value !== "100" || effectMemory.length !== 114 ||
+        !(effectMemory[22] > 0)) {
+      throw new Error(`Virtual Capo Mix UI mismatch: category=${row?.dataset.category}, ` +
+        `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
+        `mix=${pitchMix.min}..${pitchMix.max} default=${pitchMix.value}, ` +
+        `memoryLength=${effectMemory.length}, effectMemory=${effectMemory[22]}.`);
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 22;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    let barrierSequence = 0;
+    const waitForWorkletBarrier = () => new Promise((resolve, reject) => {
+      const port = workletNode.port;
+      const token = `virtual-capo-mix-${++barrierSequence}`;
+      const timeout = setTimeout(() => {
+        port.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for the Virtual Capo Mix worklet barrier."));
+      }, 5000);
+      const onMessage = (event) => {
+        if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+        clearTimeout(timeout);
+        port.removeEventListener("message", onMessage);
+        resolve();
+      };
+      port.addEventListener("message", onMessage);
+      port.postMessage({ type: "test-barrier", token });
+    });
+    await waitForWorkletBarrier();
+    pitchMode.value = "static";
+    pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const captureAt = async (mixPercent) => {
+      pitchSemitones.value = "12";
+      pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+      pitchMix.value = String(mixPercent);
+      pitchMix.dispatchEvent(new Event("input", { bubbles: true }));
+      await waitForWorkletBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForWorkletBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${mixPercent}% pitch Mix playback.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const fullyShifted = await captureAt(100);
+    const original = await captureAt(0);
+    const halfMix = await captureAt(50);
+    let shiftedSquares = 0;
+    let originalSquares = 0;
+    let halfSquares = 0;
+    let blendErrorSquares = 0;
+    let maximumBlendError = 0;
+    for (let index = 0; index < halfMix.length; index += 1) {
+      const shifted = fullyShifted[index];
+      const dry = original[index];
+      const blended = halfMix[index];
+      if (!Number.isFinite(shifted) || !Number.isFinite(dry) || !Number.isFinite(blended)) {
+        throw new Error(`Virtual Capo Mix produced a non-finite sample at ${index}.`);
+      }
+      const expected = 0.5 * (shifted + dry);
+      const error = blended - expected;
+      shiftedSquares += shifted * shifted;
+      originalSquares += dry * dry;
+      halfSquares += blended * blended;
+      blendErrorSquares += error * error;
+      maximumBlendError = Math.max(maximumBlendError, Math.abs(error));
+    }
+    const rms = (squares) => Math.sqrt(squares / Math.max(1, halfMix.length));
+    const shiftedRms = rms(shiftedSquares);
+    const originalRms = rms(originalSquares);
+    const halfMixRms = rms(halfSquares);
+    const blendErrorRms = rms(blendErrorSquares);
+    if (shiftedRms < 1e-5 || originalRms < 1e-5 || halfMixRms < 1e-5 ||
+        blendErrorRms > Math.max(2e-5, halfMixRms * 0.02)) {
+      throw new Error(`Pitch Mix did not produce the aligned 50/50 blend: ` +
+        `${JSON.stringify({ shiftedRms, originalRms, halfMixRms, blendErrorRms, maximumBlendError })}`);
+    }
+    return {
+      category: "Pitch",
+      enabledEffectIndex: 22,
+      projectRangePercent: [0, 100],
+      projectDefaultPercent: 100,
+      alignedOriginalDelaySamples: 256,
+      shiftedRms,
+      originalRms,
+      halfMixRms,
+      blendErrorRms,
+      maximumBlendError,
+      localGuitarPlayCaptured: true,
+    };
+  } finally {
+    stopSource(false);
+    pitchMode.value = previousMode;
+    pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+    pitchSemitones.value = previousPitch;
+    pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+    pitchMix.value = previousMix;
+    pitchMix.dispatchEvent(new Event("input", { bubbles: true }));
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -15656,6 +15820,10 @@ async function runBrowserSelfTest() {
           const pedalShifterSmoke = await runFenderPedalShifterBrowserSmokeTest(
             reference, captureView, captureBuffer,
           );
+          testResult.textContent = "Checking Virtual Capo Mix with local guitar Play…";
+          const virtualCapoMixSmoke = await runFenderVirtualCapoMixBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
           const focusedReport = {
             result: "passed",
             browser: navigator.userAgent,
@@ -15663,6 +15831,7 @@ async function runBrowserSelfTest() {
             channels: reference.channels,
             frames: reference.frames,
             pedalShifter: pedalShifterSmoke,
+            virtualCapoMix: virtualCapoMixSmoke,
           };
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);

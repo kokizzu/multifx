@@ -348,6 +348,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       } else {
         module._tf_chain_set_pitch(this.chain, parameters.pitchSemitones ?? 0);
       }
+      module._tf_chain_set_pitch_mix(this.chain, parameters.pitchMix ?? 1);
       const filters = parameters.filters || [80, 12000];
       module._tf_chain_set_filters(this.chain, ...filters);
       const pedalCompressor = parameters.pedalCompressor || [0.45, 0.45, 0.25, 0];
@@ -1201,6 +1202,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_ramp_output_gain(this.chain, Number(message.value));
     } else if (message.type === "pitch-semitones" && this.ready) {
       this.module._tf_chain_set_pitch(this.chain, Number(message.value));
+    } else if (message.type === "pitch-mix" && this.ready) {
+      this.module._tf_chain_set_pitch_mix(this.chain, Number(message.value));
     } else if (message.type === "pitch-expression-position" && this.ready) {
       this.module._tf_chain_set_pitch_expression(
         this.chain, Number(message.targetSemitones), Number(message.position),

@@ -129,6 +129,10 @@ target_link_libraries(tabletfx_offline PRIVATE tabletfx_core)
 add_executable(tabletfx_xr1_global_eq_bench apps/xr1_global_eq_bench.cpp)
 target_link_libraries(tabletfx_xr1_global_eq_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_fender_virtual_capo_mix_bench
+    apps/fender_virtual_capo_mix_bench.cpp)
+target_link_libraries(tabletfx_fender_virtual_capo_mix_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)

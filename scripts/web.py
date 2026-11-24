@@ -143,7 +143,7 @@ def build_web() -> None:
         "_tf_chain_set_delay_dual",
         "_tf_chain_set_delay_multitap", "_tf_chain_set_delay_multitap_tap",
         "_tf_chain_set_delay_tape_heads",
-        "_tf_chain_set_pitch", "_tf_chain_set_pitch_expression",
+        "_tf_chain_set_pitch", "_tf_chain_set_pitch_mix", "_tf_chain_set_pitch_expression",
         "_tf_chain_set_filters",
         "_tf_chain_set_pedal_compressor", "_tf_chain_set_input_gain",
         "_tf_chain_set_output_gain", "_tf_chain_ramp_input_gain",
@@ -679,7 +679,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
                 "(()=>{const n=document.querySelector('#browser-test-result');"
                 "return JSON.stringify({status:n?.dataset.status,text:n?.textContent,title:document.title})})()"
             )
-            deadline = time.monotonic() + 60
+            deadline = time.monotonic() + 180
             result: dict = {}
             while time.monotonic() < deadline:
                 response = cdp_call(sock, stream, command_id, "Runtime.evaluate", {

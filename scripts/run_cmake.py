@@ -138,6 +138,12 @@ def main() -> None:
             else "tabletfx_xr1_global_eq_bench"
         )
         run([str(xr1_benchmark)])
+        pitch_mix_benchmark = BUILD_DIR / (
+            "tabletfx_fender_virtual_capo_mix_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_fender_virtual_capo_mix_bench"
+        )
+        run([str(pitch_mix_benchmark)])
     elif action == "windows-build":
         build_windows(cmake)
 

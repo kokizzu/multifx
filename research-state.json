@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6987dd88f9ca8945aff1a96436c8096de001ff71",
+  "previous_checkpoint_commit": "7e5dcb2c8719c23186fb37122100abcc3d3e14f4",
   "latest_audit": {
     "name": "Fender Tone Master Pro Pitch Sequencer coverage and performance audit",
     "status": "verified project coverage; exact Fender controls and parity unresolved",
@@ -485,38 +485,38 @@
         "notes": "Automated native, focused local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. First enable allocates/prewarms the effect in the worklet control path; target-device first-use cost is unmeasured. Human listening, physical FM9 behavior, firmware applicability to Mark II Turbo, and target-device real-time load remain open."
       },
       "picker_rows": 113
+    },
+    {
+      "name": "Line 6 Helix Stadium XL Mutant Filter-inspired filter",
+      "status": "verified",
+      "picker_index": 111,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalogue and 1.4 release notes; Mu-Tron III manufacturer documentation for source-pedal concepts",
+        "revision": "Stadium v1.4 catalogue/release notes checked 2026-11-25; Mutant Filter first appeared in firmware 1.0. Owner's Manual selector Rev E / firmware v1.4.1; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "source_urls": [
+          "https://line6.com/helix-stadium-models/",
+          "https://kb.line6.com/helix-stadium-1-4-release-notes",
+          "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+          "https://mu-tron.com/vintage-musitronics/mu-tron-iii/"
+        ],
+        "qualification": "The Stadium catalogue calls Mutant Filter Mono/Stereo, models it on Mu-Tron III, and dates its first appearance to firmware 1.0. The checked Stadium manual provides no exact model parameter table, ranges/defaults, DSP cost, or latency. Mu-Tron low/band/high, Peak, input Gain/sensitivity, Range, and Up/Down are source-pedal concepts only, not confirmed Line 6 control names."
+      },
+      "documented_controls": "Stadium evidence: Mutant Filter, Mono/Stereo, based on Mu-Tron III, first firmware 1.0. Mu-Tron documentation describes low/band/high mode, Peak, input Gain/sensitivity, Range, and Up/Down sweep; it does not establish the Stadium controls or values.",
+      "project_controls": "Project-authored, default-off Filters & wah picker ID 111 (display row 112). Reuses existing EnvelopeWah/TPT filter core. Defaults: Band-pass mode; sensitivity 0.5; 350–2200 Hz sweep range; Q 4; level 0 dB; 5 ms attack; 80 ms release; 5 ms smoothing; Up sweep. UI offers Low-pass/Band-pass/High-pass and Up/Down. Mapping, labels, defaults, and range are project choices, not Stadium/Mu-Tron settings or sound parity. Zero buffering and no added fixed algorithmic latency.",
+      "verification": {
+        "native_ctest": "make test-mutant-filter passed focused native CTest; full make test passed 113/113 CTest cases and 11/11 fixture-safety checks.",
+        "focused_browser": "make web-test-mutant-filter passed in HeadlessChrome 151 with local prerecorded Guitar-TECHS P3_music/audio/directinput/directinput_01.wav at 48 kHz stereo/48,000 frames. Confirmed Filters & wah category, ID 111, default-off behavior, and Play capture in Low-pass/Band-pass/High-pass. Source-difference RMS: 0.0264423711 / 0.0528516514 / 0.0583531814; pairwise mode-difference RMS: 0.0655356343 / 0.0400390454 / 0.0768225859.",
+        "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+        "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.1073/0.1211/0.1339/0.4118/0.9383% of callback deadline; 624 B reported state; zero buffering/fixed algorithmic latency and no processing-time allocation. Desktop processor-call timing, not device performance.",
+        "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
+      },
+      "picker_rows": 112
     }
   ],
   "previous_checkpoint": {
-    "name": "Line 6 Helix Stadium XL Mutant Filter-inspired filter",
-    "status": "verified",
-    "picker_index": 111,
-    "category": "Filters & wah",
-    "official_source": {
-      "title": "Line 6 Helix Stadium model catalogue and 1.4 release notes; Mu-Tron III manufacturer documentation for source-pedal concepts",
-      "revision": "Stadium v1.4 catalogue/release notes checked 2026-11-25; Mutant Filter first appeared in firmware 1.0. Owner's Manual selector Rev E / firmware v1.4.1; installed firmware unknown.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "source_urls": [
-        "https://line6.com/helix-stadium-models/",
-        "https://kb.line6.com/helix-stadium-1-4-release-notes",
-        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-        "https://mu-tron.com/vintage-musitronics/mu-tron-iii/"
-      ],
-      "qualification": "The Stadium catalogue calls Mutant Filter Mono/Stereo, models it on Mu-Tron III, and dates its first appearance to firmware 1.0. The checked Stadium manual provides no exact model parameter table, ranges/defaults, DSP cost, or latency. Mu-Tron low/band/high, Peak, input Gain/sensitivity, Range, and Up/Down are source-pedal concepts only, not confirmed Line 6 control names."
-    },
-    "documented_controls": "Stadium evidence: Mutant Filter, Mono/Stereo, based on Mu-Tron III, first firmware 1.0. Mu-Tron documentation describes low/band/high mode, Peak, input Gain/sensitivity, Range, and Up/Down sweep; it does not establish the Stadium controls or values.",
-    "project_controls": "Project-authored, default-off Filters & wah picker ID 111 (display row 112). Reuses existing EnvelopeWah/TPT filter core. Defaults: Band-pass mode; sensitivity 0.5; 350–2200 Hz sweep range; Q 4; level 0 dB; 5 ms attack; 80 ms release; 5 ms smoothing; Up sweep. UI offers Low-pass/Band-pass/High-pass and Up/Down. Mapping, labels, defaults, and range are project choices, not Stadium/Mu-Tron settings or sound parity. Zero buffering and no added fixed algorithmic latency.",
-    "verification": {
-      "native_ctest": "make test-mutant-filter passed focused native CTest; full make test passed 113/113 CTest cases and 11/11 fixture-safety checks.",
-      "focused_browser": "make web-test-mutant-filter passed in HeadlessChrome 151 with local prerecorded Guitar-TECHS P3_music/audio/directinput/directinput_01.wav at 48 kHz stereo/48,000 frames. Confirmed Filters & wah category, ID 111, default-off behavior, and Play capture in Low-pass/Band-pass/High-pass. Source-difference RMS: 0.0264423711 / 0.0528516514 / 0.0583531814; pairwise mode-difference RMS: 0.0655356343 / 0.0400390454 / 0.0768225859.",
-      "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.1073/0.1211/0.1339/0.4118/0.9383% of callback deadline; 624 B reported state; zero buffering/fixed algorithmic latency and no processing-time allocation. Desktop processor-call timing, not device performance.",
-      "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
-    },
-    "picker_rows": 112
-  },
-  "current_checkpoint": {
     "name": "XRecer XR1-inspired in-chain Global EQ",
     "status": "verified",
     "picker_index": 113,
@@ -531,16 +531,53 @@
     "documented_controls": "Five bands; each has Assign, Type (Peak/HP/LP/Hi-Shelf/Lo-Shelf), Gain, Freq, Q, and Bypass; master Bypass and Reset. The exact page provides no numeric ranges/defaults, filter topology, or output-bus routing table.",
     "project_controls": "Project-authored Equalizer ID 113: Stereo/Left/Right assignment; Peak, high-pass, low-pass, high-shelf, low-shelf; gain ±12 dB; frequency 20–20,000 Hz capped at 0.45 × sample rate; Q 0.25–10; neutral peak defaults at 80/250/750/2,200/6,600 Hz; per-band/master bypass and reset. This consumes one chain slot and does not apply across presets/selected outputs or reproduce dry-DI bypass.",
     "verification": {
-      "native_ctest": "make web-test passed, including all 115/115 CTest cases and 11/11 fixture checks; XR1 tests cover filter types, bounds/invalid values, channel assignment, bypass/reset, finite recovery, block partitioning, zero fixed latency, and no process-time allocations.",
-      "focused_browser": "make web-test passed; Headless Chrome enabled Equalizer ID 113, played the existing local prerecorded Guitar-TECHS guitar DI, set band 3 to +12 dB Peak at 750 Hz, and captured measurable output (peak 0.3673; 96,000 active samples).",
-      "full_browser": "make web-test passed through the explicit Emscripten source list and the complete browser/WASM suite.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 5,000 warm-up/50,000 measured: state 1,680 B, zero fixed latency. Neutral p50/p95/p99/p99.9/max 0.001/0.001/0.001/0.001/0.296%; active five-band 0.112/0.117/0.186/0.388/0.888% of callback. Desktop processor-call timing, not target-device performance.",
-      "notes": "Native, local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. The processor is in-chain and project-authored; XR1 selected-output/global assignment, dry-DI routing, settings, DSP, and sound parity are not established. Human listening and hardware checks remain open."
+      "native_ctest": "make test passed 115/115 CTest cases and 11/11 fixture checks, including Mix endpoints/clamping, aligned dry delay, blend arithmetic, and no process-time allocations.",
+      "focused_browser": "make web-test-fender-pedal-shifter passed using the existing local prerecorded Guitar-TECHS guitar DI at 48 kHz stereo. Browser Play verified 0%, 50%, and 100% Mix; the 50% result differed from the captured wet/dry mean by 1.51e-9 RMS and 7.45e-9 maximum error.",
+      "full_browser": "make web-browser-test reached the 60-second page deadline while the page still displayed normal audio-source progress; no final browser/native comparison was produced. Full-suite comparison remains unverified.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: full-wet p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix 10.597/13.989/17.349/21.551/35.216% of callback budget. Native stereo state 496,080 B, including a 2,048 B dry-history ring; 256-frame / 5.333 ms latency. Desktop processor-call timing, not target-device performance.",
+      "notes": "Native, build, focused local-guitar browser/WASM Play, Windows cross-build, and isolated benchmark checks pass. Full browser/native comparison, human listening, Tone Master Pro hardware behavior, and target-device performance remain open. No Fender Mix bounds/defaults, measured device latency, DSP, settings, or sound parity are claimed."
+    },
+    "picker_rows": 114
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Virtual Capo Mix control",
+    "status": "verified",
+    "picker_index": 22,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fender Tone Master Pro firmware history and Virtual Capo feature article",
+      "revision": "Firmware v1.8.85 dated 2026-11-18 introduced the rebuilt Virtual Capo; current official history lists v1.8.87 dated 2026-11-23. Checked 2026-11-25; installed device firmware unknown.",
+      "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "article_url": "https://www.fender.com/articles/parts-and-accessories/unlock-new-effects-with-tone-master-pro-update",
+      "qualification": "Fender documents Mix as blending shifted and original signals. Its 1.8.85 notes describe the rebuilt polyphonic algorithm, ±12-semitone range, unity gain, unchanged CPU use, flat frequency response, and low latency. The 1.8.87 note fixes a public-beta semitone error at +1 through +OCT. Neither source publishes Mix bounds/defaults or measured latency/CPU."
+    },
+    "documented_controls": "Virtual Capo has a Mix control that blends shifted and original signals. Firmware v1.8.85 describes the rebuilt polyphonic algorithm over ±12 semitones and removes Resolution and Tracking; v1.8.87 corrects a beta semitone error. Numeric Mix bounds/defaults and measured performance are not provided.",
+    "project_controls": "Project-authored 0–100% Mix in the existing Pitch picker row ID 22, default 100% shifted; 0% returns the original signal after a shared 256-frame dry-history alignment. At 48 kHz this adds no delay beyond the existing nominal 5.333 ms shifter latency. The stereo ring is 2,048 B; reported object-aligned native state rises 2,064 B to 496,080 B. No second processor or process-time allocation is added.",
+    "verification": {
+      "native_ctest": "make test passed 115/115 CTest cases and 11/11 fixture-safety checks.",
+      "focused_browser": "make web-test-fender-pedal-shifter passed local prerecorded Guitar-TECHS DI Play at 48 kHz stereo for 0%, 50%, and 100% Mix. Midpoint blend error was 1.51e-9 RMS and 7.45e-9 maximum.",
+      "full_browser": "make web-browser-test passed after raising the page deadline to 180 seconds. Browser/native comparison across 78 optional stages reported 3.4009653e-6 maximum absolute error and 5.8804948e-7 RMS error.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: 100% Mix p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix 10.597/13.989/17.349/21.551/35.216% of callback budget. State 496,080 B stereo; latency 256 frames / 5.333 ms. Desktop timing is not target-device performance.",
+      "notes": "Native tests, WASM build, focused local-guitar browser Play, full browser/native comparison, Windows cross-build, and isolated benchmark pass. Human listening, Tone Master Pro hardware behavior, and target-device load remain open. Vendor Mix bounds/defaults, measured device latency, and DSP/settings/sound parity are unknown."
     },
     "picker_rows": 114
   },
   "next_research": [
+    {
+      "device": "Fractal FM9 Mark II Turbo",
+      "feature": "Resonator Input Gain control exposure",
+      "source": "Fractal Audio Blocks Guide, June 2023 FM9-family revision, printed p.81; firmware v12.0 downloads list FM9 Original/Turbo but do not name Mark II Turbo separately.",
+      "source_urls": [
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/",
+        "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit"
+      ],
+      "status": "The guide documents Resonator Input Gain as controlling the signal feeding the effect processor without changing the dry signal. TabletFX FourBandResonator has no equivalent control yet. The next safe project change is a cached wet-input gain scalar before band routing and delay excitation, leaving dry and feedback unchanged; no buffer or added latency is needed.",
+      "known_controls": "Input Gain is listed for Resonator and is explicitly described as wet-processor input level; no numeric bounds/default are given. Any project default/range must be labeled project-authored. Exact Mark II Turbo firmware applicability and installed device firmware remain unknown.",
+      "qualification": "Use a focused regression to prove dry remains unchanged while wet changes, parameter bounds/non-finite handling, stereo/block behavior and zero process-time allocation. Add a benchmark comparison at unity and active gain and expose the control in the existing categorized Resonator UI. Do not claim Fractal DSP, range, firmware or sound parity."
+    },
     {
       "device": "Fender Tone Master Pro",
       "feature": "Pitch Sequencer parameter surface and categorized project implementation",

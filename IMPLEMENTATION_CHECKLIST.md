@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Fender Tone Master Pro Virtual Capo Mix (2026-11-25)
+
+- [x] Verified current official firmware history: v1.8.85 introduced the rebuilt polyphonic Virtual Capo over ±12 semitones; Fender describes unity gain, unchanged CPU use, flat frequency response, cleaner attacks, and low latency. Current v1.8.87 fixes a public-beta semitone error at +1 through +OCT. Fender's feature article confirms Mix blends shifted/original signals but does not publish bounds or defaults.
+- [x] Added project-authored 0–100% Mix to the existing categorized Pitch row at picker index 22, defaulting to fully shifted. A fixed 256-frame dry-history ring aligns original audio with the existing 256-frame wet latency; the setting adds no further latency and does not create a second shifter.
+- [x] Native `make test` passed 115/115 CTest cases and 11/11 fixture checks. The focused browser/WASM local Guitar-TECHS playback test passed 0/50/100% Mix; the midpoint blend RMS error was 1.51e−9 and max error 7.45e−9. `make web-build` and `make windows-cross-build` passed.
+- [x] Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-ups / 20,000 measured: full wet p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix 10.597/13.989/17.349/21.551/35.216% of callback budget. State is 496,080 B stereo, including a 2,048 B dry-history ring (2,064 B total increase after object alignment); latency remains 5.333 ms. Desktop processor-call timing does not predict target-device performance.
+- [x] The full `make web-browser-test` passed after raising its page deadline to 180 seconds. Browser/native comparison across 78 optional stages reported 3.4009653e−6 maximum absolute error and 5.8804948e−7 RMS error; the focused Mix Play/blend assertions also passed.
+- [ ] Human listening, physical Tone Master Pro behavior, and target-device CPU/latency remain open. No Fender parameter, DSP, firmware, or sound parity is claimed.
+
 ## Fender Tone Master Pro Pitch Sequencer research and performance audit (2026-11-25)
 
 - [x] Rechecked official firmware history through v1.8.87 dated 2026-11-23. Pitch Sequencer was added in v1.8.45; v1.8.58 fixed a crash risk affecting step effects. The current v1.8.87 note covers Virtual Capo and makes no Pitch Sequencer change. Fender's overview describes melody sequences, glitches, glides, and freeze-like sounds, but publishes no controls, bounds/defaults, tracking/polyphony, latency, or DSP. The v1.1.100 / Rev. A Model Guide does not include this later effect.

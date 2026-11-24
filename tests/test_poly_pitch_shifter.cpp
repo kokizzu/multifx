@@ -421,6 +421,96 @@ void test_impulse_latency_is_bounded_by_reported_delay() {
             "neutral pitch impulse peak fell outside the reported latency window");
 }
 
+void test_mix_range_default_and_aligned_dry_path() {
+    tabletfx::PolyPitchShifter full_wet(kSampleRate, 1);
+    tabletfx::PolyPitchShifter selected_full_wet(kSampleRate, 1);
+    require(full_wet.mix() == 1.0F,
+            "project Mix must default to 100% shifted signal");
+    require(std::abs(full_wet.algorithmic_latency_ms() -
+                     (1000.0F * 256.0F / kSampleRate)) < 0.01F,
+            "adding Mix must not change reported shifter latency");
+
+    selected_full_wet.set_mix(1.0F);
+    require(selected_full_wet.mix() == 1.0F,
+            "100% Mix should select the fully shifted signal");
+    selected_full_wet.set_mix(0.25F);
+    require(selected_full_wet.mix() == 0.25F,
+            "Mix should use project-authored 0–100 percent units");
+    selected_full_wet.set_mix(-1.0F);
+    require(selected_full_wet.mix() == 0.0F,
+            "Mix should clamp below zero");
+    selected_full_wet.set_mix(2.0F);
+    require(selected_full_wet.mix() == 1.0F,
+            "Mix should clamp above 100 percent");
+    selected_full_wet.set_mix(std::numeric_limits<float>::quiet_NaN());
+    require(selected_full_wet.mix() == 1.0F,
+            "non-finite Mix updates must preserve the last valid setting");
+
+    constexpr std::size_t frames = 1024;
+    std::array<float, frames> source{};
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        source[frame] = static_cast<float>(0.2 * std::sin(
+            2.0 * 3.14159265358979323846 * 330.0 * frame / kSampleRate));
+    }
+    auto wet_output = source;
+    auto dry_output = source;
+    full_wet.process(wet_output, 1);
+    selected_full_wet.set_mix(0.0F);
+    selected_full_wet.process(dry_output, 1);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float expected = frame < 256 ? 0.0F : source[frame - 256];
+        require(std::abs(dry_output[frame] - expected) < 1.0e-7F,
+                "0% Mix must return the original signal delayed by exactly 256 samples");
+    }
+}
+
+void test_mixed_output_matches_aligned_wet_and_dry_and_allocates_nothing() {
+    tabletfx::PolyPitchShifter wet(kSampleRate, 2);
+    tabletfx::PolyPitchShifter dry(kSampleRate, 2);
+    tabletfx::PolyPitchShifter mixed(kSampleRate, 2);
+    dry.set_mix(0.0F);
+    mixed.set_mix(0.5F);
+
+    constexpr std::size_t total_samples = 8192;
+    std::vector<float> source(total_samples);
+    for (std::size_t frame = 0; frame < total_samples / 2; ++frame) {
+        source[frame * 2] = static_cast<float>(0.2 * std::sin(
+            2.0 * 3.14159265358979323846 * 220.0 * frame / kSampleRate));
+        source[frame * 2 + 1] = static_cast<float>(0.15 * std::sin(
+            2.0 * 3.14159265358979323846 * 330.0 * frame / kSampleRate));
+    }
+    auto wet_output = source;
+    auto dry_output = source;
+    auto mixed_output = source;
+    wet.set_pitch_semitones(7.0F);
+    dry.set_pitch_semitones(7.0F);
+    mixed.set_pitch_semitones(7.0F);
+
+    for (std::size_t offset = 0; offset < total_samples; offset += 1028) {
+        const std::size_t count = std::min<std::size_t>(1028, total_samples - offset);
+        wet.process(std::span<float>(wet_output).subspan(offset, count), 2);
+        dry.process(std::span<float>(dry_output).subspan(offset, count), 2);
+        mixed.process(std::span<float>(mixed_output).subspan(offset, count), 2);
+    }
+
+    for (std::size_t sample = 0; sample < total_samples; ++sample) {
+        const float expected = 0.5F * (wet_output[sample] + dry_output[sample]);
+        require(std::abs(mixed_output[sample] - expected) < 2.0e-6F,
+                "50% Mix must average the time-aligned wet and original signals");
+    }
+
+    wet.reset();
+    wet.set_pitch_semitones(7.0F);
+    wet.set_mix(0.5F);
+    std::array<float, 256> block{};
+    allocation_count.store(0, std::memory_order_relaxed);
+    count_allocations.store(true, std::memory_order_release);
+    wet.process(block, 2);
+    count_allocations.store(false, std::memory_order_release);
+    require(allocation_count.load(std::memory_order_relaxed) == 0,
+            "Mix processing must not allocate on the audio thread");
+}
+
 } // namespace
 
 void* operator new(std::size_t size) {
@@ -455,6 +545,8 @@ int main() {
         test_process_does_not_allocate();
         test_reset_matches_fresh_instance();
         test_impulse_latency_is_bounded_by_reported_delay();
+        test_mix_range_default_and_aligned_dry_path();
+        test_mixed_output_matches_aligned_wet_and_dry_and_allocates_nothing();
         std::cout << "All polyphonic pitch-shifter tests passed\n";
         return 0;
     } catch (const std::exception& error) {

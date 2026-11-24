@@ -1531,6 +1531,28 @@ FENDER_PITCH_SEQUENCE_AUDIT_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FENDER_VIRTUAL_CAPO_MIX_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "apps/fender_virtual_capo_mix_bench.cpp",
+    "include/tabletfx/effects/poly_pitch_shifter.hpp",
+    "src/effects/poly_pitch_shifter.cpp",
+    "tests/test_poly_pitch_shifter.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 RHYTHM_TAP_DELAY_CHECKPOINT_PATHS = (
     "include/tabletfx/effects/ten_tap_delay.hpp",
     "src/effects/ten_tap_delay.cpp",
@@ -2746,6 +2768,10 @@ CHECKPOINTS = {
     "fender-pitch-sequence-audit": (
         FENDER_PITCH_SEQUENCE_AUDIT_CHECKPOINT_PATHS,
         "perf: benchmark project-authored pitch sequence",
+    ),
+    "fender-virtual-capo-mix": (
+        FENDER_VIRTUAL_CAPO_MIX_CHECKPOINT_PATHS,
+        "feat: add project-authored Virtual Capo Mix",
     ),
 }
 

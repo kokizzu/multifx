@@ -163,9 +163,11 @@ struct PolyPitchShifter::Impl {
         channel_input.fill(0.0F);
         channel_output.fill(0.0F);
         output_queue.fill(0.0F);
+        dry_delay.fill(0.0F);
         input_count = 0;
         output_head = 0;
         output_count = kProcessFrames;
+        dry_delay_head = 0;
     }
 
     void process_block() {
@@ -208,9 +210,11 @@ struct PolyPitchShifter::Impl {
     std::array<float, kProcessFrames> channel_input{};
     std::array<float, kProcessFrames> channel_output{};
     std::array<float, kOutputQueueFrames * 2> output_queue{};
+    std::array<float, kOutputQueueFrames * 2> dry_delay{};
     std::size_t input_count = 0;
     std::size_t output_head = 0;
     std::size_t output_count = 0;
+    std::size_t dry_delay_head = 0;
 };
 
 PolyPitchShifter::PolyPitchShifter(float sample_rate, std::uint16_t channels,
@@ -257,6 +261,11 @@ void PolyPitchShifter::set_pitch_semitones(float semitones) noexcept {
     impl_->set_factor(std::exp2(static_cast<double>(pitch_semitones_) / 12.0));
 }
 
+void PolyPitchShifter::set_mix(float mix) noexcept {
+    if (!std::isfinite(mix)) return;
+    mix_ = std::clamp(mix, 0.0F, 1.0F);
+}
+
 void PolyPitchShifter::process(std::span<float> interleaved,
                                std::uint16_t channels) noexcept {
     if (channels != channels_ || channels == 0) {
@@ -265,9 +274,24 @@ void PolyPitchShifter::process(std::span<float> interleaved,
 
     const std::size_t total_frames = interleaved.size() / channels_;
     for (std::size_t frame = 0; frame < total_frames; ++frame) {
+        const std::size_t dry_offset = impl_->dry_delay_head * channels_;
+        const std::size_t output_offset = impl_->output_head * channels_;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
+            const std::size_t sample_index = frame * channels_ + channel;
+            const float input = interleaved[sample_index];
+            const float dry = impl_->dry_delay[dry_offset + channel];
+            impl_->dry_delay[dry_offset + channel] = input;
             impl_->input_block[impl_->input_count * channels_ + channel] =
-                interleaved[frame * channels_ + channel];
+                input;
+
+            const float wet = impl_->output_queue[output_offset + channel];
+            if (mix_ >= 1.0F) {
+                interleaved[sample_index] = wet;
+            } else if (mix_ <= 0.0F) {
+                interleaved[sample_index] = dry;
+            } else {
+                interleaved[sample_index] = mix_ * wet + (1.0F - mix_) * dry;
+            }
         }
         ++impl_->input_count;
         if (impl_->input_count == kProcessFrames) {
@@ -275,12 +299,9 @@ void PolyPitchShifter::process(std::span<float> interleaved,
             impl_->input_count = 0;
         }
 
-        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
-            interleaved[frame * channels_ + channel] =
-                impl_->output_queue[impl_->output_head * channels_ + channel];
-        }
         impl_->output_head = (impl_->output_head + 1) % kOutputQueueFrames;
         --impl_->output_count;
+        impl_->dry_delay_head = (impl_->dry_delay_head + 1) % kOutputQueueFrames;
     }
 }
 
