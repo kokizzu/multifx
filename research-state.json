@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "eadffb598f26fa74ff64b2b5020188d5618850df",
+  "previous_checkpoint_commit": "6e2ccbf82905d3351fcc560baf5048df123faa8e",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -100,65 +100,61 @@
         "notes": "Implementation and automated verification only. No Fractal DSP/settings/sound parity, device test, or human listening result. Listening and target-device checks remain open.",
         "picker_rows": 103
       }
+    },
+    {
+      "name": "Fender Tone Master Pro EQ5 Graphic categorized Equalizer implementation",
+      "status": "verified",
+      "picker_index": 103,
+      "category": "Equalizer",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and Fender firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 61; firmware history checked 2026-11-24 through v1.8.85 (2026-11-18); installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide documents EQ5 Graphic under Dynamics + EQ and fixed centers/overall Gain but gives no ranges/defaults, bandwidth/Q, topology, latency, DSP, or block limits. v1.7.53 separately names EQ-5 Parametric and menu separation; current EQ5 Graphic placement and exact firmware applicability remain unknown."
+      },
+      "documented_controls": "Five fixed bands centered at 80, 240, 750, 2,200, and 6,600 Hz plus overall Gain.",
+      "project_controls": "Project-authored five-band peaking EQ at picker index 103, flat defaults, ±12 dB per-band and overall-gain bounds, fixed Q=1. Zero fixed latency, 224 B state at 48 kHz stereo, and no process-time allocation. Project Equalizer placement and DSP are not Fender parity.",
+      "verification": {
+        "native_ctest": "make test passed 107/107 CTest cases and 11/11 audio-fixture safety checks; EQ5 tests cover centers/defaults/bounds, response, gain, stereo isolation, irregular blocks, reset, finite recovery, and zero process-time allocation.",
+        "cli": "Offline CLI smoke passed with EQ5 active and band 3 boosted at 750 Hz.",
+        "browser": "make web-test passed with 104 categorized picker entries, EQ5 at index 103, local prerecorded Guitar-TECHS DI Play smoke, and 75 active processor slots in browser/native comparison. Maximum absolute error 6.453456904864652e-6; RMS error 1.2677617584178294e-6. WASM 847,793 B; fixed heap 100,663,296 B; processor state 80,339,836 B plus 10,364 B tuner state.",
+        "windows": "make windows-cross-build passed for Windows MinGW native core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.1054/0.1227/0.3221/0.8700/1.1606% of a 2.667 ms callback deadline; 224 B owned state. Desktop processor-call estimate, not tablet/live-device performance.",
+        "notes": "Automated checks only; no Fender DSP/settings/sound parity, human listening, or hardware validation."
+      }
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9 Mark II Turbo Octave Divider category implementation",
-    "status": "verified",
-    "picker_index": 101,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "November 2026 cover date checked 2026-11-24; printed p. 84; FM9-family guide. Firmware v12.0 is listed for FM9 Original/Turbo but does not name Mark II Turbo separately.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide covers the FM9 family. The downloads page lists v12.0 for Original/Turbo, not Mark II Turbo explicitly; exact applicability to the owned SKU and installed firmware remain unknown."
-    },
-    "documented_controls": "Fixed one- and two-octave-down voices, each with independent Pan and Level. The guide recommends single notes and usually placement before distortion. It publishes no numeric bounds/defaults or polyphonic input-tracking guarantee.",
-    "project_controls": "Project-authored crossing-derived square-wave −12/−24-semitone sub voices. Input Gain default 1.0 (0–4); Voice 1 Level 0.45 (0–1), Pan −0.25 (−1…+1); Voice 2 Level 0.20 (0–1), Pan +0.25 (−1…+1); Mix 0.65 (0–1); Output 1.0 (0–2). Project control choices, bounds, smoothing, divider logic, and DSP do not claim Fractal parity. Zero fixed latency, 192 B state, no callback allocation.",
-    "verification": {
-      "native_ctest": "make test passed 105/105 CTest tests and 11/11 audio-fixture safety checks, including octave-divider signal, controls, reset, finite recovery, irregular-block, and allocation tests plus the offline CLI smoke.",
-      "browser": "make web-test passed: 103 categorized picker rows; isolated Play smoke using local prerecorded Guitar-TECHS DI; full browser/native comparison across 73 active processor slots, maximum absolute error 6.567984570438057e-6 and RMS error 1.3597328000199877e-6. Fixed WASM memory 100663296 B; full-chain processor state 80329680 B plus 10364 B tuner state.",
-      "windows": "make windows-cross-build passed for native core and offline renderer with Octave Divider.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2000 warm-up and 5000 measured blocks: p50/p95/p99/p99.9/max 0.0503/0.0953/0.1050/0.2940/0.4571% of a 2.667 ms callback deadline; owned state 192 B; zero fixed latency; no process allocation. Processor-call estimate, not live-device performance.",
-      "notes": "Implementation and automated verification only. No Fractal DSP/settings/sound parity, device test, or human listening result. Listening and target-device checks remain open.",
-      "picker_rows": 103
-    }
-  },
-  "current_checkpoint": {
     "name": "Line 6 Helix Stadium Double Take categorized Modulation implementation",
     "status": "verified",
     "picker_index": 102,
-    "category": "Modulation",
+    "category": "Modulation"
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro EQ5 Graphic categorized Equalizer implementation",
+    "status": "verified",
+    "picker_index": 103,
+    "category": "Equalizer",
     "official_source": {
-      "title": "Line 6 Helix Stadium model catalogue and live effects manual; Line 6 sound-designer discussion for legacy Helix",
-      "revision": "Stadium model catalogue and live manual checked 2026-11-23; manual is dynamically versioned and has no Double Take parameter table. Legacy Helix discussion checked 2026-11-23; exact forum-post firmware context is older than Stadium.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "legacy_controls_url": "https://line6.com/support/topic/34949-helix-models-%E2%80%9Cbased-on%E2%80%9D-full-listing-pdf-as-of-fw-260/",
-      "qualification": "The current Stadium catalogue lists mono/stereo Double Take variants. The legacy Line 6 designer discussion provides control-role evidence only; it does not establish current Stadium numeric ranges/defaults, DSP, delay timing, detailed routing, or installed firmware."
+      "title": "Tone Master Pro Model Guide and Fender firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 61; firmware history checked 2026-11-24 through v1.8.85 (2026-11-18); installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents EQ5 Graphic under Dynamics + EQ and fixed centers/overall Gain but gives no ranges/defaults, bandwidth/Q, topology, latency, DSP, or block limits. v1.7.53 separately names EQ-5 Parametric and menu separation; current EQ5 Graphic placement and exact firmware applicability remain unknown."
     },
-    "documented_controls": "Legacy Helix designer notes describe Doubles 1–4, Slop for dynamics-linked timing/pitch variation, Sensitivity for input response, Dry and Wet levels, and stereo Source choices Mono, True Stereo, Left Only, and Right Only. The current Stadium manual does not provide an individual model parameter table.",
-    "project_controls": "Project-authored Modulation processor with Doubles 2 (1–4), Slop 0.25 (0–1), Sensitivity 0.55 (0–1), Dry 0.85 (0–1), Wet 0.15 (0–1), and Source Mono by default. Project delay bases are 7–10.75 ms with up to ±2.5 ms movement; stereo ring allocation is included in 9,504 B owned state at 48 kHz. The dry path is immediate; processing performs no callback allocation. All ranges, defaults, detector, timing drift, voice layout, mixing, and DSP are project choices, not Line 6 parity.",
+    "documented_controls": "Five fixed bands centered at 80, 240, 750, 2,200, and 6,600 Hz plus overall Gain.",
+    "project_controls": "Project-authored five-band peaking EQ at picker index 103, flat defaults, ±12 dB per-band and overall-gain bounds, fixed Q=1. Zero fixed latency, 224 B state at 48 kHz stereo, and no process-time allocation. Project Equalizer placement and DSP are not Fender parity.",
     "verification": {
-      "native_ctest": "make test passed 106/106 CTest cases and 11/11 audio-fixture safety tests; Double Take tests cover defaults/bounds, source routing, dry/wet timing, irregular callback partitioning, reset, finite recovery, and zero process-time allocation.",
-      "browser": "make web-test passed with 106/106 CTest cases, 11 fixture checks, and an 845,255-byte WASM module. HeadlessChrome verified the 103-row categorized picker, Double Take Modulation row at index 102, local prerecorded Guitar-TECHS DI Play capture, and nonzero per-effect memory. Full browser/native comparison at 48 kHz stereo/48,000 frames: maximum absolute error 7.225292876000822e-6; RMS error 1.4064616026777206e-6. Fixed WASM memory 100,663,296 B; total processor state 80,339,396 B plus 10,364 B tuner state.",
-      "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.2513/0.2663/0.3675/0.6919/1.6336% of a 2.667 ms callback deadline; 9,504 B owned state; no process allocation. Processor-call estimate, not live-device performance.",
-      "notes": "Implementation and automated checks only. No Line 6 DSP/settings/sound parity, human listening, or hardware test; manual verification remains open."
+      "native_ctest": "make test passed 107/107 CTest cases and 11/11 audio-fixture safety checks; EQ5 tests cover centers/defaults/bounds, response, gain, stereo isolation, irregular blocks, reset, finite recovery, and zero process-time allocation.",
+      "cli": "Offline CLI smoke passed with EQ5 active and band 3 boosted at 750 Hz.",
+      "browser": "make web-test passed with 104 categorized picker entries, EQ5 at index 103, local prerecorded Guitar-TECHS DI Play smoke, and 75 active processor slots in browser/native comparison. Maximum absolute error 6.453456904864652e-6; RMS error 1.2677617584178294e-6. WASM 847,793 B; fixed heap 100,663,296 B; processor state 80,339,836 B plus 10,364 B tuner state.",
+      "windows": "make windows-cross-build passed for Windows MinGW native core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.1054/0.1227/0.3221/0.8700/1.1606% of a 2.667 ms callback deadline; 224 B owned state. Desktop processor-call estimate, not tablet/live-device performance.",
+      "notes": "Automated checks only; no Fender DSP/settings/sound parity, human listening, or hardware validation."
     }
   },
   "next_research": [
-    {
-      "device": "Fender Tone Master Pro",
-      "feature": "Equalizer / EQ5 Graphic",
-      "source": "Tone Master Pro Model Guide firmware v1.1.100 / Rev A, printed p. 61; Fender firmware history checked 2026-11-24.",
-      "source_urls": [
-        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
-      ],
-      "status": "EQ5 Graphic is documented under Dynamics + EQ with fixed centers 80/240/750/2,200/6,600 Hz and overall Gain. Fender v1.7.53 names a separate EQ-5 Parametric and category separation but does not state EQ5 Graphic current menu placement; v1.8.85 does not mention the graphic model. Exact ranges/defaults, bandwidth/Q, topology, latency, DSP, and installed firmware remain unknown. Project Equalizer picker placement is a UI taxonomy, not confirmed Fender placement."
-    },
     {
       "device": "Fractal FM9 Mark II Turbo (FM9-family documentation)",
       "feature": "Modulation / Optical Trem 1, Optical Trem 2, and Neon Trem",

@@ -1987,6 +1987,29 @@ LINE6_DOUBLE_TAKE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_EQ5_GRAPHIC_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/eq5_graphic.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/eq5_graphic.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_eq5_graphic.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2328,6 +2351,10 @@ CHECKPOINTS = {
     "line6-double-take": (
         LINE6_DOUBLE_TAKE_CHECKPOINT_PATHS,
         "feat: add categorized Double Take modulation",
+    ),
+    "fender-eq5-graphic": (
+        FENDER_EQ5_GRAPHIC_CHECKPOINT_PATHS,
+        "feat: add categorized Fender EQ5 Graphic",
     ),
 }
 

@@ -646,6 +646,40 @@ def check_double_take(executable: Path) -> None:
             raise AssertionError("Double Take accepted an unknown Source option")
 
 
+def check_eq5_graphic(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate
+    source_samples = [
+        round(4000 * math.sin(2.0 * math.pi * 750.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-eq5-graphic-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "eq5-graphic.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--eq5-graphic", "--eq5-band-3-db", "6",
+             "--eq5-overall-gain-db", "0"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(f"EQ5 Graphic options did not enable one processor: {result.stdout}")
+        output_samples = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in output_samples):
+            raise AssertionError("EQ5 Graphic produced non-finite output")
+        input_rms = math.sqrt(sum(value * value for value in source_samples[frame_count // 2:]) /
+                              (frame_count // 2)) / 32768.0
+        output_rms = math.sqrt(sum(value * value for value in output_samples[frame_count // 2:]) /
+                               (frame_count // 2))
+        if not input_rms * 1.85 < output_rms < input_rms * 2.15:
+            raise AssertionError(
+                f"EQ5 Graphic did not boost its 750 Hz band center by approximately 6 dB: "
+                f"input RMS {input_rms:.6f}, output RMS {output_rms:.6f}"
+            )
+
+
 def check_stereo_crossover(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 4096
@@ -2892,6 +2926,7 @@ def main() -> None:
     check_octave_fuzz(args.executable.resolve())
     check_octave_divider(args.executable.resolve())
     check_double_take(args.executable.resolve())
+    check_eq5_graphic(args.executable.resolve())
     check_stereo_crossover(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())

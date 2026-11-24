@@ -17,6 +17,7 @@
 #include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
+#include "tabletfx/effects/eq5_graphic.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -257,6 +258,9 @@ struct Options {
     tabletfx::effects::OctaveDividerParameters octave_divider{};
     bool double_take_enabled = false;
     tabletfx::DoubleTakeParameters double_take{};
+    bool eq5_graphic_enabled = false;
+    std::array<float, tabletfx::EQ5Graphic::kBandCount> eq5_graphic_gains_db{};
+    float eq5_graphic_overall_gain_db = 0.0F;
     bool stereo_crossover_enabled = false;
     tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
@@ -627,6 +631,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--double-take") {
             options.double_take_enabled = true;
+            continue;
+        }
+        if (key == "--eq5-graphic") {
+            options.eq5_graphic_enabled = true;
             continue;
         }
         if (key == "--double-take-source") {
@@ -3126,6 +3134,30 @@ Options parse_options(int argc, char** argv, int first) {
             options.double_take.wet_level = value;
             options.double_take_enabled = true;
         }
+        else if (key == "--eq5-band-1-db") {
+            options.eq5_graphic_gains_db[0] = value;
+            options.eq5_graphic_enabled = true;
+        }
+        else if (key == "--eq5-band-2-db") {
+            options.eq5_graphic_gains_db[1] = value;
+            options.eq5_graphic_enabled = true;
+        }
+        else if (key == "--eq5-band-3-db") {
+            options.eq5_graphic_gains_db[2] = value;
+            options.eq5_graphic_enabled = true;
+        }
+        else if (key == "--eq5-band-4-db") {
+            options.eq5_graphic_gains_db[3] = value;
+            options.eq5_graphic_enabled = true;
+        }
+        else if (key == "--eq5-band-5-db") {
+            options.eq5_graphic_gains_db[4] = value;
+            options.eq5_graphic_enabled = true;
+        }
+        else if (key == "--eq5-overall-gain-db") {
+            options.eq5_graphic_overall_gain_db = value;
+            options.eq5_graphic_enabled = true;
+        }
         else if (key == "--stereo-crossover-frequency-hz") {
             options.stereo_crossover.frequency_hz = value;
             options.stereo_crossover_enabled = true;
@@ -3671,6 +3703,13 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.double_take_enabled) {
         effects.push_back(std::make_unique<tabletfx::DoubleTake>(
             static_cast<float>(sample_rate), channels, options.double_take));
+    }
+    if (options.eq5_graphic_enabled) {
+        auto effect = std::make_unique<tabletfx::EQ5Graphic>(
+            static_cast<float>(sample_rate), channels);
+        effect->configure(options.eq5_graphic_gains_db,
+                          options.eq5_graphic_overall_gain_db);
+        effects.push_back(std::move(effect));
     }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
@@ -4713,6 +4752,12 @@ void run_bench() {
     benchmark_one("double-take-project-authored", [=] {
         return std::make_unique<tabletfx::DoubleTake>(
             static_cast<float>(sample_rate), channels);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("eq5-graphic-project-authored", [=] {
+        auto effect = std::make_unique<tabletfx::EQ5Graphic>(
+            static_cast<float>(sample_rate), channels);
+        effect->configure({4.0F, -3.0F, 6.0F, -2.0F, 3.0F}, 0.0F);
+        return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));

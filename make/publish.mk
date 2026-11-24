@@ -25,6 +25,7 @@ PUBLISH_CHECKPOINTS += fractal-rotary-depth
 PUBLISH_CHECKPOINTS += xr1-cabinet-ir
 PUBLISH_CHECKPOINTS += fractal-octave-divider
 PUBLISH_CHECKPOINTS += line6-double-take
+PUBLISH_CHECKPOINTS += fender-eq5-graphic
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

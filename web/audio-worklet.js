@@ -24,6 +24,7 @@ EFFECTS.push("chromatic-pitch-delay");
 EFFECTS.push("cabinet-ir");
 EFFECTS.push("octave-divider");
 EFFECTS.push("double-take");
+EFFECTS.push("eq5-graphic");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -408,6 +409,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           0, 350, 350, 4, 4]);
       this.configureOctaveFuzz(parameters.octaveFuzz || [0.55, 0.75, 1]);
       this.configureDoubleTake(parameters.doubleTake || [2, 0.25, 0.55, 0.85, 0.15, 0]);
+      this.configureEQ5Graphic(parameters.eq5Graphic || [0, 0, 0, 0, 0, 0]);
       this.configureStereoCrossover(parameters.stereoCrossover || {
         frequencyHz: 500, frequencyMultiplier: "x1",
         lowLevelLeftDb: 0, lowLevelRightDb: 0,
@@ -666,6 +668,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
 
   configureDoubleTake(values) {
     this.module._tf_chain_set_double_take(this.chain, ...values);
+  }
+
+  configureEQ5Graphic(values) {
+    this.module._tf_chain_set_eq5_graphic(this.chain, ...values);
   }
 
   configureRockBoxDist(values) {
@@ -1280,6 +1286,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_octave_divider(this.chain, ...message.value);
     } else if (message.type === "double-take" && this.ready) {
       this.configureDoubleTake(message.value);
+    } else if (message.type === "eq5-graphic" && this.ready) {
+      this.configureEQ5Graphic(message.value);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

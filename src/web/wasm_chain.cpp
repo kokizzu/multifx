@@ -15,6 +15,7 @@
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/cabinet_ir.hpp"
 #include "tabletfx/effects/double_take.hpp"
+#include "tabletfx/effects/eq5_graphic.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -113,6 +114,8 @@ public:
           octave_divider_(static_cast<float>(sample_rate),
                           static_cast<std::uint16_t>(channels)),
           double_take_(static_cast<float>(sample_rate),
+                       static_cast<std::uint16_t>(channels)),
+          eq5_graphic_(static_cast<float>(sample_rate),
                        static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
@@ -456,6 +459,11 @@ public:
             if (!enabled) double_take_.reset();
             return true;
         }
+        if (index == 103U) {
+            eq5_graphic_enabled_ = enabled;
+            if (!enabled) eq5_graphic_.reset();
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -595,6 +603,13 @@ public:
         if (index == 102U) {
             if (double_take_enabled_) {
                 double_take_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
+        if (index == 103U) {
+            if (eq5_graphic_enabled_) {
+                eq5_graphic_.process(
                     std::span<float>(output_.data(), samples), channels_);
             }
             return;
@@ -2950,6 +2965,14 @@ public:
         double_take_.set_parameters(parameters);
     }
 
+    void configure_eq5_graphic(float band1_db, float band2_db,
+                               float band3_db, float band4_db,
+                               float band5_db, float overall_gain_db) noexcept {
+        eq5_graphic_.configure(
+            {band1_db, band2_db, band3_db, band4_db, band5_db},
+            overall_gain_db);
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -2963,6 +2986,7 @@ public:
         bytes += cabinet_ir_.memory_bytes();
         bytes += octave_divider_.memory_bytes();
         bytes += double_take_.memory_bytes();
+        bytes += eq5_graphic_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3017,6 +3041,9 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 103U) {
+            return static_cast<std::uint32_t>(eq5_graphic_.memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3049,6 +3076,7 @@ private:
     tabletfx::CabinetIr cabinet_ir_;
     tabletfx::effects::OctaveDivider octave_divider_;
     tabletfx::DoubleTake double_take_;
+    tabletfx::EQ5Graphic eq5_graphic_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3058,6 +3086,7 @@ private:
     bool cabinet_ir_enabled_ = false;
     bool octave_divider_enabled_ = false;
     bool double_take_enabled_ = false;
+    bool eq5_graphic_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4034,6 +4063,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_double_take(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_double_take(
             doubles, slop, sensitivity, dry_level, wet_level, source);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_eq5_graphic(
+    void* opaque, float band1_db, float band2_db, float band3_db,
+    float band4_db, float band5_db, float overall_gain_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_eq5_graphic(
+            band1_db, band2_db, band3_db, band4_db, band5_db,
+            overall_gain_db);
     }
 }
 

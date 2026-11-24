@@ -12,6 +12,7 @@
 #include "tabletfx/effects/octave_fuzz.hpp"
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
+#include "tabletfx/effects/eq5_graphic.hpp"
 #include "tabletfx/effects/rock_box_dist.hpp"
 #include "tabletfx/effects/rock_box_boost.hpp"
 #include "tabletfx/effects/stereo_panner.hpp"

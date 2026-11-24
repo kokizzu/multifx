@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro EQ5 Graphic-inspired Equalizer (2026-11-24)
+
+The project-authored five-band peaking EQ uses fixed 80/240/750/2,200/6,600 Hz centers and a separate overall Gain control. Bands and overall Gain default to 0 dB with project-selected ±12 dB bounds and fixed Q=1. It has 224 B owned state at 48 kHz stereo, no fixed algorithmic latency, and no process-time allocation. These topology and controls do not reproduce Fender DSP or settings.
+
+An isolated Release benchmark on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame blocks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.1054/0.1227/0.3221/0.8700/1.1606% of the deadline. `make test` covers centers/defaults/bounds, response, overall gain, stereo isolation, irregular blocks, reset, finite recovery, and zero allocation; CLI, local prerecorded Guitar-TECHS DI browser Play, full browser/native parity, and Windows MinGW core build pass. The 104-row browser comparison reports maximum absolute error 6.4534569e-6 and RMS error 1.2677618e-6. These are desktop processor-call measurements, not tablet/device guarantees. No human listening result is available.
+
 ## Line 6 Helix Stadium Double Take-inspired Modulation (2026-11-24)
 
 The project-authored Double Take processor uses four preallocated delay voices with a 24 ms maximum ring. The default two-double configuration uses Slop 0.25, Sensitivity 0.55, Dry 0.85, Wet 0.15, and Mono Source. Project bounds, dynamic envelope response, timing drift, voice placement, delay values, and mixing do not claim Line 6 settings or DSP parity. Stereo processor-owned state is 9,504 B at 48 kHz. The dry path is immediate; wet voices use a 7–10.75 ms base delay with up to ±2.5 ms modulation. Construction allocates the fixed ring; process() performs no allocation.

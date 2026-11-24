@@ -193,6 +193,7 @@
         <label class="effect-row" data-category="ir-loader"><input type="checkbox" data-effect="100"><span class="effect-number">101</span><span class="effect-name">Cabinet IR · project-authored mono FIR</span><span class="effect-default">24-bit PCM · 48 kHz · 2,048 samples</span><span class="effect-category-tag">IR Loader</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="101"><span class="effect-number">102</span><span class="effect-name">Octave Divider · project-authored Fractal-inspired controls</span><span class="effect-default">Fixed −1 / −2 octave voices</span><span class="effect-category-tag">Pitch</span></label>
                 <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="102"><span class="effect-number">103</span><span class="effect-name">Double Take · project-authored dynamic double</span><span class="effect-default">1–4 voices · timing/pitch drift · dry/wet</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="103"><span class="effect-number">104</span><span class="effect-name">EQ5 Graphic · project-authored five-band EQ</span><span class="effect-default">80 · 240 · 750 · 2,200 · 6,600 Hz · ±12 dB</span><span class="effect-category-tag">Equalizer</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -746,6 +747,18 @@
           <label class="mix-control" for="double-take-dry-level"><span>Dry level</span><output>85%</output><input id="double-take-dry-level" type="range" min="0" max="1" step="0.01" value="0.85"></label>
           <label class="mix-control" for="double-take-wet-level"><span>Wet level</span><output>15%</output><input id="double-take-wet-level" type="range" min="0" max="1" step="0.01" value="0.15"></label>
           <label class="mix-control" for="double-take-source"><span>Stereo source</span><output>Mono</output><select id="double-take-source"><option value="0" selected>Mono</option><option value="1">True Stereo</option><option value="2">Left Only</option><option value="3">Right Only</option></select></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="EQ5 Graphic controls">
+        <h3>EQ5 Graphic · project-authored five-band EQ</h3>
+        <p class="hint">The Tone Master Pro Model Guide lists fixed bands at 80, 240, 750, 2,200, and 6,600 Hz, plus overall Gain. Fender does not publish gain ranges/defaults, bandwidth, or filter topology here. These ±12 dB controls and peaking-filter implementation are project-authored, with no Fender settings or sound parity claim.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="eq5-band-1-db"><span>80 Hz</span><output id="eq5-band-1-db-value" for="eq5-band-1-db">0.0 dB</output><input id="eq5-band-1-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="eq5-band-2-db"><span>240 Hz</span><output id="eq5-band-2-db-value" for="eq5-band-2-db">0.0 dB</output><input id="eq5-band-2-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="eq5-band-3-db"><span>750 Hz</span><output id="eq5-band-3-db-value" for="eq5-band-3-db">0.0 dB</output><input id="eq5-band-3-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="eq5-band-4-db"><span>2,200 Hz</span><output id="eq5-band-4-db-value" for="eq5-band-4-db">0.0 dB</output><input id="eq5-band-4-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="eq5-band-5-db"><span>6,600 Hz</span><output id="eq5-band-5-db-value" for="eq5-band-5-db">0.0 dB</output><input id="eq5-band-5-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="eq5-overall-gain-db"><span>Overall gain</span><output id="eq5-overall-gain-db-value" for="eq5-overall-gain-db">0.0 dB</output><input id="eq5-overall-gain-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
         </div>
       </div>
       <div class="gain-controls">

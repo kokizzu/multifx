@@ -104,6 +104,7 @@ const EFFECT_NAMES = [
   "Cabinet IR · project-authored mono impulse response",
   "Octave Divider · project-authored Fractal-inspired controls",
   "Double Take · project-authored dynamic double",
+  "EQ5 Graphic · project-authored five-band EQ",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -111,6 +112,7 @@ const DEFAULT_PARAMETERS = {
   stepTremolo: [4, 0.75, 8, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 4],
   octaveDivider: [1, 0.45, -0.25, 0.2, 0.25, 0.65, 1],
   doubleTake: [2, 0.25, 0.55, 0.85, 0.15, 0],
+  eq5Graphic: [0, 0, 0, 0, 0, 0],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1228,6 +1230,14 @@ const doubleTakeControls = [
   document.querySelector("#double-take-dry-level"),
   document.querySelector("#double-take-wet-level"),
   document.querySelector("#double-take-source"),
+];
+const eq5GraphicControls = [
+  document.querySelector("#eq5-band-1-db"),
+  document.querySelector("#eq5-band-2-db"),
+  document.querySelector("#eq5-band-3-db"),
+  document.querySelector("#eq5-band-4-db"),
+  document.querySelector("#eq5-band-5-db"),
+  document.querySelector("#eq5-overall-gain-db"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -2888,6 +2898,18 @@ function updateDoubleTakeOptions() {
   }
 }
 
+function updateEQ5GraphicOptions() {
+  const values = eq5GraphicControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.eq5Graphic = values;
+  eq5GraphicControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = `${values[index].toFixed(1)} dB`;
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "eq5-graphic", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -3928,6 +3950,11 @@ for (const control of doubleTakeControls) {
   control.addEventListener("change", updateDoubleTakeOptions);
 }
 updateDoubleTakeOptions();
+for (const control of eq5GraphicControls) {
+  control.addEventListener("input", updateEQ5GraphicOptions);
+  control.addEventListener("change", updateEQ5GraphicOptions);
+}
+updateEQ5GraphicOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9541,7 +9568,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 103 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 104 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9604,6 +9631,107 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
         control.value = previousControls[index];
       });
       updateDoubleTakeOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = eq5GraphicControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("EQ5 Graphic browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    ["3", "-3", "6", "-3", "3", "0"].forEach((value, index) => {
+      eq5GraphicControls[index].value = value;
+    });
+    eq5GraphicControls[2].dispatchEvent(new Event("input", { bubbles: true }));
+    effectCategoryFilter.value = "eq";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="103"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "eq" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
+        !checkbox || eq5GraphicControls.length !== 6 ||
+        effectMemory.length !== 104 || !(effectMemory[103] > 0) ||
+        DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
+      throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 103;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("EQ5 Graphic picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting EQ5 Graphic playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`EQ5 Graphic produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Equalizer", enabledEffectIndex: 103,
+      bandGainsDb: [3, -3, 6, -3, 3], overallGainDb: 0,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[103],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      eq5GraphicControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateEQ5GraphicOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -10470,8 +10598,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 103 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 103 || effectRows.length !== 103 ||
+        const expectedEffectIds = Array.from({ length: 104 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 104 || effectRows.length !== 104 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -10539,6 +10667,9 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[102]?.startsWith("Double Take") ||
               effectRows[102]?.dataset.category !== "modulation" ||
               effectRows[102]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+              !EFFECT_NAMES[103]?.startsWith("EQ5 Graphic") ||
+              effectRows[103]?.dataset.category !== "eq" ||
+              effectRows[103]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -10555,7 +10686,8 @@ async function runBrowserSelfTest() {
                     initialEffectState[92] || initialEffectState[93] ||
                       !initialEffectState[94] || !initialEffectState[95] ||
                         initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
-                         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
+        initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
+        initialEffectState[103] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -11775,7 +11907,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (eqIds.join(",") !== "20,25,26,27,59" || effectCount.value !== `5 of ${effectRows.length}` ||
+    if (eqIds.join(",") !== "20,25,26,27,59,103" || effectCount.value !== `6 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -12173,9 +12305,9 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 103 || activeProcessorIndices.length !== 74 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 102) {
-             throw new Error("The all-effect chain must contain 74 optional processors between input trim and output utilities.");
+    if (parityEnabled.length !== 104 || activeProcessorIndices.length !== 75 ||
+            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 103) {
+             throw new Error("The all-effect chain must contain 75 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -12197,6 +12329,7 @@ async function runBrowserSelfTest() {
         outputGainDb: -1,
         stereoCrossover: { ...DEFAULT_PARAMETERS.stereoCrossover },
         doubleTake: [3, 0.65, 0.55, 0.75, 0.45, 0],
+        eq5Graphic: [2, -3, 6, -3, 2, 0],
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
@@ -12810,6 +12943,10 @@ async function runBrowserSelfTest() {
     const doubleTakeSmoke = await runDoubleTakeBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking EQ5 Graphic Equalizer-category playback on local guitar audio…";
+    const eq5GraphicSmoke = await runEQ5GraphicBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -13059,6 +13196,7 @@ async function runBrowserSelfTest() {
       cabinetIR: cabinetIRSmoke,
       octaveDivider: octaveDividerSmoke,
       doubleTake: doubleTakeSmoke,
+      eq5Graphic: eq5GraphicSmoke,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

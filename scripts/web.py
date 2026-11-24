@@ -219,6 +219,7 @@ def build_web() -> None:
         "_tf_chain_cabinet_ir_latency_frames",
         "_tf_chain_set_octave_divider",
         "_tf_chain_set_double_take",
+        "_tf_chain_set_eq5_graphic",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -301,6 +302,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "cabinet_ir.cpp"),
         str(ROOT / "src" / "effects" / "octave_divider.cpp"),
         str(ROOT / "src" / "effects" / "double_take.cpp"),
+        str(ROOT / "src" / "effects" / "eq5_graphic.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -1105,6 +1107,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
               "--double-take-slop", "0.65", "--double-take-sensitivity", "0.55",
               "--double-take-dry-level", "0.75", "--double-take-wet-level", "0.45",
               "--double-take-source", "mono",
+              "--eq5-graphic",
+              "--eq5-band-1-db", "2", "--eq5-band-2-db", "-3",
+              "--eq5-band-3-db", "6", "--eq5-band-4-db", "-3",
+              "--eq5-band-5-db", "2", "--eq5-overall-gain-db", "0",
         ]
         run(renderer_command, cwd=ROOT)
         stereo_crossover_command = [
