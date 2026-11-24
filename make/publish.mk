@@ -33,6 +33,7 @@ PUBLISH_CHECKPOINTS += fractal-poly-pitch-range
 PUBLISH_CHECKPOINTS += fractal-diatonic-custom-scale
 PUBLISH_CHECKPOINTS += fender-pedal-shifter
 PUBLISH_CHECKPOINTS += fender-pedal-detune
+PUBLISH_CHECKPOINTS += fractal-touch-wah-mix
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

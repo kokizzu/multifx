@@ -2219,6 +2219,25 @@ FENDER_PEDAL_DETUNE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FRACTAL_TOUCH_WAH_MIX_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/stereo_filter.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "src/effects/stereo_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_stereo_filter.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2604,6 +2623,10 @@ CHECKPOINTS = {
     "fender-pedal-detune": (
         FENDER_PEDAL_DETUNE_CHECKPOINT_PATHS,
         "feat: add categorized Fender-style pedal detune",
+    ),
+    "fractal-touch-wah-mix": (
+        FRACTAL_TOUCH_WAH_MIX_CHECKPOINT_PATHS,
+        "feat: add project-authored Touch-Wah Mix mode",
     ),
 }
 

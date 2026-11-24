@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "78fd2d94c09dd57379419cac96a1365ca1c1956e",
+  "previous_checkpoint_commit": "bba86002dffc08ee99578e0d12370cd2a9ab9cc0",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -362,33 +362,33 @@
         "notes": "Automated native, focused browser/WASM Play, full browser/native parity, Windows cross-build, and benchmark checks pass. Human listening, real hardware, and end-to-end target-device latency remain open. Manufacturer parameter, DSP, and sound parity are not claimed."
       },
       "picker_rows": 111
+    },
+    {
+      "name": "Fractal FM9-family Touch-Wah MIX project-authored mode",
+      "status": "verified",
+      "picker_index": 96,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide",
+        "revision": "November 2026; printed p. 46; FM9-family guide. Firmware downloads checked 2026-11-24; v12.0 names Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The guide lists LOWPASS/BANDPASS/HIGHPASS/MIX and describes Touch-Wah following playing volume through natural note fade. It does not specify MIX topology, numeric blend controls, bounds, or defaults. Applicability to Mark II Turbo is family-level inference; exact firmware and installed version remain unknown."
+      },
+      "documented_controls": "Touch-Wah controls include Mode (LOWPASS/BANDPASS/HIGHPASS/MIX), Sensitivity, Attack, Release, Sweep Shape, Start/Stop Frequency (100 Hz–10 kHz), Resonance, Emphasis, and Detector Source (block or physical input). The guide does not define MIX topology or numeric controls.",
+      "project_controls": "Existing Stereo Filter at categorized Filters & wah picker index 96 adds a Touch-Wah MIX option with project-authored dry/band-pass blend, 0–100%, default 50%, smoothed over 10 ms. The existing processor is reused; no extra processor, audio buffer, delay, or fixed latency is added. Physical-input detector routing remains unavailable. This is not Fractal settings, DSP, or sound parity.",
+      "verification": {
+        "native_ctest": "make test-stereo-filter passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases.",
+        "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames. It verifies the 35-value UI/WASM configuration, visible Mix option and amount control, sends 50% at value[34], and captures Play output: peak 0.1918012649, 95,138 active samples, difference RMS 0.0393057665.",
+        "full_browser": "make web-test passed local-guitar browser/WASM tests and native/browser chain comparison across 78 optional processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+        "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.3064/0.3195/0.4174/0.5363/1.1738% of callback; existing shared filter state 38,960 B. No added fixed latency or audio buffer. Desktop processor-call timing, not device performance.",
+        "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and benchmark pass. Human listening, hardware, and target-device/round-trip checks remain open."
+      },
+      "picker_rows": 111
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Pedal Shifter expression-position mode",
-    "status": "verified",
-    "picker_index": 22,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and Fender firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide documents the effect behavior but does not name its ten intervals, numeric parameter ranges/defaults, or sweep curve. Firmware history through v1.8.85 contains no Pedal Shifter-specific change; installed firmware is unknown."
-    },
-    "documented_controls": "PITCH selects one of ten intervals at maximum POSITION. POSITION moves from unison at minimum to the selected interval at maximum. The effect removes the dry signal and may be assigned to an expression pedal or Parameter Change footswitch. The manual publishes no interval names, numeric bounds/defaults, or sweep law.",
-    "project_controls": "Existing categorized Poly Pitch row 22 gains a software Pedal Shifter mode with project-authored target −24…+24 semitones and linear position 0…1. It reuses the current wet-only stereo PolyPitchShifter; no second processor, buffer, state, or fixed latency is added. No physical expression/MIDI route is connected. Underlying shifter state is 494,016 B native at 48 kHz stereo, nominally 256 samples / 5.333 ms buffering.",
-    "verification": {
-      "native": "make test-fender-pedal-shifter passed 1/1 focused CTest; make test passed 111/111 CTest cases, documentation validation (333 requirements/346 rows), and 11/11 audio-fixture safety tests.",
-      "focused_browser": "make web-test-fender-pedal-shifter passed with the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. It verifies Pitch categorization and index 22, enabled worklet processing, heel/mid/toe output, and exact waveform equivalence to static +6/+12 semitones (max/RMS error 0/0) after worklet message barriers; 95,598/95,596 samples changed for heel-to-mid/toe; effect memory 489,416 B.",
-      "full_browser": "make web-test passed: 111/111 CTest cases, 11/11 fixture-safety tests, and browser/native comparison across 78 optional processor stages. Maximum absolute error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
-      "isolated_benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame / 2.667 ms blocks, 2,000 warm-up and 5,000 measured blocks: expression midpoint p50/p95/p99/p99.9/max 11.1318/14.1837/16.5968/22.5467/70.4258% of callback deadline; owned state 494,016 B. The ordinary shifter in the same run measured 11.2316/14.6498/17.4455/25.0946/37.6191%. Isolated desktop processor-call timings; the high max is an observed scheduling/timing outlier, not a device-performance guarantee.",
-      "notes": "The feature changes pitch on the existing shifter; expression mode adds no processor-state memory or latency. The project-authored linear sweep is not a Fender settings/sound/DSP reproduction. The underlying 5.333 ms shifter latency remains within the provisional 20 ms budget before host/device buffering, but physical round-trip latency, live expression routing, target-device performance, and human listening are unverified."
-    },
-    "picker_rows": 110
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Pedal Detune position effect",
     "status": "verified",
     "picker_index": 110,
@@ -409,6 +409,30 @@
       "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
       "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3 Release, 48 kHz stereo/128-frame (2.667 ms) blocks, 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.0563/0.0570/0.0836/0.2460/0.6330% of callback. Native state 3,672 B. Desktop processor-call timing, not target-device performance.",
       "notes": "Automated native, focused browser/WASM Play, full browser/native parity, Windows cross-build, and benchmark checks pass. Human listening, real hardware, and end-to-end target-device latency remain open. Manufacturer parameter, DSP, and sound parity are not claimed."
+    },
+    "picker_rows": 111
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Touch-Wah MIX project-authored mode",
+    "status": "verified",
+    "picker_index": 96,
+    "category": "Filters & wah",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026; printed p. 46; FM9-family guide. Firmware downloads checked 2026-11-24; v12.0 names Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide lists LOWPASS/BANDPASS/HIGHPASS/MIX and describes Touch-Wah following playing volume through natural note fade. It does not specify MIX topology, numeric blend controls, bounds, or defaults. Applicability to Mark II Turbo is family-level inference; exact firmware and installed version remain unknown."
+    },
+    "documented_controls": "Touch-Wah controls include Mode (LOWPASS/BANDPASS/HIGHPASS/MIX), Sensitivity, Attack, Release, Sweep Shape, Start/Stop Frequency (100 Hz–10 kHz), Resonance, Emphasis, and Detector Source (block or physical input). The guide does not define MIX topology or numeric controls.",
+    "project_controls": "Existing Stereo Filter at categorized Filters & wah picker index 96 adds a Touch-Wah MIX option with project-authored dry/band-pass blend, 0–100%, default 50%, smoothed over 10 ms. The existing processor is reused; no extra processor, audio buffer, delay, or fixed latency is added. Physical-input detector routing remains unavailable. This is not Fractal settings, DSP, or sound parity.",
+    "verification": {
+      "native_ctest": "make test-stereo-filter passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases.",
+      "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames. It verifies the 35-value UI/WASM configuration, visible Mix option and amount control, sends 50% at value[34], and captures Play output: peak 0.1918012649, 95,138 active samples, difference RMS 0.0393057665.",
+      "full_browser": "make web-test passed local-guitar browser/WASM tests and native/browser chain comparison across 78 optional processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+      "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.3064/0.3195/0.4174/0.5363/1.1738% of callback; existing shared filter state 38,960 B. No added fixed latency or audio buffer. Desktop processor-call timing, not device performance.",
+      "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and benchmark pass. Human listening, hardware, and target-device/round-trip checks remain open."
     },
     "picker_rows": 111
   },
@@ -436,7 +460,7 @@
     },
     {
       "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Pitch/Synth/Tremolo controls and FM9 Filter MIX/physical detector source",
+      "feature": "Pitch/Synth/Tremolo controls and FM9 physical detector source",
       "source": "Fractal Audio Systems Blocks Guide, November 2026, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-24",
       "source_urls": [
         "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
@@ -444,7 +468,7 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, and the existing Pitch row's ±24-semitone profile are implemented. The Diatonic Harmonizer now has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, Touch-Wah MIX, physical-input detector selection, and additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified.",
+      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, the existing Pitch row’s ±24-semitone profile, and the Touch-Wah MIX project mode are implemented. The Diatonic Harmonizer has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, physical-input detector selection, and additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
       "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },

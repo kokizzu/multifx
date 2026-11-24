@@ -33,7 +33,7 @@ enum class StereoFilterType : std::uint8_t {
     // Fractal physical-input source selector is not supported by this API.
     TouchLadderFilter,
     // Direct envelope-driven resonant filter; detects this effect's block
-    // input. The physical-input source and Mix mode are not supported here.
+    // input. Physical-input detector selection is not supported here.
     TouchWahFilter,
 };
 
@@ -41,6 +41,9 @@ enum class StereoFilterMode : std::uint8_t {
     Lowpass,
     Bandpass,
     Highpass,
+    // Touch-Wah only: a TabletFX-authored dry/filter crossfade. The source
+    // guide names a MIX mode but does not define its signal topology.
+    Mix,
 };
 
 enum class StereoFilterLfoShape : std::uint8_t {
@@ -108,6 +111,9 @@ struct StereoFilterParameters {
     float attack_time_ms = 5.0F;
     float release_time_ms = 80.0F;
     float emphasis = 0.0F;
+    // TabletFX dry/filter blend for Touch-Wah MIX mode. It is not a published
+    // Fractal range, default, or topology.
+    float mix_percent = 50.0F;
 };
 
 /*
@@ -209,6 +215,7 @@ private:
     std::size_t delay_frames_ = 1U;
     float lfo_phase_ = 0.0F;
     std::uint32_t lfo_cycle_ = 0U;
+    std::size_t coefficient_update_countdown_ = 0U;
     std::array<float, 2> envelope_emphasis_lowpass_{};
     float envelope_level_ = 0.0F;
     // Envelope Filter uses a project-authored attack trigger that decays while
@@ -217,6 +224,8 @@ private:
     float attack_alpha_ = 0.0F;
     float release_alpha_ = 0.0F;
     float emphasis_alpha_ = 0.0F;
+    float touch_wah_mix_fraction_ = 0.5F;
+    float touch_wah_mix_slew_per_sample_ = 0.0F;
     float level_gain_ = 1.0F;
     float balance_left_gain_ = 1.0F;
     float balance_right_gain_ = 1.0F;

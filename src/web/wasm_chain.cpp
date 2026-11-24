@@ -1640,7 +1640,7 @@ public:
 
     void configure_stereo_filter(const float* values,
                                  std::uint32_t value_count) noexcept {
-        if (values == nullptr || value_count != 34U) return;
+        if (values == nullptr || value_count != 35U) return;
         const auto enum_index = [](float value, std::uint32_t maximum) noexcept {
             if (!std::isfinite(value)) return 0U;
             return static_cast<std::uint32_t>(std::clamp(
@@ -1673,7 +1673,7 @@ public:
         parameters.lfo_quantize_steps = static_cast<std::uint8_t>(
             enum_index(values[20], 16U));
         parameters.mode = static_cast<tabletfx::StereoFilterMode>(
-            enum_index(values[21], 2U));
+            enum_index(values[21], 3U));
         parameters.sweep_shape = values[22];
         parameters.lfo_tempo_sync =
             std::isfinite(values[23]) && values[23] >= 0.5F;
@@ -1688,6 +1688,7 @@ public:
         parameters.ladder_bass_comp = values[32];
         parameters.ladder_order = static_cast<std::uint8_t>(
             enum_index(values[33], 4U));
+        parameters.mix_percent = values[34];
         stereo_filter_->set_parameters(parameters);
     }
 

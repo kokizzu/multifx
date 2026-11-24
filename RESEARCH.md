@@ -1,5 +1,11 @@
 # Research and source audit
 
+## Fractal FM9-family Touch-Wah MIX audit and project interpretation (2026-11-24)
+
+The official [Fractal Audio Blocks Guide, November 2026, p. 46](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) lists Touch-Wah Mode as LOWPASS, BANDPASS, HIGHPASS, or MIX. It describes Touch-Wah as following playing volume and closing with the note’s natural fade. It also documents Sensitivity, Attack/Release, Sweep Shape, Resonance, Start/Stop Freq (100 Hz–10 kHz), Emphasis, and a Detector Source that may be block input or a physical input. The guide does not say what MIX combines, give a MIX amount/range/default, or publish most numeric bounds/defaults. The family guide is current as checked 2026-11-24; FM9 v12.0 download labels name Original/Turbo, not Mark II Turbo by name, and installed firmware is unknown.
+
+TabletFX adds mode 3 to the existing project-authored Stereo Filter / Touch-Wah at Filters & wah picker ID 96. Its clearly project-authored mapping is a 0–100% linear dry/band-pass crossfade, default 50%, smoothed over 10 ms. It reuses the existing filter and adds no processor, delay, or buffer. Physical-input detector routing remains unavailable. Native tests, focused local prerecorded-guitar browser/WASM Play, full regression, Windows MinGW core/offline build, and benchmark results are recorded in [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md), [EFFECTS_MATRIX.md](EFFECTS_MATRIX.md), and [LATENCY_AND_QUALITY.md](LATENCY_AND_QUALITY.md). No Fractal settings, DSP, or sound parity is claimed.
+
 ## Fender Tone Master Pro Pedal Detune audit and project interpretation (2026-11-24)
 
 The exact-model [Tone Master Pro Model Guide v1.1.100 / Rev. A](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf), printed p. 68, documents a `MODE SWITCH` with `SHALLOW` and `DEEP` and a `POSITION` control that blends detuned signal with dry. The guide does not state numeric ranges/defaults, modulation values, delay topology, latency, or DSP usage. Fender's official [firmware history](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates) was checked through v1.8.85, dated 2026-11-18; installed device firmware is unknown.

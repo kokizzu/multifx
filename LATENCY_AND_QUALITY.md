@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9 Touch-Wah MIX interpretation (2026-11-24)
+
+The November 2026 Fractal Blocks Guide (p. 46) lists Touch-Wah modes LOWPASS, BANDPASS, HIGHPASS, and MIX, but gives no MIX topology, amount range, or default. TabletFX defines MIX as a linear dry/band-pass crossfade with a project-selected 50% default, a 0–100% range, and a 10 ms blend ramp. It uses the existing Touch-Wah filter, adds one scalar parameter/state value and no buffer, delay, or fixed latency; shared filter state remains 38,960 B at 48 kHz stereo. This is not Fractal DSP or control parity.
+
+On AMD Ryzen 9 5950X, GCC 13.3 Release, 48 kHz stereo/128-frame (2.667 ms) blocks, 2,000 warm-up and 5,000 measured blocks, the isolated processor measured p50/p95/p99/p99.9/max **0.3064/0.3195/0.4174/0.5363/1.1738%** of the callback deadline. This is desktop processor-call timing, not full-chain or target-device load. The processor adds no fixed algorithmic delay. Human listening and target-device/round-trip checks remain open.
+
 ## Fender Tone Master Pro Pedal Detune interpretation (2026-11-24)
 
 Pedal Detune at Pitch picker index 110 reuses the existing `PolyDetune` core. The project defaults to Shallow, 50% POSITION, a 0.25 Hz modulation rate, two voices, 75% width, and 0 dB level; project depths are 0.35 ms in Shallow and 1.4 ms in Deep. These mappings are not published Fender settings. The dry signal is immediate and the wet micro-delay is about 5 ms. At 48 kHz stereo the processor owns 3,672 B natively and the browser reports 3,632 B. The native test confirms no processing-time allocations.

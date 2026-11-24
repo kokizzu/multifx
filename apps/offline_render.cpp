@@ -7,6 +7,7 @@
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/pedal_detune.hpp"
+#include "tabletfx/effects/stereo_filter.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
@@ -4993,6 +4994,17 @@ void run_bench() {
     benchmark_one("formant-filter", [=] {
         return std::make_unique<tabletfx::FormantFilter>(
             static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-touch-wah-mix-project-authored", [=] {
+        tabletfx::StereoFilterParameters parameters;
+        parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+        parameters.mode = tabletfx::StereoFilterMode::Mix;
+        parameters.frequency_hz = 350.0F;
+        parameters.mod_frequency_hz = 6000.0F;
+        parameters.sensitivity_db = -36.0F;
+        parameters.mix_percent = 50.0F;
+        return std::make_unique<tabletfx::StereoFilter>(
+            static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("harmonic-resonator", [=] {
         return std::make_unique<tabletfx::HarmonicResonator>(

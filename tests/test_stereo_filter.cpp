@@ -646,6 +646,163 @@ void test_touch_wah_tracks_sustained_volume_and_natural_fade() {
             "Touch-Wah low-pass and high-pass modes did not select distinct responses");
 }
 
+void test_touch_wah_mix_crossfades_dry_and_project_bandpass() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 4096U;
+    for (const std::uint16_t channels : std::array<std::uint16_t, 2>{1U, 2U}) {
+        std::vector<float> dry_input(frames * channels);
+        for (std::size_t frame = 0U; frame < frames; ++frame) {
+            dry_input[frame * channels] = 0.22F * std::sin(
+                2.0F * 3.14159265358979323846F * 430.0F *
+                static_cast<float>(frame) / sample_rate);
+            if (channels == 2U) {
+                dry_input[frame * channels + 1U] = 0.17F * std::sin(
+                    2.0F * 3.14159265358979323846F * 1730.0F *
+                    static_cast<float>(frame) / sample_rate + 0.3F);
+            }
+        }
+        auto wet_input = dry_input;
+        auto midpoint_input = dry_input;
+        auto dry_reference = dry_input;
+        auto wet_reference = dry_input;
+
+        tabletfx::StereoFilterParameters parameters;
+        parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+        parameters.mode = tabletfx::StereoFilterMode::Mix;
+        parameters.frequency_hz = 350.0F;
+        parameters.mod_frequency_hz = 6000.0F;
+        parameters.sensitivity_db = -36.0F;
+        parameters.attack_time_ms = 5.0F;
+        parameters.release_time_ms = 80.0F;
+        parameters.mix_percent = 0.0F;
+        tabletfx::StereoFilter dry(sample_rate, parameters);
+        dry.process(dry_input, channels);
+        for (std::size_t index = 0U; index < dry_input.size(); ++index) {
+            require(std::abs(dry_input[index] - dry_reference[index]) < 1.0e-7F,
+                    "Touch-Wah MIX at zero percent changed the dry signal");
+        }
+
+        parameters.mix_percent = 100.0F;
+        tabletfx::StereoFilter full_mix(sample_rate, parameters);
+        full_mix.process(wet_input, channels);
+        parameters.mode = tabletfx::StereoFilterMode::Bandpass;
+        tabletfx::StereoFilter bandpass(sample_rate, parameters);
+        bandpass.process(wet_reference, channels);
+        for (std::size_t index = 0U; index < wet_input.size(); ++index) {
+            require(std::abs(wet_input[index] - wet_reference[index]) < 1.0e-7F,
+                    "Touch-Wah MIX at 100 percent differs from its wet path");
+        }
+
+        parameters.mode = tabletfx::StereoFilterMode::Mix;
+        parameters.mix_percent = 50.0F;
+        tabletfx::StereoFilter midpoint(sample_rate, parameters);
+        midpoint.process(midpoint_input, channels);
+        for (std::size_t index = 0U; index < midpoint_input.size(); ++index) {
+            const float expected = 0.5F * (dry_reference[index] +
+                                           wet_reference[index]);
+            require(std::abs(midpoint_input[index] - expected) < 1.0e-7F,
+                    "Touch-Wah MIX midpoint was not a linear dry/filter blend");
+        }
+    }
+}
+
+void test_touch_wah_mix_sanitization_reset_smoothing_and_blocks() {
+    constexpr float sample_rate = 48000.0F;
+    tabletfx::StereoFilterParameters parameters;
+    parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
+    parameters.mode = tabletfx::StereoFilterMode::Mix;
+    parameters.frequency_hz = 350.0F;
+    parameters.mod_frequency_hz = 6000.0F;
+    parameters.sensitivity_db = -36.0F;
+    parameters.mix_percent = std::numeric_limits<float>::quiet_NaN();
+    tabletfx::StereoFilter sanitized(sample_rate, parameters);
+    require(sanitized.parameters().mode == tabletfx::StereoFilterMode::Mix &&
+                sanitized.parameters().mix_percent == 50.0F,
+            "Touch-Wah MIX default or non-finite fallback was incorrect");
+
+    parameters.mix_percent = std::numeric_limits<float>::infinity();
+    sanitized.set_parameters(parameters);
+    require(sanitized.parameters().mix_percent == 50.0F,
+            "Touch-Wah MIX did not replace infinite blend values with its default");
+    parameters.mix_percent = -std::numeric_limits<float>::infinity();
+    sanitized.set_parameters(parameters);
+    require(sanitized.parameters().mix_percent == 50.0F,
+            "Touch-Wah MIX did not replace negative infinity with its default");
+    parameters.mix_percent = -10.0F;
+    sanitized.set_parameters(parameters);
+    require(sanitized.parameters().mix_percent == 0.0F,
+            "Touch-Wah MIX did not clamp its lower bound");
+    parameters.mix_percent = 110.0F;
+    sanitized.set_parameters(parameters);
+    require(sanitized.parameters().mix_percent == 100.0F,
+            "Touch-Wah MIX did not clamp its upper bound");
+
+    parameters.mix_percent = 0.0F;
+    tabletfx::StereoFilter ramping(sample_rate, parameters);
+    tabletfx::StereoFilter chunked(sample_rate, parameters);
+    std::vector<float> audio(4097U);
+    for (std::size_t index = 0U; index < audio.size(); ++index) {
+        audio[index] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * 1200.0F *
+            static_cast<float>(index) / sample_rate);
+    }
+    auto ramping_audio = audio;
+    auto chunked_audio = audio;
+    constexpr std::size_t change_frame = 97U;
+    ramping.process(std::span<float>(ramping_audio.data(), change_frame), 1U);
+    chunked.process(std::span<float>(chunked_audio.data(), change_frame), 1U);
+    parameters.mix_percent = 100.0F;
+    ramping.set_parameters(parameters);
+    chunked.set_parameters(parameters);
+    ramping.process(std::span<float>(ramping_audio.data() + change_frame,
+                                     ramping_audio.size() - change_frame), 1U);
+    std::size_t offset = change_frame;
+    const std::array<std::size_t, 7> chunks{3U, 17U, 1U, 31U, 9U, 64U, 5U};
+    std::size_t chunk_index = 0U;
+    while (offset < chunked_audio.size()) {
+        const std::size_t count = std::min(
+            chunks[chunk_index % chunks.size()], chunked_audio.size() - offset);
+        chunked.process(std::span<float>(chunked_audio.data() + offset, count),
+                        1U);
+        offset += count;
+        ++chunk_index;
+    }
+    for (std::size_t index = 0U; index < ramping_audio.size(); ++index) {
+        require(std::abs(ramping_audio[index] - chunked_audio[index]) < 1.0e-7F,
+                "Touch-Wah MIX ramp changed with irregular process block sizes");
+    }
+
+    parameters.mix_percent = 0.0F;
+    tabletfx::StereoFilter reset_filter(sample_rate, parameters);
+    std::array<float, 64> warmup{};
+    warmup.fill(0.2F);
+    reset_filter.process(warmup, 1U);
+    parameters.mix_percent = 100.0F;
+    reset_filter.set_parameters(parameters);
+    reset_filter.process(warmup, 1U);
+    reset_filter.reset();
+    tabletfx::StereoFilter fresh_full_mix(sample_rate, parameters);
+    std::array<float, 64> after_reset{};
+    std::array<float, 64> fresh_output{};
+    after_reset.fill(0.2F);
+    fresh_output = after_reset;
+    reset_filter.process(after_reset, 1U);
+    fresh_full_mix.process(fresh_output, 1U);
+    for (std::size_t index = 0U; index < after_reset.size(); ++index) {
+        require(std::abs(after_reset[index] - fresh_output[index]) < 1.0e-7F,
+                "Touch-Wah MIX reset did not restore its target blend and filter state");
+    }
+
+    std::array<float, 256> allocation_audio{};
+    allocation_audio.fill(0.1F);
+    allocation_count = 0U;
+    count_allocations = true;
+    reset_filter.process(allocation_audio, 1U);
+    count_allocations = false;
+    require(allocation_count == 0U,
+            "Touch-Wah MIX allocated during process()");
+}
+
 void test_sanitization_reset_and_no_process_allocation() {
     tabletfx::StereoFilterParameters parameters;
     parameters.type = tabletfx::StereoFilterType::Null;
@@ -698,6 +855,8 @@ int main() {
         test_ladder_filter_controls();
         test_touch_ladder_uses_input_envelope_instead_of_lfo();
         test_touch_wah_tracks_sustained_volume_and_natural_fade();
+        test_touch_wah_mix_crossfades_dry_and_project_bandpass();
+        test_touch_wah_mix_sanitization_reset_smoothing_and_blocks();
         test_sanitization_reset_and_no_process_allocation();
         std::cout << "Stereo Filter tests passed\n";
         return 0;

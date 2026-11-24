@@ -14,6 +14,7 @@ constexpr float kMaximumSampleRate = 384000.0F;
 constexpr float kMaximumInput = 8.0F;
 constexpr float kMaximumFeedback = 0.95F;
 constexpr float kMaximumDelayMs = 50.0F;
+constexpr float kTouchWahMixSmoothingMs = 10.0F;
 
 float safe_sample(float sample) noexcept {
     if (!std::isfinite(sample)) return 0.0F;
@@ -44,6 +45,8 @@ StereoFilter::StereoFilter(float sample_rate,
                 2U);
     delayed_input_.assign(delay_capacity_frames_ * 2U, 0.0F);
     delayed_output_.assign(delay_capacity_frames_ * 2U, 0.0F);
+    touch_wah_mix_slew_per_sample_ = 1.0F /
+        (sample_rate_ * kTouchWahMixSmoothingMs * 0.001F);
     set_parameters(parameters);
     reset();
 }
@@ -124,6 +127,12 @@ void StereoFilter::set_parameters(StereoFilterParameters parameters) noexcept {
     parameters.release_time_ms = bounded(parameters.release_time_ms, 80.0F,
                                           1.0F, 2000.0F);
     parameters.emphasis = bounded(parameters.emphasis, 0.0F, 0.0F, 1.0F);
+    parameters.mix_percent = bounded(parameters.mix_percent, 50.0F,
+                                      0.0F, 100.0F);
+    if (parameters.mode == StereoFilterMode::Mix &&
+        parameters.type != StereoFilterType::TouchWahFilter) {
+        parameters.mode = StereoFilterMode::Lowpass;
+    }
     if (parameters.lfo_quantize_steps == 1U) {
         parameters.lfo_quantize_steps = 2U;
     } else if (parameters.lfo_quantize_steps > 32U) {
@@ -172,6 +181,8 @@ void StereoFilter::process(std::span<float> interleaved,
     const bool is_touch_ladder =
         parameters_.type == StereoFilterType::TouchLadderFilter;
     const bool is_touch_wah = parameters_.type == StereoFilterType::TouchWahFilter;
+    const bool is_touch_wah_mix = is_touch_wah &&
+                                  parameters_.mode == StereoFilterMode::Mix;
     const bool has_envelope_sweep =
         is_envelope_filter || is_touch_ladder || is_touch_wah;
     const bool has_lfo = (parameters_.lfo_enabled || is_auto_wah) &&
@@ -182,6 +193,9 @@ void StereoFilter::process(std::span<float> interleaved,
                          parameters_.type != StereoFilterType::Null;
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
+        const bool update_coefficients = is_touch_wah_mix
+            ? coefficient_update_countdown_ == 0U
+            : frame % kCoefficientUpdateFrames == 0U;
         float frame_inputs[2] = {0.0F, 0.0F};
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
             frame_inputs[channel] = safe_sample(
@@ -236,7 +250,7 @@ void StereoFilter::process(std::span<float> interleaved,
                     0.0F, 1.0F);
             const float position = std::pow(normalized,
                                              parameters_.sweep_shape);
-            if (frame % kCoefficientUpdateFrames == 0U) {
+            if (update_coefficients) {
                 const float lower = std::log(parameters_.frequency_hz);
                 const float upper = std::log(parameters_.mod_frequency_hz);
                 const float frequency = std::exp(
@@ -245,7 +259,7 @@ void StereoFilter::process(std::span<float> interleaved,
             }
         }
 
-        if (has_lfo && frame % kCoefficientUpdateFrames == 0U) {
+        if (has_lfo && update_coefficients) {
             const float raw_position = lfo_position();
             const float position = is_auto_wah
                 ? std::pow(raw_position, parameters_.sweep_shape)
@@ -254,6 +268,18 @@ void StereoFilter::process(std::span<float> interleaved,
             const float upper = std::log(parameters_.mod_frequency_hz);
             const float frequency = std::exp(lower + (upper - lower) * position);
             rebuild_coefficients(frequency);
+        }
+
+        if (is_touch_wah_mix) {
+            const float target = parameters_.mix_percent * 0.01F;
+            const float difference = target - touch_wah_mix_fraction_;
+            if (difference > touch_wah_mix_slew_per_sample_) {
+                touch_wah_mix_fraction_ += touch_wah_mix_slew_per_sample_;
+            } else if (difference < -touch_wah_mix_slew_per_sample_) {
+                touch_wah_mix_fraction_ -= touch_wah_mix_slew_per_sample_;
+            } else {
+                touch_wah_mix_fraction_ = target;
+            }
         }
 
         float filtered[2] = {0.0F, 0.0F};
@@ -283,6 +309,12 @@ void StereoFilter::process(std::span<float> interleaved,
                 break;
             }
             output = process_first_order(output, channel);
+            if (is_touch_wah_mix) {
+                // TabletFX defines MIX as a linear dry/band-pass crossfade.
+                // The Fractal guide names the mode but does not publish its
+                // topology or blend amount.
+                output = input + touch_wah_mix_fraction_ * (output - input);
+            }
             const bool invert = parameters_.phase_invert ==
                                     StereoFilterPhaseInvert::Both ||
                                 (channel == 0U && parameters_.phase_invert ==
@@ -312,6 +344,11 @@ void StereoFilter::process(std::span<float> interleaved,
 
         ++write_frame_;
         if (write_frame_ == delay_capacity_frames_) write_frame_ = 0U;
+        if (coefficient_update_countdown_ == 0U) {
+            coefficient_update_countdown_ = kCoefficientUpdateFrames - 1U;
+        } else {
+            --coefficient_update_countdown_;
+        }
         if (has_lfo) advance_lfo();
     }
 }
@@ -331,9 +368,11 @@ void StereoFilter::reset() noexcept {
     write_frame_ = 0U;
     lfo_phase_ = 0.0F;
     lfo_cycle_ = 0U;
+    coefficient_update_countdown_ = 0U;
     envelope_emphasis_lowpass_.fill(0.0F);
     envelope_level_ = 0.0F;
     envelope_trigger_level_ = 0.0F;
+    touch_wah_mix_fraction_ = parameters_.mix_percent * 0.01F;
 }
 
 float StereoFilter::bounded(float value, float fallback, float minimum,
@@ -400,6 +439,7 @@ StereoFilterMode StereoFilter::sanitize_mode(StereoFilterMode mode) noexcept {
     case StereoFilterMode::Lowpass:
     case StereoFilterMode::Bandpass:
     case StereoFilterMode::Highpass:
+    case StereoFilterMode::Mix:
         return mode;
     }
     return StereoFilterMode::Lowpass;
@@ -450,6 +490,9 @@ std::size_t StereoFilter::make_coefficients(
         case StereoFilterMode::Highpass:
             effective_type = StereoFilterType::Highpass;
             break;
+        case StereoFilterMode::Mix:
+            effective_type = StereoFilterType::Bandpass;
+            break;
         }
     } else if (parameters_.type == StereoFilterType::EnvelopeFilter ||
                parameters_.type == StereoFilterType::TouchWahFilter) {
@@ -462,6 +505,9 @@ std::size_t StereoFilter::make_coefficients(
             break;
         case StereoFilterMode::Highpass:
             effective_type = StereoFilterType::Highpass;
+            break;
+        case StereoFilterMode::Mix:
+            effective_type = StereoFilterType::Bandpass;
             break;
         }
     }
