@@ -1,5 +1,12 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Fractal Bias Trem (2026-11-24)
+
+The effect owns 136 B of native state (the browser/WASM chain reports 132 B) at 48 kHz stereo, has zero fixed algorithmic latency, and allocates no memory in process(). Defaults and ranges are project choices; the curve is a bounded nonlinear modulation shape, not a tube-bias circuit model.
+
+An isolated Release benchmark on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame blocks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.0570/0.1118/0.1256/0.7474/1.7708% of the deadline. This is desktop processor-call timing, not a tablet/device guarantee. Native test coverage checks bounds, waveform choices, trigger, stereo behavior, reset, finite output, irregular blocks, and no allocations. Focused and full browser/WASM tests exercise local prerecorded Guitar-TECHS DI and native/browser comparison; Windows MinGW core/offline build passes. No human listening or target-device result is available.
+
+
 ## Project-authored Fractal Optical / Neon Tremolo (2026-11-24)
 
 At 48 kHz stereo the fixed processor object owns 216 B. Its process path has no fixed algorithmic latency and performs no allocation. A Ryzen 9 5950X Release benchmark with 128-frame blocks (2.667 ms callback deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max of 0.0743/0.0746/0.1204/0.2895/0.3638% of the deadline. These are isolated desktop processor-call timings, not Android, Windows, or end-to-end device measurements.

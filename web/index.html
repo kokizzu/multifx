@@ -195,6 +195,7 @@
                 <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="102"><span class="effect-number">103</span><span class="effect-name">Double Take · project-authored dynamic double</span><span class="effect-default">1–4 voices · timing/pitch drift · dry/wet</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="103"><span class="effect-number">104</span><span class="effect-name">EQ5 Graphic · project-authored five-band EQ</span><span class="effect-default">80 · 240 · 750 · 2,200 · 6,600 Hz · ±12 dB</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="104"><span class="effect-number">105</span><span class="effect-name">Optical Tremolo · project-authored Fractal FM9-family controls</span><span class="effect-default">Optical 1 · Optical 2 · Neon · ten LFO shapes</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="105"><span class="effect-number">106</span><span class="effect-name">Bias Trem · project-authored Fractal Blocks Guide-inspired controls</span><span class="effect-default">LFO amplitude modulation with a mild asymmetric curve</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -784,6 +785,26 @@
           <label class="mix-control" for="optical-tremolo-level-db"><span>Level · project range −24–+12 dB</span><output id="optical-tremolo-level-db-value">0.0 dB</output><input id="optical-tremolo-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
           <label class="mix-control" for="optical-tremolo-balance-percent"><span>Balance · project range −100–+100%</span><output id="optical-tremolo-balance-percent-value">0%</output><input id="optical-tremolo-balance-percent" type="range" min="-100" max="100" step="1" value="0"></label>
           <label class="mix-control" for="optical-tremolo-bypass-mode"><span>Bypass mode · project wrapper</span><output>Pass</output><select id="optical-tremolo-bypass-mode"><option value="0" selected>Pass audio</option><option value="1">Mute audio</option></select></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Bias Trem controls">
+        <h3>Bias Trem · project-authored Fractal Blocks Guide-inspired processing</h3>
+        <p class="hint">Fractal describes its Bias Trem qualitatively as an organic tube-bias tremolo and warns that it can add distortion. It does not publish this control set, numeric ranges/defaults, curve, or detector behavior here. TabletFX uses a project-authored LFO amplitude modulator with a bounded polarity-asymmetric soft curve; this is not Fractal DSP or settings parity. The LFO, detector, and all control bounds/defaults are project choices.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="fractal-bias-trem-rate-hz"><span>Rate · project range 0.05–20 Hz</span><output>4.50 Hz</output><input id="fractal-bias-trem-rate-hz" type="range" min="0.05" max="20" step="0.05" value="4.5"></label>
+          <label class="mix-control" for="fractal-bias-trem-depth"><span>Depth · project range 0–100%</span><output>35%</output><input id="fractal-bias-trem-depth" type="range" min="0" max="100" step="1" value="35"></label>
+          <label class="mix-control" for="fractal-bias-trem-waveform"><span>LFO waveform · project choices</span><output>Sine</output><select id="fractal-bias-trem-waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Square</option><option value="3">Saw Up</option><option value="4">Saw Down</option><option value="5">Sample &amp; Hold</option></select></label>
+          <label class="mix-control" for="fractal-bias-trem-tempo-sync"><span>Tempo sync · project control</span><output>Off</output><input id="fractal-bias-trem-tempo-sync" type="checkbox"></label>
+          <label class="mix-control" for="fractal-bias-trem-tempo-bpm"><span>Tempo · project range 30–300 BPM</span><output>120 BPM</output><input id="fractal-bias-trem-tempo-bpm" type="range" min="30" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="fractal-bias-trem-beats-per-cycle"><span>Beats per cycle · project range 1/16–16</span><output>1 beat</output><input id="fractal-bias-trem-beats-per-cycle" type="range" min="0.0625" max="16" step="0.0625" value="1"></label>
+          <label class="mix-control" for="fractal-bias-trem-trigger-sync"><span>Trigger sync · project control</span><output>Off</output><input id="fractal-bias-trem-trigger-sync" type="checkbox"></label>
+          <label class="mix-control" for="fractal-bias-trem-trigger-threshold-db"><span>Trigger threshold · project range −80–0 dB</span><output>−36.0 dB</output><input id="fractal-bias-trem-trigger-threshold-db" type="range" min="-80" max="0" step="1" value="-36"></label>
+          <label class="mix-control" for="fractal-bias-trem-ducking"><span>Ducking · project range 0–100%</span><output>0%</output><input id="fractal-bias-trem-ducking" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="fractal-bias-trem-drive"><span>Asymmetric drive · project range 0–100%</span><output>18%</output><input id="fractal-bias-trem-drive" type="range" min="0" max="100" step="1" value="18"></label>
+          <label class="mix-control" for="fractal-bias-trem-mix"><span>Mix · project range 0–100%</span><output>100%</output><input id="fractal-bias-trem-mix" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="fractal-bias-trem-level-db"><span>Level · project range −24–+12 dB</span><output>0.0 dB</output><input id="fractal-bias-trem-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="fractal-bias-trem-balance"><span>Balance · project range −100–+100%</span><output>0%</output><input id="fractal-bias-trem-balance" type="range" min="-100" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="fractal-bias-trem-bypass"><span>Bypass · project control</span><output>Off</output><input id="fractal-bias-trem-bypass" type="checkbox"></label>
         </div>
       </div>
       <div class="gain-controls">

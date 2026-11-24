@@ -17,6 +17,7 @@
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
 #include "tabletfx/effects/optical_tremolo.hpp"
+#include "tabletfx/effects/fractal_bias_trem.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/auto_swell_delay.hpp"
 #include "tabletfx/effects/auto_pan.hpp"
@@ -119,7 +120,8 @@ public:
           eq5_graphic_(static_cast<float>(sample_rate),
                        static_cast<std::uint16_t>(channels)),
           optical_tremolo_(std::make_unique<tabletfx::OpticalTremolo>(
-              static_cast<float>(sample_rate))) {
+              static_cast<float>(sample_rate))),
+          fractal_bias_trem_(static_cast<float>(sample_rate)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -410,7 +412,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 11; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 12; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -470,6 +472,11 @@ public:
         if (index == 104U) {
             optical_tremolo_enabled_ = enabled;
             if (!enabled) optical_tremolo_->reset();
+            return true;
+        }
+        if (index == 105U) {
+            fractal_bias_trem_enabled_ = enabled;
+            if (!enabled) fractal_bias_trem_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -631,6 +638,13 @@ public:
             }
             return;
         }
+        if (index == 105U) {
+            if (fractal_bias_trem_enabled_) {
+                fractal_bias_trem_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -703,6 +717,7 @@ public:
         octave_divider_.reset();
         double_take_.reset();
         optical_tremolo_->reset();
+        fractal_bias_trem_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -3027,6 +3042,33 @@ public:
         optical_tremolo_mute_bypass_ = bypass_mode != 0U;
     }
 
+    void configure_fractal_bias_trem(
+        float rate_hz, float depth, std::uint32_t waveform,
+        std::uint32_t tempo_sync, float tempo_bpm, float beats_per_cycle,
+        std::uint32_t trigger_sync, float trigger_threshold_db,
+        float ducking, float bias_drive, float mix, float level_db,
+        float balance, std::uint32_t bypass) noexcept {
+        tabletfx::BiasTremParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.depth = depth;
+        parameters.waveform = waveform <= static_cast<std::uint32_t>(
+            tabletfx::BiasTremWaveform::SampleHold)
+            ? static_cast<tabletfx::BiasTremWaveform>(waveform)
+            : static_cast<tabletfx::BiasTremWaveform>(255U);
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.beats_per_cycle = beats_per_cycle;
+        parameters.trigger_sync = trigger_sync != 0U;
+        parameters.trigger_threshold_db = trigger_threshold_db;
+        parameters.ducking = ducking;
+        parameters.bias_drive = bias_drive;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        parameters.balance = balance;
+        parameters.bypass = bypass != 0U;
+        fractal_bias_trem_.set_parameters(parameters);
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -3042,6 +3084,7 @@ public:
         bytes += double_take_.memory_bytes();
         bytes += eq5_graphic_.memory_bytes();
         bytes += optical_tremolo_->memory_bytes();
+        bytes += fractal_bias_trem_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3102,6 +3145,9 @@ public:
         if (index == 104U) {
             return static_cast<std::uint32_t>(optical_tremolo_->memory_bytes());
         }
+        if (index == 105U) {
+            return static_cast<std::uint32_t>(fractal_bias_trem_.memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3136,6 +3182,7 @@ private:
     tabletfx::DoubleTake double_take_;
     tabletfx::EQ5Graphic eq5_graphic_;
     std::unique_ptr<tabletfx::OpticalTremolo> optical_tremolo_;
+    tabletfx::BiasTrem fractal_bias_trem_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3148,6 +3195,7 @@ private:
     bool eq5_graphic_enabled_ = false;
     bool optical_tremolo_enabled_ = false;
     bool optical_tremolo_mute_bypass_ = false;
+    bool fractal_bias_trem_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4152,6 +4200,20 @@ TABLETFX_WASM_EXPORT void tf_chain_set_optical_tremolo(
             phase_degrees, start_phase_degrees, trigger_enabled,
             trigger_threshold_dbfs, ducking_percent, mix, level_db,
             balance_percent, bypass_mode);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_bias_trem(
+    void* opaque, float rate_hz, float depth, std::uint32_t waveform,
+    std::uint32_t tempo_sync, float tempo_bpm, float beats_per_cycle,
+    std::uint32_t trigger_sync, float trigger_threshold_db,
+    float ducking, float bias_drive, float mix, float level_db,
+    float balance, std::uint32_t bypass) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_bias_trem(
+            rate_hz, depth, waveform, tempo_sync, tempo_bpm, beats_per_cycle,
+            trigger_sync, trigger_threshold_db, ducking, bias_drive, mix,
+            level_db, balance, bypass);
     }
 }
 

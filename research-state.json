@@ -147,15 +147,31 @@
         "notes": "Automated verification only. Fractal DSP/settings/sound parity, human listening, exact firmware applicability, and physical-device checks remain open.",
         "picker_rows": 105
       }
+    },
+    {
+      "name": "Fractal FM9-family Bias Trem project-authored Modulation implementation",
+      "status": "verified",
+      "picker_index": 105,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+        "revision": "November 2026 cover date checked 2026-11-24; printed pp. 106–107; FM9-family guide. Firmware v12.0 is listed for FM9 Original/Turbo but does not name Mark II Turbo separately; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The guide describes Bias Trem qualitatively and lists shared tremolo controls but no numeric ranges/defaults or circuit details. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown."
+      },
+      "documented_controls": "Distinct Bias Trem type, described as an organic tube-bias tremolo that may add distortion. Shared tremolo controls: Rate/Tempo, Depth, LFO Type, Duty, Shape, Phase, Start Phase, Trigger Threshold, Ducking; Mix-page Level, Balance, Bypass, Bypass Mode.",
+      "project_controls": "Project-authored Modulation row at picker index 105. Defaults: 4.5 Hz, 0.35 depth, Sine, tempo off at 120 BPM/1 beat, trigger off with −36 dBFS stored threshold, zero ducking, 0.18 bias-drive, Mix 1.0, 0 dB Level, centered Balance, bypass off. Ranges: 0.05–20 Hz, depth/ducking/drive/mix 0–1, tempo 30–300 BPM, beat length 1/16–16, trigger −80–0 dBFS, Level −24…+12 dB, Balance −1…+1. Project bounded nonlinear curve and DSP do not emulate tube-bias hardware or claim Fractal parity.",
+      "verification": {
+        "native_ctest": "make test passed 109/109 CTest tests and 11/11 audio-fixture safety checks.",
+        "browser": "Focused make web-test-fractal-bias-trem and full make web-test passed with local prerecorded Guitar-TECHS DI, 106 categorized picker rows, and browser/native parity across available optional processors. Focused capture: peak 0.166132, 95,980 active samples, difference RMS 0.0388875. Full comparison max absolute error 5.6019e-6; RMS error 7.2461e-7. Browser reports 132 B effect state.",
+        "windows": "make windows-cross-build passed for the MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0570/0.1118/0.1256/0.7474/1.7708% of a 2.667 ms deadline; native sizeof 136 B, zero fixed latency, no process allocation. Desktop processor-call estimate, not target-device performance.",
+        "notes": "Automated implementation checks only. No Fractal DSP/settings/sound parity, human listening, or physical-device test."
+      }
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro EQ5 Graphic categorized Equalizer implementation",
-    "status": "verified",
-    "picker_index": 103,
-    "category": "Equalizer"
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Optical / Neon Tremolo categorized Modulation implementation",
     "status": "verified",
     "picker_index": 104,
@@ -178,19 +194,40 @@
       "notes": "Automated verification only; no Fractal parity, human listening, or physical-device validation."
     }
   },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Bias Trem project-authored Modulation implementation",
+    "status": "verified",
+    "picker_index": 105,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+      "revision": "November 2026 cover date checked 2026-11-24; printed pp. 106–107; FM9-family guide. Firmware v12.0 is listed for FM9 Original/Turbo but does not name Mark II Turbo separately; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide describes Bias Trem qualitatively and lists shared tremolo controls but no numeric ranges/defaults or circuit details. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown."
+    },
+    "documented_controls": "Distinct Bias Trem type, described as an organic tube-bias tremolo that may add distortion. Shared tremolo controls: Rate/Tempo, Depth, LFO Type, Duty, Shape, Phase, Start Phase, Trigger Threshold, Ducking; Mix-page Level, Balance, Bypass, Bypass Mode.",
+    "project_controls": "Project-authored Modulation row at picker index 105. Defaults: 4.5 Hz, 0.35 depth, Sine, tempo off at 120 BPM/1 beat, trigger off with −36 dBFS stored threshold, zero ducking, 0.18 bias-drive, Mix 1.0, 0 dB Level, centered Balance, bypass off. Ranges: 0.05–20 Hz, depth/ducking/drive/mix 0–1, tempo 30–300 BPM, beat length 1/16–16, trigger −80–0 dBFS, Level −24…+12 dB, Balance −1…+1. Project bounded nonlinear curve and DSP do not emulate tube-bias hardware or claim Fractal parity.",
+    "verification": {
+      "native_ctest": "make test passed 109/109 CTest tests and 11/11 audio-fixture safety checks.",
+      "browser": "Focused make web-test-fractal-bias-trem and full make web-test passed with local prerecorded Guitar-TECHS DI, 106 categorized picker rows, and browser/native parity across available optional processors. Focused capture: peak 0.166132, 95,980 active samples, difference RMS 0.0388875. Full comparison max absolute error 5.6019e-6; RMS error 7.2461e-7. Browser reports 132 B effect state.",
+      "windows": "make windows-cross-build passed for the MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0570/0.1118/0.1256/0.7474/1.7708% of a 2.667 ms deadline; native sizeof 136 B, zero fixed latency, no process allocation. Desktop processor-call estimate, not target-device performance.",
+      "notes": "Automated implementation checks only. No Fractal DSP/settings/sound parity, human listening, or physical-device test."
+    }
+  },
   "next_research": [
     {
-      "device": "Fractal FM9 Mark II Turbo (FM9-family documentation)",
-      "feature": "Bias Trem / Modulation",
-      "source": "Fractal Audio Systems Blocks Guide, November 2026, printed pp. 106–107; FM9 firmware/downloads checked 2026-11-24",
+      "device": "Fender Tone Master Pro",
+      "feature": "Vibratone / rotating-baffle Modulation",
+      "source": "Tone Master Pro Model Guide v1.1.100 / Rev A, printed pp. 36–37; firmware history checked through v1.8.85 (2026-11-18)",
       "source_urls": [
-        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "https://www.fractalaudio.com/fm9-downloads/",
-        "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit"
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
       ],
-      "status": "The guide identifies Bias Trem as a distinct type, describes an organic tube-bias tremolo character, and warns that it can add distortion. An isolated project-authored core draft exists but still needs native/build integration, browser controls, tests, DSP measurement, Windows verification, documentation, and a published checkpoint.",
-      "known_controls": "Shared tremolo roles include Rate/Tempo, Depth, LFO Type, Duty Cycle, Shape, Phase, Start Phase, Trigger Threshold, Ducking, and Mix-page Level/Balance/Bypass/Bypass Mode. No standalone numeric bounds/defaults or circuit details are published.",
-      "qualification": "The guide is FM9-family evidence; v12.0 lists FM9 Original/Turbo but does not name Mark II Turbo, and installed firmware is unknown. Bias, Harmonic, Optical, Neon Trem, and Panner are separate types. Project nonlinear curve, trigger detector, ducking, ranges, and DSP must remain explicitly project-authored."
+      "status": "Exact-model guide identifies the Vibratone rotary-speaker effect and lists its controls. Implement a project-authored rotary variant only after reviewing the existing Rotary Speaker API and avoiding claims of Fender parity.",
+      "known_controls": "Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, Dynamics Switch.",
+      "qualification": "Guide provides no numeric ranges/defaults, ramp/detector behavior, rotor geometry, stereo configuration, latency, DSP, or stacking limit. v1.8.85 notes do not mention Vibratone; installed firmware is unknown. Reuse common rotary primitives where possible and expose project-authored controls/curve; do not infer Fender settings or sound parity."
     },
     {
       "device": "Line 6 Helix Stadium XL",
@@ -223,7 +260,7 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan, the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah, the project Arpeggiator ±24-scale-degree range, and Optical 1/2 plus Neon Tremolo are implemented. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking-range controls, but bass tracking quality is unverified. Touch-Wah MIX, physical detector selection, Fractal's separate ±24-semitone polyphonic pitch shift, multi-voice/custom-scale Diatonic harmonies, and Bias Trem remain open.",
+      "status": "Volume/Pan, the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah, the project Arpeggiator ±24-scale-degree range, and Optical 1/2 plus Neon Tremolo are implemented. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking-range controls, but bass tracking quality is unverified. Touch-Wah MIX, physical detector selection, Fractal's separate ±24-semitone polyphonic pitch shift, multi-voice/custom-scale Diatonic harmonies, Bias Trem is implemented at picker index 105 with project-authored controls; the remaining listed pitch/harmony/filter gaps stay open.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
       "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },

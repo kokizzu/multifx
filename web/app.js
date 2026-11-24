@@ -106,6 +106,7 @@ const EFFECT_NAMES = [
   "Double Take · project-authored dynamic double",
   "EQ5 Graphic · project-authored five-band EQ",
   "Optical Tremolo · project-authored Fractal FM9-family controls",
+  "Bias Trem · project-authored Fractal Blocks Guide-inspired controls",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -115,6 +116,7 @@ const DEFAULT_PARAMETERS = {
   doubleTake: [2, 0.25, 0.55, 0.85, 0.15, 0],
   eq5Graphic: [0, 0, 0, 0, 0, 0],
   opticalTremolo: [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0],
+  fractalBiasTrem: [4.5, 0.35, 0, 0, 120, 1, 0, -36, 0, 0.18, 1, 0, 0, 0],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1260,6 +1262,22 @@ const opticalTremoloControls = [
   document.querySelector("#optical-tremolo-level-db"),
   document.querySelector("#optical-tremolo-balance-percent"),
   document.querySelector("#optical-tremolo-bypass-mode"),
+];
+const fractalBiasTremControls = [
+  document.querySelector("#fractal-bias-trem-rate-hz"),
+  document.querySelector("#fractal-bias-trem-depth"),
+  document.querySelector("#fractal-bias-trem-waveform"),
+  document.querySelector("#fractal-bias-trem-tempo-sync"),
+  document.querySelector("#fractal-bias-trem-tempo-bpm"),
+  document.querySelector("#fractal-bias-trem-beats-per-cycle"),
+  document.querySelector("#fractal-bias-trem-trigger-sync"),
+  document.querySelector("#fractal-bias-trem-trigger-threshold-db"),
+  document.querySelector("#fractal-bias-trem-ducking"),
+  document.querySelector("#fractal-bias-trem-drive"),
+  document.querySelector("#fractal-bias-trem-mix"),
+  document.querySelector("#fractal-bias-trem-level-db"),
+  document.querySelector("#fractal-bias-trem-balance"),
+  document.querySelector("#fractal-bias-trem-bypass"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -2984,6 +3002,43 @@ function updateOpticalTremoloOptions() {
   }
 }
 
+function updateFractalBiasTremOptions() {
+  const values = [
+    Number(fractalBiasTremControls[0].value),
+    Number(fractalBiasTremControls[1].value) / 100,
+    Number(fractalBiasTremControls[2].value),
+    Number(fractalBiasTremControls[3].checked),
+    Number(fractalBiasTremControls[4].value),
+    Number(fractalBiasTremControls[5].value),
+    Number(fractalBiasTremControls[6].checked),
+    Number(fractalBiasTremControls[7].value),
+    Number(fractalBiasTremControls[8].value) / 100,
+    Number(fractalBiasTremControls[9].value) / 100,
+    Number(fractalBiasTremControls[10].value) / 100,
+    Number(fractalBiasTremControls[11].value),
+    Number(fractalBiasTremControls[12].value) / 100,
+    Number(fractalBiasTremControls[13].checked),
+  ];
+  DEFAULT_PARAMETERS.fractalBiasTrem = values;
+  const waveforms = ["Sine", "Triangle", "Square", "Saw Up", "Saw Down", "Sample & Hold"];
+  const labels = [
+    `${values[0].toFixed(2)} Hz`, `${Math.round(values[1] * 100)}%`,
+    waveforms[values[2]] || "Sine", values[3] ? "On" : "Off",
+    `${Math.round(values[4])} BPM`, `${values[5]} beats`,
+    values[6] ? "On" : "Off", `${values[7].toFixed(1)} dB`,
+    `${Math.round(values[8] * 100)}%`, `${Math.round(values[9] * 100)}%`,
+    `${Math.round(values[10] * 100)}%`, `${values[11].toFixed(1)} dB`,
+    `${Math.round(values[12] * 100)}%`, values[13] ? "On" : "Off",
+  ];
+  fractalBiasTremControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = labels[index];
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "fractal-bias-trem", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -4034,6 +4089,11 @@ for (const control of opticalTremoloControls) {
   control.addEventListener("change", updateOpticalTremoloOptions);
 }
 updateOpticalTremoloOptions();
+for (const control of fractalBiasTremControls) {
+  control.addEventListener("input", updateFractalBiasTremOptions);
+  control.addEventListener("change", updateFractalBiasTremOptions);
+}
+updateFractalBiasTremOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9647,7 +9707,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 105 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 106 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9749,7 +9809,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 105 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 106 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -9856,7 +9916,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 105 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 106 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -9924,6 +9984,118 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
         }
       });
       updateOpticalTremoloOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = fractalBiasTremControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Bias Trem browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const smokeValues = [3.7, 75, 1, 0, 120, 1, 0, -36, 0, 70, 100, 0, 0, 0];
+    fractalBiasTremControls.forEach((control, index) => {
+      if (control.type === "checkbox") {
+        control.checked = Boolean(smokeValues[index]);
+      } else {
+        control.value = String(smokeValues[index]);
+      }
+    });
+    updateFractalBiasTremOptions();
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="105"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !checkbox || fractalBiasTremControls.length !== 14 ||
+        effectMemory.length !== 106 || !(effectMemory[105] > 0) ||
+        DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
+          "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
+      throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 105;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Bias Trem picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Bias Trem playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Bias Trem produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 105,
+      waveform: "Triangle", rateHz: 3.7, depth: 0.75, biasDrive: 0.7,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[105],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      fractalBiasTremControls.forEach((control, index) => {
+        if (control.type === "checkbox") {
+          control.checked = previousControls[index];
+        } else {
+          control.value = previousControls[index];
+        }
+      });
+      updateFractalBiasTremOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -10790,8 +10962,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 105 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 105 || effectRows.length !== 105 ||
+        const expectedEffectIds = Array.from({ length: 106 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 106 || effectRows.length !== 106 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -12496,13 +12668,15 @@ async function runBrowserSelfTest() {
     // Octave Divider is verified by its dedicated local guitar Play smoke and
     // focused CLI test, so keep it out of the shared offline parity chain.
     parityEnabled[101] = false;
+    // Bias Trem has a native CLI reference and participates in full-chain parity.
+    parityEnabled[105] = true;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 105 || activeProcessorIndices.length !== 76 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 104) {
-             throw new Error("The all-effect chain must contain 76 optional processors between input trim and output utilities.");
+    if (parityEnabled.length !== 106 || activeProcessorIndices.length !== 77 ||
+            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 105) {
+             throw new Error("The all-effect chain must contain 77 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -12526,6 +12700,7 @@ async function runBrowserSelfTest() {
         doubleTake: [3, 0.65, 0.55, 0.75, 0.45, 0],
         eq5Graphic: [2, -3, 6, -3, 2, 0],
         opticalTremolo: [1, 5.2, 0.65, 4, 0, 120, 1, 35, 58, 18, 10, 0, -36, 25, 0.75, -1, 0, 0],
+        fractalBiasTrem: [3.7, 0.75, 1, 0, 120, 1, 0, -36, 0, 0.7, 1, 0, 0, 0],
         volumePedal: [0.92, -96, 0, 1],
         noiseGate: [-60, -72, 3, 2, 20, 80],
         cleanBoostDb: 3,
@@ -12943,7 +13118,25 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
-       if (new URLSearchParams(location.search).get("selftest") === "step-tremolo") {
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {
+          testResult.textContent = "Checking Bias Trem browser Play with the local guitar fixture…";
+          const fractalBiasTremSmoke = await runFractalBiasTremBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            fractalBiasTrem: fractalBiasTremSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Bias Trem browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "step-tremolo") {
          testResult.textContent = "Checking Step Tremolo browser Play with the local guitar fixture…";
          const stepTremoloSmoke = await runStepTremoloBrowserSmokeTest(
            reference, captureView, captureBuffer,
@@ -13030,8 +13223,8 @@ async function runBrowserSelfTest() {
     let maximumErrorIndex = 0;
     let errorSquares = 0;
     let referenceSquares = 0;
+    let actualSquares = 0;
     let referencePeak = 0;
-    let nonZeroSamples = 0;
     for (let i = 0; i < actual.length; i += 1) {
       const expected = reference.samples[i];
       const error = Math.abs(actual[i] - expected);
@@ -13041,20 +13234,21 @@ async function runBrowserSelfTest() {
       }
       errorSquares += error * error;
       referenceSquares += expected * expected;
+      actualSquares += actual[i] * actual[i];
       referencePeak = Math.max(referencePeak, Math.abs(expected));
-      if (Math.abs(actual[i]) > 1e-6) nonZeroSamples += 1;
     }
     const rmsError = Math.sqrt(errorSquares / Math.max(1, actual.length));
     const referenceRms = Math.sqrt(referenceSquares / Math.max(1, actual.length));
+    const actualRms = Math.sqrt(actualSquares / Math.max(1, actual.length));
     const maxAbsTolerance = Math.max(0.0002, referencePeak * 0.06);
     const rmsTolerance = Math.max(0.00002, referenceRms * 0.075);
-    if (maximumError > maxAbsTolerance || rmsError > rmsTolerance || nonZeroSamples === 0) {
+    const minimumSignalRms = Math.max(1e-12, referenceRms * 0.01);
+    if (maximumError > maxAbsTolerance || rmsError > rmsTolerance ||
+        actualRms < minimumSignalRms) {
       const firstSamples = Array.from({ length: 8 }, (_, index) =>
         `${index}:${actual[index].toFixed(5)}/${reference.samples[index].toFixed(5)}`).join(", ");
-      let actualSquares = 0;
       let expectedSquares = 0;
       for (let i = 0; i < actual.length; i += 1) {
-        actualSquares += actual[i] * actual[i];
         expectedSquares += reference.samples[i] * reference.samples[i];
       }
       let bestLag = 0;
@@ -13073,7 +13267,7 @@ async function runBrowserSelfTest() {
           bestLag = lag;
         }
       }
-      throw new Error(`Browser/native audio mismatch: max error ${maximumError} at sample ${maximumErrorIndex} (${actual[maximumErrorIndex].toFixed(5)}/${reference.samples[maximumErrorIndex].toFixed(5)}), RMS error ${rmsError}, signal RMS browser/native ${Math.sqrt(actualSquares / actual.length)}/${Math.sqrt(expectedSquares / actual.length)}, best offset ${bestLag} samples (RMS ${Math.sqrt(bestLagError)}); first samples browser/native ${firstSamples}; decoded/context rates ${decodedAudio.sampleRate}/${audioContext.sampleRate} Hz; user agent ${navigator.userAgent}.`);
+      throw new Error(`Browser/native audio mismatch: max error ${maximumError} at sample ${maximumErrorIndex} (${actual[maximumErrorIndex].toFixed(5)}/${reference.samples[maximumErrorIndex].toFixed(5)}), RMS error ${rmsError}, signal RMS browser/native ${actualRms}/${Math.sqrt(expectedSquares / actual.length)}, minimum browser signal RMS ${minimumSignalRms}, best offset ${bestLag} samples (RMS ${Math.sqrt(bestLagError)}); first samples browser/native ${firstSamples}; decoded/context rates ${decodedAudio.sampleRate}/${audioContext.sampleRate} Hz; user agent ${navigator.userAgent}.`);
     }
     if (audioContext.state !== "running") throw new Error("Play did not start the browser audio context.");
     const load = readLoadWindow();
@@ -13145,6 +13339,10 @@ async function runBrowserSelfTest() {
     );
     testResult.textContent = "Checking Optical Tremolo Modulation-category playback on local guitar audio…";
     const opticalTremoloSmoke = await runOpticalTremoloBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
+    testResult.textContent = "Checking Bias Trem Modulation-category playback on local guitar audio…";
+    const fractalBiasTremSmoke = await runFractalBiasTremBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
@@ -13398,7 +13596,8 @@ async function runBrowserSelfTest() {
       doubleTake: doubleTakeSmoke,
       eq5Graphic: eq5GraphicSmoke,
       opticalTremolo: opticalTremoloSmoke,
-      playOutputCaptured: nonZeroSamples > 0,
+      fractalBiasTrem: fractalBiasTremSmoke,
+      playOutputCaptured: actualRms >= minimumSignalRms,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,
       dualEngineDistortion: dualEngineDistortionSmoke,

@@ -221,6 +221,7 @@ def build_web() -> None:
         "_tf_chain_set_double_take",
         "_tf_chain_set_eq5_graphic",
         "_tf_chain_set_optical_tremolo",
+        "_tf_chain_set_fractal_bias_trem",
         "_tf_chain_set_reverse_delay", "_tf_chain_set_reverse_delay_run",
         "_tf_chain_restart_reverse_delay", "_tf_chain_set_ducking_delay",
         "_tf_chain_set_modulated_delay", "_tf_chain_set_filtered_delay",
@@ -305,6 +306,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "double_take.cpp"),
         str(ROOT / "src" / "effects" / "eq5_graphic.cpp"),
         str(ROOT / "src" / "effects" / "optical_tremolo.cpp"),
+        str(ROOT / "src" / "effects" / "fractal_bias_trem.cpp"),
         str(ROOT / "src" / "effects" / "reverse_delay.cpp"),
         str(ROOT / "src" / "effects" / "ducking_delay.cpp"),
         str(ROOT / "src" / "effects" / "modulated_delay.cpp"),
@@ -716,7 +718,8 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 
 
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
-                 step_tremolo_only: bool = False) -> None:
+                 step_tremolo_only: bool = False,
+                 fractal_bias_trem_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1131,6 +1134,21 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
               "--optical-tremolo-mix", "0.75",
               "--optical-tremolo-level-db", "-1",
               "--optical-tremolo-balance-percent", "0",
+              "--fractal-bias-trem",
+              "--fractal-bias-trem-rate-hz", "3.7",
+              "--fractal-bias-trem-depth", "0.75",
+              "--fractal-bias-trem-waveform", "triangle",
+              "--fractal-bias-trem-tempo-sync", "off",
+              "--fractal-bias-trem-tempo-bpm", "120",
+              "--fractal-bias-trem-beats-per-cycle", "1",
+              "--fractal-bias-trem-trigger-sync", "off",
+              "--fractal-bias-trem-trigger-threshold-db", "-36",
+              "--fractal-bias-trem-ducking", "0",
+              "--fractal-bias-trem-bias-drive", "0.7",
+              "--fractal-bias-trem-mix", "1",
+              "--fractal-bias-trem-level-db", "0",
+              "--fractal-bias-trem-balance", "0",
+              "--fractal-bias-trem-bypass", "off",
         ]
         run(renderer_command, cwd=ROOT)
         stereo_crossover_command = [
@@ -1194,6 +1212,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         LocalWebHandler.request_paths = []
         if step_tremolo_only:
             url = base_url + "/web/index.html?selftest=step-tremolo"
+        elif fractal_bias_trem_only:
+            url = base_url + "/web/index.html?selftest=fractal-bias-trem"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1390,7 +1410,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
-                None if volume_pan_only or stereo_filter_only or step_tremolo_only
+                None if volume_pan_only or stereo_filter_only or step_tremolo_only or
+                fractal_bias_trem_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1416,6 +1437,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif step_tremolo_only:
             print("Focused Step Tremolo browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fractal_bias_trem_only:
+            print("Focused Bias Trem browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1470,6 +1494,7 @@ def main() -> None:
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
         "test-volume-pan", "test-stereo-filter", "test-step-tremolo",
+        "test-fractal-bias-trem",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1487,6 +1512,8 @@ def main() -> None:
         browser_test(stereo_filter_only=True)
     elif action == "test-step-tremolo":
         browser_test(step_tremolo_only=True)
+    elif action == "test-fractal-bias-trem":
+        browser_test(fractal_bias_trem_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

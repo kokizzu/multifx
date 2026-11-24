@@ -27,6 +27,7 @@ PUBLISH_CHECKPOINTS += fractal-octave-divider
 PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic
 PUBLISH_CHECKPOINTS += fractal-optical-tremolo
+PUBLISH_CHECKPOINTS += fractal-bias-trem
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -68,12 +69,18 @@ web-test-stereo-filter:
 	$(PYTHON) scripts/web.py test-stereo-filter
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
-.PHONY: test-optical-tremolo
+.PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem
 test-step-tremolo:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_step_tremolo_tests
 
 test-optical-tremolo:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_optical_tremolo_tests
+
+test-fractal-bias-trem:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_fractal_bias_trem_tests
+
+web-test-fractal-bias-trem: web-build
+	$(PYTHON) scripts/web.py test-fractal-bias-trem
 
 web-test-step-tremolo:
 	$(PYTHON) scripts/web.py test-step-tremolo

@@ -18,6 +18,7 @@
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
+#include "tabletfx/effects/fractal_bias_trem.hpp"
 #include "tabletfx/effects/optical_tremolo.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
@@ -264,6 +265,8 @@ struct Options {
     bool eq5_graphic_enabled = false;
     std::array<float, tabletfx::EQ5Graphic::kBandCount> eq5_graphic_gains_db{};
     float eq5_graphic_overall_gain_db = 0.0F;
+    bool fractal_bias_trem_enabled = false;
+    tabletfx::BiasTremParameters fractal_bias_trem{};
     bool stereo_crossover_enabled = false;
     tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
@@ -640,6 +643,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.eq5_graphic_enabled = true;
             continue;
         }
+        if (key == "--fractal-bias-trem") {
+            options.fractal_bias_trem_enabled = true;
+            continue;
+        }
         if (key == "--optical-tremolo") {
             options.optical_tremolo_enabled = true;
             continue;
@@ -830,6 +837,56 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--manual-thru-zero-flanger") {
             options.manual_thru_zero_flanger_enabled = true;
+            continue;
+        }
+        if (key.starts_with("--fractal-bias-trem-")) {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for " + std::string(key));
+            }
+            constexpr std::string_view prefix = "--fractal-bias-trem-";
+            const std::string_view setting = key.substr(prefix.size());
+            if (setting == "waveform" || setting == "tempo-sync" ||
+                setting == "trigger-sync" || setting == "bypass") {
+                const std::string_view value(argv[++i]);
+                if (setting == "waveform") {
+                    using Waveform = tabletfx::BiasTremWaveform;
+                    if (value == "sine") options.fractal_bias_trem.waveform = Waveform::Sine;
+                    else if (value == "triangle") options.fractal_bias_trem.waveform = Waveform::Triangle;
+                    else if (value == "square") options.fractal_bias_trem.waveform = Waveform::Square;
+                    else if (value == "saw-up") options.fractal_bias_trem.waveform = Waveform::SawUp;
+                    else if (value == "saw-down") options.fractal_bias_trem.waveform = Waveform::SawDown;
+                    else if (value == "sample-hold") options.fractal_bias_trem.waveform = Waveform::SampleHold;
+                    else throw std::invalid_argument(
+                        "Bias Trem waveform must be sine, triangle, square, saw-up, saw-down, or sample-hold");
+                } else {
+                    if (value != "on" && value != "off") {
+                        throw std::invalid_argument(
+                            "Bias Trem tempo-sync, trigger-sync, and bypass must be on or off");
+                    }
+                    const bool enabled = value == "on";
+                    if (setting == "tempo-sync") {
+                        options.fractal_bias_trem.tempo_sync = enabled;
+                    } else if (setting == "trigger-sync") {
+                        options.fractal_bias_trem.trigger_sync = enabled;
+                    } else {
+                        options.fractal_bias_trem.bypass = enabled;
+                    }
+                }
+            } else {
+                const float value = parse_float(key, argv[++i]);
+                if (setting == "rate-hz") options.fractal_bias_trem.rate_hz = value;
+                else if (setting == "depth") options.fractal_bias_trem.depth = value;
+                else if (setting == "tempo-bpm") options.fractal_bias_trem.tempo_bpm = value;
+                else if (setting == "beats-per-cycle") options.fractal_bias_trem.beats_per_cycle = value;
+                else if (setting == "trigger-threshold-db") options.fractal_bias_trem.trigger_threshold_db = value;
+                else if (setting == "ducking") options.fractal_bias_trem.ducking = value;
+                else if (setting == "bias-drive") options.fractal_bias_trem.bias_drive = value;
+                else if (setting == "mix") options.fractal_bias_trem.mix = value;
+                else if (setting == "level-db") options.fractal_bias_trem.level_db = value;
+                else if (setting == "balance") options.fractal_bias_trem.balance = value;
+                else throw std::invalid_argument("Unknown option: " + std::string(key));
+            }
+            options.fractal_bias_trem_enabled = true;
             continue;
         }
         if (key.starts_with("--optical-tremolo-")) {
@@ -3772,25 +3829,6 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::VolumePedal>(
             static_cast<float>(sample_rate), options.volume_pedal));
     }
-    if (options.octave_divider_enabled) {
-        effects.push_back(std::make_unique<tabletfx::effects::OctaveDivider>(
-            static_cast<float>(sample_rate), channels, options.octave_divider));
-    }
-    if (options.double_take_enabled) {
-        effects.push_back(std::make_unique<tabletfx::DoubleTake>(
-            static_cast<float>(sample_rate), channels, options.double_take));
-    }
-    if (options.eq5_graphic_enabled) {
-        auto effect = std::make_unique<tabletfx::EQ5Graphic>(
-            static_cast<float>(sample_rate), channels);
-        effect->configure(options.eq5_graphic_gains_db,
-                          options.eq5_graphic_overall_gain_db);
-        effects.push_back(std::move(effect));
-    }
-    if (options.optical_tremolo_enabled) {
-        effects.push_back(std::make_unique<tabletfx::OpticalTremolo>(
-            static_cast<float>(sample_rate), options.optical_tremolo));
-    }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
             static_cast<float>(sample_rate), channels, options.high_pass_hz));
@@ -4176,6 +4214,29 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate), channels);
         eq->configure(options.five_band_eq);
         effects.push_back(std::move(eq));
+    }
+    if (options.octave_divider_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::OctaveDivider>(
+            static_cast<float>(sample_rate), channels, options.octave_divider));
+    }
+    if (options.double_take_enabled) {
+        effects.push_back(std::make_unique<tabletfx::DoubleTake>(
+            static_cast<float>(sample_rate), channels, options.double_take));
+    }
+    if (options.eq5_graphic_enabled) {
+        auto eq = std::make_unique<tabletfx::EQ5Graphic>(
+            static_cast<float>(sample_rate), channels);
+        eq->configure(options.eq5_graphic_gains_db,
+                      options.eq5_graphic_overall_gain_db);
+        effects.push_back(std::move(eq));
+    }
+    if (options.optical_tremolo_enabled) {
+        effects.push_back(std::make_unique<tabletfx::OpticalTremolo>(
+            static_cast<float>(sample_rate), options.optical_tremolo));
+    }
+    if (options.fractal_bias_trem_enabled) {
+        effects.push_back(std::make_unique<tabletfx::BiasTrem>(
+            static_cast<float>(sample_rate), options.fractal_bias_trem));
     }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
@@ -4843,6 +4904,10 @@ void run_bench() {
         return std::make_unique<tabletfx::OpticalTremolo>(
             static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-bias-trem-project-authored", [=] {
+        return std::make_unique<tabletfx::BiasTrem>(
+            static_cast<float>(sample_rate));
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));
     },
@@ -5384,7 +5449,15 @@ void print_usage() {
                   " [--optical-tremolo-start-phase-degrees 0..360] [--optical-tremolo-trigger on|off]"
                   " [--optical-tremolo-trigger-threshold-dbfs -90..0] [--optical-tremolo-ducking-percent 0..100]"
                   " [--optical-tremolo-mix 0..1] [--optical-tremolo-level-db -24..12]"
-                  " [--optical-tremolo-balance-percent -100..100]"
+                   " [--optical-tremolo-balance-percent -100..100]"
+                   " [--fractal-bias-trem] [--fractal-bias-trem-rate-hz 0.05..20]"
+                   " [--fractal-bias-trem-depth 0..1] [--fractal-bias-trem-waveform sine|triangle|square|saw-up|saw-down|sample-hold]"
+                   " [--fractal-bias-trem-tempo-sync on|off] [--fractal-bias-trem-tempo-bpm 30..300]"
+                   " [--fractal-bias-trem-beats-per-cycle 0.0625..16] [--fractal-bias-trem-trigger-sync on|off]"
+                   " [--fractal-bias-trem-trigger-threshold-db -80..0] [--fractal-bias-trem-ducking 0..1]"
+                   " [--fractal-bias-trem-bias-drive 0..1] [--fractal-bias-trem-mix 0..1]"
+                   " [--fractal-bias-trem-level-db -24..12] [--fractal-bias-trem-balance -1..1]"
+                   " [--fractal-bias-trem-bypass on|off]"
                   " [--harmonic-tremolo-rate-hz Hz] [--harmonic-tremolo-depth 0..1]"
                   " [--harmonic-tremolo-crossover-hz Hz]"
                   " [--harmonic-tremolo-waveform sine|triangle|square]"
