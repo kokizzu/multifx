@@ -44,6 +44,7 @@
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/five_band_eq.hpp"
+#include "tabletfx/effects/stadium_seven_band_peq.hpp"
 #include "tabletfx/effects/guitar_graphic_eq.hpp"
 #include "tabletfx/effects/bass_graphic_eq.hpp"
 #include "tabletfx/effects/shelf_tilt_eq.hpp"
@@ -5535,6 +5536,23 @@ void run_bench() {
         bands[0].gain_db = 2.0F;
         bands[2].gain_db = -3.0F;
         bands[4].gain_db = 1.5F;
+        effect->configure(bands);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("stadium-seven-band-parametric-eq-max", [=] {
+        auto effect = std::make_unique<tabletfx::StadiumSevenBandParametricEQ>(
+            static_cast<float>(sample_rate), channels);
+        auto bands = effect->parameters();
+        constexpr std::array<float, 7> frequencies{
+            63.0F, 160.0F, 400.0F, 1000.0F, 2500.0F, 6300.0F, 12500.0F};
+        for (std::size_t index = 0; index < bands.size(); ++index) {
+            bands[index].enabled = true;
+            bands[index].shape = index == 0
+                ? tabletfx::SevenBandEQShape::LowCut
+                : tabletfx::SevenBandEQShape::HighCut;
+            bands[index].frequency_hz = frequencies[index];
+            bands[index].slope_db_per_octave = 36.0F;
+        }
         effect->configure(bands);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);

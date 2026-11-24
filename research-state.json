@@ -4,28 +4,28 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "1f1a2a198dad629c63cb813ffb2ca2628e80e390",
+  "previous_checkpoint_commit": "8d9a9745d2ee2e13811da8876abb739ab9a8e6a4",
   "latest_audit": {
-    "name": "Fractal FM9-family three-voice Synth verification",
-    "status": "verified; automated checks pass; human listening and hardware checks remain",
+    "name": "Line 6 Helix Stadium XL seven-band Parametric EQ audit and project implementation",
+    "status": "verified; automated checks pass; human listening and device checks remain",
     "date": "2026-11-25",
-    "picker_index": 78,
-    "category": "Synth",
-    "official_source": "The current November 2026 FM9-family Blocks Guide, printed p. 102, documents a three-oscillator monophonic Synth, shared Guitar/Bass tracking range, per-voice wave/track/frequency/shift/tune/duty/pan/filter/attack/level controls, and shared Mix-page controls. Tune is ±50 cents; most ranges/defaults, DSP, and latency are not specified. Disabling voices can conserve CPU. FM9 v12.0 lists Original/Turbo but not Mark II Turbo by name; installed firmware is unknown.",
-    "project_controls": "Existing project-authored Synth picker ID 78 has three tracked voices, a project Quantize option and a global Guitar/Bass detector. It does not claim chord tracking or Fractal parameter/DSP/sound parity and does not expose the shared Mix-page controls. Bass candidates reach 23.125 Hz, using ~128 ms analysis windows and 32 ms hops; observed project response is ~0.1–0.22 s, not fixed audio-path latency. Owned state 1,031,344 B; processing uses fixed state.",
+    "picker_index": 114,
+    "category": "Equalizer",
+    "official_source": "Current model catalogue lists Parametric as Mono/Stereo, Line 6 Original, first v1.0. Current manual selector is v1.4 Rev D / v1.3 Rev B / v1.2. Manual migration notes identify the seven-band PEQ and improved peak Q/cut slopes; Native FAQ confirms seven bands, per-band bypass and adjustable slopes. No exact parameter table, ranges/defaults, DSP or latency are published. Device firmware is unknown.",
+    "project_controls": "Project-authored seven-band Equalizer at picker ID 114, disabled by default. Per band: Enable, Bell/Low Cut/High Cut, Frequency 20–20,000 Hz (sample-rate capped), Gain ±18 dB, Q 0.25–10, slope 6–36 dB/oct in 6 dB steps. Default frequencies 63/160/400/1,000/2,500/6,300/12,500 Hz; 0 dB, Q 0.707, 12 dB/oct. Fixed state 944 B, zero added latency, no process-time allocation. No Line 6 settings/DSP/sound parity.",
     "verification": {
-      "focused_native": "make test passed all 115/115 CTest cases, including the three-voice and 23.125 Hz Bass detector coverage; 11/11 fixture checks passed.",
-      "browser": "Full make web-test passed. Browser smoke plays local prerecorded Guitar-TECHS DI through three active Sine/Triangle/Square voices in Bass tracking at picker ID 78; 95,596 samples changed, RMS difference 0.44038. Wider browser/native comparison max absolute error 3.3736e−6 and RMS error 5.8412e−7. This does not test real-bass note accuracy.",
+      "focused_native": "make test passed documentation validation, 11/11 fixture checks, and 116/116 CTest cases, including PEQ response, bounds, slope, stereo, reset, neutral passthrough, and no-allocation coverage.",
+      "browser": "make web-test passed categorized picker/WASM checks and Play on local prerecorded guitar DI through picker ID 114. Shared native/browser path max absolute error 3.37354e-6 and RMS error 5.84118e-7.",
       "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 1,031,344 B state. Guitar p50/p95/p99/p99.9/max 11.7641/15.1125/17.0858/20.6417/22.3742%; Bass 11.8406/17.3034/20.9259/27.9432/50.2461%. Isolated processor-call result, not target-device performance."
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.7924/0.8295/1.0114/1.2855/1.7550%; 944 B state, zero fixed latency. Isolated desktop timing, not target-device performance."
     },
-    "remaining": "Real-bass tracking accuracy, musical response, human listening, hardware behavior, target-device CPU/latency, exact FM9 Mark II Turbo firmware applicability, and installed firmware remain unverified."
+    "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Dedicated 7-band Parametric EQ with per-band bypass and adjustable filter slopes",
-    "qualification": "The current manufacturer catalog/manual/FAQ establish the model identity and broad features, but not exact control names, ranges/defaults, slope choices, DSP, or latency. Existing 5-band PEQ and 7-band graphic EQ are related, not equivalent. Any project implementation must identify its parameters as project-authored."
+    "next_feature": "3 OSC Synth: exact control table, input note handling, and distinction from 4 OSC Generator",
+    "qualification": "The current official model catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. The distinct 4 OSC Generator is documented as free-running without an instrument. Do not infer 3 OSC Synth tracking, polyphony, controls, ranges/defaults, DSP, or latency from the 4 OSC Generator or unrelated synths; verify an exact-model source first."
   },
   "completed_checkpoints": [
     {
@@ -589,6 +589,30 @@
       },
       "picker_rows": 114,
       "remaining": "Human listening, exact Mark II Turbo firmware applicability, installed firmware, physical hardware behavior, and target-device CPU/latency remain unverified."
+    },
+    {
+      "name": "Line 6 Helix Stadium XL seven-band Parametric EQ audit and project implementation",
+      "status": "verified; automated checks pass; human listening and hardware checks remain",
+      "picker_index": 114,
+      "category": "Equalizer",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalogue, live v1.4 manual, and Native FAQ",
+        "revision": "Catalogue checked 2026-11-25; manual selector v1.4 Rev D / v1.3 Rev B / v1.2; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "manual_url": "https://manuals.line6.com/en/helix-stadium/live/presets",
+        "faq_url": "https://kb.line6.com/helix-stadium-native-faq",
+        "qualification": "Parametric is Mono/Stereo, a Line 6 Original, first appearing v1.0. FAQ confirms seven bands, per-band bypass and adjustable slopes; manual notes improved peak Q and cut slopes. Exact parameter table, ranges/defaults, DSP and latency remain unpublished."
+      },
+      "documented_controls": "Seven bands, per-band bypass, adjustable filter slopes; improved peak-filter Q and more precise low/high cut slopes. Exact model controls/ranges/defaults are not published.",
+      "project_controls": "Project-authored Equalizer picker ID 114, disabled by default. Seven bands: Enable, Bell/Low Cut/High Cut, Frequency 20–20,000 Hz (sample-rate capped), Gain ±18 dB, Q 0.25–10, slope 6–36 dB/oct by 6 dB; defaults 63/160/400/1,000/2,500/6,300/12,500 Hz, 0 dB, Q 0.707, 12 dB/oct. State 944 B, zero fixed latency, no process allocation. Not Line 6 settings/DSP/sound parity.",
+      "verification": {
+        "native": "make test: docs validation, 11/11 fixture checks, 116/116 CTest.",
+        "browser": "make web-test: local guitar-DI Play at ID 114, categorized picker and WASM checks, shared path max absolute error 3.37354e-6 / RMS 5.84118e-7.",
+        "windows": "make windows-cross-build passed.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: 0.7924/0.8295/1.0114/1.2855/1.7550% p50/p95/p99/p99.9/max of 2.667 ms callback."
+      },
+      "picker_rows": 115,
+      "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
     }
   ],
   "previous_checkpoint": {
@@ -616,28 +640,28 @@
     "picker_rows": 114
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Volume/Pan utility audit and existing project implementation",
-    "status": "verified; automated checks pass; human listening and hardware checks remain",
-    "picker_index": 93,
-    "category": "Utility",
+    "name": "Line 6 Helix Stadium XL seven-band Parametric EQ audit and project implementation",
+    "status": "verified; automated checks pass; human listening and device checks remain",
+    "picker_index": 114,
+    "category": "Equalizer",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 firmware downloads",
-      "revision": "Blocks Guide November 2026, printed p. 109; firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide covers FM9-family controls but publishes no numeric bounds/defaults or taper/pan laws. Firmware v12.0 lists Original/Turbo, not Mark II Turbo by name; exact applicability is inferred from family coverage and installed firmware is unknown."
+      "title": "Line 6 Helix Stadium model catalogue, live v1.4 manual, and Native FAQ",
+      "revision": "Model catalogue checked 2026-11-25; manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 release notes dated 2026-10-27 and Native 1.4.1 dated 2026-10-29. Installed device firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/presets",
+      "faq_url": "https://kb.line6.com/helix-stadium-native-faq",
+      "qualification": "Catalogue establishes Mono/Stereo, Line 6 Original, first appearance v1.0. Manual migration note and FAQ establish seven bands, per-band bypass, adjustable slopes and improved peak Q/cut slopes, but no exact parameter table, numeric bounds/defaults, DSP cost, or latency."
     },
-    "documented_controls": "Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, seven Taper choices, Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left/Right, Bypass Mode (pass/mute), and Output Level independent of Volume; no numeric bounds/defaults or taper/pan laws are provided.",
-    "project_controls": "Existing project-authored Utility ID 93: Volume 0…1; endpoints project-bounded −96…+12 dB (defaults −96/0); seven project taper approximations; Balance and L/R pan ±100%; Stereo/Left/Right input selection; independent Output Level −24…+12 dB (default 0); pass/mute bypass. Auto-Swell remains separate and no hardware expression-controller assignment is included. Mono uses shared Volume/Output gain; channels above the first stereo pair use shared gain. State 80 B, no process-time allocation, zero added fixed latency; no Fractal settings/DSP/sound parity.",
+    "documented_controls": "Seven-band parametric EQ; per-band bypass; adjustable filter slopes. Manual migration note cites improved peak-filter Q and more precise low/high-cut slopes. Exact control names, supported shapes, ranges/defaults, DSP and latency are not published.",
+    "project_controls": "Project-authored seven-band Equalizer at picker ID 114, disabled by default. Per band: Enable, Bell/Low Cut/High Cut, Frequency 20–20,000 Hz (sample-rate capped), Gain ±18 dB, Q 0.25–10, slope 6–36 dB/oct in 6 dB steps. Default frequencies 63/160/400/1,000/2,500/6,300/12,500 Hz; 0 dB, Q 0.707, 12 dB/oct. Fixed state 944 B, zero added latency, no process-time allocation. No Line 6 settings/DSP/sound parity.",
     "verification": {
-      "focused_native": "make test-volume-pan passed focused VolumePan CTest.",
-      "browser": "make web-test-volume-pan passed with the local prerecorded 48 kHz stereo guitar DI through Utility ID 93; peak 0.126371, 95,980 active samples, RMS difference 0.0169668. make inspect-volume-pan-path verified app-to-Worklet-to-WASM ID 93 alignment.",
+      "focused_native": "make test passed documentation validation, 11/11 fixture checks, and 116/116 CTest cases, including PEQ response, bounds, slope, stereo, reset, neutral passthrough, and no-allocation coverage.",
+      "browser": "make web-test passed categorized picker/WASM checks and Play on local prerecorded guitar DI through picker ID 114. Shared native/browser path max absolute error 3.37354e-6 and RMS error 5.84118e-7.",
       "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 80 B state, zero fixed latency; p50/p95/p99/p99.9/max callback use 0.0180/0.0180/0.0382/0.3428/1.2195%. Isolated desktop processor-call timing, not target-device performance."
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.7924/0.8295/1.0114/1.2855/1.7550%; 944 B state, zero fixed latency. Isolated desktop timing, not target-device performance."
     },
-    "picker_rows": 114,
-    "remaining": "Human listening, physical hardware behavior, target-device CPU/latency, exact Mark II Turbo applicability, and installed firmware remain unverified."
+    "picker_rows": 115,
+    "remaining": "Human listening, physical Stadium behavior, installed firmware applicability, and target-device CPU/latency remain unverified."
   },
   "next_research": [
     {

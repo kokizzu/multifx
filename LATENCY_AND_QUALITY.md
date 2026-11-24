@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium XL seven-band Parametric EQ-inspired project effect (2026-11-25)
+
+The project-authored Equalizer row at picker ID 114 uses seven independently configured second-order filter sections with fixed per-channel state. Coefficients are prepared when controls change, outside audio processing. It owns **944 B**, adds **zero fixed algorithmic latency**, and allocates nothing during `process()`. The worst-case benchmark enables one low cut and six high cuts at the project's maximum 36 dB/oct slope.
+
+On an AMD Ryzen 9 5950X Release build at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks), `make bench` recorded p50/p95/p99/p99.9/max callback use of **0.7924/0.8295/1.0114/1.2855/1.7550%**. This is isolated desktop processor-call timing, not whole-chain or target-device performance. Native DSP and the local prerecorded guitar-DI browser/WASM path pass automated checks, including the Windows MinGW cross-build. Human listening and device behavior remain unverified; these project measurements do not establish Line 6 DSP/settings parity.
+
 ## Fractal FM9-family Volume/Pan utility (2026-11-25)
 
 The existing project-authored Utility stage is picker ID 93. It performs volume, taper, balance, stereo input selection, independent L/R pan, Output Level, and pass/mute bypass; Auto-Swell remains a separate effect. All ranges, defaults, curve approximations, and routing are project choices. The utility owns **80 B**, adds **zero fixed latency**, and makes no process-time allocation. The focused local guitar-DI Play test verifies audible Utility-row output.

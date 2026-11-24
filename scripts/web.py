@@ -228,6 +228,7 @@ def build_web() -> None:
         "_tf_chain_set_double_take",
         "_tf_chain_set_eq5_graphic",
         "_tf_chain_set_xr1_global_eq",
+        "_tf_chain_set_stadium_seven_band_peq",
         "_tf_chain_set_optical_tremolo",
         "_tf_chain_set_fractal_bias_trem",
         "_tf_chain_set_vibratone",

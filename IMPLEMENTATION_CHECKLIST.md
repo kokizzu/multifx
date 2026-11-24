@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## Line 6 Helix Stadium XL — seven-band Parametric EQ-inspired project effect (2026-11-25)
+
+- [x] Verified the current Line 6 model catalogue: Parametric is Mono/Stereo, Line 6 Original, first appearing in v1.0. The live manual selector is v1.4 Rev D; its migration note says the 7-band model replaces Simple EQ, Low/High Cut, Low/High Shelf and legacy 5-band PEQ with improved peak Q and more precise cut slopes. The Native FAQ confirms seven bands, per-band bypass and adjustable filter slopes. Neither source provides the exact current parameter table, ranges/defaults, DSP or latency.
+- [x] Added a default-off Equalizer row at picker ID 114. Each of seven bands exposes enable, Bell/Low Cut/High Cut, Frequency, Gain, Q and cut slope; all settings/ranges/defaults are explicitly project-authored, not Line 6 settings or algorithm parity. The native class uses fixed state, precomputes coefficients during configuration, and allocates nothing in `process()`.
+- [x] `make test` passes documentation validation, 11/11 fixture-safety checks and 116/116 CTest cases. Browser/WASM Play on the local prerecorded guitar-DI fixture exercises the categorized row, band settings and captured output; full `make web-test` passes. `make windows-cross-build` passes for the MinGW core/offline renderer.
+- [x] On AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms; 2,000 warm-up/5,000 measured), the worst-case seven-active-cut-band preset owns 944 B, adds zero fixed latency, and uses p50/p95/p99/p99.9/max 0.7924/0.8295/1.0114/1.2855/1.7550% of the callback deadline.
+- [ ] Human listening, physical Stadium behavior, installed firmware applicability and target-device CPU/latency remain unverified.
+
 ## Fractal FM9-family three-voice Synth comparison (2026-11-25)
 
 - [x] Verified the November 2026 Blocks Guide, printed p. 102: three-oscillator monophonic tracking; Guitar/Bass range shared by all voices; per-voice waveform, tracking mode, Frequency, Shift, Tune, Duty Cycle, Pan, Filter Frequency/Q, Attack and Level; shared Mix/Level/Balance/Bypass/Bypass Mode/Global Mix. The manual omits most numeric limits/defaults and DSP/latency values; three oscillators do not mean chord tracking.

@@ -204,6 +204,7 @@
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="111"><span class="effect-number">112</span><span class="effect-name">Mutant Filter · project-authored envelope filter</span><span class="effect-default">Band-pass · 350–2200 Hz · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="112"><span class="effect-number">113</span><span class="effect-name">Fractal Chromatic · project-authored four-voice pitch</span><span class="effect-default">4 voices · −12/+7/+12/−5 semitones · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="113"><span class="effect-number">114</span><span class="effect-name">Global EQ · project-authored XR1-inspired in-chain EQ</span><span class="effect-default">5 assignable filters · project L/R assignment</span><span class="effect-category-tag">Equalizer</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="114"><span class="effect-number">115</span><span class="effect-name">7-Band Parametric EQ · project-authored Helix Stadium-inspired</span><span class="effect-default">Neutral seven-band curve · disabled by default</span><span class="effect-category-tag">Equalizer</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -806,6 +807,14 @@
           <button id="xr1-global-eq-reset" type="button">Reset to project defaults</button>
         </div>
         <div id="xr1-global-eq-bands" class="gain-controls"></div>
+      </div>
+      <div class="effect-parameter-group" aria-label="7-Band Parametric EQ controls">
+        <h3>7-Band Parametric EQ · Helix Stadium role reference</h3>
+        <p class="hint">Line 6 identifies a mono/stereo Parametric EQ in Stadium 1.0, and its Native FAQ describes a seven-band parametric EQ with per-band bypass and adjustable filter slopes. The current live Owner's Manual selector says v1.4 Rev D, but its public pages do not expose this model's complete parameter table. Bell/low-cut/high-cut shapes, the 20–20,000 Hz frequency range, ±18 dB gain, Q, 6–36 dB/oct slope steps, defaults, and filter design here are project-authored choices, not Line 6 settings or DSP parity. The default curve is neutral. Configuration happens outside audio processing; the processor has fixed state, no process-time allocation, and zero fixed delay.</p>
+        <div class="gain-controls">
+          <button id="stadium-seven-band-peq-reset" type="button">Reset to project defaults</button>
+        </div>
+        <div id="stadium-seven-band-peq-bands" class="gain-controls"></div>
       </div>
       <div class="effect-parameter-group" aria-label="Optical Tremolo controls">
         <h3>Optical Tremolo · FM9-family control roles</h3>

@@ -41,6 +41,7 @@ PUBLISH_CHECKPOINTS += flagship-control-routing
 PUBLISH_CHECKPOINTS += stadium-mutant-filter
 PUBLISH_CHECKPOINTS += fractal-chromatic-harmonizer
 PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
+PUBLISH_CHECKPOINTS += stadium-seven-band-peq
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

@@ -115,6 +115,7 @@ const EFFECT_NAMES = [
   "Mutant Filter · project-authored envelope filter",
   "Fractal Chromatic · project-authored four-voice pitch",
   "Global EQ · project-authored XR1-inspired five-band in-chain EQ",
+  "7-Band Parametric EQ · project-authored Helix Stadium-inspired",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -130,6 +131,15 @@ const DEFAULT_PARAMETERS = {
     0, 0, 0, 2200, 0.707, 0,
     0, 0, 0, 6600, 0.707, 0,
     0,
+  ],
+  stadiumSevenBandPeq: [
+    1, 0, 63, 0, 0.707, 12,
+    1, 0, 160, 0, 0.707, 12,
+    1, 0, 400, 0, 0.707, 12,
+    1, 0, 1000, 0, 0.707, 12,
+    1, 0, 2500, 0, 0.707, 12,
+    1, 0, 6300, 0, 0.707, 12,
+    1, 0, 12500, 0, 0.707, 12,
   ],
   opticalTremolo: [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0],
   fractalBiasTrem: [4.5, 0.35, 0, 0, 120, 1, 0, -36, 0, 0.18, 1, 0, 0, 0],
@@ -1409,6 +1419,9 @@ const xr1GlobalEQBandContainer = document.querySelector("#xr1-global-eq-bands");
 const xr1GlobalEQMasterBypass = document.querySelector("#xr1-global-eq-master-bypass");
 const xr1GlobalEQResetButton = document.querySelector("#xr1-global-eq-reset");
 const xr1GlobalEQControls = buildXR1GlobalEQControls();
+const stadiumSevenBandPeqContainer = document.querySelector("#stadium-seven-band-peq-bands");
+const stadiumSevenBandPeqResetButton = document.querySelector("#stadium-seven-band-peq-reset");
+const stadiumSevenBandPeqControls = buildStadiumSevenBandPeqControls();
 const opticalTremoloControls = [
   document.querySelector("#optical-tremolo-variant"),
   document.querySelector("#optical-tremolo-rate-hz"),
@@ -3391,6 +3404,99 @@ function buildXR1GlobalEQControls() {
   return controls;
 }
 
+function buildStadiumSevenBandPeqControls() {
+  if (!stadiumSevenBandPeqContainer) return [];
+  const parameters = DEFAULT_PARAMETERS.stadiumSevenBandPeq;
+  const shapes = [[0, "Bell"], [1, "Low cut"], [2, "High cut"]];
+  const controls = [];
+  for (let band = 0; band < 7; band += 1) {
+    const offset = band * 6;
+    const details = document.createElement("details");
+    details.className = "resonator-band-controls";
+    const summary = document.createElement("summary");
+    summary.textContent = `Band ${band + 1}`;
+    details.append(summary);
+    const row = document.createElement("div");
+    row.className = "gain-controls";
+
+    const enabledLabel = document.createElement("label");
+    enabledLabel.className = "mix-control";
+    const enabledText = document.createElement("span");
+    enabledText.textContent = "Band enabled";
+    const enabled = document.createElement("input");
+    enabled.type = "checkbox";
+    enabled.checked = Boolean(parameters[offset]);
+    enabledLabel.append(enabledText, enabled);
+
+    const shapeLabel = document.createElement("label");
+    shapeLabel.className = "mix-control";
+    const shapeText = document.createElement("span");
+    shapeText.textContent = "Shape";
+    const shape = document.createElement("select");
+    for (const [value, label] of shapes) {
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = label;
+      shape.append(option);
+    }
+    shape.value = String(parameters[offset + 1]);
+    shapeLabel.append(shapeText, shape);
+
+    const rangeControl = (title, min, max, step, value, unit, digits) => {
+      const label = document.createElement("label");
+      label.className = "mix-control";
+      const text = document.createElement("span");
+      text.textContent = title;
+      const output = document.createElement("output");
+      const input = document.createElement("input");
+      input.type = "range";
+      input.min = String(min);
+      input.max = String(max);
+      input.step = String(step);
+      input.value = String(value);
+      output.textContent = `${Number(value).toFixed(digits)} ${unit}`;
+      label.append(text, output, input);
+      return { input, output };
+    };
+
+    const frequency = rangeControl(
+      "Frequency · project range 20–20,000 Hz", 20, 20000, 1,
+      parameters[offset + 2], "Hz", 0,
+    );
+    const gain = rangeControl(
+      "Gain · project range −18…+18 dB", -18, 18, 0.1,
+      parameters[offset + 3], "dB", 1,
+    );
+    const q = rangeControl(
+      "Q · project range 0.25–10", 0.25, 10, 0.01,
+      parameters[offset + 4], "Q", 2,
+    );
+    const slopeLabel = document.createElement("label");
+    slopeLabel.className = "mix-control";
+    const slopeText = document.createElement("span");
+    slopeText.textContent = "Cut slope · project choice";
+    const slope = document.createElement("select");
+    for (let value = 6; value <= 36; value += 6) {
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = `${value} dB/oct`;
+      slope.append(option);
+    }
+    slope.value = String(parameters[offset + 5]);
+    slopeLabel.append(slopeText, slope);
+
+    row.append(
+      enabledLabel, shapeLabel,
+      frequency.input.parentElement, gain.input.parentElement,
+      q.input.parentElement, slopeLabel,
+    );
+    details.append(row);
+    stadiumSevenBandPeqContainer.append(details);
+    controls.push({ enabled, shape, frequency, gain, q, slope });
+  }
+  return controls;
+}
+
 function updateEQ5GraphicOptions() {
   const values = eq5GraphicControls.map((control) => Number(control.value));
   DEFAULT_PARAMETERS.eq5Graphic = values;
@@ -3424,6 +3530,50 @@ function updateXR1GlobalEQOptions() {
   if (workletNode) {
     workletNode.port.postMessage({ type: "xr1-global-eq", value: values });
   }
+}
+
+function updateStadiumSevenBandPeqOptions() {
+  const values = [];
+  for (const controls of stadiumSevenBandPeqControls) {
+    const bandValues = [
+      Number(controls.enabled.checked),
+      Number(controls.shape.value),
+      Number(controls.frequency.input.value),
+      Number(controls.gain.input.value),
+      Number(controls.q.input.value),
+      Number(controls.slope.value),
+    ];
+    values.push(...bandValues);
+    controls.frequency.output.textContent = `${bandValues[2].toFixed(0)} Hz`;
+    controls.gain.output.textContent = `${bandValues[3].toFixed(1)} dB`;
+    controls.q.output.textContent = `${bandValues[4].toFixed(2)} Q`;
+  }
+  DEFAULT_PARAMETERS.stadiumSevenBandPeq = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "stadium-seven-band-peq", value: values });
+  }
+}
+
+function resetStadiumSevenBandPeqOptions() {
+  const defaults = [
+    1, 0, 63, 0, 0.707, 12,
+    1, 0, 160, 0, 0.707, 12,
+    1, 0, 400, 0, 0.707, 12,
+    1, 0, 1000, 0, 0.707, 12,
+    1, 0, 2500, 0, 0.707, 12,
+    1, 0, 6300, 0, 0.707, 12,
+    1, 0, 12500, 0, 0.707, 12,
+  ];
+  stadiumSevenBandPeqControls.forEach((controls, band) => {
+    const offset = band * 6;
+    controls.enabled.checked = Boolean(defaults[offset]);
+    controls.shape.value = String(defaults[offset + 1]);
+    controls.frequency.input.value = String(defaults[offset + 2]);
+    controls.gain.input.value = String(defaults[offset + 3]);
+    controls.q.input.value = String(defaults[offset + 4]);
+    controls.slope.value = String(defaults[offset + 5]);
+  });
+  updateStadiumSevenBandPeqOptions();
 }
 
 function resetXR1GlobalEQOptions() {
@@ -4669,6 +4819,19 @@ for (const controls of xr1GlobalEQControls) {
 xr1GlobalEQMasterBypass?.addEventListener("change", updateXR1GlobalEQOptions);
 xr1GlobalEQResetButton?.addEventListener("click", resetXR1GlobalEQOptions);
 updateXR1GlobalEQOptions();
+for (const controls of stadiumSevenBandPeqControls) {
+  for (const control of [
+    controls.enabled, controls.shape, controls.frequency.input,
+    controls.gain.input, controls.q.input, controls.slope,
+  ]) {
+    control.addEventListener("input", updateStadiumSevenBandPeqOptions);
+    control.addEventListener("change", updateStadiumSevenBandPeqOptions);
+  }
+}
+stadiumSevenBandPeqResetButton?.addEventListener(
+  "click", resetStadiumSevenBandPeqOptions,
+);
+updateStadiumSevenBandPeqOptions();
 for (const control of opticalTremoloControls) {
   control.addEventListener("input", updateOpticalTremoloOptions);
   control.addEventListener("change", updateOpticalTremoloOptions);
@@ -10635,7 +10798,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-         effectMemory.length !== 114 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -10751,7 +10914,7 @@ async function runXR1GlobalEQBrowserSmokeTest(reference, captureView, captureBuf
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || xr1GlobalEQControls.length !== 5 ||
-        effectMemory.length !== 114 || !(effectMemory[113] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[113] > 0) ||
         DEFAULT_PARAMETERS.xr1GlobalEq.length !== 31 ||
         DEFAULT_PARAMETERS.xr1GlobalEq[14] !== 12 ||
         DEFAULT_PARAMETERS.xr1GlobalEq[15] !== 750) {
@@ -10863,7 +11026,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-         effectMemory.length !== 114 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -10940,6 +11103,131 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
   }
 }
 
+async function runStadiumSevenBandPeqBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = stadiumSevenBandPeqControls.map((controls) => ({
+    enabled: controls.enabled.checked,
+    shape: controls.shape.value,
+    frequency: controls.frequency.input.value,
+    gain: controls.gain.input.value,
+    q: controls.q.input.value,
+    slope: controls.slope.value,
+  }));
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Stadium PEQ smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    stadiumSevenBandPeqControls.forEach((controls, band) => {
+      controls.enabled.checked = true;
+      controls.shape.value = band === 0 ? "1" : "0";
+      controls.frequency.input.value = band === 0 ? "80" :
+        [63, 160, 400, 1000, 2500, 6300, 12500][band].toString();
+      controls.gain.input.value = band === 3 ? "9" : "0";
+      controls.q.input.value = "0.707";
+      controls.slope.value = band === 0 ? "24" : "12";
+    });
+    updateStadiumSevenBandPeqOptions();
+    effectCategoryFilter.value = "eq";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="114"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "eq" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
+        !checkbox || stadiumSevenBandPeqControls.length !== 7 ||
+        effectMemory.length !== 115 || !(effectMemory[114] > 0) ||
+        DEFAULT_PARAMETERS.stadiumSevenBandPeq.length !== 42 ||
+        DEFAULT_PARAMETERS.stadiumSevenBandPeq[2] !== 80 ||
+        DEFAULT_PARAMETERS.stadiumSevenBandPeq[5] !== 24 ||
+        DEFAULT_PARAMETERS.stadiumSevenBandPeq[21] !== 9) {
+      throw new Error("Stadium-inspired seven-band PEQ is missing its categorized row, controls, or memory.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 114;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Stadium PEQ picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Stadium PEQ playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Stadium PEQ produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Equalizer", enabledEffectIndex: 114,
+      bands: 7, bellBand: 4, bellGainDb: 9, lowCutHz: 80,
+      lowCutSlopeDbPerOctave: 24, playOutputCaptured: true,
+      peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[114], algorithmicLatencySamples: 0,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      stadiumSevenBandPeqControls.forEach((controls, band) => {
+        const previous = previousControls[band];
+        controls.enabled.checked = previous.enabled;
+        controls.shape.value = previous.shape;
+        controls.frequency.input.value = previous.frequency;
+        controls.gain.input.value = previous.gain;
+        controls.q.input.value = previous.q;
+        controls.slope.value = previous.slope;
+      });
+      updateStadiumSevenBandPeqOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runOpticalTremoloBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = opticalTremoloControls.map((control) =>
@@ -10970,7 +11258,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-         effectMemory.length !== 114 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -11083,7 +11371,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-         effectMemory.length !== 114 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -11195,7 +11483,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-         effectMemory.length !== 114 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -11303,7 +11591,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-         effectMemory.length !== 114 || !(effectMemory[107] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -11402,7 +11690,7 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
         !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
-         effectMemory.length !== 114 || !(effectMemory[108] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[108] > 0) ||
         DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
           "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
       throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
@@ -11501,7 +11789,7 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
         !checkbox || pitchSemitones.min !== "-24" ||
-        pitchSemitones.max !== "24" || effectMemory.length !== 114 ||
+        pitchSemitones.max !== "24" || effectMemory.length !== 115 ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Polyphonic pitch control mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -11614,7 +11902,7 @@ async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, c
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !checkbox || pitchMix.min !== "0" || pitchMix.max !== "100" ||
-        pitchMix.value !== "100" || effectMemory.length !== 114 ||
+        pitchMix.value !== "100" || effectMemory.length !== 115 ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Virtual Capo Mix UI mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -11771,7 +12059,7 @@ async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, cap
         !checkbox || pitchMode.querySelector('option[value="pedal-shifter"]') === null ||
         pitchExpressionTarget.min !== "-24" || pitchExpressionTarget.max !== "24" ||
         pitchExpressionPosition.min !== "0" || pitchExpressionPosition.max !== "100" ||
-        effectMemory.length !== 114 || !(effectMemory[22] > 0)) {
+        effectMemory.length !== 115 || !(effectMemory[22] > 0)) {
       throw new Error("Pedal Shifter controls are missing or incorrectly categorized.");
     }
 
@@ -12054,7 +12342,7 @@ async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureV
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmonizer") ||
-        !checkbox || !customOption || effectMemory.length !== 114 ||
+        !checkbox || !customOption || effectMemory.length !== 115 ||
         !(effectMemory[effectIndex] > 0) || diatonicCustomScaleNotes.length !== 8) {
       throw new Error("Diatonic custom scale is missing its categorized picker row or controls.");
     }
@@ -12184,7 +12472,7 @@ async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuff
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Poly Detune") ||
         !checkbox || checkbox.checked || polyDetuneControls.length !== 6 ||
-        effectMemory.length !== 114 || !(effectMemory[109] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[109] > 0) ||
         DEFAULT_PARAMETERS.polyDetune.join(",") !== "2,0.25,0.75,0.75,0.25,0") {
       throw new Error("Poly Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -12289,7 +12577,7 @@ async function runFenderPedalDetuneBrowserSmokeTest(reference, captureView, capt
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Pedal Detune") ||
         !checkbox || checkbox.checked || pedalDetuneControls.length !== 2 ||
-        effectMemory.length !== 114 || !(effectMemory[110] > 0) ||
+        effectMemory.length !== 115 || !(effectMemory[110] > 0) ||
         DEFAULT_PARAMETERS.pedalDetune.join(",") !== "0,0.5") {
       throw new Error("Pedal Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -12430,7 +12718,7 @@ async function runFractalChromaticHarmonizerBrowserSmokeTest(reference, captureV
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Fractal Chromatic") ||
         !checkbox || checkbox.checked || fractalChromaticHarmonizerControls.length !== 24 ||
-        effectMemory.length !== 114 || effectMemory[effectIndex] !== 0) {
+        effectMemory.length !== 115 || effectMemory[effectIndex] !== 0) {
       throw new Error("Fractal Chromatic picker, disabled default, 24 controls, or lazy memory state is incorrect.");
     }
     const expectedBounds = [
@@ -13621,8 +13909,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 114 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 114 || effectRows.length !== 114 ||
+    const expectedEffectIds = Array.from({ length: 115 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 115 || effectRows.length !== 115 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -13717,7 +14005,11 @@ async function runBrowserSelfTest() {
                !EFFECT_NAMES[113]?.startsWith("Global EQ · project-authored XR1-inspired") ||
                effectRows[113]?.dataset.category !== "eq" ||
                effectRows[113]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
-               initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
+                !EFFECT_NAMES[114]?.startsWith("7-Band Parametric EQ · project-authored Helix Stadium-inspired") ||
+                effectRows[114]?.dataset.category !== "eq" ||
+                effectRows[114]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
+                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
+                initialEffectState[114] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -13754,7 +14046,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-       throw new Error(`The effect picker must list 114 ordered, categorized effects (IDs 0–113), including XR1-inspired in-chain Global EQ; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[113]}, row113=${effectRows[113]?.dataset.category}/${effectRows[113]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[113]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+        throw new Error(`The effect picker must list 115 ordered, categorized effects (IDs 0–114), including the XR1-inspired Global EQ and Stadium-inspired seven-band PEQ; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[114]}, row114=${effectRows[114]?.dataset.category}/${effectRows[114]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[114]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -14991,7 +15283,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const eqIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (eqIds.join(",") !== "20,25,26,27,59,103,113" || effectCount.value !== `7 of ${effectRows.length}` ||
+    if (eqIds.join(",") !== "20,25,26,27,59,103,113,114" || effectCount.value !== `8 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Equalizer category must include both parametric EQs and the graphic/shelf EQs.");
     }
@@ -15374,6 +15666,8 @@ async function runBrowserSelfTest() {
     parityEnabled[112] = false;
     // XR1-inspired Global EQ has a focused local guitar Play test and no offline CLI stage.
     parityEnabled[113] = false;
+    // Stadium-inspired seven-band PEQ has its own local-guitar Play smoke and no offline CLI stage.
+    parityEnabled[114] = false;
        // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, Celestial/Cloud Reverb, and Fractal synth have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
@@ -15429,7 +15723,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-     if (parityEnabled.length !== 114 || activeProcessorIndices.length !== 78 ||
+      if (parityEnabled.length !== 115 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -16299,6 +16593,10 @@ async function runBrowserSelfTest() {
     const xr1GlobalEQSmoke = await runXR1GlobalEQBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Stadium-inspired seven-band PEQ Equalizer playback on local guitar audio…";
+    const stadiumSevenBandPeqSmoke = await runStadiumSevenBandPeqBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Optical Tremolo Modulation-category playback on local guitar audio…";
     const opticalTremoloSmoke = await runOpticalTremoloBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -16562,6 +16860,7 @@ async function runBrowserSelfTest() {
       doubleTake: doubleTakeSmoke,
       eq5Graphic: eq5GraphicSmoke,
       xr1GlobalEq: xr1GlobalEQSmoke,
+      stadiumSevenBandPeq: stadiumSevenBandPeqSmoke,
       opticalTremolo: opticalTremoloSmoke,
       fractalBiasTrem: fractalBiasTremSmoke,
       vibratone: vibratoneSmoke,

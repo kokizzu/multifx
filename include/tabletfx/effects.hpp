@@ -59,6 +59,7 @@
 #include "tabletfx/effects/triple_double_chorus.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/five_band_eq.hpp"
+#include "tabletfx/effects/stadium_seven_band_peq.hpp"
 #include "tabletfx/effects/looper.hpp"
 #include "tabletfx/effects/deluxe_looper.hpp"
 #include "tabletfx/effects/chromatic_pitch_delay.hpp"

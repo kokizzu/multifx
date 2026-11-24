@@ -35,6 +35,7 @@ EFFECTS.push("pedal-detune");
 EFFECTS.push("mutant-filter");
 EFFECTS.push("fractal-chromatic-harmonizer");
 EFFECTS.push("xr1-global-eq");
+EFFECTS.push("stadium-seven-band-peq");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -447,6 +448,15 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         0, 0, 0, 6600, 0.707, 0,
         0,
       ]);
+      this.configureStadiumSevenBandPeq(parameters.stadiumSevenBandPeq || [
+        1, 0, 63, 0, 0.707, 12,
+        1, 0, 160, 0, 0.707, 12,
+        1, 0, 400, 0, 0.707, 12,
+        1, 0, 1000, 0, 0.707, 12,
+        1, 0, 2500, 0, 0.707, 12,
+        1, 0, 6300, 0, 0.707, 12,
+        1, 0, 12500, 0, 0.707, 12,
+      ]);
       this.configureOpticalTremolo(parameters.opticalTremolo ||
         [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0]);
       this.configureFractalBiasTrem(parameters.fractalBiasTrem ||
@@ -753,6 +763,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     if (!pointer) return;
     this.module.HEAPF32.set(values, pointer >>> 2);
     this.module._tf_chain_set_xr1_global_eq(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
+  configureStadiumSevenBandPeq(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 42) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_stadium_seven_band_peq(this.chain, pointer, values.length);
     this.module._free(pointer);
   }
 
@@ -1485,6 +1506,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureEQ5Graphic(message.value);
     } else if (message.type === "xr1-global-eq" && this.ready) {
       this.configureXR1GlobalEQ(message.value);
+    } else if (message.type === "stadium-seven-band-peq" && this.ready) {
+      this.configureStadiumSevenBandPeq(message.value);
     } else if (message.type === "optical-tremolo" && this.ready) {
       this.configureOpticalTremolo(message.value);
     } else if (message.type === "fractal-bias-trem" && this.ready) {

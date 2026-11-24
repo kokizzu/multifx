@@ -2468,6 +2468,27 @@ STADIUM_MUTANT_FILTER_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+STADIUM_SEVEN_BAND_PEQ_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/stadium_seven_band_peq.hpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_stadium_seven_band_peq.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
@@ -2788,6 +2809,10 @@ CHECKPOINTS = {
     "stadium-mutant-filter": (
         STADIUM_MUTANT_FILTER_CHECKPOINT_PATHS,
         "feat: add project-authored Mutant Filter effect",
+    ),
+    "stadium-seven-band-peq": (
+        STADIUM_SEVEN_BAND_PEQ_CHECKPOINT_PATHS,
+        "feat: add categorized seven-band parametric EQ",
     ),
     "fractal-chromatic-harmonizer": (
         FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS,

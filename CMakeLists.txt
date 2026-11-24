@@ -151,6 +151,12 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_five_band_eq_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_five_band_eq_tests COMMAND tabletfx_five_band_eq_tests)
 
+    add_executable(tabletfx_stadium_seven_band_peq_tests
+        tests/test_stadium_seven_band_peq.cpp)
+    target_link_libraries(tabletfx_stadium_seven_band_peq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_stadium_seven_band_peq_tests
+        COMMAND tabletfx_stadium_seven_band_peq_tests)
+
     add_executable(tabletfx_xr1_global_eq_tests tests/test_xr1_global_eq.cpp)
     target_link_libraries(tabletfx_xr1_global_eq_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_xr1_global_eq_tests COMMAND tabletfx_xr1_global_eq_tests)
