@@ -13439,9 +13439,18 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     const parameters = [...DEFAULT_PARAMETERS.fractalThreeVoiceSynth];
     parameters[0] = 0;
     parameters[1] = 2;
-    parameters[10] = 0.5;
-    parameters[11] = 7;
-    parameters[22] = 7;
+    parameters[6] = -0.7;
+    parameters[10] = 0.22;
+    parameters[11] = 1;
+    parameters[12] = 2;
+    parameters[14] = 7;
+    parameters[17] = 0;
+    parameters[21] = 0.18;
+    parameters[22] = 2;
+    parameters[23] = 2;
+    parameters[25] = -12;
+    parameters[28] = 0.7;
+    parameters[32] = 0.18;
     parameters[33] = 1;
     fractalThreeVoiceSynthControls.forEach((control, index) => {
       control.value = String(parameters[index]);
@@ -13490,10 +13499,10 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     }
     return {
       enabledEffectIndex: 78,
-      waveform: "Sine",
-      tracking: "Pitch + envelope",
+      generatedVoices: 3,
+      waveform: "Sine / Triangle / Square",
+      tracking: "Pitch + envelope for all three voices",
       inputTrackingRange: "Bass",
-      generatedVoices: 1,
       rmsDifference,
       maxDifference,
       changedSamples,

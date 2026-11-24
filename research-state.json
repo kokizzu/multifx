@@ -4,31 +4,52 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "8afb24ea93a868422ca9d2f5a8390b6d92b2f2e2",
+  "previous_checkpoint_commit": "1f1a2a198dad629c63cb813ffb2ca2628e80e390",
   "latest_audit": {
-    "name": "Fractal FM9-family Volume/Pan utility audit and implementation",
+    "name": "Fractal FM9-family three-voice Synth verification",
     "status": "verified; automated checks pass; human listening and hardware checks remain",
     "date": "2026-11-25",
-    "picker_index": 93,
-    "category": "Utility",
-    "official_source": "The current November 2026 FM9-family Blocks Guide, printed p. 109, documents Volume/Auto-Swell Type, Volume, detector controls, Balance, seven taper choices, Input Select, independent L/R pan, pass-or-mute bypass, and Output Level separate from Volume. It publishes no numeric bounds/defaults or taper/pan laws. Firmware v12.0 lists FM9 Original/Turbo but not Mark II Turbo by name; installed firmware is unknown.",
-    "project_controls": "Existing project-authored Utility picker ID 93: normalized Volume position 0…1; configurable endpoints bounded −96…+12 dB (default endpoints −96/0); seven project taper approximations; Balance and independent L/R pan ±100%; Stereo/Left/Right selection; independent Output Level −24…+12 dB; pass/mute bypass. Auto-Swell remains separate and no hardware expression-controller assignment is included. Mono uses shared volume/output gain; channels beyond the first stereo pair receive shared gain. 80 B state, zero fixed latency, no process-time allocation; no Fractal settings/DSP/sound parity.",
+    "picker_index": 78,
+    "category": "Synth",
+    "official_source": "The current November 2026 FM9-family Blocks Guide, printed p. 102, documents a three-oscillator monophonic Synth, shared Guitar/Bass tracking range, per-voice wave/track/frequency/shift/tune/duty/pan/filter/attack/level controls, and shared Mix-page controls. Tune is ±50 cents; most ranges/defaults, DSP, and latency are not specified. Disabling voices can conserve CPU. FM9 v12.0 lists Original/Turbo but not Mark II Turbo by name; installed firmware is unknown.",
+    "project_controls": "Existing project-authored Synth picker ID 78 has three tracked voices, a project Quantize option and a global Guitar/Bass detector. It does not claim chord tracking or Fractal parameter/DSP/sound parity and does not expose the shared Mix-page controls. Bass candidates reach 23.125 Hz, using ~128 ms analysis windows and 32 ms hops; observed project response is ~0.1–0.22 s, not fixed audio-path latency. Owned state 1,031,344 B; processing uses fixed state.",
     "verification": {
-      "focused_native": "make test-volume-pan passed the focused VolumePan CTest suite.",
-      "browser": "make web-test-volume-pan passed with local prerecorded 48 kHz stereo guitar DI: Utility category, picker ID 93, 95,980 active samples, peak 0.126371 and difference RMS 0.0169668. make inspect-volume-pan-path verified app-to-Worklet-to-WASM ID 93 mapping.",
+      "focused_native": "make test passed all 115/115 CTest cases, including the three-voice and 23.125 Hz Bass detector coverage; 11/11 fixture checks passed.",
+      "browser": "Full make web-test passed. Browser smoke plays local prerecorded Guitar-TECHS DI through three active Sine/Triangle/Square voices in Bass tracking at picker ID 78; 95,596 samples changed, RMS difference 0.44038. Wider browser/native comparison max absolute error 3.3736e−6 and RMS error 5.8412e−7. This does not test real-bass note accuracy.",
       "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 80 B state, zero fixed latency; p50/p95/p99/p99.9/max callback use 0.0180/0.0180/0.0382/0.3428/1.2195%. Isolated processor-call result, not target-device performance."
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback), 2,000 warm-up/5,000 measured: 1,031,344 B state. Guitar p50/p95/p99/p99.9/max 11.7641/15.1125/17.0858/20.6417/22.3742%; Bass 11.8406/17.3034/20.9259/27.9432/50.2461%. Isolated processor-call result, not target-device performance."
     },
-    "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
+    "remaining": "Real-bass tracking accuracy, musical response, human listening, hardware behavior, target-device CPU/latency, exact FM9 Mark II Turbo firmware applicability, and installed firmware remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Three-oscillator monophonic Synth documentation and browser/native verification",
-    "qualification": "The current November 2026 family guide documents the Synth but most numeric ranges/defaults, latency, and DSP cost are unknown. Compare against the existing project synth before considering code; three oscillators do not imply three-note tracking polyphony."
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Dedicated 7-band Parametric EQ with per-band bypass and adjustable filter slopes",
+    "qualification": "The current manufacturer catalog/manual/FAQ establish the model identity and broad features, but not exact control names, ranges/defaults, slope choices, DSP, or latency. Existing 5-band PEQ and 7-band graphic EQ are related, not equivalent. Any project implementation must identify its parameters as project-authored."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fractal FM9-family three-voice Synth comparison and browser verification",
+      "status": "verified; automated tests pass; manual audio checks remain",
+      "picker_index": 78,
+      "category": "Synth",
+      "official_source": {
+        "title": "Fractal Audio Blocks Guide",
+        "revision": "November 2026 cover date; printed p. 102. FM9-family documentation. FM9 v12.0 download listing names Original/Turbo but not Mark II Turbo explicitly; installed firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Family-level evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
+      },
+      "documented_controls": "Three oscillators with monophonic input tracking; shared Guitar/Bass range. Per voice: Waveform (Sine, Triangle, Square, Sawtooth, Random, White Noise, Pink Noise, Off), Track (Off, Env Only, Pitch+Env, Quantize), Frequency, Shift, Tune ±50 cents, Duty Cycle, Pan, Filter Frequency/Q, Attack, Level. Shared Mix-page controls: Mix, Level, Balance, Bypass, Bypass Mode, Global Mix. Disabling a voice may conserve CPU. Most ranges/defaults, DSP, and latency are not specified.",
+      "project_controls": "Existing project-authored Three-Voice Tracked Synth; categorized at picker ID 78. Three oscillators share one monophonic detector and do not track chords. Project exposes Guitar/Bass ranges, with Bass candidates to 23.125 Hz, but omits the shared Mix-page controls. Project controls/DSP and detector are not Fractal settings/parity. Fixed state; 1,031,344 B; Bass analysis windows ~128 ms with 32 ms hops and observed ~0.1–0.22 s response, not fixed audio-path latency.",
+      "verification": {
+        "native": "make test passed docs validation, 11/11 fixture checks, and 115/115 CTest cases.",
+        "browser": "Full make web-test passed. Three voices (Sine/Triangle/Square) played local prerecorded Guitar-TECHS DI in Bass mode at picker ID 78; 95,596 samples changed, difference RMS 0.44038. Browser/native comparison maximum absolute error 3.3736e−6; RMS error 5.8412e−7. This is not real-bass tracking-accuracy evidence.",
+        "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,667 μs callback: Guitar p50/p95/p99/p99.9/max 11.7641/15.1125/17.0858/20.6417/22.3742%; Bass 11.8406/17.3034/20.9259/27.9432/50.2461%. Isolated CPU estimate, not target-device performance."
+      },
+      "remaining": "Human listening, guitar/bass tracking quality, real-bass test, hardware behavior, target-device CPU, exact Mark II Turbo firmware applicability, and installed firmware remain open."
+    },
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
       "status": "verified",

@@ -1755,6 +1755,7 @@ FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "LATENCY_AND_QUALITY.md",
     "RESEARCH.md",
+    "research-state.json",
     "README.md",
     "scripts/publish_checkpoint.py",
 )
@@ -2646,7 +2647,7 @@ CHECKPOINTS = {
                       "feat: add project-authored three-stage distortion"),
     "fractal-three-voice-synth": (
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
-        "feat: add project-authored three-voice tracked synth",
+        "test: verify three-voice synth browser and Bass paths",
     ),
     "fractal-ring-mod-tracking": (
         FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS,

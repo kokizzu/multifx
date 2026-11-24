@@ -36,7 +36,7 @@ enum class FractalSynthTrackingMode : std::uint8_t {
 };
 
 // Project-authored bounds and defaults for a three-voice monophonic synth.
-// The June 2023 Fractal Blocks Guide documents the control names and
+// The November 2026 Fractal Blocks Guide documents the control names and
 // behavior but does not give most numeric limits, defaults, or DSP details.
 struct FractalSynthVoiceParameters {
     FractalSynthWaveform waveform = FractalSynthWaveform::Sawtooth;
