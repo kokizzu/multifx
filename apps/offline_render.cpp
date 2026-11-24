@@ -3973,7 +3973,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     }
     if (options.pitch_enabled) {
         auto pitch = std::make_unique<tabletfx::PolyPitchShifter>(
-            static_cast<float>(sample_rate), channels);
+            static_cast<float>(sample_rate), channels, 24.0F);
         pitch->set_pitch_semitones(options.pitch_semitones);
         effects.push_back(std::move(pitch));
     }
@@ -5309,6 +5309,12 @@ void run_bench() {
         effect->set_pitch_semitones(5.0F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("poly-pitch-shifter-fractal-24-semitone", [=] {
+        auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
+            static_cast<float>(sample_rate), channels, 24.0F);
+        effect->set_pitch_semitones(24.0F);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("poly-pitch-shifter-mono", [=] {
         auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
             static_cast<float>(sample_rate), 1);
@@ -5677,7 +5683,7 @@ void print_usage() {
                     " [--delay-dual-b-feedback 0..0.95] [--delay-dual-b-mix 0..1]"
                    " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
                   " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
-                 " [--pitch-semitones -12..12]\n"
+                  " [--pitch-semitones -24..24]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
                  " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"
               << "                 [--compressor-threshold-db dB] [--compressor-ratio 1..20]"

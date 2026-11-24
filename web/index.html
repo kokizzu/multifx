@@ -112,7 +112,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="19"><span class="effect-number">20</span><span class="effect-name">Vibrato</span><span class="effect-default">5 Hz · 0.35 ms · 100% wet</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="20"><span class="effect-number">21</span><span class="effect-name">Three-band parametric EQ</span><span class="effect-default">120 / 800 / 5000 Hz</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="21"><span class="effect-number">22</span><span class="effect-name">Digital delay</span><span class="effect-default">350 ms · 25% feedback · 25% wet</span><span class="effect-category-tag">Delay</span></label>
-        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−12…+12 semitones · neutral by default</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="22"><span class="effect-number">23</span><span class="effect-name">Polyphonic pitch shifter</span><span class="effect-default">−24…+24 semitones · neutral by default</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="23"><span class="effect-number">24</span><span class="effect-name">Optical-style compressor</span><span class="effect-default">Linked RMS · program-dependent release</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="dynamics"><input type="checkbox" data-effect="24"><span class="effect-number">25</span><span class="effect-name">FET-style compressor</span><span class="effect-default">Fast peak detector · fixed release</span><span class="effect-category-tag">Dynamics</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="25"><span class="effect-number">26</span><span class="effect-name">Guitar graphic EQ</span><span class="effect-default">5- or 7-band</span><span class="effect-category-tag">Equalizer</span></label>
@@ -205,8 +205,9 @@
       <div class="gain-controls">
         <label class="mix-control" for="pitch-semitones">
           <span>Pitch transpose</span><output id="pitch-semitones-value" for="pitch-semitones">0.0 semitones</output>
-          <input id="pitch-semitones" type="range" min="-12" max="12" step="0.5" value="0">
+          <input id="pitch-semitones" type="range" min="-24" max="24" step="0.5" value="0">
         </label>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">June 2023 FM9-family Blocks Guide</a> documents up to ±24 semitones for its chromatic pitch voices. This project uses its own polyphonic pitch engine and extends the same UI range; it does not claim Fractal algorithm, sound, tracking quality, or DSP parity. The current <a href="https://www.fractalaudio.com/fm9-downloads/" target="_blank" rel="noreferrer">FM9 firmware page</a> names Original and Turbo, not Mark II Turbo; that model's applicability and installed firmware remain unconfirmed.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Optical-style compressor controls">
         <h3>Optical-style compressor · project-authored</h3>

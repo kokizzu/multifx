@@ -156,6 +156,16 @@ void test_wider_pitch_range_is_opt_in_and_per_instance() {
                 "±24-semitone output deviates more than 45 cents on a steady tone");
         require(amplitude_near(output, expected) > 0.025,
                 "±24-semitone output level is too weak for the focused test tone");
+
+        constexpr std::array<double, 3> chord{220.0, 277.18263, 329.62756};
+        wide_range.reset();
+        const auto chord_output = render_tones(wide_range, {chord[0], chord[1], chord[2]});
+        for (const double input_frequency : chord) {
+            const double target = input_frequency *
+                std::exp2(static_cast<double>(semitones) / 12.0);
+            require(amplitude_near(chord_output, target) > 0.005,
+                    "a polyphonic chord component was lost at a ±24-semitone endpoint");
+        }
     }
 
     default_range.set_pitch_semitones(24.0F);

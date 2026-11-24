@@ -199,7 +199,7 @@ public:
                                 350.0F, 0.25F, 0.25F, true),
                             false});
         effects_.push_back({std::make_unique<tabletfx::PolyPitchShifter>(
-                                static_cast<float>(sample_rate), channels),
+                                static_cast<float>(sample_rate), channels, 24.0F),
                             false});
         effects_.push_back({std::make_unique<tabletfx::OpticalCompressor>(
                                 static_cast<float>(sample_rate)),

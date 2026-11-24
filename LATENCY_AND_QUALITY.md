@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Existing polyphonic pitch shifter — Fractal-range profile (2026-11-24)
+
+The browser Pitch row (index 22) and offline-renderer pitch stage now configure the existing `PolyPitchShifter` with a ±24-semitone limit; neutral remains 0 semitones. Other `PolyPitchShifter` instances retain their existing per-instance profiles. A wider limit creates no second engine: it adds no processor state or extra fixed latency. The shifter itself has 5.333 ms algorithmic latency at 48 kHz, owns 494,016 B in the native stereo benchmark, and reports 489,416 B for the focused WASM effect.
+
+The June 2023 FM9-family Blocks Guide documents up to ±24 semitones per voice for Dual/Quad Chromatic types. The project still has one global shift control, not independent two/four-voice routing or Fractal algorithm parity. A Ryzen 9 5950X Release benchmark with +24 semitones at 48 kHz stereo/128-frame blocks (2.667 ms deadline; 2,000 warm-up, 5,000 measured) recorded p50/p95/p99/p99.9/max at 10.2614/13.7768/17.9694/26.8763/40.8795% of the callback deadline. This is an isolated desktop processor-call measure; the p99.9 and maximum tail, whole-chain load, and mobile hardware performance still warrant caution. Native tests check ±24 endpoint tones and chords. Focused browser Play on local prerecorded Guitar-TECHS DI compares captured ±12 and ±24 outputs for both polarities; Windows MinGW build passes. Human listening and target-device checks remain open.
+
 ## Project-authored Line 6 Helix Stadium Poly Detune-inspired Modulation (2026-11-24)
 
 The project effect is a short modulated-delay widener, not a note tracker or static pitch shifter. Its direct path is immediate; the wet path uses up to two modulated taps around a 5 ms base delay. Defaults are two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, and 0 dB level. Project bounds and smoothing are not Line 6 controls. The effect uses one preallocated shared ring, does not evaluate trigonometric functions per sample, and allocates nothing in `process()`. At 48 kHz stereo it owns 3,656 B natively; the browser reports 3,620 B of effect memory. This is a project-authored approximation, not Line 6 DSP or sound parity.

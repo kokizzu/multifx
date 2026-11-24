@@ -2140,6 +2140,23 @@ LINE6_POLY_DETUNE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FRACTAL_POLY_PITCH_RANGE_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "tests/test_poly_pitch_shifter.cpp",
+    "web/app.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2509,6 +2526,10 @@ CHECKPOINTS = {
     "line6-poly-detune": (
         LINE6_POLY_DETUNE_CHECKPOINT_PATHS,
         "feat: add categorized Poly Detune-inspired modulation",
+    ),
+    "fractal-poly-pitch-range": (
+        FRACTAL_POLY_PITCH_RANGE_CHECKPOINT_PATHS,
+        "feat: expose Fractal-range poly pitch transpose",
     ),
 }
 

@@ -10675,6 +10675,118 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
   }
 }
 
+async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousPitch = pitchSemitones.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Polyphonic pitch range smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="22"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
+        !checkbox || pitchSemitones.min !== "-24" ||
+        pitchSemitones.max !== "24" || effectMemory.length !== 110 ||
+        !(effectMemory[22] > 0)) {
+      throw new Error(`Polyphonic pitch control mismatch: category=${row?.dataset.category}, ` +
+        `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
+        `name=${row?.querySelector(".effect-name")?.textContent}, ` +
+        `checked=${checkbox?.checked}, min=${pitchSemitones.min}, max=${pitchSemitones.max}, ` +
+        `memoryLength=${effectMemory.length}, effectMemory=${effectMemory[22]}.`);
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 22;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const captureAt = async (semitones) => {
+      pitchSemitones.value = String(semitones);
+      pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${semitones}-semitone pitch playback.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+    const at12 = await captureAt(12);
+    const at24 = await captureAt(24);
+    const atMinus12 = await captureAt(-12);
+    const atMinus24 = await captureAt(-24);
+    const compare = (first, second, label) => {
+      let squares = 0;
+      let changedSamples = 0;
+      let peak = 0;
+      for (let index = 0; index < second.length; index += 1) {
+        const sample = second[index];
+        if (!Number.isFinite(sample)) {
+          throw new Error(`${label} output contains a non-finite sample at ${index}.`);
+        }
+        peak = Math.max(peak, Math.abs(sample));
+        const delta = sample - first[index];
+        squares += delta * delta;
+        if (Math.abs(delta) > 1e-6) changedSamples += 1;
+      }
+      const differenceRms = second.length > 0
+        ? Math.sqrt(squares / second.length) : 0;
+      if (peak < 1e-5 || differenceRms < 1e-5 || changedSamples < 32) {
+        throw new Error(`${label} did not produce a distinct shifted output.`);
+      }
+      return { peak, differenceRms, changedSamples };
+    };
+    return {
+      category: "Pitch",
+      enabledEffectIndex: 22,
+      documentedRangeSemitones: [-24, 24],
+      projectPitchEngine: "polyphonic STFT; no Fractal algorithm parity claimed",
+      positiveEndpoint: compare(at12, at24, "+24 vs +12 semitones"),
+      negativeEndpoint: compare(atMinus12, atMinus24, "-24 vs -12 semitones"),
+      effectMemoryBytes: effectMemory[22],
+      playOutputCaptured: true,
+    };
+  } finally {
+    stopSource(false);
+    pitchSemitones.value = previousPitch;
+    pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = polyDetuneControls.map((control) => control.value);
@@ -13914,6 +14026,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Poly Detune browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-poly-pitch-range") {
+          testResult.textContent = "Checking the FM9-family ±24 polyphonic pitch range with local guitar audio…";
+          const pitchRangeSmoke = await runFractalPolyPitchRangeBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            polyPitchRange: pitchRangeSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX poly-pitch range browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {

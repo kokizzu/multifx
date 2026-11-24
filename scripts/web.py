@@ -729,7 +729,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  vibratone_only: bool = False,
                  uni_verse_vibe_only: bool = False,
                   four_osc_only: bool = False,
-                  poly_detune_only: bool = False) -> None:
+                  poly_detune_only: bool = False,
+                  fractal_poly_pitch_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1233,6 +1234,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=four-osc-generator"
         elif poly_detune_only:
             url = base_url + "/web/index.html?selftest=poly-detune"
+        elif fractal_poly_pitch_only:
+            url = base_url + "/web/index.html?selftest=fractal-poly-pitch-range"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1431,7 +1434,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
                 None if volume_pan_only or stereo_filter_only or step_tremolo_only or
                 fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
-                or four_osc_only or poly_detune_only
+                or four_osc_only or poly_detune_only or fractal_poly_pitch_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1472,6 +1475,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif poly_detune_only:
             print("Focused Line 6 Poly Detune browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fractal_poly_pitch_only:
+            print("Focused Fractal-family poly-pitch ±24 browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1531,6 +1537,7 @@ def main() -> None:
         "test-fender-universe-vibe",
         "test-line6-four-osc-generator",
         "test-line6-poly-detune",
+        "test-fractal-poly-pitch-range",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1558,6 +1565,8 @@ def main() -> None:
         browser_test(four_osc_only=True)
     elif action == "test-line6-poly-detune":
         browser_test(poly_detune_only=True)
+    elif action == "test-fractal-poly-pitch-range":
+        browser_test(fractal_poly_pitch_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":
