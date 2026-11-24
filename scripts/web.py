@@ -168,6 +168,7 @@ def build_web() -> None:
         "_tf_chain_set_poly_detune",
         "_tf_chain_set_pedal_detune",
         "_tf_chain_set_mutant_filter",
+        "_tf_chain_set_fractal_chromatic_harmonizer",
         "_tf_chain_set_fractal_three_voice_synth",
         "_tf_chain_set_enhancer",
         "_tf_chain_deluxe_looper_command",
@@ -306,6 +307,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "poly_detune.cpp"),
         str(ROOT / "src" / "effects" / "pedal_detune.cpp"),
         str(ROOT / "src" / "effects" / "mutant_filter.cpp"),
+        str(ROOT / "src" / "effects" / "fractal_chromatic_harmonizer.cpp"),
         str(ROOT / "src" / "effects" / "grain_delay.cpp"),
         str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
         str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
@@ -739,7 +741,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_poly_pitch_only: bool = False,
                   fender_pedal_shifter_only: bool = False,
                   fender_pedal_detune_only: bool = False,
-                  fractal_diatonic_custom_scale_only: bool = False) -> None:
+                  fractal_diatonic_custom_scale_only: bool = False,
+                  fractal_chromatic_harmonizer_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1251,6 +1254,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fender-pedal-detune"
         elif fractal_diatonic_custom_scale_only:
             url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
+        elif fractal_chromatic_harmonizer_only:
+            url = base_url + "/web/index.html?selftest=fractal-chromatic-harmonizer"
         elif mutant_filter_only:
             url = base_url + "/web/index.html?selftest=mutant-filter"
         elif stereo_filter_only:
@@ -1569,6 +1574,7 @@ def main() -> None:
         "test-fender-pedal-shifter",
         "test-fender-pedal-detune",
         "test-fractal-diatonic-custom-scale",
+        "test-fractal-chromatic-harmonizer",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1606,6 +1612,8 @@ def main() -> None:
         browser_test(fender_pedal_detune_only=True)
     elif action == "test-fractal-diatonic-custom-scale":
         browser_test(fractal_diatonic_custom_scale_only=True)
+    elif action == "test-fractal-chromatic-harmonizer":
+        browser_test(fractal_chromatic_harmonizer_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

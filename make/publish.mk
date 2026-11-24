@@ -36,6 +36,7 @@ PUBLISH_CHECKPOINTS += fender-pedal-detune
 PUBLISH_CHECKPOINTS += fractal-touch-wah-mix
 PUBLISH_CHECKPOINTS += flagship-control-routing
 PUBLISH_CHECKPOINTS += stadium-mutant-filter
+PUBLISH_CHECKPOINTS += fractal-chromatic-harmonizer
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -179,3 +180,10 @@ test-mutant-filter:
 
 web-test-mutant-filter: web-build
 	$(PYTHON) scripts/web.py test-mutant-filter
+
+.PHONY: test-fractal-chromatic-harmonizer web-test-fractal-chromatic-harmonizer
+test-fractal-chromatic-harmonizer:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_fractal_chromatic_harmonizer_tests
+
+web-test-fractal-chromatic-harmonizer: web-build
+	$(PYTHON) scripts/web.py test-fractal-chromatic-harmonizer

@@ -33,6 +33,7 @@ EFFECTS.push("four-osc-generator");
 EFFECTS.push("poly-detune");
 EFFECTS.push("pedal-detune");
 EFFECTS.push("mutant-filter");
+EFFECTS.push("fractal-chromatic-harmonizer");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -197,6 +198,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.chain = module._tf_chain_create(sampleRate, this.channels, MAX_BLOCK_FRAMES);
       if (!this.chain) {
         this.port.postMessage({ type: "error", message: "Could not allocate the audio chain." });
+        return;
+      }
+      const chainEffectCount = module._tf_chain_effect_count(this.chain);
+      if (chainEffectCount !== EFFECTS.length) {
+        this.port.postMessage({
+          type: "error",
+          message: `The WASM chain exposes ${chainEffectCount} effect slots; the picker defines ${EFFECTS.length}.`,
+        });
         return;
       }
       const channelConversionTest = module._tf_channel_conversion_self_test();
@@ -480,6 +489,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePedalDetune(parameters.pedalDetune || [0, 0.5]);
       this.configureMutantFilter(parameters.mutantFilter ||
         [1, 0.5, 350, 2200, 4, 0, 5, 80, 5, 0]);
+      this.configureFractalChromaticHarmonizer(
+        parameters.fractalChromaticHarmonizer || [
+          -12, 0, 0.20, -0.65, 0, 0,
+          7, 0, 0.20, -0.20, 0, 0,
+          12, 0, 0.20, 0.20, 0, 0,
+          -5, 0, 0.20, 0.65, 0, 0,
+        ],
+      );
       this.configureFractalThreeVoiceSynth(parameters.fractalThreeVoiceSynth ||
         [3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
           3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -1049,6 +1066,19 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_set_mutant_filter(this.chain, ...values);
   }
 
+  configureFractalChromaticHarmonizer(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 24) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_fractal_chromatic_harmonizer(
+      this.chain, pointer, values.length,
+    );
+    this.module._free(pointer);
+  }
+
   configureFractalThreeVoiceSynth(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
       return;
@@ -1111,7 +1141,23 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const index = message.index | 0;
       if (index >= 0 && index < EFFECTS.length) {
         this.enabled[index] = Boolean(message.value);
-        this.module._tf_chain_set_enabled(this.chain, index, this.enabled[index] ? 1 : 0);
+        const accepted = this.module._tf_chain_set_enabled(
+          this.chain, index, this.enabled[index] ? 1 : 0,
+        );
+        if (!accepted) {
+          this.enabled[index] = false;
+          this.port.postMessage({ type: "enable-error", index });
+        } else if (index === EFFECTS.indexOf("fractal-chromatic-harmonizer")) {
+          const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
+            this.chain, index,
+          );
+          this.port.postMessage({
+            type: "effect-memory",
+            index,
+            effectMemoryBytes,
+            memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+          });
+        }
       }
     } else if (message.type === "mix" && this.ready) {
       this.module._tf_chain_set_mix(this.chain, Number(message.value));
@@ -1362,6 +1408,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePedalDetune(message.value);
     } else if (message.type === "mutant-filter" && this.ready) {
       this.configureMutantFilter(message.value);
+    } else if (message.type === "fractal-chromatic-harmonizer" && this.ready) {
+      this.configureFractalChromaticHarmonizer(message.value);
     } else if (message.type === "fractal-three-voice-synth" && this.ready) {
       this.configureFractalThreeVoiceSynth(message.value);
     } else if (message.type === "enhancer" && this.ready) {

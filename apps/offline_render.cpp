@@ -5419,6 +5419,11 @@ void run_bench() {
         effect->set_pitch_semitones(24.0F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-chromatic-harmonizer-four-voice", [=] {
+        return std::make_unique<tabletfx::effects::FractalChromaticHarmonizer>(
+            static_cast<float>(sample_rate), channels, 4U,
+            tabletfx::effects::FractalChromaticHarmonizer::InputMode::MonoSum);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("poly-pitch-shifter-mono", [=] {
         auto effect = std::make_unique<tabletfx::PolyPitchShifter>(
             static_cast<float>(sample_rate), 1);

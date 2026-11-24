@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Fractal FM9 family — four-voice chromatic harmonizer (2026-11-25)
+
+- [x] The November 2026 Blocks Guide (printed pp. 76–79) documents Dual Chromatic with two voices and Quad Chromatic / Quad Chromatic Delay with four; per-voice Shift ±24 semitones, Detune ±50 cents, Level, Pan, and Delay up to 2,000 ms. Quad Chromatic Delay has post-shift feedback. The guide does not state input-note polyphony or feedback bounds. FM9 v12.0 downloads name Original/Turbo, not Mark II Turbo separately; installed firmware is unknown.
+- [x] Added a default-off, project-authored four-voice fixed-interval processor at Pitch picker ID 112 (113 entries). Per-voice UI controls are Shift, Detune, Level, Pan, Delay, and Feedback. Starter shifts are −12/+7/+12/−5, each voice at 0.20 level with symmetric pans; delay/feedback and detune start at zero. Project-authored bounds/defaults are labeled; this is not a note-tracked synth, Fractal algorithm, DSP, firmware, or sound parity. Stereo routing and Mono Sum are project choices based on the guide's routing notes.
+- [x] The asymmetric STFT path reports 256 frames / 5.333 ms at 48 kHz. A fresh default-off chain does not allocate the effect; first enable creates it, then bypass retains that state for responsive re-enable. Active four-voice/no-delay state is 675,480 B native and 670,556 B in browser/WASM. Each voice allocates its 2-second ring only when delay is enabled; all four full rings bring native state to 2,211,496 B. Processing performs no memory allocation.
+- [x] `make test` passes documentation validation, 11/11 audio-fixture checks, and 114/114 CTest cases. `make web-test-fractal-chromatic-harmonizer` verifies Pitch categorization, disabled startup, 24 controls, local prerecorded guitar Play output, changed pitch settings, memory reporting, and output. Full `make web-test` and `make windows-cross-build` pass.
+- [x] Ryzen 9 5950X Release benchmark, 48 kHz stereo/128-frame blocks (2.667 ms callback; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max CPU is 19.8103/26.3085/30.3267/35.6049/39.2801% of callback time. This is isolated desktop processor-call timing, not a mobile/target-device guarantee.
+- [ ] Human listening, exact FM9 Mark II Turbo firmware applicability, and target-device real-time/load checks remain open. First enable constructs and warms the processor in the worklet control path; its first-use behavior on the target device has not been measured.
+
 ## Line 6 Helix Stadium XL — Mutant Filter-inspired envelope filter (2026-11-25)
 
 - [x] Stadium v1.4 catalogue lists Mutant Filter as Mono/Stereo, modeled on Mu-Tron III, first appearing in firmware 1.0. The checked Stadium manual publishes no exact control table, bounds/defaults, DSP cost, or latency. Mu-Tron's manufacturer documentation describes low/band/high mode, Peak, input Gain/sensitivity, Range, and Up/Down sweep; these are source-pedal concepts, not verified Line 6 controls.

@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6bd67f87dfdd3454c2efd25980893ac918c6ba03",
+  "previous_checkpoint_commit": "bc98b85ba3ca1ff4e2d9293617832f2ca36f18ea",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -444,38 +444,33 @@
         "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
       },
       "picker_rows": 112
+    },
+    {
+      "name": "Fractal FM9-family four-voice chromatic harmonizer",
+      "status": "verified",
+      "picker_index": 112,
+      "category": "Pitch",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide, November 2026, and FM9 firmware downloads",
+        "revision": "Blocks Guide November 2026, printed pp. 76–79; firmware downloads checked 2026-11-25, v12.0 dated 2026-07-07 and labeled Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The family guide documents Dual Chromatic (two voices), Quad Chromatic (four), and Quad Chromatic Delay (four), with per-voice shifts, detune, level, pan, and delay. It does not state input-note polyphony or numeric feedback bounds. Firmware v12.0 does not name Mark II Turbo separately; exact applicability and installed firmware are unknown."
+      },
+      "documented_controls": "Shift ±24 semitones, Detune ±50 cents, Level, Pan, per-voice Delay up to 2,000 ms; Quad Chromatic Delay feedback is post-shift. The quad stereo routing summary maps L to voices 1/3 and R to voices 2/4; the default block sums to mono. The guide does not document a note-tracked synth, input-note polyphony, or numeric feedback limits.",
+      "project_controls": "Default-off four-voice fixed-interval processor at Pitch picker ID 112 (113 entries), with shifts -12/+7/+12/-5, 0.20 level per voice, pans -0.65/-0.20/+0.20/+0.65, detune/delay/feedback zero. Project bounds: shift ±24, detune ±50 cents, level 0–2, pan -1…+1, delay 0–2,000 ms, feedback 0–0.9. Asymmetric 2048/128 STFT path reports 256-frame (5.333 ms at 48 kHz) algorithmic latency. Native memory is 675,480 B with delay off and 2,211,496 B with four full 2-second delay rings; browser effect memory is 670,556 B with delay off. Delay rings are lazy; process is allocation-free. No Fractal DSP, settings, firmware, synth-tracking, or sound parity is claimed.",
+      "verification": {
+        "native_ctest": "make test-fractal-chromatic-harmonizer passed focused 1/1 CTest. make test passed documentation validation, 11/11 audio-fixture checks, and 114/114 CTest cases, including pitch intervals, bounds, delay, routing, reset, memory, finite recovery, and no process-time allocations.",
+        "focused_browser": "make web-test-fractal-chromatic-harmonizer passed in HeadlessChrome 151 using local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. Verified Pitch category ID 112, disabled default, 24 controls/bounds, Play output, audible parameter change, and lazy memory reporting. Browser effect memory was 670,556 B; pitch-setting difference RMS 0.0118364404.",
+        "full_browser": "make web-test passed. The local prerecorded guitar/browser suite and full browser/native chain comparison passed; the WASM module uses its existing fixed 100,663,296 B linear memory. No new default-off processor allocation is made for this effect.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 19.8103/26.3085/30.3267/35.6049/39.2801% of callback. Native processor state is 675,480 B with delay off. Desktop processor-call timing, not target-device performance.",
+        "notes": "Automated native, focused local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. First enable allocates/prewarms the effect in the worklet control path; target-device first-use cost is unmeasured. Human listening, physical FM9 behavior, firmware applicability to Mark II Turbo, and target-device real-time load remain open."
+      },
+      "picker_rows": 113
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal detector-source, Stadium 1 Switch Looper, and AXOM Delay coverage",
-    "status": "verified",
-    "picker_index": 96,
-    "category": "Filters & wah; Loop & performance; Delay",
-    "official_source": {
-      "title": "Fractal Audio Blocks Guide; Line 6 Helix Stadium manual; Melofty AXOM app notes",
-      "revision": "Fractal Blocks Guide November 2026, printed pp.45–47 (FM9 family; v12.0 firmware listing names Original/Turbo); Stadium manual selector Rev E / firmware v1.4.1; AXOM app V1.9.2 notes (2026-10-26) and firmware/controller downloads V1.9.2 (2026-10-27). Installed device firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "source_urls": [
-        "https://manuals.line6.com/en/helix-stadium/live/looper-block",
-        "https://line6.com/helix-stadium-models/",
-        "https://www.meloftyaudio.com/support/downloads",
-        "https://apps.apple.com/tc/app/melofty/id6762972347"
-      ],
-      "qualification": "Fractal Physical Input is mapped to the project original chain-input span, not a separate hardware jack/routing emulation. Stadium 1 Switch controller timing/mapping is project-authored over the existing Deluxe Looper. Melofty notes do not identify an affected Delay model or exact controls; related coverage is not an Axom model match."
-    },
-    "documented_controls": "Fractal Touch-Wah and Touch-Ladder document block/physical detector sources. Stadium 1 Switch uses Playback, Overdub, Low Cut, and High Cut; 120 s mono / 60 s stereo full-speed capacity, double at half speed. Melofty app V1.9.2 notes mention 1/64–1/1 Delay divisions and High/Low Cut without an algorithm-specific control table.",
-    "project_controls": "The Stereo Filter at categorized picker index 96 adds Block/Physical detector source selection and reuses existing filter state; no extra processor stage, input copy, audio buffer, or fixed latency. Stadium 1 Switch is a controller profile over existing Deluxe Looper DSP/buffer; 280 ms double-press and 1 s hold timings are project UI choices. Filtered Delay remains the existing processor with 1/32 and 1/64 divisions and repeat-path cuts; no Axom-specific model is claimed.",
-    "verification": {
-      "native_ctest": "make test passed 112/112 CTest cases and 11/11 audio-fixture safety checks, including delay repeat-filter/timing and both Stereo Filter detector-source tests.",
-      "focused_browser": "make web-test-stereo-filter passed with local prerecorded Guitar-TECHS stereo DI at 48 kHz/48,000 frames; the 36-value API exposes Block/Physical source for Touch-Wah and Touch-Ladder and captures distinct output for both. Full browser interaction verified the Stadium 1 Switch sequence: record, play, overdub, undo, redo, stop, and clear using the same Deluxe Looper processor and buffer.",
-      "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported max absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
-      "windows": "make windows-cross-build passed for the Windows MinGW native core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: Physical Input Touch-Wah p50/p95/p99/p99.9/max 0.3023/0.4178/0.5666/1.4787/4.6944% of deadline; filter state 38,968 B. Existing Filtered Delay: 0.1365/0.2715/0.3323/0.6270/3.1332% and 768,864 B. Desktop processor-call measurements, not device performance; no DSP stage is added by the Stadium controller profile.",
-      "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and DSP benchmark pass. Human listening, hardware routing/footswitch mapping, and target-device checks remain open."
-    },
-    "picker_rows": 111
-  },
-  "current_checkpoint": {
     "name": "Line 6 Helix Stadium XL Mutant Filter-inspired filter",
     "status": "verified",
     "picker_index": 111,
@@ -504,7 +499,43 @@
     },
     "picker_rows": 112
   },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family four-voice chromatic harmonizer",
+    "status": "verified",
+    "picker_index": 112,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide, November 2026, and FM9 firmware downloads",
+      "revision": "Blocks Guide November 2026, printed pp. 76–79; firmware downloads checked 2026-11-25, v12.0 dated 2026-07-07 and labeled Original/Turbo; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The family guide documents Dual Chromatic (two voices), Quad Chromatic (four), and Quad Chromatic Delay (four), with per-voice shifts, detune, level, pan, and delay. It does not state input-note polyphony or numeric feedback bounds. Firmware v12.0 does not name Mark II Turbo separately; exact applicability and installed firmware are unknown."
+    },
+    "documented_controls": "Shift ±24 semitones, Detune ±50 cents, Level, Pan, per-voice Delay up to 2,000 ms; Quad Chromatic Delay feedback is post-shift. The quad stereo routing summary maps L to voices 1/3 and R to voices 2/4; the default block sums to mono. The guide does not document a note-tracked synth, input-note polyphony, or numeric feedback limits.",
+    "project_controls": "Default-off four-voice fixed-interval processor at Pitch picker ID 112 (113 entries), with shifts -12/+7/+12/-5, 0.20 level per voice, pans -0.65/-0.20/+0.20/+0.65, detune/delay/feedback zero. Project bounds: shift ±24, detune ±50 cents, level 0–2, pan -1…+1, delay 0–2,000 ms, feedback 0–0.9. Asymmetric 2048/128 STFT path reports 256-frame (5.333 ms at 48 kHz) algorithmic latency. Native memory is 675,480 B with delay off and 2,211,496 B with four full 2-second delay rings; browser effect memory is 670,556 B with delay off. Delay rings are lazy; process is allocation-free. No Fractal DSP, settings, firmware, synth-tracking, or sound parity is claimed.",
+    "verification": {
+      "native_ctest": "make test-fractal-chromatic-harmonizer passed focused 1/1 CTest. make test passed documentation validation, 11/11 audio-fixture checks, and 114/114 CTest cases, including pitch intervals, bounds, delay, routing, reset, memory, finite recovery, and no process-time allocations.",
+      "focused_browser": "make web-test-fractal-chromatic-harmonizer passed in HeadlessChrome 151 using local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. Verified Pitch category ID 112, disabled default, 24 controls/bounds, Play output, audible parameter change, and lazy memory reporting. Browser effect memory was 670,556 B; pitch-setting difference RMS 0.0118364404.",
+      "full_browser": "make web-test passed. The local prerecorded guitar/browser suite and full browser/native chain comparison passed; the WASM module uses its existing fixed 100,663,296 B linear memory. No new default-off processor allocation is made for this effect.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 19.8103/26.3085/30.3267/35.6049/39.2801% of callback. Native processor state is 675,480 B with delay off. Desktop processor-call timing, not target-device performance.",
+      "notes": "Automated native, focused local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. First enable allocates/prewarms the effect in the worklet control path; target-device first-use cost is unmeasured. Human listening, physical FM9 behavior, firmware applicability to Mark II Turbo, and target-device real-time load remain open."
+    },
+    "picker_rows": 113
+  },
   "next_research": [
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Pitch Sequencer parameter surface and categorized project implementation",
+      "source": "Official Tone Master Pro firmware history checked through v1.8.87 (2026-11-23); v1.8.45 introduction (2026-06-03), v1.8.58 stability fix, and official feature article.",
+      "source_urls": [
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here"
+      ],
+      "status": "Pitch Sequencer is listed under Pitch from v1.8.45; Fender describes sequence melodies, glitching, note glides, and freezing. The checked public sources do not publish its algorithm controls, step/voice count, ranges/defaults, tracking/polyphony, latency, or DSP. It is a source-backed gap, not a verified completed model. Review existing project Pitch Sequence behavior before choosing a project-authored UI/model.",
+      "known_controls": "Only the broad sequence/glitch/glide/freeze feature description and Pitch category are verified. No numeric controls, sequence resolution, clocking, note-entry format, input-note handling, or DSP percentage is documented.",
+      "qualification": "v1.8.58 fixes a step-effects crash and does not add controls. Do not claim Fender algorithm/settings parity or use existing project controls as manufacturer specifications."
+    },
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",
@@ -516,19 +547,19 @@
     {
       "device": "Fender Tone Master Pro",
       "feature": "Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay",
-      "source": "Tone Master Pro firmware v1.8.85 dated 2026-11-18; v1.8.45 introduced Step Filter, Step Filter Delay, Pitch Sequencer, Prismatic Delay, Step Tremolo, Cirrostratus Reverb/Synthverb, and Spectral Reverb; v1.8.58 fixed crashes in step effects; v1.8.85 rebuilt Virtual Capo.",
+      "source": "Tone Master Pro firmware history checked through v1.8.87 dated 2026-11-23; Pitch Sequencer introduced in v1.8.45 (2026-06-03), step-effect crash fix v1.8.58; official Fender feature article.",
       "source_urls": [
         "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
         "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here",
         "https://www.fender.com/products/tone-master-pro"
       ],
-      "status": "Step Filter Delay remains integrated at categorized Delay index 92; latest make web-test passes its local-DI Play smoke, the 102-case native suite, and 73-stage browser/native comparison. Exact Step Filter/Step Filter Delay numeric controls and topology remain unpublished. Dynamic Delay and Chromatic Pitch Shifter are separate documented gaps recorded below. Official v1.8.85 notes also describe Virtual Capo as a polyphonic ±12-semitone shifter with reduced latency/cleaner attacks, flat response and unchanged CPU versus the prior implementation; new synth model parameter tables remain unpublished.",
-      "known_controls": "No exact model control tables were found. Fender describes Step Filter as rhythmic sweeps/pulses/morphs and Step Filter Delay as unusual rhythms/textures. TabletFX Step Filter Delay controls, ranges, defaults, timing model, and DSP are project-authored, not Fender settings.",
-      "qualification": "v1.8.58 later fixed a crash affecting step effects; v1.8.85 lists no new Step Filter or Step Filter Delay behavior. The linked Model Guide PDF could not be parsed, so do not infer manufacturer parameter controls or mono/stereo behavior. Browser playback smoke remains unverified in the current test ordering because the full suite aborts earlier on WASM OOM. The 2023 Model Guide predates 2025–26 models; use rolling release notes for newer models. Release notes do not publish exact values or sound/DSP topology for most of the added algorithms."
+      "status": "Official release history places Pitch Sequencer in Pitch starting v1.8.45 (2026-06-03); v1.8.58 fixed a crash affecting step effects, and current history lists v1.8.87 dated 2026-11-23 without a sequencer-specific change. Fender describes sequencing melodies, glitching, gliding between notes, and freezing sound, but publishes no sequencer parameter table, step/voice count, numeric ranges/defaults, tracking/polyphony, latency, or DSP. Keep these unknown and determine whether existing Pitch Sequence code can be reused only after reviewing its actual control/signal model.",
+      "known_controls": "Manufacturer evidence verifies category Pitch and the general sequence/glitch/glide/freeze description only. Step count, rate/clocking, note entry, quantization, voice count, tracking method, controls/ranges/defaults, latency, and DSP use remain undocumented in checked sources.",
+      "qualification": "The v1.8.58 note is a software stability fix, not a parameter specification. No Fender sequencer controls or firmware behavior should be inferred from unrelated TabletFX Pitch Sequence controls."
     },
     {
       "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Pitch/Synth/Tremolo controls and FM9 physical detector source",
+      "feature": "Fractal Synth model controls and remaining pitch/synth behavior",
       "source": "Fractal Audio Systems Blocks Guide, November 2026, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-24",
       "source_urls": [
         "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
@@ -536,10 +567,10 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, the existing Pitch row’s ±24-semitone profile, and the Touch-Wah MIX project mode are implemented. The Diatonic Harmonizer has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, plus additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified. Touch-Wah and Touch-Ladder block/physical detector selection is now implemented; Physical Input uses the raw original chain-input span and is not separate hardware-jack routing.",
+      "status": "The four-voice fixed-interval chromatic effect is now implemented as default-off Pitch picker ID 112 and verified with focused/full native and browser tests, Windows cross-build, and benchmark. It is not a note-tracked synth. The remaining comparison gap is the family three-oscillator Synth parameter/behavior surface; preserve the Mark II Turbo firmware applicability caveat. Human and hardware checks remain open.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not. The family Blocks Guide also documents a three-oscillator monophonic Synth with oscillator waveform, tracking mode (Off/Env Only/Pitch+Env), Frequency, Shift, Tune, Duty Cycle, Pan, Filter Frequency/Q, Attack, and Level; this remains a potential comparison gap. Three oscillators do not imply three-note input tracking.",
       "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim.",
-      "implementation_estimate": "Unverified capacity estimate only: a naive four-times polyphonic shifter could use about 1.98 MB and reach approximately 70% p99 desktop callback load before the rest of the chain. A shared-FFT adapter likely needs investigation. This is an estimate, not a measured implementation or device result."
+      "implementation_estimate": "Four-voice Chromatic implementation measured 675,480 B native without delay, 2,211,496 B with all four 2-second rings; 19.8103/26.3085/30.3267/35.6049/39.2801% p50/p95/p99/p99.9/max of a 2.667 ms deadline on Ryzen 9 5950X. These are measured project results, not Fractal DSP or target-device estimates."
     },
     {
       "device": "HeadRush Prime",

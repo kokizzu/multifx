@@ -113,6 +113,7 @@ const EFFECT_NAMES = [
   "Poly Detune · project-authored modulated micro-delay",
   "Pedal Detune · project-authored position blend",
   "Mutant Filter · project-authored envelope filter",
+  "Fractal Chromatic · project-authored four-voice pitch",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -172,6 +173,12 @@ const DEFAULT_PARAMETERS = {
   polyDetune: [2, 0.25, 0.75, 0.75, 0.25, 0],
   pedalDetune: [0, 0.5],
   mutantFilter: [1, 0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
+  fractalChromaticHarmonizer: [
+    -12, 0, 0.20, -0.65, 0, 0,
+    7, 0, 0.20, -0.20, 0, 0,
+    12, 0, 0.20, 0.20, 0, 0,
+    -5, 0, 0.20, 0.65, 0, 0,
+  ],
   fractalThreeVoiceSynth: [
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -374,6 +381,10 @@ const fourBandResonatorControls = document.querySelector("#four-band-resonator-c
 const fractalThreeVoiceSynthControlsContainer = document.querySelector(
   "#fractal-three-voice-synth-controls",
 );
+const fractalChromaticHarmonizerControlsContainer = document.querySelector(
+  "#fractal-chromatic-harmonizer-controls",
+);
+const fractalChromaticHarmonizerControls = [];
 const diatonicHarmonizerControls = [
   document.querySelector("#diatonic-harmonizer-mix"),
   document.querySelector("#diatonic-harmonizer-interval"),
@@ -3894,6 +3905,20 @@ async function setupProcessor(testOptions = null) {
        updateDeluxeLooperOptions();
        workletNode.port.postMessage({ type: "deluxe-looper-status-request" });
       resolveReady(message);
+    } else if (message?.type === "effect-memory") {
+      if (Number.isInteger(message.index) && message.index >= 0 &&
+          message.index < effectMemory.length) {
+        effectMemory[message.index] = Number(message.effectMemoryBytes) || 0;
+        chainMemoryBytes = Number(message.memoryBytes) || chainMemoryBytes;
+        document.querySelector("#memory-use").textContent = bytesLabel(chainMemoryBytes);
+        renderLoadRows(null);
+      }
+    } else if (message?.type === "enable-error") {
+      const row = document.querySelector(`[data-effect="${message.index}"]`)
+        ?.closest(".effect-row");
+      const checkbox = row?.querySelector("[data-effect]");
+      if (checkbox) checkbox.checked = false;
+      setAudioStatus("Effect could not reserve memory", "error");
     } else if (message?.type === "tuner-reading") {
       renderTunerReading(message);
     } else if (message?.type === "looper-status") {
@@ -4743,6 +4768,74 @@ for (const control of mutantFilterControls) {
   control.addEventListener("change", updateMutantFilter);
 }
 updateMutantFilter();
+
+const fractalChromaticHarmonizerDefaults = [
+  [-12, 0, 0.20, -0.65, 0, 0],
+  [7, 0, 0.20, -0.20, 0, 0],
+  [12, 0, 0.20, 0.20, 0, 0],
+  [-5, 0, 0.20, 0.65, 0, 0],
+];
+const fractalChromaticHarmonizerParameters = [
+  { name: "Shift", min: -24, max: 24, step: 0.5, format: (v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} semitones` },
+  { name: "Detune", min: -50, max: 50, step: 1, format: (v) => `${v > 0 ? "+" : ""}${Math.round(v)} cents` },
+  { name: "Voice level", min: 0, max: 2, step: 0.01, format: (v) => `${Math.round(v * 100)}%` },
+  { name: "Pan", min: -1, max: 1, step: 0.01, format: (v) => v === 0 ? "Center" : `${Math.round(Math.abs(v) * 100)}% ${v < 0 ? "left" : "right"}` },
+  { name: "Delay", min: 0, max: 2000, step: 1, format: (v) => `${Math.round(v)} ms` },
+  { name: "Feedback", min: 0, max: 0.9, step: 0.01, format: (v) => `${Math.round(v * 100)}%` },
+];
+for (let voice = 0; voice < fractalChromaticHarmonizerDefaults.length; voice += 1) {
+  const group = document.createElement("div");
+  group.className = "gain-controls fractal-chromatic-voice";
+  group.setAttribute("aria-label", `Fractal Chromatic voice ${voice + 1}`);
+  const heading = document.createElement("h4");
+  heading.textContent = `Voice ${voice + 1}`;
+  group.append(heading);
+  for (let parameter = 0; parameter < fractalChromaticHarmonizerParameters.length; parameter += 1) {
+    const definition = fractalChromaticHarmonizerParameters[parameter];
+    const control = document.createElement("input");
+    const id = `fractal-chromatic-voice-${voice + 1}-${parameter}`;
+    control.id = id;
+    control.type = "range";
+    control.min = String(definition.min);
+    control.max = String(definition.max);
+    control.step = String(definition.step);
+    control.value = String(fractalChromaticHarmonizerDefaults[voice][parameter]);
+    const label = document.createElement("label");
+    label.className = "mix-control";
+    label.htmlFor = id;
+    const title = document.createElement("span");
+    title.textContent = definition.name;
+    const output = document.createElement("output");
+    output.htmlFor = id;
+    output.value = definition.format(Number(control.value));
+    label.append(title, output, control);
+    group.append(label);
+    fractalChromaticHarmonizerControls.push(control);
+  }
+  fractalChromaticHarmonizerControlsContainer.append(group);
+}
+
+function updateFractalChromaticHarmonizer() {
+  const values = fractalChromaticHarmonizerControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.fractalChromaticHarmonizer = values;
+  fractalChromaticHarmonizerControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    const definition = fractalChromaticHarmonizerParameters[index % 6];
+    if (output) output.value = definition.format(values[index]);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "fractal-chromatic-harmonizer",
+      value: values,
+    });
+  }
+}
+
+for (const control of fractalChromaticHarmonizerControls) {
+  control.addEventListener("input", updateFractalChromaticHarmonizer);
+  control.addEventListener("change", updateFractalChromaticHarmonizer);
+}
+updateFractalChromaticHarmonizer();
 
 cleanBoost.addEventListener("input", () => {
   const value = Number(cleanBoost.value);
@@ -10361,7 +10454,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 112 || !(effectMemory[102] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -10463,7 +10556,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 112 || !(effectMemory[103] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -10570,7 +10663,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 112 || !(effectMemory[104] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10683,7 +10776,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 112 || !(effectMemory[105] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10795,7 +10888,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 112 || !(effectMemory[106] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -10903,7 +10996,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-        effectMemory.length !== 112 || !(effectMemory[107] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -11002,7 +11095,7 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
         !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
-        effectMemory.length !== 112 || !(effectMemory[108] > 0) ||
+         effectMemory.length !== 113 || !(effectMemory[108] > 0) ||
         DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
           "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
       throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
@@ -11101,7 +11194,7 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
         !checkbox || pitchSemitones.min !== "-24" ||
-        pitchSemitones.max !== "24" || effectMemory.length !== 112 ||
+        pitchSemitones.max !== "24" || effectMemory.length !== 113 ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Polyphonic pitch control mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -11218,7 +11311,7 @@ async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, cap
         !checkbox || pitchMode.querySelector('option[value="pedal-shifter"]') === null ||
         pitchExpressionTarget.min !== "-24" || pitchExpressionTarget.max !== "24" ||
         pitchExpressionPosition.min !== "0" || pitchExpressionPosition.max !== "100" ||
-        effectMemory.length !== 112 || !(effectMemory[22] > 0)) {
+        effectMemory.length !== 113 || !(effectMemory[22] > 0)) {
       throw new Error("Pedal Shifter controls are missing or incorrectly categorized.");
     }
 
@@ -11384,7 +11477,7 @@ async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureV
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmonizer") ||
-        !checkbox || !customOption || effectMemory.length !== 112 ||
+        !checkbox || !customOption || effectMemory.length !== 113 ||
         !(effectMemory[effectIndex] > 0) || diatonicCustomScaleNotes.length !== 8) {
       throw new Error("Diatonic custom scale is missing its categorized picker row or controls.");
     }
@@ -11514,7 +11607,7 @@ async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuff
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Poly Detune") ||
         !checkbox || checkbox.checked || polyDetuneControls.length !== 6 ||
-        effectMemory.length !== 112 || !(effectMemory[109] > 0) ||
+        effectMemory.length !== 113 || !(effectMemory[109] > 0) ||
         DEFAULT_PARAMETERS.polyDetune.join(",") !== "2,0.25,0.75,0.75,0.25,0") {
       throw new Error("Poly Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -11619,7 +11712,7 @@ async function runFenderPedalDetuneBrowserSmokeTest(reference, captureView, capt
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Pedal Detune") ||
         !checkbox || checkbox.checked || pedalDetuneControls.length !== 2 ||
-        effectMemory.length !== 112 || !(effectMemory[110] > 0) ||
+        effectMemory.length !== 113 || !(effectMemory[110] > 0) ||
         DEFAULT_PARAMETERS.pedalDetune.join(",") !== "0,0.5") {
       throw new Error("Pedal Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -11718,6 +11811,153 @@ async function runFenderPedalDetuneBrowserSmokeTest(reference, captureView, capt
         control.value = previousControls[index];
       });
       updatePedalDetune();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFractalChromaticHarmonizerBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = fractalChromaticHarmonizerControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  const postedMessages = [];
+  const portPrototype = MessagePort.prototype;
+  const originalPost = portPrototype.postMessage;
+  portPrototype.postMessage = function(message, ...transfer) {
+    if (message?.type === "fractal-chromatic-harmonizer" ||
+        (message?.type === "enable" && message.index === 112)) {
+      postedMessages.push(message);
+    }
+    return originalPost.call(this, message, ...transfer);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Fractal Chromatic smoke requires the local guitar fixture.");
+    }
+    const effectIndex = 112;
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Fractal Chromatic") ||
+        !checkbox || checkbox.checked || fractalChromaticHarmonizerControls.length !== 24 ||
+        effectMemory.length !== 113 || effectMemory[effectIndex] !== 0) {
+      throw new Error("Fractal Chromatic picker, disabled default, 24 controls, or lazy memory state is incorrect.");
+    }
+    const expectedBounds = [
+      ["-24", "24"], ["-50", "50"], ["0", "2"], ["-1", "1"], ["0", "2000"], ["0", "0.9"],
+    ];
+    for (let voice = 0; voice < 4; voice += 1) {
+      for (let parameter = 0; parameter < 6; parameter += 1) {
+        const control = fractalChromaticHarmonizerControls[voice * 6 + parameter];
+        const [minimum, maximum] = expectedBounds[parameter];
+        if (control.min !== minimum || control.max !== maximum) {
+          throw new Error(`Fractal Chromatic voice ${voice + 1} parameter ${parameter + 1} bounds are incorrect.`);
+        }
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    fractalChromaticHarmonizerControls[0].value = "-12";
+    fractalChromaticHarmonizerControls[6].value = "7";
+    fractalChromaticHarmonizerControls[12].value = "12";
+    fractalChromaticHarmonizerControls[18].value = "-5";
+    updateFractalChromaticHarmonizer();
+    checkbox.click();
+    if (!checkbox.checked) throw new Error("Fractal Chromatic picker row did not enable from its click handler.");
+
+    const capture = async () => {
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, reference.samples.length);
+    };
+    const first = await capture();
+    if (!(effectMemory[effectIndex] > 500_000 && effectMemory[effectIndex] < 1_000_000)) {
+      throw new Error(`Fractal Chromatic allocation was not reported after enable: ${effectMemory[effectIndex]} bytes.`);
+    }
+    let peak = 0;
+    let guitarDifferenceSquares = 0;
+    for (let frame = 0; frame < Math.floor(first.length / reference.channels); frame += 1) {
+      for (let channel = 0; channel < reference.channels; channel += 1) {
+        const index = frame * reference.channels + channel;
+        peak = Math.max(peak, Math.abs(first[index]));
+        const source = decodedAudio.getChannelData(
+          Math.min(channel, decodedAudio.numberOfChannels - 1),
+        )[frame];
+        const difference = first[index] - source;
+        guitarDifferenceSquares += difference * difference;
+      }
+    }
+    const guitarDifferenceRms = Math.sqrt(
+      guitarDifferenceSquares / Math.max(1, first.length),
+    );
+    if (peak < 1e-5 || guitarDifferenceRms < 1e-3) {
+      throw new Error(`Fractal Chromatic Play did not create shifted guitar output (peak ${peak}, difference RMS ${guitarDifferenceRms}).`);
+    }
+
+    fractalChromaticHarmonizerControls[0].value = "7";
+    updateFractalChromaticHarmonizer();
+    const second = await capture();
+    let shiftDifferenceSquares = 0;
+    for (let index = 0; index < Math.min(first.length, second.length); index += 1) {
+      const difference = first[index] - second[index];
+      shiftDifferenceSquares += difference * difference;
+    }
+    const shiftDifferenceRms = Math.sqrt(
+      shiftDifferenceSquares / Math.max(1, Math.min(first.length, second.length)),
+    );
+    if (shiftDifferenceRms < 1e-3 ||
+        !postedMessages.some((message) => message.type === "fractal-chromatic-harmonizer" &&
+          message.value?.length === 24) ||
+        !postedMessages.some((message) => message.type === "enable" &&
+          message.index === effectIndex && message.value === true)) {
+      throw new Error("Fractal Chromatic settings or enable state did not reach the browser audio chain.");
+    }
+    return {
+      category: "Pitch",
+      effectIndex,
+      voiceCount: 4,
+      playCaptures: 2,
+      effectMemoryBytes: effectMemory[effectIndex],
+      guitarDifferenceRms,
+      shiftedParameterDifferenceRms: shiftDifferenceRms,
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    portPrototype.postMessage = originalPost;
+    if (workletNode) {
+      fractalChromaticHarmonizerControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateFractalChromaticHarmonizer();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -12795,8 +13035,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 112 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 112 || effectRows.length !== 112 ||
+    const expectedEffectIds = Array.from({ length: 113 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 113 || effectRows.length !== 113 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -12882,10 +13122,13 @@ async function runBrowserSelfTest() {
                !EFFECT_NAMES[110]?.startsWith("Pedal Detune") ||
                effectRows[110]?.dataset.category !== "pitch" ||
                effectRows[110]?.querySelector(".effect-category-tag")?.textContent !== "Pitch" ||
-               !EFFECT_NAMES[111]?.startsWith("Mutant Filter · project-authored") ||
+                !EFFECT_NAMES[111]?.startsWith("Mutant Filter · project-authored") ||
+                !EFFECT_NAMES[112]?.startsWith("Fractal Chromatic · project-authored") ||
                effectRows[111]?.dataset.category !== "filter" ||
                effectRows[111]?.querySelector(".effect-category-tag")?.textContent !== "Filters & wah" ||
-               initialEffectState[111] ||
+               effectRows[112]?.dataset.category !== "pitch" ||
+               effectRows[112]?.querySelector(".effect-category-tag")?.textContent !== "Pitch" ||
+               initialEffectState[111] || initialEffectState[112] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -12922,7 +13165,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-      throw new Error("The effect picker must list 112 ordered, categorized effects (IDs 0–111), including the project-authored Mutant Filter in Filters & wah; existing effect IDs and optional-disabled defaults must stay stable.");
+       throw new Error(`The effect picker must list 113 ordered, categorized effects (IDs 0–112), including Mutant Filter and Fractal Chromatic; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[112]}, row112=${effectRows[112]?.dataset.category}/${effectRows[112]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[112]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -14175,7 +14418,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51,74,99,101,110" || effectCount.value !== `7 of ${effectRows.length}` ||
+    if (pitchIds.join(",") !== "22,50,51,74,99,101,110,112" || effectCount.value !== `8 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, harmonizer, pitch sequencers, and Chromatic Pitch Delay.");
     }
@@ -14538,6 +14781,8 @@ async function runBrowserSelfTest() {
     parityEnabled[110] = false;
     // Mutant Filter has a focused browser/WASM Play test and no offline CLI stage.
     parityEnabled[111] = false;
+    // Fractal Chromatic has a focused browser/WASM Play test and no offline CLI stage.
+    parityEnabled[112] = false;
        // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, Celestial/Cloud Reverb, and Fractal synth have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
@@ -14593,7 +14838,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 112 || activeProcessorIndices.length !== 78 ||
+     if (parityEnabled.length !== 113 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -15251,6 +15496,24 @@ async function runBrowserSelfTest() {
         testResult.dataset.status = "passed";
         testResult.textContent = JSON.stringify(focusedReport);
         document.title = "PASS · TabletFX Mutant Filter browser test";
+        return;
+      }
+      if (new URLSearchParams(location.search).get("selftest") === "fractal-chromatic-harmonizer") {
+        testResult.textContent = "Checking Fractal Chromatic four-voice browser Play with local guitar audio…";
+        const harmonizerSmoke = await runFractalChromaticHarmonizerBrowserSmokeTest(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          fractalChromaticHarmonizer: harmonizerSmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Fractal Chromatic browser test";
         return;
       }
       if (new URLSearchParams(location.search).get("selftest") === "volume-pan") {

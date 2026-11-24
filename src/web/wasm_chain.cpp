@@ -27,6 +27,7 @@
 #include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/pedal_detune.hpp"
 #include "tabletfx/effects/mutant_filter.hpp"
+#include "tabletfx/effects/fractal_chromatic_harmonizer.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -428,7 +429,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 16; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 19; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -523,6 +524,14 @@ public:
         if (index == 111U) {
             mutant_filter_enabled_ = enabled;
             if (!enabled) mutant_filter_.reset();
+            return true;
+        }
+        if (index == 112U) {
+            if (enabled && !ensure_fractal_chromatic_harmonizer()) return false;
+            fractal_chromatic_harmonizer_enabled_ = enabled;
+            if (!enabled && fractal_chromatic_harmonizer_) {
+                fractal_chromatic_harmonizer_->reset();
+            }
             return true;
         }
         if (index >= effects_.size()) {
@@ -735,6 +744,14 @@ public:
             }
             return;
         }
+        if (index == 112U) {
+            if (fractal_chromatic_harmonizer_enabled_ &&
+                fractal_chromatic_harmonizer_) {
+                fractal_chromatic_harmonizer_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -813,6 +830,9 @@ public:
         four_osc_generator_.reset();
         poly_detune_.reset();
         mutant_filter_.reset();
+        if (fractal_chromatic_harmonizer_) {
+            fractal_chromatic_harmonizer_->reset();
+        }
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2296,6 +2316,46 @@ public:
                                  parameters);
     }
 
+    void configure_fractal_chromatic_harmonizer(
+        const float* values, std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 24U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        std::copy_n(values, kParameterCount,
+                    fractal_chromatic_harmonizer_parameters_.begin());
+        fractal_chromatic_harmonizer_parameters_valid_ = true;
+        apply_fractal_chromatic_harmonizer_parameters();
+    }
+
+    [[nodiscard]] bool ensure_fractal_chromatic_harmonizer() noexcept {
+        if (fractal_chromatic_harmonizer_) return true;
+        try {
+            fractal_chromatic_harmonizer_ =
+                std::make_unique<tabletfx::effects::FractalChromaticHarmonizer>(
+                    static_cast<float>(sample_rate_), channels_, 4U,
+                    tabletfx::effects::FractalChromaticHarmonizer::InputMode::MonoSum);
+        } catch (...) {
+            return false;
+        }
+        apply_fractal_chromatic_harmonizer_parameters();
+        return true;
+    }
+
+    void apply_fractal_chromatic_harmonizer_parameters() noexcept {
+        if (!fractal_chromatic_harmonizer_ ||
+            !fractal_chromatic_harmonizer_parameters_valid_) return;
+        for (std::uint8_t voice = 0; voice < 4U; ++voice) {
+            const std::uint32_t offset = static_cast<std::uint32_t>(voice) * 6U;
+            tabletfx::effects::FractalChromaticHarmonizer::VoiceParameters parameters;
+            parameters.shift_semitones = fractal_chromatic_harmonizer_parameters_[offset];
+            parameters.detune_cents = fractal_chromatic_harmonizer_parameters_[offset + 1U];
+            parameters.level = fractal_chromatic_harmonizer_parameters_[offset + 2U];
+            parameters.pan = fractal_chromatic_harmonizer_parameters_[offset + 3U];
+            parameters.delay_ms = fractal_chromatic_harmonizer_parameters_[offset + 4U];
+            parameters.feedback = fractal_chromatic_harmonizer_parameters_[offset + 5U];
+            (void)fractal_chromatic_harmonizer_->set_voice_parameters(voice, parameters);
+        }
+    }
+
     void configure_fractal_three_voice_synth(
         const float* values, std::uint32_t value_count) noexcept {
         constexpr std::uint32_t kParameterCount = 33U;
@@ -3354,6 +3414,9 @@ public:
         bytes += four_osc_generator_.memory_bytes();
         bytes += poly_detune_.memory_bytes();
         bytes += pedal_detune_.memory_bytes();
+        if (fractal_chromatic_harmonizer_) {
+            bytes += fractal_chromatic_harmonizer_->memory_bytes();
+        }
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3453,6 +3516,13 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 112U) {
+            if (!fractal_chromatic_harmonizer_) return 0;
+            const std::size_t bytes = fractal_chromatic_harmonizer_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3494,6 +3564,10 @@ private:
     tabletfx::PolyDetune poly_detune_;
     tabletfx::PedalDetune pedal_detune_;
     tabletfx::MutantFilter mutant_filter_;
+    std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
+        fractal_chromatic_harmonizer_;
+    std::array<float, 24> fractal_chromatic_harmonizer_parameters_{};
+    bool fractal_chromatic_harmonizer_parameters_valid_ = false;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3513,6 +3587,7 @@ private:
     bool poly_detune_enabled_ = false;
     bool pedal_detune_enabled_ = false;
     bool mutant_filter_enabled_ = false;
+    bool fractal_chromatic_harmonizer_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4315,6 +4390,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_mutant_filter(
         as_chain(opaque)->configure_mutant_filter(
             mode, sensitivity, minimum_hz, maximum_hz, resonance_q,
             level_db, attack_ms, release_ms, smoothing_ms, direction);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_chromatic_harmonizer(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_chromatic_harmonizer(values, value_count);
     }
 }
 
