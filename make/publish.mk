@@ -24,6 +24,7 @@ PUBLISH_CHECKPOINTS += fractal-filter-ladder
 PUBLISH_CHECKPOINTS += chromatic-pitch-delay
 PUBLISH_CHECKPOINTS += fractal-rotary-depth
 PUBLISH_CHECKPOINTS += xr1-cabinet-ir
+PUBLISH_CHECKPOINTS += xr1-global-eq
 PUBLISH_CHECKPOINTS += fractal-octave-divider
 PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic

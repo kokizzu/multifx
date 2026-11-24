@@ -124,6 +124,8 @@ public:
                        static_cast<std::uint16_t>(channels)),
           eq5_graphic_(static_cast<float>(sample_rate),
                        static_cast<std::uint16_t>(channels)),
+          xr1_global_eq_(static_cast<float>(sample_rate),
+                         static_cast<std::uint16_t>(channels)),
           optical_tremolo_(std::make_unique<tabletfx::OpticalTremolo>(
               static_cast<float>(sample_rate))),
           fractal_bias_trem_(static_cast<float>(sample_rate)),
@@ -429,7 +431,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 19; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 20; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -532,6 +534,11 @@ public:
             if (!enabled && fractal_chromatic_harmonizer_) {
                 fractal_chromatic_harmonizer_->reset();
             }
+            return true;
+        }
+        if (index == 113U) {
+            xr1_global_eq_enabled_ = enabled;
+            if (!enabled) xr1_global_eq_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -752,6 +759,13 @@ public:
             }
             return;
         }
+        if (index == 113U) {
+            if (xr1_global_eq_enabled_) {
+                xr1_global_eq_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -823,6 +837,7 @@ public:
         cabinet_ir_.reset();
         octave_divider_.reset();
         double_take_.reset();
+        xr1_global_eq_.reset();
         optical_tremolo_->reset();
         fractal_bias_trem_.reset();
         vibratone_.reset();
@@ -3312,6 +3327,35 @@ public:
             overall_gain_db);
     }
 
+    void configure_xr1_global_eq(const float* values,
+                                 std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count != 31U) return;
+        tabletfx::XR1GlobalEQParameters parameters = xr1_global_eq_.parameters();
+        for (std::size_t band = 0; band < parameters.bands.size(); ++band) {
+            const std::size_t offset = band * 6U;
+            const auto enum_index = [](float value, std::uint32_t maximum,
+                                       std::uint32_t fallback) noexcept {
+                if (!std::isfinite(value) || value < 0.0F ||
+                    value > static_cast<float>(maximum)) {
+                    return fallback;
+                }
+                return static_cast<std::uint32_t>(std::lround(value));
+            };
+            auto& destination = parameters.bands[band];
+            destination.assign = static_cast<tabletfx::XR1GlobalEQAssign>(
+                enum_index(values[offset], 2U, 0U));
+            destination.type = static_cast<tabletfx::XR1GlobalEQType>(
+                enum_index(values[offset + 1U], 4U, 0U));
+            destination.gain_db = values[offset + 2U];
+            destination.frequency_hz = values[offset + 3U];
+            destination.q = values[offset + 4U];
+            destination.bypass = std::isfinite(values[offset + 5U]) &&
+                                 values[offset + 5U] >= 0.5F;
+        }
+        parameters.bypass = std::isfinite(values[30]) && values[30] >= 0.5F;
+        xr1_global_eq_.configure(parameters);
+    }
+
     void configure_optical_tremolo(
         std::uint32_t variant, float rate_hz, float depth,
         std::uint32_t lfo, std::uint32_t tempo_sync, float tempo_bpm,
@@ -3407,6 +3451,7 @@ public:
         bytes += octave_divider_.memory_bytes();
         bytes += double_take_.memory_bytes();
         bytes += eq5_graphic_.memory_bytes();
+        bytes += xr1_global_eq_.memory_bytes();
         bytes += optical_tremolo_->memory_bytes();
         bytes += fractal_bias_trem_.memory_bytes();
         bytes += vibratone_.memory_bytes();
@@ -3523,6 +3568,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 113U) {
+            const std::size_t bytes = xr1_global_eq_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3556,6 +3607,7 @@ private:
     tabletfx::effects::OctaveDivider octave_divider_;
     tabletfx::DoubleTake double_take_;
     tabletfx::EQ5Graphic eq5_graphic_;
+    tabletfx::XR1GlobalEQ xr1_global_eq_;
     std::unique_ptr<tabletfx::OpticalTremolo> optical_tremolo_;
     tabletfx::BiasTrem fractal_bias_trem_;
     tabletfx::Vibratone vibratone_;
@@ -3588,6 +3640,7 @@ private:
     bool pedal_detune_enabled_ = false;
     bool mutant_filter_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
+    bool xr1_global_eq_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4628,6 +4681,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_eq5_graphic(
         as_chain(opaque)->configure_eq5_graphic(
             band1_db, band2_db, band3_db, band4_db, band5_db,
             overall_gain_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_xr1_global_eq(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_xr1_global_eq(values, value_count);
     }
 }
 

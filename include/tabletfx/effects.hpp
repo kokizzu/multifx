@@ -13,6 +13,7 @@
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
+#include "tabletfx/effects/xr1_global_eq.hpp"
 #include "tabletfx/effects/fractal_bias_trem.hpp"
 #include "tabletfx/effects/vibratone.hpp"
 #include "tabletfx/effects/optical_tremolo.hpp"

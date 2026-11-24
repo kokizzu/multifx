@@ -132,6 +132,12 @@ def main() -> None:
         print(f"CPU: {cpu_name()}")
         executable = BUILD_DIR / ("tabletfx_offline.exe" if os.name == "nt" else "tabletfx_offline")
         run([str(executable), "--bench"])
+        xr1_benchmark = BUILD_DIR / (
+            "tabletfx_xr1_global_eq_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_xr1_global_eq_bench"
+        )
+        run([str(xr1_benchmark)])
     elif action == "windows-build":
         build_windows(cmake)
 

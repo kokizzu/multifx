@@ -34,6 +34,7 @@ EFFECTS.push("poly-detune");
 EFFECTS.push("pedal-detune");
 EFFECTS.push("mutant-filter");
 EFFECTS.push("fractal-chromatic-harmonizer");
+EFFECTS.push("xr1-global-eq");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -437,6 +438,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureOctaveFuzz(parameters.octaveFuzz || [0.55, 0.75, 1]);
       this.configureDoubleTake(parameters.doubleTake || [2, 0.25, 0.55, 0.85, 0.15, 0]);
       this.configureEQ5Graphic(parameters.eq5Graphic || [0, 0, 0, 0, 0, 0]);
+      this.configureXR1GlobalEQ(parameters.xr1GlobalEq || [
+        0, 0, 0, 80, 0.707, 0,
+        0, 0, 0, 250, 0.707, 0,
+        0, 0, 0, 750, 0.707, 0,
+        0, 0, 0, 2200, 0.707, 0,
+        0, 0, 0, 6600, 0.707, 0,
+        0,
+      ]);
       this.configureOpticalTremolo(parameters.opticalTremolo ||
         [0, 4.5, 0.5, 0, 0, 120, 1, 50, 50, 0, 0, 0, -36, 0, 1, 0, 0, 0]);
       this.configureFractalBiasTrem(parameters.fractalBiasTrem ||
@@ -733,6 +742,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
 
   configureEQ5Graphic(values) {
     this.module._tf_chain_set_eq5_graphic(this.chain, ...values);
+  }
+
+  configureXR1GlobalEQ(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 31) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_xr1_global_eq(this.chain, pointer, values.length);
+    this.module._free(pointer);
   }
 
   configureOpticalTremolo(values) {
@@ -1460,6 +1480,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureDoubleTake(message.value);
     } else if (message.type === "eq5-graphic" && this.ready) {
       this.configureEQ5Graphic(message.value);
+    } else if (message.type === "xr1-global-eq" && this.ready) {
+      this.configureXR1GlobalEQ(message.value);
     } else if (message.type === "optical-tremolo" && this.ready) {
       this.configureOpticalTremolo(message.value);
     } else if (message.type === "fractal-bias-trem" && this.ready) {

@@ -1952,6 +1952,30 @@ XR1_CABINET_IR_CHECKPOINT_PATHS = (
     "web/wav_decoder.js",
 )
 
+XR1_GLOBAL_EQ_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/xr1_global_eq_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/five_band_eq.hpp",
+    "include/tabletfx/effects/xr1_global_eq.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/xr1_global_eq.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_xr1_global_eq.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_OCTAVE_DIVIDER_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
@@ -2646,6 +2670,10 @@ CHECKPOINTS = {
     "xr1-cabinet-ir": (
         XR1_CABINET_IR_CHECKPOINT_PATHS,
         "feat: add categorized Cabinet IR loader",
+    ),
+    "xr1-global-eq": (
+        XR1_GLOBAL_EQ_CHECKPOINT_PATHS,
+        "feat: add categorized XR1-inspired Global EQ",
     ),
     "fractal-octave-divider": (
         FRACTAL_OCTAVE_DIVIDER_CHECKPOINT_PATHS,

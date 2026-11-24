@@ -73,6 +73,45 @@ public:
     // Fractal family guide as a reference; bounds, shapes, shelf transition,
     // and filter realization remain independent of the manufacturer's DSP.
     void configure(std::array<FiveBandEQBand, 5> bands) noexcept {
+        configure_impl(bands, false, false);
+    }
+
+    // Shared IIR/filter core for project Global EQ variants whose five bands
+    // may each select any supported shape and frequency. The default
+    // configure() keeps the original per-band restrictions unchanged.
+    void configure_global_eq(std::array<FiveBandEQBand, 5> bands) noexcept {
+        configure_impl(bands, true, true);
+    }
+
+    [[nodiscard]] float process_sample(float sample,
+                                       std::uint16_t channel = 0) noexcept {
+        if (channel >= channels_) return sample;
+        if (!std::isfinite(sample)) {
+            states_[channel] = {};
+            return 0.0F;
+        }
+        if (neutral_) return sample;
+
+        if (solo_band_ != 0U) {
+            const std::size_t band = solo_band_ - 1U;
+            return process_section(sample, solo_coefficients_[band],
+                                   states_[channel][band][0]);
+        }
+        for (std::size_t band = 0; band < coefficients_.size(); ++band) {
+            for (std::size_t section = 0;
+                 section < coefficients_[band].count; ++section) {
+                sample = process_section(
+                    sample, coefficients_[band].sections[section],
+                    states_[channel][band][section]);
+            }
+        }
+        return sample;
+    }
+
+private:
+    void configure_impl(std::array<FiveBandEQBand, 5> bands,
+                        bool allow_any_shape,
+                        bool use_uniform_frequency_range) noexcept {
         constexpr std::array<float, 5> kMinimumFrequencyHz{
             20.0F, 100.0F, 100.0F, 100.0F, 200.0F};
         constexpr std::array<float, 5> kMaximumFrequencyHz{
@@ -87,15 +126,23 @@ public:
 
         bool bands_are_neutral = true;
         for (std::size_t band = 0; band < bands.size(); ++band) {
-            const float max_hz = std::min(kMaximumFrequencyHz[band], nyquist_guard_hz);
+            const float min_hz = use_uniform_frequency_range
+                                     ? 20.0F
+                                     : kMinimumFrequencyHz[band];
+            const float max_hz = std::min(
+                use_uniform_frequency_range ? 20000.0F
+                                            : kMaximumFrequencyHz[band],
+                nyquist_guard_hz);
             bands_[band].frequency_hz = bounded(
                 bands[band].frequency_hz, kDefaultFrequencyHz[band],
-                kMinimumFrequencyHz[band], max_hz);
+                min_hz, max_hz);
             bands_[band].gain_db = bounded(
                 bands[band].gain_db, 0.0F, kMinimumGainDb, kMaximumGainDb);
             bands_[band].q = bounded(
                 bands[band].q, 0.707F, kMinimumQ, kMaximumQ);
-            bands_[band].shape = supported_shape(band, bands[band].shape)
+            bands_[band].shape =
+                    (allow_any_shape ? known_shape(bands[band].shape)
+                                     : supported_shape(band, bands[band].shape))
                                      ? bands[band].shape
                                      : FiveBandEQShape::Peaking;
             const float slope = bounded(
@@ -113,6 +160,8 @@ public:
         reset();
     }
 
+public:
+
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override {
         if (channels != channels_ || neutral_) return;
@@ -120,29 +169,7 @@ public:
         for (std::size_t frame = 0; frame < frames; ++frame) {
             for (std::uint16_t channel = 0; channel < channels_; ++channel) {
                 const std::size_t index = frame * channels_ + channel;
-                float sample = interleaved[index];
-                if (!std::isfinite(sample)) {
-                    states_[channel] = {};
-                    interleaved[index] = 0.0F;
-                    continue;
-                }
-                if (solo_band_ != 0U) {
-                    const std::size_t band = solo_band_ - 1U;
-                    sample = process_section(
-                        sample, solo_coefficients_[band],
-                        states_[channel][band][0]);
-                    interleaved[index] = sample;
-                    continue;
-                }
-                for (std::size_t band = 0; band < coefficients_.size(); ++band) {
-                    for (std::size_t section = 0;
-                         section < coefficients_[band].count; ++section) {
-                        sample = process_section(
-                            sample, coefficients_[band].sections[section],
-                            states_[channel][band][section]);
-                    }
-                }
-                interleaved[index] = sample;
+                interleaved[index] = process_sample(interleaved[index], channel);
             }
         }
     }
@@ -214,6 +241,21 @@ private:
             return band == 0;
         case FiveBandEQShape::HighCut:
             return band == 4;
+        }
+        return false;
+    }
+
+    [[nodiscard]] static bool known_shape(FiveBandEQShape shape) noexcept {
+        switch (shape) {
+        case FiveBandEQShape::Peaking:
+        case FiveBandEQShape::LowShelf:
+        case FiveBandEQShape::HighShelf:
+        case FiveBandEQShape::LowCut:
+        case FiveBandEQShape::HighCut:
+        case FiveBandEQShape::Peaking2:
+        case FiveBandEQShape::LowShelf2:
+        case FiveBandEQShape::HighShelf2:
+            return true;
         }
         return false;
     }

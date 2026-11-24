@@ -517,28 +517,28 @@
     "picker_rows": 112
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family four-voice chromatic harmonizer",
+    "name": "XRecer XR1-inspired in-chain Global EQ",
     "status": "verified",
-    "picker_index": 112,
-    "category": "Pitch",
+    "picker_index": 113,
+    "category": "Equalizer",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide, November 2026, and FM9 firmware downloads",
-      "revision": "Blocks Guide November 2026, printed pp. 76–79; firmware downloads checked 2026-11-25, v12.0 dated 2026-07-07 and labeled Original/Turbo; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The family guide documents Dual Chromatic (two voices), Quad Chromatic (four), and Quad Chromatic Delay (four), with per-voice shifts, detune, level, pan, and delay. It does not state input-note polyphony or numeric feedback bounds. Firmware v12.0 does not name Mark II Turbo separately; exact applicability and installed firmware are unknown."
+      "title": "XRecer XR1 User Manual V1.1.0 and official FAQ",
+      "revision": "User Manual V1.1.0, November 2026, Global EQ section; official FAQ checked 2026-11-25. Installed XR1 OS is unknown.",
+      "url": "https://wiki.xrecer.com/docs/global-eq/index.html",
+      "faq_url": "https://www.xrecer.com/pages/faq",
+      "qualification": "The manual documents per-band Assign, Type, Gain, Freq, Q, and Bypass plus master Bypass/Reset, but not numeric ranges/defaults, filter topology, or output-bus routing. FAQ says Global EQ applies to selected outputs and dry DI bypasses it. Project ID 113 is an in-chain approximation only."
     },
-    "documented_controls": "Shift ±24 semitones, Detune ±50 cents, Level, Pan, per-voice Delay up to 2,000 ms; Quad Chromatic Delay feedback is post-shift. The quad stereo routing summary maps L to voices 1/3 and R to voices 2/4; the default block sums to mono. The guide does not document a note-tracked synth, input-note polyphony, or numeric feedback limits.",
-    "project_controls": "Default-off four-voice fixed-interval processor at Pitch picker ID 112 (113 entries), with shifts -12/+7/+12/-5, 0.20 level per voice, pans -0.65/-0.20/+0.20/+0.65, detune/delay/feedback zero. Project bounds: shift ±24, detune ±50 cents, level 0–2, pan -1…+1, delay 0–2,000 ms, feedback 0–0.9. Asymmetric 2048/128 STFT path reports 256-frame (5.333 ms at 48 kHz) algorithmic latency. Native memory is 675,480 B with delay off and 2,211,496 B with four full 2-second delay rings; browser effect memory is 670,556 B with delay off. Delay rings are lazy; process is allocation-free. No Fractal DSP, settings, firmware, synth-tracking, or sound parity is claimed.",
+    "documented_controls": "Five bands; each has Assign, Type (Peak/HP/LP/Hi-Shelf/Lo-Shelf), Gain, Freq, Q, and Bypass; master Bypass and Reset. The exact page provides no numeric ranges/defaults, filter topology, or output-bus routing table.",
+    "project_controls": "Project-authored Equalizer ID 113: Stereo/Left/Right assignment; Peak, high-pass, low-pass, high-shelf, low-shelf; gain ±12 dB; frequency 20–20,000 Hz capped at 0.45 × sample rate; Q 0.25–10; neutral peak defaults at 80/250/750/2,200/6,600 Hz; per-band/master bypass and reset. This consumes one chain slot and does not apply across presets/selected outputs or reproduce dry-DI bypass.",
     "verification": {
-      "native_ctest": "make test-fractal-chromatic-harmonizer passed focused 1/1 CTest. make test passed documentation validation, 11/11 audio-fixture checks, and 114/114 CTest cases, including pitch intervals, bounds, delay, routing, reset, memory, finite recovery, and no process-time allocations.",
-      "focused_browser": "make web-test-fractal-chromatic-harmonizer passed in HeadlessChrome 151 using local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. Verified Pitch category ID 112, disabled default, 24 controls/bounds, Play output, audible parameter change, and lazy memory reporting. Browser effect memory was 670,556 B; pitch-setting difference RMS 0.0118364404.",
-      "full_browser": "make web-test passed. The local prerecorded guitar/browser suite and full browser/native chain comparison passed; the WASM module uses its existing fixed 100,663,296 B linear memory. No new default-off processor allocation is made for this effect.",
+      "native_ctest": "make web-test passed, including all 115/115 CTest cases and 11/11 fixture checks; XR1 tests cover filter types, bounds/invalid values, channel assignment, bypass/reset, finite recovery, block partitioning, zero fixed latency, and no process-time allocations.",
+      "focused_browser": "make web-test passed; Headless Chrome enabled Equalizer ID 113, played the existing local prerecorded Guitar-TECHS guitar DI, set band 3 to +12 dB Peak at 750 Hz, and captured measurable output (peak 0.3673; 96,000 active samples).",
+      "full_browser": "make web-test passed through the explicit Emscripten source list and the complete browser/WASM suite.",
       "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X, Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 19.8103/26.3085/30.3267/35.6049/39.2801% of callback. Native processor state is 675,480 B with delay off. Desktop processor-call timing, not target-device performance.",
-      "notes": "Automated native, focused local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. First enable allocates/prewarms the effect in the worklet control path; target-device first-use cost is unmeasured. Human listening, physical FM9 behavior, firmware applicability to Mark II Turbo, and target-device real-time load remain open."
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 5,000 warm-up/50,000 measured: state 1,680 B, zero fixed latency. Neutral p50/p95/p99/p99.9/max 0.001/0.001/0.001/0.001/0.296%; active five-band 0.112/0.117/0.186/0.388/0.888% of callback. Desktop processor-call timing, not target-device performance.",
+      "notes": "Native, local-guitar browser/WASM Play, full browser suite, Windows build, and benchmark pass. The processor is in-chain and project-authored; XR1 selected-output/global assignment, dry-DI routing, settings, DSP, and sound parity are not established. Human listening and hardware checks remain open."
     },
-    "picker_rows": 113
+    "picker_rows": 114
   },
   "next_research": [
     {

@@ -203,6 +203,7 @@
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="110"><span class="effect-number">111</span><span class="effect-name">Pedal Detune · project-authored position blend</span><span class="effect-default">Shallow · 50% position · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="111"><span class="effect-number">112</span><span class="effect-name">Mutant Filter · project-authored envelope filter</span><span class="effect-default">Band-pass · 350–2200 Hz · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="112"><span class="effect-number">113</span><span class="effect-name">Fractal Chromatic · project-authored four-voice pitch</span><span class="effect-default">4 voices · −12/+7/+12/−5 semitones · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="113"><span class="effect-number">114</span><span class="effect-name">Global EQ · project-authored XR1-inspired in-chain EQ</span><span class="effect-default">5 assignable filters · project L/R assignment</span><span class="effect-category-tag">Equalizer</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -791,6 +792,15 @@
           <label class="mix-control" for="eq5-band-5-db"><span>6,600 Hz</span><output id="eq5-band-5-db-value" for="eq5-band-5-db">0.0 dB</output><input id="eq5-band-5-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
           <label class="mix-control" for="eq5-overall-gain-db"><span>Overall gain</span><output id="eq5-overall-gain-db-value" for="eq5-overall-gain-db">0.0 dB</output><input id="eq5-overall-gain-db" type="range" min="-12" max="12" step="0.5" value="0"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="XR1-inspired Global EQ controls">
+        <h3>Global EQ · project-authored XR1-inspired in-chain EQ</h3>
+        <p class="hint">The XR1 User Manual V1.1.0 (November 2026) documents per-band Assign, Type (Peak/HP/LP/Hi-Shelf/Lo-Shelf), Gain, Freq, Q, and Bypass, plus master Bypass and Reset. It does not publish numeric ranges/defaults, filter topology, or bus-routing details. These project-selected controls use ±12 dB, 20–20,000 Hz (capped at 0.45 × sample rate), Q 0.25–10, and Stereo/Left/Right assignments. This processor occupies one project signal-chain slot; it does not apply across presets or reproduce XR1 output-bus or dry-DI routing. Dry DI is outside its scope.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="xr1-global-eq-master-bypass"><span>Master bypass</span><input id="xr1-global-eq-master-bypass" type="checkbox"></label>
+          <button id="xr1-global-eq-reset" type="button">Reset to project defaults</button>
+        </div>
+        <div id="xr1-global-eq-bands" class="gain-controls"></div>
       </div>
       <div class="effect-parameter-group" aria-label="Optical Tremolo controls">
         <h3>Optical Tremolo · FM9-family control roles</h3>

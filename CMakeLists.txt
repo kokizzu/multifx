@@ -29,6 +29,7 @@ add_library(tabletfx_core
     src/effects/octave_divider.cpp
     src/effects/double_take.cpp
     src/effects/eq5_graphic.cpp
+    src/effects/xr1_global_eq.cpp
     src/effects/optical_tremolo.cpp
     src/effects/fractal_bias_trem.cpp
     src/effects/grain_delay.cpp
@@ -125,6 +126,9 @@ endif()
 add_executable(tabletfx_offline apps/offline_render.cpp)
 target_link_libraries(tabletfx_offline PRIVATE tabletfx_core)
 
+add_executable(tabletfx_xr1_global_eq_bench apps/xr1_global_eq_bench.cpp)
+target_link_libraries(tabletfx_xr1_global_eq_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
@@ -142,6 +146,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_five_band_eq_tests tests/test_five_band_eq.cpp)
     target_link_libraries(tabletfx_five_band_eq_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_five_band_eq_tests COMMAND tabletfx_five_band_eq_tests)
+
+    add_executable(tabletfx_xr1_global_eq_tests tests/test_xr1_global_eq.cpp)
+    target_link_libraries(tabletfx_xr1_global_eq_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_xr1_global_eq_tests COMMAND tabletfx_xr1_global_eq_tests)
 
     add_executable(tabletfx_filter_tests tests/test_filters.cpp)
     target_link_libraries(tabletfx_filter_tests PRIVATE tabletfx_core)
