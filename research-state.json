@@ -4,39 +4,8 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "38b10551b974dd2049ce8a2f71e62c5b912752cf",
+  "previous_checkpoint_commit": "48354b57803cc698a59ce67207c54e355059123e",
   "completed_checkpoints": [
-    {
-      "name": "Fractal FM9-family Dynamic Formant Morph",
-      "status": "verified",
-      "picker_index": 43,
-      "category": "Filters & wah",
-      "official_source": {
-        "title": "Fractal Audio Systems Blocks Guide",
-        "revision": "June 2023",
-        "pages": [
-          3,
-          4,
-          51
-        ],
-        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-        "qualification": "Guide covers FM9 family. Firmware v12.0 names FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown."
-      },
-      "documented_controls": "Start/Middle/End vowels (AAA, EEE, III, OHH, OOO, EHH, AHH, AWW, UHH, ERR), Resonance, Control; common Mix, Level, Balance, Bypass, and Bypass Mode.",
-      "project_controls": "The existing generic A/E/I/O/U sweep is retained. Three-vowel mode has Start/Middle/End selectors, manual Control 0–100% with middle at 50%, project-authored profile frequencies/gains, Resonance Q 0.5–12, Mix 0–1, Level −24…+12 dB, Balance −100…+100%, and 10 ms smoothing. Automated LFO/expression modifier assignment and selectable Bypass Mode are not implemented.",
-      "verification": {
-        "native_ctest": "96/96 CTest cases passed",
-        "fixture_safety": "11 passed",
-        "picker_rows": 93,
-        "browser_native_comparison": "71 active stages passed on local stereo Guitar-TECHS DI; max absolute error 0.000006942274751509103, RMS error 0.0000012286337480166103",
-        "formant_morph_playback": "browser Play captured finite changed output with local prerecorded Guitar-TECHS DI",
-        "wasm_memory": "fixed 64 MiB heap; 32,959,916 B full stereo processor state plus 10,364 B tuner state",
-        "isolated_benchmark": "648 B processor state; p50 0.0896%, p95 0.1425%, p99 0.1560%, p99.9 0.9098%, max 1.4400% of 2.667 ms callback at 48 kHz stereo/128 frames; processor-call estimate, not a live device measurement",
-        "audio_regression": "passed: all five EGFxSet pickup positions; 3,480,000-frame Guitar-TECHS stereo DI and mono fold-down; full chain includes Formant Filter; separate isolated Three-Stage Distortion, Stereo Crossover, and Asheville Pattrn renders passed",
-        "notes": "No Fractal DSP/settings parity is claimed. No hardware or human listening evidence."
-      }
-    },
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
       "status": "verified",
@@ -102,31 +71,15 @@
         "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up plus 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of a 2.667 ms callback; 1,208 B object state; zero fixed latency; no per-block allocation. Processor-call estimate, not live device performance."
       },
       "notes": "Project-authored behavior only. No Fractal DSP/settings parity, hardware test, or human listening result. Manual listening and device comparison remain open."
+    },
+    {
+      "name": "XRecer XR1 Cabinet IR Loader single-mono path",
+      "status": "verified",
+      "picker_index": 100,
+      "category": "IR Loader"
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Rotary Speaker Hi Depth / Rotor Length behavior",
-    "status": "verified",
-    "picker_index": 33,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
-      "revision": "June 2023 cover date; printed p. 87; FM9-family documentation. Firmware v12.0 posted 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Guide content is family-level evidence and the current linked PDF has a June 2023 cover date. Applicability to FM9 Mark II Turbo is family-level inference; the firmware page does not name Mark II Turbo and does not establish installed firmware."
-    },
-    "documented_controls": "Rate/Tempo, Drive, Hi/Low Depth, Hi Level, Rotor Length, Low Rate Multiplier, separate Low/Hi Time Constants, separate LF/HF Mic Spacing, Mic Distance, Stereo Spread, Mix, Level, Balance, and Input Select. The guide says zero Hi Depth can simulate drum-only operation but gives no numeric ranges or control mappings.",
-    "project_controls": "Project-authored dual-rotor model. Hi Depth now controls both horn level modulation and high-rotor Doppler motion; at zero the horn is parked and Rotor Length cannot move it. Project bounds, crossover, motor model, mapping, and DSP are not Fractal settings or sound parity. Zero fixed algorithmic latency; no process allocation; 1,208 B owned state.",
-    "verification": {
-      "native_ctest": "make test passed: 104/104 CTest tests and 11/11 audio-fixture safety checks, including a zero-Hi-Depth/Rotor-Length regression.",
-      "browser": "make web-test passed: full 104/104 native suite plus browser/WASM chain comparison using local prerecorded Guitar-TECHS DI. Rotary is active in the chain; no isolated Rotary browser Play measurement is claimed.",
-      "windows": "make windows-cross-build passed for the native core and offline renderer.",
-      "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up plus 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of a 2.667 ms callback; 1,208 B object state; zero fixed latency; no per-block allocation. Processor-call estimate, not live device performance."
-    },
-    "notes": "Project-authored behavior only. No Fractal DSP/settings parity, hardware test, or human listening result. Manual listening and device comparison remain open."
-  },
-  "current_checkpoint": {
     "name": "XRecer XR1 Cabinet IR Loader single-mono path",
     "status": "verified",
     "picker_index": 100,
@@ -147,17 +100,29 @@
       "notes": "Project implementation and file contract validation only. XR1 channel count, dual-loader semantics, DSP and latency remain unknown; no device test or human listening result."
     }
   },
-  "next_research": [
-    {
-      "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Pitch / Octave Divider",
-      "source": "Fractal Audio Systems Blocks Guide, June 2023 cover date, printed p. 73; FM9 downloads checked 2026-11-24",
-      "source_urls": [
-        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "https://www.fractalaudio.com/fm9-downloads/"
-      ],
-      "status": "The guide documents fixed −1 and −2 octave divided voices with independent Pan and Level. It recommends single notes and usually placing the effect before distortion. Exact algorithm behavior, numeric bounds/defaults, and firmware applicability to Mark II Turbo remain qualified."
+  "current_checkpoint": {
+    "name": "Fractal FM9 Mark II Turbo Octave Divider category implementation",
+    "status": "verified",
+    "picker_index": 101,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+      "revision": "November 2026 revision checked 2026-11-24; printed p. 83; FM9-family documentation. Firmware v12.0 checked 2026-11-24.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide is family-level, while the firmware v12.0 compatibility line names FM9 Original/Turbo but not Mark II Turbo separately. Applicability to Mark II Turbo is a family inference; installed firmware is unknown."
     },
+    "documented_controls": "Fixed one- and two-octave-down voices, each with independent Pan and Level. The guide recommends single notes and usually placement before distortion. It publishes no numeric bounds/defaults or polyphonic input-tracking guarantee.",
+    "project_controls": "Project-authored crossing-derived square-wave −12/−24-semitone sub voices. Input Gain default 1.0 (0–4); Voice 1 Level 0.45 (0–1), Pan −0.25 (−1…+1); Voice 2 Level 0.20 (0–1), Pan +0.25 (−1…+1); Mix 0.65 (0–1); Output 1.0 (0–2). Project control choices, bounds, smoothing, divider logic, and DSP do not claim Fractal parity. Zero fixed latency, 192 B state, no callback allocation.",
+    "verification": {
+      "native_ctest": "make test passed 105/105 CTest tests and 11/11 audio-fixture safety checks, including octave-divider signal, controls, reset, finite recovery, irregular-block, and allocation tests plus the offline CLI smoke.",
+      "browser": "make web-test passed: 102 categorized picker rows; isolated Play smoke using local prerecorded Guitar-TECHS DI; full browser/native comparison across 73 active processor slots, maximum absolute error 6.567984570438057e-6 and RMS error 1.3597328000199877e-6. Fixed WASM memory 100663296 B; full-chain processor state 80329680 B plus 10364 B tuner state.",
+      "windows": "make windows-cross-build passed for native core and offline renderer with Octave Divider.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2000 warm-up and 5000 measured blocks: p50/p95/p99/p99.9/max 0.0503/0.0953/0.1050/0.2940/0.4571% of a 2.667 ms callback deadline; owned state 192 B; zero fixed latency; no process allocation. Processor-call estimate, not live-device performance.",
+      "notes": "Implementation and automated verification only. No Fractal DSP/settings/sound parity, device test, or human listening result. Listening and target-device checks remain open."
+    }
+  },
+  "next_research": [
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Modulation / Double Take",

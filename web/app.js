@@ -102,11 +102,13 @@ const EFFECT_NAMES = [
   "Deluxe Looper · project-authored",
   "Chromatic Pitch Delay · project-authored Fender-inspired control roles",
   "Cabinet IR · project-authored mono impulse response",
+  "Octave Divider · project-authored Fractal-inspired controls",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
   stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0, 0.25, 0, 0, 4],
   stepTremolo: [4, 0.75, 8, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 1, 0.75, 0.5, 0.75, 4],
+  octaveDivider: [1, 0.45, -0.25, 0.2, 0.25, 0.65, 1],
   octaveFuzz: [0.55, 0.75, 1],
   rockBoxDistortion: [0.5, 0.5, 0, 10],
   rockBoxBoost: [0, 0, 10],
@@ -1207,6 +1209,15 @@ const stepTremoloLevels = [...document.querySelectorAll("[data-step-tremolo-leve
 const stepTremoloControls = [
   stepTremoloStepCount, stepTremoloRateHz, stepTremoloDepth,
   stepTremoloTransitionMs, ...stepTremoloLevels,
+];
+const octaveDividerControls = [
+  document.querySelector("#octave-divider-input-gain"),
+  document.querySelector("#octave-divider-voice1-level"),
+  document.querySelector("#octave-divider-voice1-pan"),
+  document.querySelector("#octave-divider-voice2-level"),
+  document.querySelector("#octave-divider-voice2-pan"),
+  document.querySelector("#octave-divider-mix"),
+  document.querySelector("#octave-divider-output-level"),
 ];
 const stereoFilterControls = [
   document.querySelector("#stereo-filter-type"),
@@ -2830,6 +2841,25 @@ function updateStepTremoloOptions() {
   }
 }
 
+function updateOctaveDividerOptions() {
+  const values = octaveDividerControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.octaveDivider = values;
+  octaveDividerControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (!output) return;
+    if (index === 0) output.value = `${values[index].toFixed(2)}×`;
+    else if (index === 1 || index === 3 || index === 5) {
+      output.value = `${Math.round(values[index] * 100)}%`;
+    } else if (index === 2 || index === 4) {
+      const percent = Math.round(values[index] * 100);
+      output.value = `${percent > 0 ? "+" : ""}${percent}%`;
+    } else output.value = `${Math.round(values[index] * 100)}%`;
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "octave-divider", value: values });
+  }
+}
+
 function updateVolumePanOptions() {
   const values = [
     Number(volumePanPosition.value) / 100,
@@ -3859,6 +3889,11 @@ for (const control of stepTremoloControls) {
   }
 }
 updateStepTremoloOptions();
+for (const control of octaveDividerControls) {
+  control.addEventListener("input", updateOctaveDividerOptions);
+  control.addEventListener("change", updateOctaveDividerOptions);
+}
+updateOctaveDividerOptions();
 for (const control of multiDelayControls) {
   control.addEventListener(control.type === "range" ? "input" : "change",
     updateMultiDelayOptions);
@@ -9344,6 +9379,110 @@ async function runStepTremoloBrowserSmokeTest(reference, captureView, captureBuf
   }
 }
 
+async function runOctaveDividerBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = octaveDividerControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Octave Divider browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    octaveDividerControls[0].value = "1.1";
+    octaveDividerControls[1].value = "0.45";
+    octaveDividerControls[2].value = "-0.5";
+    octaveDividerControls[3].value = "0.25";
+    octaveDividerControls[4].value = "0.5";
+    octaveDividerControls[5].value = "0.8";
+    octaveDividerControls[6].value = "1";
+    octaveDividerControls[5].dispatchEvent(new Event("input", { bubbles: true }));
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="101"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !checkbox || octaveDividerControls.length !== 7 ||
+        Math.abs(DEFAULT_PARAMETERS.octaveDivider[5] - 0.8) > 1e-6) {
+      throw new Error("Octave Divider is missing its categorized Pitch row or seven parameter controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 101;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    if (!checkbox.checked) checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Octave Divider picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Octave Divider playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      const magnitude = Math.abs(sample);
+      peak = Math.max(peak, magnitude);
+      if (magnitude > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`Octave Divider produced no measurable local guitar output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Pitch", enabledEffectIndex: 101,
+      inputGain: 1.1, voice1Level: 0.45, voice1Pan: -0.5,
+      voice2Level: 0.25, voice2Pan: 0.5, mix: 0.8, outputLevel: 1,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      octaveDividerControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateOctaveDividerOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runStereoFilterBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = stereoFilterControls.map((control) =>
@@ -10195,8 +10334,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 101 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 101 || effectRows.length !== 101 ||
+        const expectedEffectIds = Array.from({ length: 102 }, (_, index) => index);
+        if (EFFECT_NAMES.length !== 102 || effectRows.length !== 102 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -10258,6 +10397,9 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[100]?.startsWith("Cabinet IR") ||
               effectRows[100]?.dataset.category !== "ir-loader" ||
               effectRows[100]?.querySelector(".effect-category-tag")?.textContent !== "IR Loader" ||
+              !EFFECT_NAMES[101]?.startsWith("Octave Divider") ||
+              effectRows[101]?.dataset.category !== "pitch" ||
+              effectRows[101]?.querySelector(".effect-category-tag")?.textContent !== "Pitch" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -10274,7 +10416,7 @@ async function runBrowserSelfTest() {
                     initialEffectState[92] || initialEffectState[93] ||
                       !initialEffectState[94] || !initialEffectState[95] ||
                         initialEffectState[96] || initialEffectState[97] || initialEffectState[98] ||
-                        initialEffectState[100] ||
+                         initialEffectState[100] || initialEffectState[101] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -11510,7 +11652,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (pitchIds.join(",") !== "22,50,51,74,99" || effectCount.value !== `5 of ${effectRows.length}` ||
+                   if (pitchIds.join(",") !== "22,50,51,74,99,101" || effectCount.value !== `6 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, harmonizer, pitch sequencers, and Chromatic Pitch Delay.");
     }
@@ -11885,11 +12027,14 @@ async function runBrowserSelfTest() {
     parityEnabled[99] = false;
     // Cabinet IR has a focused browser/WASM Play smoke and no shared offline CLI stage.
     parityEnabled[100] = false;
+    // Octave Divider is verified by its dedicated local guitar Play smoke and
+    // focused CLI test, so keep it out of the shared offline parity chain.
+    parityEnabled[101] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-        if (parityEnabled.length !== 101 || activeProcessorIndices.length !== 73 ||
+        if (parityEnabled.length !== 102 || activeProcessorIndices.length !== 73 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 98) {
              throw new Error("The all-effect chain must contain 73 optional processors between input trim and output utilities.");
     }
@@ -12517,6 +12662,10 @@ async function runBrowserSelfTest() {
     const cabinetIRSmoke = await runCabinetIrBrowserSmokeTest(
       reference, captureView, captureBuffer, cabinetIRBytes,
     );
+    testResult.textContent = "Checking Octave Divider Pitch-category playback on local guitar audio…";
+    const octaveDividerSmoke = await runOctaveDividerBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Megatap Delay playback on local guitar audio…";
     const megatapDelaySmoke = await runMegatapDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -12764,6 +12913,7 @@ async function runBrowserSelfTest() {
       localFileDecode: localFileDecoded,
       convolutionIRLoaded: convolutionIRUploadedVersion === convolutionIRVersion,
       cabinetIR: cabinetIRSmoke,
+      octaveDivider: octaveDividerSmoke,
       playOutputCaptured: nonZeroSamples > 0,
       megatapDelay: megatapDelaySmoke,
       deEsser: deEsserSmoke,

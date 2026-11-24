@@ -1941,6 +1941,29 @@ XR1_CABINET_IR_CHECKPOINT_PATHS = (
     "web/wav_decoder.js",
 )
 
+FRACTAL_OCTAVE_DIVIDER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/octave_divider.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/octave_divider.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_octave_divider.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2274,6 +2297,10 @@ CHECKPOINTS = {
     "xr1-cabinet-ir": (
         XR1_CABINET_IR_CHECKPOINT_PATHS,
         "feat: add categorized Cabinet IR loader",
+    ),
+    "fractal-octave-divider": (
+        FRACTAL_OCTAVE_DIVIDER_CHECKPOINT_PATHS,
+        "feat: add categorized Fractal-inspired Octave Divider",
     ),
 }
 

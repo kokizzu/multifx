@@ -191,6 +191,7 @@
                 <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="98"><span class="effect-number">99</span><span class="effect-name">Deluxe Looper · project-authored</span><span class="effect-default">120 s mono / 60 s stereo at 48 kHz</span><span class="effect-category-tag">Loop &amp; performance</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="99"><span class="effect-number">100</span><span class="effect-name">Chromatic Pitch Delay · project-authored</span><span class="effect-default">±24 semitones · tempo sync · 10–2,000 ms</span><span class="effect-category-tag">Pitch</span></label>
         <label class="effect-row" data-category="ir-loader"><input type="checkbox" data-effect="100"><span class="effect-number">101</span><span class="effect-name">Cabinet IR · project-authored mono FIR</span><span class="effect-default">24-bit PCM · 48 kHz · 2,048 samples</span><span class="effect-category-tag">IR Loader</span></label>
+        <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="101"><span class="effect-number">102</span><span class="effect-name">Octave Divider · project-authored Fractal-inspired controls</span><span class="effect-default">Fixed −1 / −2 octave voices</span><span class="effect-category-tag">Pitch</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -720,6 +721,19 @@
           <input id="cabinet-ir-file" type="file" accept=".wav,audio/wav">
         </label>
         <p id="cabinet-ir-status" class="hint" role="status">No Cabinet IR loaded; the enabled block passes audio through.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Octave Divider controls">
+        <h3>Octave Divider · project-authored flip-flop style</h3>
+        <p class="hint">Fixed −1 and −2 octave square-wave divider voices. The Fractal guide recommends single notes, usually before distortion; the effect does not promise chord tracking or Fractal DSP/sound parity. Ranges and defaults here are project choices.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="octave-divider-input-gain"><span>Input gain</span><output id="octave-divider-input-gain-value" for="octave-divider-input-gain">1.00×</output><input id="octave-divider-input-gain" type="range" min="0" max="4" step="0.01" value="1"></label>
+          <label class="mix-control" for="octave-divider-voice1-level"><span>−1 octave level</span><output id="octave-divider-voice1-level-value" for="octave-divider-voice1-level">45%</output><input id="octave-divider-voice1-level" type="range" min="0" max="1" step="0.01" value="0.45"></label>
+          <label class="mix-control" for="octave-divider-voice1-pan"><span>−1 octave pan</span><output id="octave-divider-voice1-pan-value" for="octave-divider-voice1-pan">−25%</output><input id="octave-divider-voice1-pan" type="range" min="-1" max="1" step="0.01" value="-0.25"></label>
+          <label class="mix-control" for="octave-divider-voice2-level"><span>−2 octave level</span><output id="octave-divider-voice2-level-value" for="octave-divider-voice2-level">20%</output><input id="octave-divider-voice2-level" type="range" min="0" max="1" step="0.01" value="0.2"></label>
+          <label class="mix-control" for="octave-divider-voice2-pan"><span>−2 octave pan</span><output id="octave-divider-voice2-pan-value" for="octave-divider-voice2-pan">+25%</output><input id="octave-divider-voice2-pan" type="range" min="-1" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="octave-divider-mix"><span>Mix</span><output id="octave-divider-mix-value" for="octave-divider-mix">65%</output><input id="octave-divider-mix" type="range" min="0" max="1" step="0.01" value="0.65"></label>
+          <label class="mix-control" for="octave-divider-output-level"><span>Output level</span><output id="octave-divider-output-level-value" for="octave-divider-output-level">100%</output><input id="octave-divider-output-level" type="range" min="0" max="2" step="0.01" value="1"></label>
+        </div>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="input-trim-db">

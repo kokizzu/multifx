@@ -15,6 +15,7 @@
 #include "tabletfx/effects/spring_reverb.hpp"
 #include "tabletfx/effects/convolution_reverb.hpp"
 #include "tabletfx/effects/cabinet_ir.hpp"
+#include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
 #include "tabletfx/effects/bit_crusher.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -251,6 +252,8 @@ struct Options {
     tabletfx::TapeEchoParameters tape_echo{};
     bool octave_fuzz_enabled = false;
     tabletfx::effects::OctaveFuzzParameters octave_fuzz{};
+    bool octave_divider_enabled = false;
+    tabletfx::effects::OctaveDividerParameters octave_divider{};
     bool stereo_crossover_enabled = false;
     tabletfx::StereoCrossoverParameters stereo_crossover{};
     bool bit_crusher_enabled = false;
@@ -613,6 +616,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--octave-fuzz") {
             options.octave_fuzz_enabled = true;
+            continue;
+        }
+        if (key == "--octave-divider") {
+            options.octave_divider_enabled = true;
             continue;
         }
         if (key == "--stereo-crossover") {
@@ -3044,6 +3051,34 @@ Options parse_options(int argc, char** argv, int first) {
             options.octave_fuzz.volume = value;
             options.octave_fuzz_enabled = true;
         }
+        else if (key == "--octave-divider-input-gain") {
+            options.octave_divider.input_gain = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-voice1-level") {
+            options.octave_divider.voice1_level = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-voice1-pan") {
+            options.octave_divider.voice1_pan = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-voice2-level") {
+            options.octave_divider.voice2_level = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-voice2-pan") {
+            options.octave_divider.voice2_pan = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-mix") {
+            options.octave_divider.mix = value;
+            options.octave_divider_enabled = true;
+        }
+        else if (key == "--octave-divider-output-level") {
+            options.octave_divider.output_level = value;
+            options.octave_divider_enabled = true;
+        }
         else if (key == "--stereo-crossover-frequency-hz") {
             options.stereo_crossover.frequency_hz = value;
             options.stereo_crossover_enabled = true;
@@ -3581,6 +3616,10 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
     if (options.volume_pedal_enabled) {
         effects.push_back(std::make_unique<tabletfx::VolumePedal>(
             static_cast<float>(sample_rate), options.volume_pedal));
+    }
+    if (options.octave_divider_enabled) {
+        effects.push_back(std::make_unique<tabletfx::effects::OctaveDivider>(
+            static_cast<float>(sample_rate), channels, options.octave_divider));
     }
     if (options.high_pass_hz > 0.0F) {
         effects.push_back(std::make_unique<tabletfx::HighPassFilter>(
@@ -4614,6 +4653,11 @@ void run_bench() {
             throw std::runtime_error("Could not prepare cabinet IR benchmark processor");
         }
         return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("octave-divider-fractal-inspired", [=] {
+        tabletfx::effects::OctaveDividerParameters parameters;
+        return std::make_unique<tabletfx::effects::OctaveDivider>(
+            static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("input-gain", [=] {
         return std::make_unique<tabletfx::Gain>(6.0F, static_cast<float>(sample_rate));

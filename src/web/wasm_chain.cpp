@@ -108,7 +108,9 @@ public:
           signal_controls_(static_cast<float>(sample_rate)),
           tuner_(static_cast<float>(sample_rate)),
           cabinet_ir_(static_cast<float>(sample_rate),
-                      static_cast<std::uint16_t>(channels)) {
+                      static_cast<std::uint16_t>(channels)),
+          octave_divider_(static_cast<float>(sample_rate),
+                          static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -441,6 +443,11 @@ public:
             if (!enabled) cabinet_ir_.reset();
             return true;
         }
+        if (index == 101U) {
+            octave_divider_enabled_ = enabled;
+            if (!enabled) octave_divider_.reset();
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -570,6 +577,13 @@ public:
             }
             return;
         }
+        if (index == 101U) {
+            if (octave_divider_enabled_) {
+                octave_divider_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -639,6 +653,7 @@ public:
         deluxe_looper_->reset();
         chromatic_pitch_delay_->reset();
         cabinet_ir_.reset();
+        octave_divider_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2891,6 +2906,21 @@ public:
         output_limiter_.set_release_ms(release_ms);
     }
 
+    void configure_octave_divider(float input_gain, float voice1_level,
+                                  float voice1_pan, float voice2_level,
+                                  float voice2_pan, float mix,
+                                  float output_level) noexcept {
+        tabletfx::effects::OctaveDividerParameters parameters;
+        parameters.input_gain = input_gain;
+        parameters.voice1_level = voice1_level;
+        parameters.voice1_pan = voice1_pan;
+        parameters.voice2_level = voice2_level;
+        parameters.voice2_pan = voice2_pan;
+        parameters.mix = mix;
+        parameters.output_level = output_level;
+        octave_divider_.configure(parameters);
+    }
+
     [[nodiscard]] std::uint32_t memory_bytes() const noexcept {
         std::size_t bytes = sizeof(*this) + effects_.capacity() * sizeof(EffectEntry);
         bytes += input_.capacity() * sizeof(float) + dry_.capacity() * sizeof(float);
@@ -2902,6 +2932,7 @@ public:
         bytes += deluxe_looper_->memory_bytes();
         bytes += chromatic_pitch_delay_->memory_bytes();
         bytes += cabinet_ir_.memory_bytes();
+        bytes += octave_divider_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -2947,6 +2978,9 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 101U) {
+            return static_cast<std::uint32_t>(octave_divider_.memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -2977,6 +3011,7 @@ private:
     tabletfx::LevelMeter input_meter_;
     tabletfx::LevelMeter output_meter_;
     tabletfx::CabinetIr cabinet_ir_;
+    tabletfx::effects::OctaveDivider octave_divider_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -2984,6 +3019,7 @@ private:
     bool deluxe_looper_enabled_ = false;
     bool chromatic_pitch_delay_enabled_ = false;
     bool cabinet_ir_enabled_ = false;
+    bool octave_divider_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -3942,6 +3978,16 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_load_cabinet_ir(
 
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_cabinet_ir_latency_frames() noexcept {
     return WasmChain::cabinet_ir_latency_frames();
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_octave_divider(
+    void* opaque, float input_gain, float voice1_level, float voice1_pan,
+    float voice2_level, float voice2_pan, float mix, float output_level) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_octave_divider(
+            input_gain, voice1_level, voice1_pan, voice2_level, voice2_pan,
+            mix, output_level);
+    }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_flanger(

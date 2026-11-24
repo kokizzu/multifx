@@ -22,6 +22,7 @@ EFFECTS.push("step-tremolo");
 EFFECTS.push("deluxe-looper");
 EFFECTS.push("chromatic-pitch-delay");
 EFFECTS.push("cabinet-ir");
+EFFECTS.push("octave-divider");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -1269,6 +1270,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.loadConvolutionIR(message);
     } else if (message.type === "cabinet-ir" && this.ready) {
       this.loadCabinetIR(message);
+    } else if (message.type === "octave-divider" && this.ready) {
+      this.module._tf_chain_set_octave_divider(this.chain, ...message.value);
     } else if (message.type === "flanger" && this.ready) {
       this.module._tf_chain_set_flanger(this.chain, ...message.value);
     } else if (message.type === "delay" && this.ready) {

@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Fractal-inspired Octave Divider (2026-11-24)
+
+The fixed crossing-derived square-wave divider adds independent −12 and −24 semitone sub voices without an FFT, note tracker, delay line, or process-time allocation. Its measured state is 192 B at 48 kHz stereo, with zero fixed algorithmic latency. A Ryzen 9 5950X Release run (48 kHz stereo, 128-frame blocks, 2,000 warm-up and 5,000 measured blocks) measured p50/p95/p99/p99.9/max at 0.0503/0.0953/0.1050/0.2940/0.4571% of the 2.667 ms callback deadline. These processor-call timings are desktop estimates, not tablet or end-to-end latency evidence.
+
+Native tests cover −12/−24 voice frequency, parameter bounds, stereo pan/mix, reset, irregular blocks, finite recovery, and no allocation. The offline CLI smoke uses a 220 Hz tone. `make web-test` passes the local prerecorded Guitar-TECHS DI Play smoke and full browser/native comparison; the 73-stage comparison reports maximum absolute error 6.568e-6 and RMS error 1.360e-6. Browser memory is fixed at 96 MiB; the complete chain reports 80,329,680 B processor state plus 10,364 B tuner state. The effect's individual WASM memory is included in that total. Windows MinGW core cross-build passes. No Fractal algorithm/settings/sound parity, human listening, Android measurement, or device test is established.
+
 ## Fractal Rotary Speaker Hi Depth behavior (2026-11-24)
 
 The June 2023 FM9-family Blocks Guide (printed p. 87) says setting Hi Depth to zero can simulate drum-only operation; it does not publish numeric bounds or define the control mapping. The project now scales the horn/Doppler path with Hi Depth, so Rotor Length cannot move the horn at zero depth. A regression checks that zero-depth case and verifies that Rotor Length still changes the high-rotor output with nonzero depth. This is project-authored behavior, not Fractal DSP/settings/sound parity.

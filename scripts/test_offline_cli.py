@@ -558,6 +558,50 @@ def check_octave_fuzz(executable: Path) -> None:
             raise AssertionError("Octave Fuzz accepted an unknown Octave Switch state")
 
 
+def check_octave_divider(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate
+    source_samples = [
+        round(8192 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-octave-divider-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        output = root / "octave-divider.wav"
+        write_pcm16(source, sample_rate, source_samples)
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(output),
+             "--octave-divider", "--octave-divider-input-gain", "1",
+             "--octave-divider-voice1-level", "1",
+             "--octave-divider-voice1-pan", "-1",
+             "--octave-divider-voice2-level", "0",
+             "--octave-divider-voice2-pan", "1",
+             "--octave-divider-mix", "1",
+             "--octave-divider-output-level", "1"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                f"Octave Divider controls did not enable one processor: {result.stdout}"
+            )
+        values = struct.unpack("<" + "f" * frame_count, output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in values):
+            raise AssertionError("Octave Divider produced non-finite output")
+        # Ignore initial gate acquisition and count the generated voice's
+        # positive crossings. A 220 Hz input should divide to about 110 Hz.
+        positive_crossings = sum(
+            previous <= 0.0 < current
+            for previous, current in zip(values[2400:-1], values[2401:], strict=True)
+        )
+        measured_hz = positive_crossings * sample_rate / (frame_count - 2400)
+        if abs(measured_hz - 110.0) > 3.0:
+            raise AssertionError(
+                f"Octave Divider did not divide the 220 Hz input by two: "
+                f"{measured_hz:.2f} Hz from {positive_crossings} crossings"
+            )
+
+
 def check_stereo_crossover(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 4096
@@ -2802,6 +2846,7 @@ def main() -> None:
     check_ring_modulator(args.executable.resolve())
     check_tape_echo(args.executable.resolve())
     check_octave_fuzz(args.executable.resolve())
+    check_octave_divider(args.executable.resolve())
     check_stereo_crossover(args.executable.resolve())
     check_rhythmic_slicer(args.executable.resolve())
     check_step_filter(args.executable.resolve())
@@ -2859,7 +2904,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":
