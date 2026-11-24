@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "bba86002dffc08ee99578e0d12370cd2a9ab9cc0",
+  "previous_checkpoint_commit": "6bd67f87dfdd3454c2efd25980893ac918c6ba03",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -415,33 +415,38 @@
         "notes": "Automated native, focused browser/WASM Play, full browser suite, Windows build, and DSP benchmark pass. Human listening, hardware routing/footswitch mapping, and target-device checks remain open."
       },
       "picker_rows": 111
+    },
+    {
+      "name": "Line 6 Helix Stadium XL Mutant Filter-inspired filter",
+      "status": "verified",
+      "picker_index": 111,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalogue and 1.4 release notes; Mu-Tron III manufacturer documentation for source-pedal concepts",
+        "revision": "Stadium v1.4 catalogue/release notes checked 2026-11-25; Mutant Filter first appeared in firmware 1.0. Owner's Manual selector Rev E / firmware v1.4.1; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "source_urls": [
+          "https://line6.com/helix-stadium-models/",
+          "https://kb.line6.com/helix-stadium-1-4-release-notes",
+          "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+          "https://mu-tron.com/vintage-musitronics/mu-tron-iii/"
+        ],
+        "qualification": "The Stadium catalogue calls Mutant Filter Mono/Stereo, models it on Mu-Tron III, and dates its first appearance to firmware 1.0. The checked Stadium manual provides no exact model parameter table, ranges/defaults, DSP cost, or latency. Mu-Tron low/band/high, Peak, input Gain/sensitivity, Range, and Up/Down are source-pedal concepts only, not confirmed Line 6 control names."
+      },
+      "documented_controls": "Stadium evidence: Mutant Filter, Mono/Stereo, based on Mu-Tron III, first firmware 1.0. Mu-Tron documentation describes low/band/high mode, Peak, input Gain/sensitivity, Range, and Up/Down sweep; it does not establish the Stadium controls or values.",
+      "project_controls": "Project-authored, default-off Filters & wah picker ID 111 (display row 112). Reuses existing EnvelopeWah/TPT filter core. Defaults: Band-pass mode; sensitivity 0.5; 350–2200 Hz sweep range; Q 4; level 0 dB; 5 ms attack; 80 ms release; 5 ms smoothing; Up sweep. UI offers Low-pass/Band-pass/High-pass and Up/Down. Mapping, labels, defaults, and range are project choices, not Stadium/Mu-Tron settings or sound parity. Zero buffering and no added fixed algorithmic latency.",
+      "verification": {
+        "native_ctest": "make test-mutant-filter passed focused native CTest; full make test passed 113/113 CTest cases and 11/11 fixture-safety checks.",
+        "focused_browser": "make web-test-mutant-filter passed in HeadlessChrome 151 with local prerecorded Guitar-TECHS P3_music/audio/directinput/directinput_01.wav at 48 kHz stereo/48,000 frames. Confirmed Filters & wah category, ID 111, default-off behavior, and Play capture in Low-pass/Band-pass/High-pass. Source-difference RMS: 0.0264423711 / 0.0528516514 / 0.0583531814; pairwise mode-difference RMS: 0.0655356343 / 0.0400390454 / 0.0768225859.",
+        "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+        "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.1073/0.1211/0.1339/0.4118/0.9383% of callback deadline; 624 B reported state; zero buffering/fixed algorithmic latency and no processing-time allocation. Desktop processor-call timing, not device performance.",
+        "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
+      },
+      "picker_rows": 112
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Pedal Detune position effect",
-    "status": "verified",
-    "picker_index": 110,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and Fender firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 68; firmware history checked through v1.8.85 dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide documents SHALLOW/DEEP mode and a POSITION dry/detuned blend but not depth values, rate, voice count, numeric ranges/defaults, or DSP topology. Firmware history through v1.8.85 contains no Pedal Detune-specific change; installed firmware is unknown."
-    },
-    "documented_controls": "MODE SWITCH selects SHALLOW or DEEP. POSITION blends the detuned signal with dry. The guide publishes no numeric ranges/defaults, modulation values, or algorithm/topology details.",
-    "project_controls": "A disabled-by-default Pitch picker row at index 110 wraps the existing modulated-delay core. Shallow/Deep use project-selected detune depths of 0.35/1.4 ms, 0.25 Hz, two voices, 75% width, and a 10 ms POSITION ramp. It performs no note tracking and is not Fender settings, DSP, or sound parity. Native state is 3,672 B; browser effect memory is 3,632 B. Dry audio is immediate; the wet path uses about a 5 ms micro-delay.",
-    "verification": {
-      "native": "make test-fender-pedal-detune passed 1/1 focused CTest. make test passed documentation validation (333 source requirements/346 tracked rows), 11/11 fixture-safety tests, and 112/112 CTest cases, including bounds, reset, irregular blocks, finite recovery, reported memory, and zero process allocations.",
-      "focused_browser": "make web-test-fender-pedal-detune passed using the local prerecorded Guitar-TECHS stereo DI at 48 kHz / 48,000 frames. Pitch category/index 110 and captured Play output were verified: dry-to-Shallow difference RMS 0.0265534681; Shallow-to-Deep 0.0916219280; full POSITION versus zero POSITION 0.0906947512. Effect memory 3,632 B.",
-      "full_browser": "make web-test passed. Browser/native chain comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; browser reported 80,350,308 B processor memory and 100,663,296 B WASM linear memory.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3 Release, 48 kHz stereo/128-frame (2.667 ms) blocks, 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.0563/0.0570/0.0836/0.2460/0.6330% of callback. Native state 3,672 B. Desktop processor-call timing, not target-device performance.",
-      "notes": "Automated native, focused browser/WASM Play, full browser/native parity, Windows cross-build, and benchmark checks pass. Human listening, real hardware, and end-to-end target-device latency remain open. Manufacturer parameter, DSP, and sound parity are not claimed."
-    },
-    "picker_rows": 111
-  },
-  "current_checkpoint": {
     "name": "Fractal detector-source, Stadium 1 Switch Looper, and AXOM Delay coverage",
     "status": "verified",
     "picker_index": 96,
@@ -470,14 +475,43 @@
     },
     "picker_rows": 111
   },
+  "current_checkpoint": {
+    "name": "Line 6 Helix Stadium XL Mutant Filter-inspired filter",
+    "status": "verified",
+    "picker_index": 111,
+    "category": "Filters & wah",
+    "official_source": {
+      "title": "Line 6 Helix Stadium model catalogue and 1.4 release notes; Mu-Tron III manufacturer documentation for source-pedal concepts",
+      "revision": "Stadium v1.4 catalogue/release notes checked 2026-11-25; Mutant Filter first appeared in firmware 1.0. Owner's Manual selector Rev E / firmware v1.4.1; installed firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "source_urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://mu-tron.com/vintage-musitronics/mu-tron-iii/"
+      ],
+      "qualification": "The Stadium catalogue calls Mutant Filter Mono/Stereo, models it on Mu-Tron III, and dates its first appearance to firmware 1.0. The checked Stadium manual provides no exact model parameter table, ranges/defaults, DSP cost, or latency. Mu-Tron low/band/high, Peak, input Gain/sensitivity, Range, and Up/Down are source-pedal concepts only, not confirmed Line 6 control names."
+    },
+    "documented_controls": "Stadium evidence: Mutant Filter, Mono/Stereo, based on Mu-Tron III, first firmware 1.0. Mu-Tron documentation describes low/band/high mode, Peak, input Gain/sensitivity, Range, and Up/Down sweep; it does not establish the Stadium controls or values.",
+    "project_controls": "Project-authored, default-off Filters & wah picker ID 111 (display row 112). Reuses existing EnvelopeWah/TPT filter core. Defaults: Band-pass mode; sensitivity 0.5; 350–2200 Hz sweep range; Q 4; level 0 dB; 5 ms attack; 80 ms release; 5 ms smoothing; Up sweep. UI offers Low-pass/Band-pass/High-pass and Up/Down. Mapping, labels, defaults, and range are project choices, not Stadium/Mu-Tron settings or sound parity. Zero buffering and no added fixed algorithmic latency.",
+    "verification": {
+      "native_ctest": "make test-mutant-filter passed focused native CTest; full make test passed 113/113 CTest cases and 11/11 fixture-safety checks.",
+      "focused_browser": "make web-test-mutant-filter passed in HeadlessChrome 151 with local prerecorded Guitar-TECHS P3_music/audio/directinput/directinput_01.wav at 48 kHz stereo/48,000 frames. Confirmed Filters & wah category, ID 111, default-off behavior, and Play capture in Low-pass/Band-pass/High-pass. Source-difference RMS: 0.0264423711 / 0.0528516514 / 0.0583531814; pairwise mode-difference RMS: 0.0655356343 / 0.0400390454 / 0.0768225859.",
+      "full_browser": "make web-test passed; browser/native comparison across 78 optional processor stages reported maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms), 2,000 warm-up/5,000 measured: p50/p95/p99/p99.9/max 0.1073/0.1211/0.1339/0.4118/0.9383% of callback deadline; 624 B reported state; zero buffering/fixed algorithmic latency and no processing-time allocation. Desktop processor-call timing, not device performance.",
+      "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
+    },
+    "picker_rows": 112
+  },
   "next_research": [
     {
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "The 1 Switch Looper controller profile is implemented over the existing Deluxe Looper and verified in browser interaction tests. The current live manual omits model-specific parameter tables for many audio blocks; exact settings remain unresolved. Poly Sustain has a separate project-authored partial implementation. Next distinct filter candidate is Mutant Filter: the Stadium catalogue lists it Mono/Stereo, while the source-pedal control concept does not establish Line 6 parameter values.",
-      "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0. 1 Switch is covered with the same Deluxe Looper buffer and a project-authored 280 ms double-press / 1 s hold controller mapping; physical device verification remains open.",
-      "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
+      "status": "The Stadium Mutant Filter candidate is now implemented as a separate, project-authored Filters & wah row at picker ID 111 and verified with native tests, local guitar-DI browser/WASM Play, full make web-test, Windows cross-build, and benchmark. It reuses the existing envelope/TPT filter core. The catalogue identifies Mono/Stereo, Mu-Tron III basis, and first firmware 1.0; exact Stadium parameter table, ranges/defaults, DSP, and latency remain unpublished. Continue other Stadium-specific synth, delay, reverb, Poly Sustain, looper, and block behavior research; human/device checks remain open.",
+      "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0. 1 Switch is covered with the same Deluxe Looper buffer and a project-authored 280 ms double-press / 1 s hold controller mapping; physical device verification remains open. The Mutant Filter project's Low/Band/High, sensitivity, sweep, and Peak/Q mappings are project authored and are not verified Stadium controls.",
+      "qualification": "Older Helix Poly Sustain controls are not a Stadium parameter table. Mutant Filter source-pedal concepts are not verified Line 6 settings. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },
     {
       "device": "Fender Tone Master Pro",
@@ -504,7 +538,8 @@
       ],
       "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, the existing Pitch row’s ±24-semitone profile, and the Touch-Wah MIX project mode are implemented. The Diatonic Harmonizer has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, plus additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified. Touch-Wah and Touch-Ladder block/physical detector selection is now implemented; Physical Input uses the raw original chain-input span and is not separate hardware-jack routing.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not. The family Blocks Guide also documents a three-oscillator monophonic Synth with oscillator waveform, tracking mode (Off/Env Only/Pitch+Env), Frequency, Shift, Tune, Duty Cycle, Pan, Filter Frequency/Q, Attack, and Level; this remains a potential comparison gap. Three oscillators do not imply three-note input tracking.",
-      "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
+      "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim.",
+      "implementation_estimate": "Unverified capacity estimate only: a naive four-times polyphonic shifter could use about 1.98 MB and reach approximately 70% p99 desktop callback load before the rest of the chain. A shared-FFT adapter likely needs investigation. This is an estimate, not a measured implementation or device result."
     },
     {
       "device": "HeadRush Prime",
@@ -517,9 +552,9 @@
         "https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf",
         "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf"
       ],
-      "status": "Spring Guru, Kill Seq, Splicer, Hybrid Synth, Electric Piano, and DB-33 Organ are listed; firmware notes add selected features. Exact effect-specific controls, ranges/defaults, timing/polyphony, and model behavior were not recoverable from accessible official sources; do not infer them from older HeadRush products.",
-      "known_controls": "Product page lists Ambi-Verb, Hybrid Synth, Electric Piano, and DB-33 Organ in Synth. v3.2 added Hybrid Synth, Electric Piano, and DB-33 Organ and moved Ambi Verb to Synth. v4.0 added Spring Guru in Reverb, Kill Seq/Splicer in Rhythmic, and arpeggiator controls for Hybrid Synth, Electric Piano, and DB-33 Organ.",
-      "qualification": "v5.2 notes list no changes to these effects. The linked 11.7 MB v5.2 guide could not be parsed; exact per-effect controls, ranges/defaults, input-note polyphony, rhythmic resolution, and DSP behavior are unknown. Product Pitch heading says seven while displaying eight bullets with Octaves duplicated. C-Verb controls have no published numeric ranges; project convolver accepts local mono/stereo WAV only and has measured callback outliers above budget, so no HeadRush parity or glitch-free real-time claim."
+      "status": "Official release notes establish v3.2 Hybrid Synth, Electric Piano, and DB-33 Organ; v4.0 Spring Guru, Kill Seq, Splicer, and arpeggiator presence; and v4.1.1 DB-33 Rotary/Rotary Rate labels. The v5.2.0 guide reader failed with HTTP 400 at 11,709,295 bytes. Exact per-effect controls/ranges/defaults, DB-33 Rotary ranges, timing/polyphony, and model behavior remain unrecoverable from checked sources; do not infer them.",
+      "known_controls": "Official v3.2 notes: Hybrid Synth, Electric Piano, DB-33 Organ. v4.0 notes: Spring Guru in Reverb; Kill Seq and Splicer in Rhythmic; arpeggiator controls are present for Hybrid Synth, Electric Piano, and DB-33 Organ. v4.1.1 notes expose DB-33 Rotary and Rotary Rate labels only, with no numeric ranges. Product page lists Ambi-Verb and synth models. The linked v5.2.0 guide could not be read: HTTP 400 at 11,709,295 bytes.",
+      "qualification": "The v5.2.0 guide reader failed HTTP 400 at 11,709,295 bytes, so effect-specific numeric controls, ranges/defaults, input-note polyphony, rhythmic resolution, and DSP behavior remain unknown. v4.1.1 provides DB-33 Rotary and Rotary Rate names only. Product Pitch heading count mismatch and C-Verb project limitations remain as previously qualified; no Prime parity claim."
     },
     {
       "device": "Melofty Axom Max",

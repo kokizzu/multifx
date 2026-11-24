@@ -68,6 +68,16 @@ void EnvelopeWah::configure(float sample_rate, std::uint16_t channels,
     parameters_.direction = parameters.direction == EnvelopeWahDirection::Down
                                 ? EnvelopeWahDirection::Down
                                 : EnvelopeWahDirection::Up;
+    switch (parameters.filter_mode) {
+    case EnvelopeWahFilterMode::Lowpass:
+    case EnvelopeWahFilterMode::Bandpass:
+    case EnvelopeWahFilterMode::Highpass:
+        parameters_.filter_mode = parameters.filter_mode;
+        break;
+    default:
+        parameters_.filter_mode = EnvelopeWahFilterMode::Bandpass;
+        break;
+    }
 
     // Sensitivity maps to the rising envelope threshold from -18 dBFS
     // (low sensitivity) to -60 dBFS (high sensitivity).
@@ -135,7 +145,13 @@ void EnvelopeWah::process(std::span<float> interleaved,
             const float v2 = state.integrator2 + current_g_ * v1;
             const float next1 = 2.0F * v1 - state.integrator1;
             const float next2 = 2.0F * v2 - state.integrator2;
-            const float output = v1 * level_;
+            float filtered = v1;
+            if (parameters_.filter_mode == EnvelopeWahFilterMode::Lowpass) {
+                filtered = v2;
+            } else if (parameters_.filter_mode == EnvelopeWahFilterMode::Highpass) {
+                filtered = input - k_ * v1 - v2;
+            }
+            const float output = filtered * level_;
             if (!std::isfinite(v1) || !std::isfinite(v2) ||
                 !std::isfinite(next1) || !std::isfinite(next2) ||
                 !std::isfinite(output)) {

@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium Mutant Filter-inspired effect (2026-11-25)
+
+TabletFX's project-authored Mutant Filter row reuses the existing sample-by-sample envelope/TPT filter core. It has no block buffer, added fixed algorithmic latency, or processing-time allocation; reported native object state is 624 B. In an AMD Ryzen 9 5950X Release benchmark at 48 kHz stereo with 128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks), `make bench` recorded p50/p95/p99/p99.9/max at **0.1073/0.1211/0.1339/0.4118/0.9383%** of the callback deadline. This is processor-call timing on that desktop, not a live device guarantee. The browser/WASM test plays a local prerecorded guitar-DI fixture and verifies distinct Low-pass, Band-pass, and High-pass output. Human listening and target-device checks remain open. Stadium's v1.4 catalogue identifies Mutant Filter as Mono/Stereo, based on Mu-Tron III and first appearing in firmware 1.0, but the checked manual does not publish its exact parameters, DSP cost, or latency; these project metrics do not establish Stadium parity.
+
 ## Fractal Touch-Wah / Touch-Ladder physical detector source (2026-11-25)
 
 The existing Stereo Filter at picker index 96 can detect its Touch-Wah or Touch-Ladder envelope from either the processed block input or the original chain input. The physical-input option passes a read-only view of the already-available raw input; it adds no audio copy, buffer, processor stage, or fixed algorithmic latency. The control value adds 8 B to the filter object's reported state (38,968 B total at 48 kHz stereo). This is the project's routing interpretation of the family guide, not a separate physical jack or Fractal routing emulation.

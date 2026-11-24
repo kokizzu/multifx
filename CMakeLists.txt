@@ -33,6 +33,7 @@ add_library(tabletfx_core
     src/effects/fractal_bias_trem.cpp
     src/effects/grain_delay.cpp
     src/effects/envelope_wah.cpp
+    src/effects/mutant_filter.cpp
     src/effects/flanger.cpp
     src/effects/manual_thru_zero_flanger.cpp
     src/effects/octobot.cpp
@@ -316,6 +317,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_envelope_wah_tests tests/test_envelope_wah.cpp)
     target_link_libraries(tabletfx_envelope_wah_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_envelope_wah_tests COMMAND tabletfx_envelope_wah_tests)
+
+    add_executable(tabletfx_mutant_filter_tests tests/test_mutant_filter.cpp)
+    target_link_libraries(tabletfx_mutant_filter_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_mutant_filter_tests COMMAND tabletfx_mutant_filter_tests)
 
     add_executable(tabletfx_signal_controls_tests tests/test_signal_controls.cpp)
     target_link_libraries(tabletfx_signal_controls_tests PRIVATE tabletfx_core)

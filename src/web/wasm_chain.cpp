@@ -26,6 +26,7 @@
 #include "tabletfx/effects/de_esser.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/pedal_detune.hpp"
+#include "tabletfx/effects/mutant_filter.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -134,7 +135,9 @@ public:
           poly_detune_(static_cast<float>(sample_rate),
                        static_cast<std::uint16_t>(channels)),
           pedal_detune_(static_cast<float>(sample_rate),
-                        static_cast<std::uint16_t>(channels)) {
+                        static_cast<std::uint16_t>(channels)),
+          mutant_filter_(static_cast<float>(sample_rate),
+                         static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -425,7 +428,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 15; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 16; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -515,6 +518,11 @@ public:
         if (index == 110U) {
             pedal_detune_enabled_ = enabled;
             if (!enabled) pedal_detune_.reset();
+            return true;
+        }
+        if (index == 111U) {
+            mutant_filter_enabled_ = enabled;
+            if (!enabled) mutant_filter_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -720,6 +728,13 @@ public:
             }
             return;
         }
+        if (index == 111U) {
+            if (mutant_filter_enabled_) {
+                mutant_filter_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -797,6 +812,7 @@ public:
         uni_verse_vibe_.reset();
         four_osc_generator_.reset();
         poly_detune_.reset();
+        mutant_filter_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2247,6 +2263,39 @@ public:
         pedal_detune_.set_parameters(parameters);
     }
 
+    void configure_mutant_filter(std::uint32_t mode, float sensitivity,
+                                 float minimum_hz, float maximum_hz,
+                                 float resonance_q, float level_db,
+                                 float attack_ms, float release_ms,
+                                 float smoothing_ms,
+                                 std::uint32_t direction) noexcept {
+        tabletfx::EnvelopeWahParameters parameters;
+        switch (mode) {
+        case 0U:
+            parameters.filter_mode = tabletfx::EnvelopeWahFilterMode::Lowpass;
+            break;
+        case 2U:
+            parameters.filter_mode = tabletfx::EnvelopeWahFilterMode::Highpass;
+            break;
+        default:
+            parameters.filter_mode = tabletfx::EnvelopeWahFilterMode::Bandpass;
+            break;
+        }
+        parameters.sensitivity = sensitivity;
+        parameters.minimum_hz = minimum_hz;
+        parameters.maximum_hz = maximum_hz;
+        parameters.resonance_q = resonance_q;
+        parameters.level_db = level_db;
+        parameters.attack_ms = attack_ms;
+        parameters.release_ms = release_ms;
+        parameters.smoothing_ms = smoothing_ms;
+        parameters.direction = direction == 1U
+                                   ? tabletfx::EnvelopeWahDirection::Down
+                                   : tabletfx::EnvelopeWahDirection::Up;
+        mutant_filter_.configure(static_cast<float>(sample_rate_), channels_,
+                                 parameters);
+    }
+
     void configure_fractal_three_voice_synth(
         const float* values, std::uint32_t value_count) noexcept {
         constexpr std::uint32_t kParameterCount = 33U;
@@ -3398,6 +3447,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 111U) {
+            const std::size_t bytes = mutant_filter_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3438,6 +3493,7 @@ private:
     tabletfx::effects::FourOscGenerator four_osc_generator_;
     tabletfx::PolyDetune poly_detune_;
     tabletfx::PedalDetune pedal_detune_;
+    tabletfx::MutantFilter mutant_filter_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3456,6 +3512,7 @@ private:
     bool four_osc_generator_enabled_ = false;
     bool poly_detune_enabled_ = false;
     bool pedal_detune_enabled_ = false;
+    bool mutant_filter_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4246,6 +4303,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pedal_detune(
     void* opaque, std::uint32_t mode, float position) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_pedal_detune(mode, position);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_mutant_filter(
+    void* opaque, std::uint32_t mode, float sensitivity,
+    float minimum_hz, float maximum_hz, float resonance_q,
+    float level_db, float attack_ms, float release_ms,
+    float smoothing_ms, std::uint32_t direction) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_mutant_filter(
+            mode, sensitivity, minimum_hz, maximum_hz, resonance_q,
+            level_db, attack_ms, release_ms, smoothing_ms, direction);
     }
 }
 

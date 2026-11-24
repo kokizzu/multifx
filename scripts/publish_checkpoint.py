@@ -2364,6 +2364,29 @@ CHROMATIC_PITCH_DELAY_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+STADIUM_MUTANT_FILTER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/envelope_wah.hpp",
+    "include/tabletfx/effects/mutant_filter.hpp",
+    "src/effects/envelope_wah.cpp",
+    "src/effects/mutant_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_mutant_filter.cpp",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
@@ -2650,6 +2673,10 @@ CHECKPOINTS = {
     "flagship-control-routing": (
         FLAGSHIP_CONTROL_ROUTING_CHECKPOINT_PATHS,
         "feat: add flagship filter and looper controls",
+    ),
+    "stadium-mutant-filter": (
+        STADIUM_MUTANT_FILTER_CHECKPOINT_PATHS,
+        "feat: add project-authored Mutant Filter effect",
     ),
 }
 

@@ -35,6 +35,7 @@ PUBLISH_CHECKPOINTS += fender-pedal-shifter
 PUBLISH_CHECKPOINTS += fender-pedal-detune
 PUBLISH_CHECKPOINTS += fractal-touch-wah-mix
 PUBLISH_CHECKPOINTS += flagship-control-routing
+PUBLISH_CHECKPOINTS += stadium-mutant-filter
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -171,3 +172,10 @@ inspect-effect-picker:
 .PHONY: inspect-publish-checkpoint
 inspect-publish-checkpoint:
 	python3 scripts/inspect_publish_checkpoint.py
+
+.PHONY: test-mutant-filter web-test-mutant-filter
+test-mutant-filter:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_mutant_filter_tests
+
+web-test-mutant-filter: web-build
+	$(PYTHON) scripts/web.py test-mutant-filter

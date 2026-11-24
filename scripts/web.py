@@ -167,6 +167,7 @@ def build_web() -> None:
         "_tf_chain_set_four_osc_generator",
         "_tf_chain_set_poly_detune",
         "_tf_chain_set_pedal_detune",
+        "_tf_chain_set_mutant_filter",
         "_tf_chain_set_fractal_three_voice_synth",
         "_tf_chain_set_enhancer",
         "_tf_chain_deluxe_looper_command",
@@ -304,6 +305,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "fractal_three_voice_synth.cpp"),
         str(ROOT / "src" / "effects" / "poly_detune.cpp"),
         str(ROOT / "src" / "effects" / "pedal_detune.cpp"),
+        str(ROOT / "src" / "effects" / "mutant_filter.cpp"),
         str(ROOT / "src" / "effects" / "grain_delay.cpp"),
         str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
         str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
@@ -727,6 +729,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 
 
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
+                 mutant_filter_only: bool = False,
                  step_tremolo_only: bool = False,
                  fractal_bias_trem_only: bool = False,
                  vibratone_only: bool = False,
@@ -1248,6 +1251,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fender-pedal-detune"
         elif fractal_diatonic_custom_scale_only:
             url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
+        elif mutant_filter_only:
+            url = base_url + "/web/index.html?selftest=mutant-filter"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1554,7 +1559,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
-        "test-volume-pan", "test-stereo-filter", "test-step-tremolo",
+        "test-volume-pan", "test-stereo-filter", "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
         "test-fender-universe-vibe",
@@ -1579,6 +1584,8 @@ def main() -> None:
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":
         browser_test(stereo_filter_only=True)
+    elif action == "test-mutant-filter":
+        browser_test(mutant_filter_only=True)
     elif action == "test-step-tremolo":
         browser_test(step_tremolo_only=True)
     elif action == "test-fractal-bias-trem":

@@ -201,6 +201,7 @@
         <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="108"><span class="effect-number">109</span><span class="effect-name">4 OSC Generator · project-authored controls</span><span class="effect-default">Four free-running voices · disabled by default</span><span class="effect-category-tag">Synth</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="109"><span class="effect-number">110</span><span class="effect-name">Poly Detune · project-authored micro-delay</span><span class="effect-default">Modulated short delay · no pitch tracking</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="110"><span class="effect-number">111</span><span class="effect-name">Pedal Detune · project-authored position blend</span><span class="effect-default">Shallow · 50% position · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="111"><span class="effect-number">112</span><span class="effect-name">Mutant Filter · project-authored envelope filter</span><span class="effect-default">Band-pass · 350–2200 Hz · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -967,6 +968,49 @@
           <span>Touch-wah smoothing</span><output id="touch-wah-smoothing-value" for="touch-wah-smoothing-ms">5 ms</output>
           <input id="touch-wah-smoothing-ms" type="range" min="0" max="100" step="1" value="5">
         </label>
+      </div>
+      <div class="gain-controls" aria-label="Mutant Filter project-authored controls">
+        <label class="mix-control" for="mutant-filter-mode">
+          <span>Mutant Filter · project-authored filter mode</span>
+          <select id="mutant-filter-mode"><option value="0">Low-pass</option><option value="1" selected>Band-pass</option><option value="2">High-pass</option></select>
+        </label>
+        <label class="mix-control" for="mutant-filter-sensitivity">
+          <span>Mutant Filter · project-authored sensitivity</span><output id="mutant-filter-sensitivity-value" for="mutant-filter-sensitivity">0.50</output>
+          <input id="mutant-filter-sensitivity" type="range" min="0" max="1" step="0.01" value="0.5">
+        </label>
+        <label class="mix-control" for="mutant-filter-min-hz">
+          <span>Mutant Filter · project-authored minimum frequency</span><output id="mutant-filter-min-hz-value" for="mutant-filter-min-hz">350 Hz</output>
+          <input id="mutant-filter-min-hz" type="range" min="200" max="800" step="10" value="350">
+        </label>
+        <label class="mix-control" for="mutant-filter-max-hz">
+          <span>Mutant Filter · project-authored maximum frequency</span><output id="mutant-filter-max-hz-value" for="mutant-filter-max-hz">2200 Hz</output>
+          <input id="mutant-filter-max-hz" type="range" min="1000" max="4000" step="25" value="2200">
+        </label>
+        <label class="mix-control" for="mutant-filter-q">
+          <span>Mutant Filter · project-authored resonance Q</span><output id="mutant-filter-q-value" for="mutant-filter-q">4.0</output>
+          <input id="mutant-filter-q" type="range" min="0.7" max="10" step="0.1" value="4">
+        </label>
+        <label class="mix-control" for="mutant-filter-level-db">
+          <span>Mutant Filter · project-authored output level</span><output id="mutant-filter-level-db-value" for="mutant-filter-level-db">0.0 dB</output>
+          <input id="mutant-filter-level-db" type="range" min="-24" max="12" step="0.5" value="0">
+        </label>
+        <label class="mix-control" for="mutant-filter-attack-ms">
+          <span>Mutant Filter · project-authored attack</span><output id="mutant-filter-attack-ms-value" for="mutant-filter-attack-ms">5 ms</output>
+          <input id="mutant-filter-attack-ms" type="range" min="0" max="2000" step="1" value="5">
+        </label>
+        <label class="mix-control" for="mutant-filter-release-ms">
+          <span>Mutant Filter · project-authored release</span><output id="mutant-filter-release-ms-value" for="mutant-filter-release-ms">80 ms</output>
+          <input id="mutant-filter-release-ms" type="range" min="0" max="5000" step="5" value="80">
+        </label>
+        <label class="mix-control" for="mutant-filter-smoothing-ms">
+          <span>Mutant Filter · project-authored frequency smoothing</span><output id="mutant-filter-smoothing-ms-value" for="mutant-filter-smoothing-ms">5 ms</output>
+          <input id="mutant-filter-smoothing-ms" type="range" min="0" max="1000" step="1" value="5">
+        </label>
+        <label class="mix-control" for="mutant-filter-direction">
+          <span>Mutant Filter · project-authored sweep direction</span>
+          <select id="mutant-filter-direction"><option value="0" selected>Up with attack</option><option value="1">Down with attack</option></select>
+        </label>
+        <p class="effect-default">TabletFX controls are project-authored; Line 6 does not publish the Stadium model's exact control table.</p>
       </div>
       <div class="gain-controls">
         <label class="mix-control" for="clean-boost-db">

@@ -10,6 +10,7 @@
 #include "tabletfx/effects/stereo_filter.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
+#include "tabletfx/effects/mutant_filter.hpp"
 #include "tabletfx/effects/flanger.hpp"
 #include "tabletfx/effects/manual_thru_zero_flanger.hpp"
 #include "tabletfx/effects/filters.hpp"
@@ -5508,6 +5509,12 @@ void run_bench() {
         tabletfx::EnvelopeWahParameters parameters;
         parameters.sensitivity = 0.8F;
         return std::make_unique<tabletfx::EnvelopeWah>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("mutant-filter", [=] {
+        tabletfx::EnvelopeWahParameters parameters;
+        parameters.sensitivity = 0.8F;
+        return std::make_unique<tabletfx::MutantFilter>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("clean-boost", [=] {

@@ -10,6 +10,7 @@
 namespace tabletfx {
 
 enum class EnvelopeWahDirection : std::uint8_t { Up, Down };
+enum class EnvelopeWahFilterMode : std::uint8_t { Lowpass, Bandpass, Highpass };
 
 struct EnvelopeWahParameters {
     float sensitivity = 0.5F; // 0 = less sensitive; 1 = more sensitive
@@ -21,9 +22,10 @@ struct EnvelopeWahParameters {
     float release_ms = 80.0F;
     float smoothing_ms = 5.0F;
     EnvelopeWahDirection direction = EnvelopeWahDirection::Up;
+    EnvelopeWahFilterMode filter_mode = EnvelopeWahFilterMode::Bandpass;
 };
 
-// Envelope-controlled resonant band-pass. Its log-frequency table is built
+// Envelope-controlled resonant filter. Its log-frequency table is built
 // during configure(), keeping trigonometry and allocation off the audio path.
 class EnvelopeWah final : public Effect {
 public:
