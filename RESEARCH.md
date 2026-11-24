@@ -1,5 +1,13 @@
 # Research and source audit
 
+## Line 6 Helix Stadium XL 4 OSC Generator audit and implementation (2026-11-24)
+
+The current official [Helix Stadium model catalogue](https://line6.com/helix-stadium-models/) lists 4 OSC Generator as Mono/Stereo, Line 6 Original, first appearing in Stadium 1.0. Its note says the 3 Note Generator and 4 OSC Generator make sound without an instrument and their blocks are off by default. The catalogue does not provide a per-model parameter table, oscillator waveforms/count behavior, note ranges, input-note polyphony, DSP cost, or latency; no undocumented Line 6 controls are inferred here.
+
+TabletFX adds a separate project-authored Synth source at picker index 108. Four fixed-phase voices each expose waveform (sine/triangle/saw/square), static MIDI note 0–127, octave shift −2…+2, and level 0–1; master output is 0–1. Defaults are sine voices at MIDI 48, 55, 60, and 64 (C3/G3/C4/E4), level 0.15 each, output 0.35. The independent source replaces live input before the ordinary effect chain, so enabled effects process its output. It is disabled by default, is not a guitar pitch tracker, and does not consume MIDI. These parameter choices and oscillator DSP are project-authored, not Line 6 settings, sound, or algorithm parity.
+
+At 48 kHz stereo the native state is 176 B and the browser reports 168 B per-effect memory. It adds no fixed algorithmic latency, uses no process-time allocation, and measures p50/p95/p99/p99.9/max 0.0709/0.1552/0.1706/0.4751/0.7286% of a 2.667 ms callback on an AMD Ryzen 9 5950X Release build (128-frame blocks; 2,000 warm-up, 5,000 measured). This is isolated desktop CPU time, not whole-chain or target-device load. Human listening and hardware checks remain open.
+
 ## Fender Tone Master Pro Uni-Verse Vibe audit and implementation (2026-11-24)
 
 The exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A lists Speed (overall effect speed), Intensity (depth), Volume (output loudness), Tap Division (subdivision of current tempo), Vintage/Modern (darker/brighter tone), and Chorus/Vibrato (lush Chorus/pitch-modulated Vibrato). The guide publishes no numeric ranges/defaults, selectable-division inventory, latency, DSP cost, or block limit. Fender firmware history was checked through v1.8.85 dated 2026-11-18; those notes do not mention a Uni-Verse Vibe change. The installed firmware is unknown.

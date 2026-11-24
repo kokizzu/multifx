@@ -5046,6 +5046,23 @@ void run_bench() {
             static_cast<float>(sample_rate), channels, parameters,
             tabletfx::VibeModel::UniVerse);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("line6-4-osc-generator-project-authored", [=] {
+        auto generator = std::make_unique<tabletfx::effects::FourOscGenerator>(
+            static_cast<float>(sample_rate));
+        tabletfx::effects::NoteGeneratorParameters parameters;
+        parameters.voice_count = 4U;
+        parameters.voices[0] = {
+            tabletfx::effects::NoteGeneratorWaveform::Sine, 84, 0, 0.2F};
+        parameters.voices[1] = {
+            tabletfx::effects::NoteGeneratorWaveform::Triangle, 91, 0, 0.2F};
+        parameters.voices[2] = {
+            tabletfx::effects::NoteGeneratorWaveform::Sawtooth, 96, 0, 0.2F};
+        parameters.voices[3] = {
+            tabletfx::effects::NoteGeneratorWaveform::Square, 100, 0, 0.2F};
+        parameters.output_level = 0.35F;
+        generator->configure(parameters);
+        return generator;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("ring-modulator", [=] {
         tabletfx::RingModulatorParameters parameters;
         parameters.frequency_hz = 713.0F;

@@ -29,10 +29,12 @@ EFFECTS.push("optical-tremolo");
 EFFECTS.push("fractal-bias-trem");
 EFFECTS.push("vibratone");
 EFFECTS.push("uni-verse-vibe");
+EFFECTS.push("four-osc-generator");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
 const PEAK_LIMITER_INDEX = 95;
+const FOUR_OSC_GENERATOR_INDEX = EFFECTS.indexOf("four-osc-generator");
 const MAX_BLOCK_FRAMES = 8192;
 const STATS_HEADER_WORDS = 2;
 const STATS_RING_BLOCKS = 512;
@@ -455,6 +457,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [2, 0.75, 0.6, -54, 8, 180, 8]);
       this.configureNoteGenerator(parameters.noteGenerator ||
         [1, 0, 60, 0, 0.5, 0, 60, 0, 0.5, 0, 60, 0, 0.5, 0.5]);
+      this.configureFourOscGenerator(parameters.fourOscGenerator ||
+        [0, 48, 0, 0.15, 0, 55, 0, 0.15, 0, 60, 0, 0.15,
+          0, 64, 0, 0.15, 0.35]);
       this.configureFractalThreeVoiceSynth(parameters.fractalThreeVoiceSynth ||
         [3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
           3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -985,6 +990,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureFourOscGenerator(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 17) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_four_osc_generator(this.chain, pointer, values.length);
+    this.module._free(pointer);
+  }
+
   configureFractalThreeVoiceSynth(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
       return;
@@ -1280,6 +1296,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureMonoGuitarSynth(message.value);
     } else if (message.type === "note-generator" && this.ready) {
       this.configureNoteGenerator(message.value);
+    } else if (message.type === "four-osc-generator" && this.ready) {
+      this.configureFourOscGenerator(message.value);
     } else if (message.type === "fractal-three-voice-synth" && this.ready) {
       this.configureFractalThreeVoiceSynth(message.value);
     } else if (message.type === "enhancer" && this.ready) {
@@ -1429,6 +1447,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_process_tuner(this.chain);
     const tunerElapsedMs = nowMs() - tunerStartMs;
     if (this.stats) this.stats[ringOffset + TUNER_TIME] = Math.round(tunerElapsedMs * 1000000);
+    const fourOscStartMs = nowMs();
+    this.module._tf_chain_process_effect(this.chain, FOUR_OSC_GENERATOR_INDEX);
+    const fourOscElapsedMs = nowMs() - fourOscStartMs;
+    if (this.stats) {
+      this.stats[ringOffset + FOUR_OSC_GENERATOR_INDEX] = Math.round(fourOscElapsedMs * 1000000);
+    }
     for (let effect = 0; effect < EFFECT_PIPELINE_EFFECT_COUNT; effect += 1) {
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
@@ -1437,6 +1461,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
     this.module._tf_chain_finish(this.chain, frames);
     for (let effect = FIRST_EXTRA_EFFECT_INDEX; effect < EFFECTS.length; effect += 1) {
+      if (effect === FOUR_OSC_GENERATOR_INDEX) continue;
       const startMs = nowMs();
       this.module._tf_chain_process_effect(this.chain, effect);
       const elapsedMs = nowMs() - startMs;

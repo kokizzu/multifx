@@ -25,15 +25,15 @@ struct NoteGeneratorVoiceParameters {
 };
 
 struct NoteGeneratorParameters {
-    std::uint8_t voice_count = 1;  // Project range [1, 3].
-    std::array<NoteGeneratorVoiceParameters, 3> voices{};
+    std::uint8_t voice_count = 1;  // Project range [1, 4].
+    std::array<NoteGeneratorVoiceParameters, 4> voices{};
     float output_level = 0.5F;     // Linear summed-output gain, project range [0, 1].
 };
 
 // Project-authored, free-running oscillator note generator. It overwrites the
 // input buffer with generated audio and never reads input samples, tracks guitar
 // pitch, or consumes MIDI notes. The note_number field is a static control, not
-// a MIDI input. One to three fixed oscillators can run at once; a voice's level
+// a MIDI input. One to four fixed oscillators can run at once; a voice's level
 // of zero mutes it. Stereo output is dual mono.
 //
 // Defaults and bounds are project choices, not copied manufacturer settings.
@@ -71,7 +71,7 @@ public:
                  std::uint16_t channels) noexcept override;
 
 private:
-    static constexpr std::size_t kMaximumVoices = 3U;
+    static constexpr std::size_t kMaximumVoices = 4U;
     static constexpr float kDefaultSampleRate = 48000.0F;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 96000.0F;
@@ -258,5 +258,62 @@ inline void NoteGenerator::process(std::span<float> interleaved,
         }
     }
 }
+
+// A separate four-oscillator source for the documented Helix Stadium 4 OSC
+// Generator capability. Line 6 does not publish this model's parameter table;
+// these note, waveform, level, and safe-output defaults are project-authored.
+// It generates audio without reading or tracking the instrument input. Keep it
+// disabled in the host until deliberately enabled; the default summed tone is
+// bounded below normal line level. It shares the fixed-size oscillator core.
+class FourOscGenerator final : public tabletfx::Effect {
+public:
+    explicit FourOscGenerator(
+        const float sample_rate = 48000.0F) noexcept
+        : generator_(sample_rate, safe_defaults()) {}
+
+    [[nodiscard]] std::string_view id() const noexcept override {
+        return "four-osc-free-generator";
+    }
+    [[nodiscard]] std::size_t memory_bytes() const noexcept override {
+        return sizeof(*this);
+    }
+
+    void configure(const NoteGeneratorParameters& parameters) noexcept {
+        NoteGeneratorParameters four_voices = parameters;
+        four_voices.voice_count = 4U;
+        generator_.configure(four_voices);
+    }
+    [[nodiscard]] const NoteGeneratorParameters& parameters() const noexcept {
+        return generator_.parameters();
+    }
+    [[nodiscard]] float voice_frequency_hz(
+        const std::size_t voice) const noexcept {
+        return generator_.voice_frequency_hz(voice);
+    }
+
+    void reset() noexcept override { generator_.reset(); }
+    void process(std::span<float> interleaved,
+                 const std::uint16_t channels) noexcept override {
+        generator_.process(interleaved, channels);
+    }
+
+private:
+    [[nodiscard]] static NoteGeneratorParameters safe_defaults() noexcept {
+        NoteGeneratorParameters parameters;
+        parameters.voice_count = 4U;
+        parameters.voices[0] = {
+            NoteGeneratorWaveform::Sine, 48, 0, 0.15F}; // C3
+        parameters.voices[1] = {
+            NoteGeneratorWaveform::Sine, 55, 0, 0.15F}; // G3
+        parameters.voices[2] = {
+            NoteGeneratorWaveform::Sine, 60, 0, 0.15F}; // C4
+        parameters.voices[3] = {
+            NoteGeneratorWaveform::Sine, 64, 0, 0.15F}; // E4
+        parameters.output_level = 0.35F;
+        return parameters;
+    }
+
+    NoteGenerator generator_;
+};
 
 }  // namespace tabletfx::effects

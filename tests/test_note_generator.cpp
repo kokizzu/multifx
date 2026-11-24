@@ -15,6 +15,7 @@ using tabletfx::effects::NoteGenerator;
 using tabletfx::effects::NoteGeneratorParameters;
 using tabletfx::effects::NoteGeneratorVoiceParameters;
 using tabletfx::effects::NoteGeneratorWaveform;
+using tabletfx::effects::FourOscGenerator;
 
 #ifdef assert
 #undef assert
@@ -82,7 +83,7 @@ void test_defaults_bounds_and_small_fixed_state() {
     assert(generator.memory_bytes() == sizeof(generator));
     assert(generator.memory_bytes() < 256U);
     assert(std::abs(generator.voice_frequency_hz(0U) - 261.6256F) < 0.02F);
-    assert(generator.voice_frequency_hz(3U) == 0.0F);
+    assert(generator.voice_frequency_hz(4U) == 0.0F);
 }
 
 void test_waveforms_and_note_frequency() {
@@ -159,6 +160,65 @@ void test_per_voice_levels_mute_and_summing() {
     }
 }
 
+void test_fourth_oscillator_voice_is_independent() {
+    NoteGeneratorParameters parameters;
+    parameters.voice_count = 4U;
+    parameters.output_level = 0.5F;
+    parameters.voices[0] = {NoteGeneratorWaveform::Sine, 60, 0, 0.0F};
+    parameters.voices[1] = {NoteGeneratorWaveform::Sine, 64, 0, 0.0F};
+    parameters.voices[2] = {NoteGeneratorWaveform::Sine, 67, 0, 0.0F};
+    parameters.voices[3] = {NoteGeneratorWaveform::Sine, 72, 0, 1.0F};
+
+    NoteGenerator generator(kSampleRate, parameters);
+    std::array<float, kFrames> audio{};
+    generator.process(audio, 1U);
+    assert(std::abs(generator.voice_frequency_hz(3U) - 523.2511F) < 0.02F);
+    const float measured_hz = estimate_positive_crossing_hz(audio);
+    assert(measured_hz > 0.0F);
+    assert(std::abs(measured_hz - 523.2511F) < 1.0F);
+    assert(generator.voice_frequency_hz(4U) == 0.0F);
+}
+
+void test_all_four_oscillators_mix_independently() {
+    NoteGeneratorParameters combined_parameters;
+    combined_parameters.voice_count = 4U;
+    combined_parameters.output_level = 0.25F;
+    combined_parameters.voices[0] =
+        {NoteGeneratorWaveform::Sine, 48, -1, 0.4F};
+    combined_parameters.voices[1] =
+        {NoteGeneratorWaveform::Triangle, 60, 0, 0.3F};
+    combined_parameters.voices[2] =
+        {NoteGeneratorWaveform::Sawtooth, 67, 1, 0.2F};
+    combined_parameters.voices[3] =
+        {NoteGeneratorWaveform::Square, 72, -1, 0.1F};
+
+    NoteGenerator combined(kSampleRate, combined_parameters);
+    std::array<std::array<float, 1024>, 4> isolated_audio{};
+    for (std::size_t voice = 0U; voice < isolated_audio.size(); ++voice) {
+        auto isolated_parameters = combined_parameters;
+        for (std::size_t other = 0U; other < isolated_parameters.voices.size();
+             ++other) {
+            if (other != voice) {
+                isolated_parameters.voices[other].level = 0.0F;
+            }
+        }
+        NoteGenerator isolated(kSampleRate, isolated_parameters);
+        isolated.process(isolated_audio[voice], 1U);
+        assert(std::abs(isolated.voice_frequency_hz(voice) -
+                        combined.voice_frequency_hz(voice)) < 0.001F);
+    }
+
+    std::array<float, 1024> combined_audio{};
+    combined.process(combined_audio, 1U);
+    for (std::size_t frame = 0U; frame < combined_audio.size(); ++frame) {
+        float sum = 0.0F;
+        for (const auto& voice : isolated_audio) {
+            sum += voice[frame];
+        }
+        assert(std::abs(combined_audio[frame] - sum) < 1.0e-6F);
+    }
+}
+
 void test_control_bounds_and_safe_fallbacks() {
     NoteGenerator generator;
     NoteGeneratorParameters parameters;
@@ -175,10 +235,11 @@ void test_control_bounds_and_safe_fallbacks() {
         std::numeric_limits<float>::quiet_NaN()};
     parameters.voices[1] = {NoteGeneratorWaveform::Square, 999, 99, 4.0F};
     parameters.voices[2] = {NoteGeneratorWaveform::Triangle, 20, -9, -1.0F};
+    parameters.voices[3] = {NoteGeneratorWaveform::Sine, 48, 0, 0.75F};
     generator.configure(parameters);
 
     const auto& bounded = generator.parameters();
-    assert(bounded.voice_count == 3U);
+    assert(bounded.voice_count == 4U);
     assert(bounded.output_level == 1.0F);
     assert(bounded.voices[0].waveform == NoteGeneratorWaveform::Sine);
     assert(bounded.voices[0].note_number == 0);
@@ -190,6 +251,8 @@ void test_control_bounds_and_safe_fallbacks() {
     assert(bounded.voices[2].note_number == 20);
     assert(bounded.voices[2].octave == -2);
     assert(bounded.voices[2].level == 0.0F);
+    assert(bounded.voices[3].note_number == 48);
+    assert(bounded.voices[3].level == 0.75F);
     assert(generator.voice_frequency_hz(1U) <= 20000.0F);
     assert(generator.voice_frequency_hz(2U) > 0.0F);
 
@@ -260,6 +323,35 @@ void test_process_does_not_allocate() {
     }
 }
 
+void test_four_osc_generator_is_safe_offline_and_stereo_dual_mono() {
+    FourOscGenerator generator(kSampleRate);
+    const auto& parameters = generator.parameters();
+    assert(generator.id() == "four-osc-free-generator");
+    assert(parameters.voice_count == 4U);
+    assert(parameters.output_level == 0.35F);
+    assert(parameters.voices[0].note_number == 48);
+    assert(parameters.voices[1].note_number == 55);
+    assert(parameters.voices[2].note_number == 60);
+    assert(parameters.voices[3].note_number == 64);
+    assert(generator.memory_bytes() == sizeof(generator));
+    assert(generator.memory_bytes() < 512U);
+    assert(std::abs(generator.voice_frequency_hz(0U) - 130.8128F) < 0.02F);
+    assert(std::abs(generator.voice_frequency_hz(3U) - 329.6276F) < 0.03F);
+
+    std::array<float, 2048> stereo{};
+    stereo.fill(0.7F);
+    allocation_count.store(0U, std::memory_order_relaxed);
+    generator.process(stereo, 2U);
+    assert(allocation_count.load(std::memory_order_relaxed) == 0U);
+    float peak = 0.0F;
+    for (std::size_t frame = 0U; frame < stereo.size() / 2U; ++frame) {
+        assert(std::isfinite(stereo[frame * 2U]));
+        assert(stereo[frame * 2U] == stereo[frame * 2U + 1U]);
+        peak = std::max(peak, std::abs(stereo[frame * 2U]));
+    }
+    assert(peak <= 0.210001F);
+}
+
 }  // namespace
 
 void* operator new(std::size_t size) {
@@ -287,10 +379,13 @@ int main() {
     test_defaults_bounds_and_small_fixed_state();
     test_waveforms_and_note_frequency();
     test_per_voice_levels_mute_and_summing();
+    test_fourth_oscillator_voice_is_independent();
+    test_all_four_oscillators_mix_independently();
     test_control_bounds_and_safe_fallbacks();
     test_reset_retains_controls_and_rewinds_phase();
     test_stereo_is_dual_mono_and_input_independent();
     test_process_does_not_allocate();
+    test_four_osc_generator_is_safe_offline_and_stereo_dual_mono();
     std::fprintf(stdout, "All TabletFX note generator tests passed.\n");
     return 0;
 }

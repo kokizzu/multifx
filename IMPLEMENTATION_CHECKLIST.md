@@ -1,5 +1,15 @@
 # Implementation checklist
 
+## Line 6 Helix Stadium XL — 4 OSC Generator / Synth (2026-11-24)
+
+- [x] Rechecked the official Stadium model catalogue. It confirms Mono/Stereo, a free-running source that works without an instrument, and off-by-default behavior; it publishes no per-effect parameter table or DSP/latency data.
+- [x] Added categorized Synth picker index 108 (display row 109), disabled by default, with four static-note voices and project-authored waveform, note, octave, voice-level and output controls. Source precedes the chain so downstream effects process it.
+- [x] Native tests pass, including independent voice changes, bounds, stable memory, mono/stereo behavior, output peak limit and zero process allocation.
+- [x] Focused browser/WASM Play passes using the existing local Guitar-TECHS DI fixture; it verifies picker category, disabled default and captured effect-chain output.
+- [x] Isolated benchmark and native/WASM memory are recorded in [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
+- [x] Full `make web-test` passes: 110/110 CTest tests, 11/11 fixture-safety tests, 109 picker entries, 78 browser/native processor stages, maximum absolute error 3.400965e−6 and RMS error 5.880495e−7. Windows MinGW core/offline build passes.
+- [ ] Human listening and target-device checks remain open; no Line 6 DSP/settings/sound parity is claimed.
+
 ## Flagship category-gap implementation queue (2026-11-23)
 
 This queue follows exact model documentation and keeps related project processing separate from manufacturer parity claims. See [`FLAGSHIP_EFFECT_COMPARISON.md`](FLAGSHIP_EFFECT_COMPARISON.md) for the category map, sources, and model boundaries.

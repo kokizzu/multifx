@@ -109,6 +109,7 @@ const EFFECT_NAMES = [
   "Bias Trem · project-authored Fractal Blocks Guide-inspired controls",
   "Vibratone · project-authored rotating-baffle effect",
   "Uni-Verse Vibe · project-authored",
+  "4 OSC Generator · project-authored free-running source",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -162,6 +163,8 @@ const DEFAULT_PARAMETERS = {
     0, 2, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -90],
   monoGuitarSynth: [2, 0.75, 0.6, -54, 8, 180, 8],
   noteGenerator: [3, 0, 40, 0, 0.45, 1, 47, 1, 0.3, 2, 52, 0, 0.25, 0.6],
+  fourOscGenerator: [0, 48, 0, 0.15, 0, 55, 0, 0.15,
+    0, 60, 0, 0.15, 0, 64, 0, 0.15, 0.35],
   fractalThreeVoiceSynth: [
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -412,6 +415,7 @@ const noteGeneratorControls = [
   }).flat(),
   document.querySelector("#note-generator-output-level"),
 ];
+const fourOscGeneratorControls = [];
 const fractalThreeVoiceSynthControls = [];
 const enhancerControls = [
   document.querySelector("#enhancer-mode"),
@@ -785,6 +789,72 @@ function buildFractalThreeVoiceSynthControls() {
 }
 
 buildFractalThreeVoiceSynthControls();
+
+function buildFourOscGeneratorControls() {
+  const container = document.querySelector("#four-osc-generator-control-list");
+  if (!container) return;
+  const waveformChoices = [
+    [0, "Sine"], [1, "Triangle"], [2, "Sawtooth"], [3, "Square"],
+  ];
+  const addControl = (parent, id, labelText, valueIndex, specification) => {
+    const label = document.createElement("label");
+    label.className = "mix-control";
+    label.htmlFor = id;
+    const title = document.createElement("span");
+    title.textContent = labelText;
+    const output = document.createElement("output");
+    output.id = `${id}-value`;
+    output.htmlFor = id;
+    const control = specification.choices
+      ? document.createElement("select")
+      : document.createElement("input");
+    control.id = id;
+    control.dataset.fourOscIndex = String(valueIndex);
+    if (specification.choices) {
+      for (const [value, text] of specification.choices) {
+        const option = document.createElement("option");
+        option.value = String(value);
+        option.textContent = text;
+        control.append(option);
+      }
+    } else {
+      control.type = "range";
+      control.min = String(specification.min);
+      control.max = String(specification.max);
+      control.step = String(specification.step);
+    }
+    control.value = String(DEFAULT_PARAMETERS.fourOscGenerator[valueIndex]);
+    label.append(title, output, control);
+    parent.append(label);
+    fourOscGeneratorControls.push(control);
+  };
+
+  for (let voice = 0; voice < 4; voice += 1) {
+    const details = document.createElement("details");
+    details.className = "resonator-band-controls";
+    const summary = document.createElement("summary");
+    summary.textContent = `Oscillator ${voice + 1}`;
+    details.append(summary);
+    const group = document.createElement("div");
+    group.className = "gain-controls";
+    const offset = voice * 4;
+    addControl(group, `four-osc-voice-${voice + 1}-waveform`, "Waveform",
+      offset, { choices: waveformChoices });
+    addControl(group, `four-osc-voice-${voice + 1}-note`, "Static MIDI note · 0–127",
+      offset + 1, { min: 0, max: 127, step: 1 });
+    addControl(group, `four-osc-voice-${voice + 1}-octave`, "Octave shift · −2…+2",
+      offset + 2, { min: -2, max: 2, step: 1 });
+    addControl(group, `four-osc-voice-${voice + 1}-level`, "Voice level · 0–100%",
+      offset + 3, { min: 0, max: 1, step: 0.01 });
+    details.append(group);
+    container.append(details);
+  }
+
+  addControl(container, "four-osc-output-level", "Output level · 0–100%",
+    16, { min: 0, max: 1, step: 0.01 });
+}
+
+buildFourOscGeneratorControls();
 
 const playButton = document.querySelector("#play-button");
 const stopButton = document.querySelector("#stop-button");
@@ -5109,6 +5179,37 @@ for (const control of noteGeneratorControls) {
   control.addEventListener("change", updateNoteGenerator);
 }
 updateNoteGenerator();
+
+function updateFourOscGenerator() {
+  const values = fourOscGeneratorControls.map((control) => Number(control.value));
+  DEFAULT_PARAMETERS.fourOscGenerator = values;
+  const waveformNames = ["Sine", "Triangle", "Sawtooth", "Square"];
+  for (let voice = 0; voice < 4; voice += 1) {
+    const offset = voice * 4;
+    const controls = fourOscGeneratorControls.slice(offset, offset + 4);
+    controls[0].parentElement.querySelector("output").value =
+      waveformNames[values[offset]] || "Sine";
+    controls[1].parentElement.querySelector("output").value =
+      `MIDI ${values[offset + 1]}`;
+    const octave = values[offset + 2];
+    controls[2].parentElement.querySelector("output").value = octave === 0
+      ? "0 octaves"
+      : `${octave > 0 ? "+" : "−"}${Math.abs(octave)} octave${Math.abs(octave) === 1 ? "" : "s"}`;
+    controls[3].parentElement.querySelector("output").value =
+      `${Math.round(values[offset + 3] * 100)}%`;
+  }
+  fourOscGeneratorControls[16].parentElement.querySelector("output").value =
+    `${Math.round(values[16] * 100)}%`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "four-osc-generator", value: values });
+  }
+}
+
+for (const control of fourOscGeneratorControls) {
+  control.addEventListener("input", updateFourOscGenerator);
+  control.addEventListener("change", updateFourOscGenerator);
+}
+updateFourOscGenerator();
 
 function updateFractalThreeVoiceSynth() {
   const values = fractalThreeVoiceSynthControls.map((control) => Number(control.value));
@@ -9819,7 +9920,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 108 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -9921,7 +10022,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 108 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -10028,7 +10129,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 108 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10141,7 +10242,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 108 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10253,7 +10354,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 108 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -10361,7 +10462,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-        effectMemory.length !== 108 || !(effectMemory[107] > 0) ||
+        effectMemory.length !== 109 || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -10423,6 +10524,106 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         control.value = previousControls[index];
       });
       updateUniVerseVibeOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = fourOscGeneratorControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("4 OSC Generator browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    updateFourOscGenerator();
+    effectCategoryFilter.value = "synth";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="108"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "synth" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
+        !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
+        effectMemory.length !== 109 || !(effectMemory[108] > 0) ||
+        DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
+          "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
+      throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0 || index === 12;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("4 OSC Generator picker row did not enable from its click handler.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting 4 OSC Generator playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const actual = new Float32Array(captureBuffer);
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    const sampleCount = Math.min(actual.length, reference.samples.length);
+    for (let index = 0; index < sampleCount; index += 1) {
+      const sample = actual[index];
+      peak = Math.max(peak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+      const difference = sample - reference.samples[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = sampleCount > 0
+      ? Math.sqrt(differenceSquares / sampleCount)
+      : 0;
+    if (peak < 1e-5 || peak > 0.5 || activeSamples < 32 || differenceRms < 1e-4) {
+      throw new Error(`4 OSC Generator produced unexpected output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Synth", enabledEffectIndex: 108,
+      sourceReplacesInput: true, downstreamHighGainDistortionEnabled: true,
+      voices: 4, voiceNotes: [48, 55, 60, 64], outputLevel: 0.35,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[108],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      fourOscGeneratorControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateFourOscGenerator();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -11289,8 +11490,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-        const expectedEffectIds = Array.from({ length: 108 }, (_, index) => index);
-        if (EFFECT_NAMES.length !== 108 || effectRows.length !== 108 ||
+    const expectedEffectIds = Array.from({ length: 109 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 109 || effectRows.length !== 109 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -11386,6 +11587,7 @@ async function runBrowserSelfTest() {
         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
         initialEffectState[103] || initialEffectState[104] ||
         initialEffectState[105] || initialEffectState[106] || initialEffectState[107] ||
+        initialEffectState[108] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -11402,7 +11604,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-              throw new Error("The effect picker must list 108 ordered, categorized effects (IDs 0–107), including Uni-Verse Vibe in Modulation; existing effect IDs and optional-disabled defaults must stay stable.");
+      throw new Error("The effect picker must list 109 ordered, categorized effects (IDs 0–108), including Uni-Verse Vibe in Modulation and 4 OSC Generator in Synth; existing effect IDs and optional-disabled defaults must stay stable.");
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -12663,9 +12865,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const synthIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (synthIds.join(",") !== "52,53,78" || effectCount.value !== `3 of ${effectRows.length}` ||
+                   if (synthIds.join(",") !== "52,53,78,108" || effectCount.value !== `4 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Synth category must list the tracked guitar synth, free-running note generator, and three-voice tracked synth without changing chain state.");
+      throw new Error("The Synth category must list the tracked guitar synths, free-running note sources, and three-voice tracked synth without changing chain state.");
     }
     effectCategoryFilter.value = "loop";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -12881,6 +13083,29 @@ async function runBrowserSelfTest() {
       noteGeneratorControls[index].value = String(value);
     });
     updateNoteGenerator();
+    const defaultFourOscGenerator = [...DEFAULT_PARAMETERS.fourOscGenerator];
+    fourOscGeneratorControls[0].value = "3";
+    fourOscGeneratorControls[1].value = "57";
+    fourOscGeneratorControls[2].value = "-1";
+    fourOscGeneratorControls[3].value = "0.7";
+    fourOscGeneratorControls[16].value = "0.8";
+    fourOscGeneratorControls[16].dispatchEvent(new Event("input", { bubbles: true }));
+    if (fourOscGeneratorControls.length !== 17 ||
+        DEFAULT_PARAMETERS.fourOscGenerator[0] !== 3 ||
+        DEFAULT_PARAMETERS.fourOscGenerator[1] !== 57 ||
+        DEFAULT_PARAMETERS.fourOscGenerator[2] !== -1 ||
+        DEFAULT_PARAMETERS.fourOscGenerator[3] !== 0.7 ||
+        DEFAULT_PARAMETERS.fourOscGenerator[16] !== 0.8 ||
+        fourOscGeneratorControls[0].parentElement.querySelector("output").value !== "Square" ||
+        fourOscGeneratorControls[1].parentElement.querySelector("output").value !== "MIDI 57" ||
+        fourOscGeneratorControls[2].parentElement.querySelector("output").value !== "−1 octave" ||
+        fourOscGeneratorControls[16].parentElement.querySelector("output").value !== "80%") {
+      throw new Error("4 OSC Generator controls must update waveform, pitch, octave, levels, and displayed values.");
+    }
+    defaultFourOscGenerator.forEach((value, index) => {
+      fourOscGeneratorControls[index].value = String(value);
+    });
+    updateFourOscGenerator();
     const defaultGrainDelay = [...DEFAULT_PARAMETERS.grainDelay];
     [grainDelayControls[0].value, grainDelayControls[1].value,
       grainDelayControls[2].value, grainDelayControls[3].value,
@@ -12988,6 +13213,7 @@ async function runBrowserSelfTest() {
     const captureControl = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
+    parityEnabled[108] = false;
        // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, Celestial/Cloud Reverb, and Fractal synth have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
@@ -13043,7 +13269,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 108 || activeProcessorIndices.length !== 78 ||
+    if (parityEnabled.length !== 109 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -13503,6 +13729,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Uni-Verse Vibe browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "four-osc-generator") {
+          testResult.textContent = "Checking 4 OSC Generator browser Play with the local guitar fixture…";
+          const fourOscSmoke = await runFourOscGeneratorBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            fourOscGenerator: fourOscSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX 4 OSC Generator browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {

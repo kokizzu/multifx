@@ -127,7 +127,8 @@ public:
                      static_cast<std::uint16_t>(channels)),
           uni_verse_vibe_(static_cast<float>(sample_rate),
                           static_cast<std::uint16_t>(channels), {},
-                          tabletfx::VibeModel::UniVerse) {
+                          tabletfx::VibeModel::UniVerse),
+          four_osc_generator_(static_cast<float>(sample_rate)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -418,7 +419,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 12; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 13; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -493,6 +494,11 @@ public:
         if (index == 107U) {
             uni_verse_vibe_enabled_ = enabled;
             if (!enabled) uni_verse_vibe_.reset();
+            return true;
+        }
+        if (index == 108U) {
+            four_osc_generator_enabled_ = enabled;
+            if (!enabled) four_osc_generator_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -675,6 +681,14 @@ public:
             }
             return;
         }
+        if (index == 108U) {
+            if (four_osc_generator_enabled_) {
+                auto generated = std::span<float>(work_.data(), samples);
+                four_osc_generator_.process(generated, channels_);
+                std::copy_n(work_.begin(), samples, dry_.begin());
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -750,6 +764,7 @@ public:
         fractal_bias_trem_.reset();
         vibratone_.reset();
         uni_verse_vibe_.reset();
+        four_osc_generator_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2096,7 +2111,7 @@ public:
         };
         tabletfx::effects::NoteGeneratorParameters parameters;
         parameters.voice_count = static_cast<std::uint8_t>(selector(values[0], 3U));
-        for (std::size_t voice = 0; voice < parameters.voices.size(); ++voice) {
+        for (std::size_t voice = 0; voice < 3U; ++voice) {
             const std::size_t offset = 1U + voice * 4U;
             parameters.voices[voice].waveform =
                 static_cast<tabletfx::effects::NoteGeneratorWaveform>(
@@ -2110,6 +2125,38 @@ public:
         parameters.output_level = values[13U];
         static_cast<tabletfx::effects::NoteGenerator*>(effects_[53].effect.get())
             ->configure(parameters);
+    }
+
+    void configure_four_osc_generator(const float* values,
+                                     std::uint32_t value_count) noexcept {
+        constexpr std::uint32_t kParameterCount = 17U;
+        if (values == nullptr || value_count != kParameterCount) return;
+        const auto selector = [](float value, std::uint32_t maximum) noexcept {
+            if (!std::isfinite(value)) return 0U;
+            return static_cast<std::uint32_t>(
+                std::clamp(value, 0.0F, static_cast<float>(maximum)) + 0.5F);
+        };
+        const auto integer = [](float value, int minimum, int maximum,
+                                int fallback) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return static_cast<int>(std::lround(std::clamp(
+                value, static_cast<float>(minimum), static_cast<float>(maximum))));
+        };
+        tabletfx::effects::NoteGeneratorParameters parameters;
+        parameters.voice_count = 4U;
+        for (std::size_t voice = 0; voice < parameters.voices.size(); ++voice) {
+            const std::size_t offset = voice * 4U;
+            parameters.voices[voice].waveform =
+                static_cast<tabletfx::effects::NoteGeneratorWaveform>(
+                    selector(values[offset], 3U));
+            parameters.voices[voice].note_number =
+                integer(values[offset + 1U], 0, 127, 60);
+            parameters.voices[voice].octave =
+                integer(values[offset + 2U], -2, 2, 0);
+            parameters.voices[voice].level = values[offset + 3U];
+        }
+        parameters.output_level = values[16U];
+        four_osc_generator_.configure(parameters);
     }
 
     void configure_fractal_three_voice_synth(
@@ -3167,6 +3214,7 @@ public:
         bytes += fractal_bias_trem_.memory_bytes();
         bytes += vibratone_.memory_bytes();
         bytes += uni_verse_vibe_.memory_bytes();
+        bytes += four_osc_generator_.memory_bytes();
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3242,6 +3290,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 108U) {
+            const std::size_t bytes = four_osc_generator_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3279,6 +3333,7 @@ private:
     tabletfx::BiasTrem fractal_bias_trem_;
     tabletfx::Vibratone vibratone_;
     tabletfx::Vibe uni_verse_vibe_;
+    tabletfx::effects::FourOscGenerator four_osc_generator_;
     bool output_gain_enabled_ = true;
     bool output_limiter_enabled_ = true;
     bool stereo_filter_enabled_ = false;
@@ -3294,6 +3349,7 @@ private:
     bool fractal_bias_trem_enabled_ = false;
     bool vibratone_enabled_ = false;
     bool uni_verse_vibe_enabled_ = false;
+    bool four_osc_generator_enabled_ = false;
 };
 
 WasmChain* as_chain(void* opaque) noexcept {
@@ -4049,6 +4105,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_note_generator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_note_generator(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_four_osc_generator(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_four_osc_generator(values, value_count);
     }
 }
 

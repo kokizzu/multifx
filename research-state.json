@@ -217,33 +217,33 @@
         "notes": "Automated verification is complete. Human listening and physical target-device checks remain open."
       },
       "picker_rows": 108
+    },
+    {
+      "name": "Line 6 Helix Stadium XL 4 OSC Generator project-authored Synth source",
+      "status": "verified",
+      "picker_index": 108,
+      "category": "Synth",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalogue and current firmware notes",
+        "revision": "Live model catalogue checked 2026-11-24; lists Mono/Stereo, Line 6 Original, first appearing Stadium 1.0 and off-by-default operation. v1.4.2 hardware notes report no effect changes; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "qualification": "Catalogue confirms an independent source that makes sound without an instrument and advises keeping its block off by default; it provides no per-effect parameter table, note ranges/polyphony, numeric defaults, DSP cost, or latency. Project controls and DSP are independent."
+      },
+      "documented_controls": "The catalogue lists Mono/Stereo and identifies the model as a free-running source that makes sound without an instrument; its block is off by default. No oscillator parameter table or numeric controls are published.",
+      "project_controls": "Project-authored Synth row at picker index 108 (display row 109), disabled by default. Four fixed-phase voices expose sine/triangle/saw/square waveform, MIDI note 0–127, octave −2…+2, and level 0–1; output level 0–1. Defaults: four sine voices at MIDI 48/55/60/64, 0.15 each, output 0.35. The source replaces input before the standard effect chain; it does not track guitar pitch or consume MIDI. These are not Line 6 settings, DSP, or sound parity.",
+      "verification": {
+        "native_ctest": "make web-test passed 110/110 CTest tests and 11/11 audio fixture safety checks, including four-voice independence, bounds, stereo output, peak ceiling, and zero process-time allocation.",
+        "focused_browser": "make web-test-line6-four-osc-generator passed with the local prerecorded Guitar-TECHS DI fixture at 48 kHz/48,000 frames. The browser verified Synth category, index 108, disabled default, 17 controls and captured Play output through downstream distortion: peak 0.3548133969, 95,998 active samples, difference RMS 0.3102750372, and 168 B effect memory.",
+        "full_browser": "make web-test passed: 109 picker entries and 78 optional processor stages; maximum absolute browser/native error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,342,696 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. Full-chain parity keeps the independent generator disabled.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.0709/0.1552/0.1706/0.4751/0.7286% of deadline; 176 B native owned state, no fixed algorithmic delay, no process-time allocation. Desktop processor-call measurement, not target-device performance.",
+        "notes": "Automated tests/builds pass. Human listening and physical target-device checks remain open; no Line 6 settings, DSP or sound parity."
+      },
+      "picker_rows": 109
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Vibratone project-authored Modulation implementation",
-    "status": "verified",
-    "picker_index": 106,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and Fender firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 36–37; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists the Vibratone controls but gives no numeric ranges/defaults, rotor geometry, ramp/detector behavior, stereo configuration, latency, DSP cost, or block limit. The checked v1.8.85 notes do not mention Vibratone. Installed firmware is unknown."
-    },
-    "documented_controls": "Drive, Tone, Level, Fast, Slow, Speed Switch, Ramp, Sensitivity, Dynamics Switch.",
-    "project_controls": "Project defaults: Drive 0%, Tone 80%, Level 0 dB, Fast 6.5 Hz, Slow 0.85 Hz, Speed Switch Slow, Ramp 650 ms, Sensitivity 50%, Dynamics off. Project ranges: Drive 0–100%, Tone 0–100% mapped exponentially to an 800 Hz–20 kHz one-pole output low-pass, Level −24…+12 dB, Fast 1–10 Hz, Slow 0.1–5 Hz capped at half Fast, Ramp 50–3,000 ms, Sensitivity mapped to a −5…−45 dB threshold. Dynamics uses project-selected 20 ms attack/250 ms release and 0.75 hysteresis. It wraps the existing project RotarySpeaker effect; these are not Fender settings, topology, DSP, or sound parity.",
-    "verification": {
-      "native_ctest": "make test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests. Vibratone tests cover defaults/bounds, manual/dynamics speed switching, tone/level response, reset, hostile and irregular input, and no process-time allocation.",
-      "cli": "The full native/offline CLI test passed within make test.",
-      "browser": "make web-test-fender-vibratone passed with local prerecorded Guitar-TECHS DI: Modulation category, enabled effect index 106, 48 kHz stereo/48,000 frames, captured Play output peak 0.7913645, 96,000 active samples, difference RMS 0.1667494, and 1,264 B effect memory. Full make web-test passed with 107 picker entries and 78 processor stages; maximum absolute native/WASM error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,341,868 B processor state plus 10,364 B tuner state in a fixed 100,663,296 B WASM heap.",
-      "windows": "make windows-cross-build passed for Windows MinGW native core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4298/0.5963/0.8708/1.5859/1.9392% of deadline; 1,304 B native owned state; zero fixed algorithmic latency and no process-time allocation. Desktop measurement, not target-device performance.",
-      "notes": "Automated implementation verification only. No human listening, target-device test, or Fender DSP/settings/sound parity."
-    },
-    "picker_rows": 107
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Uni-Verse Vibe project-authored Modulation implementation",
     "status": "verified",
     "picker_index": 107,
@@ -266,6 +266,30 @@
       "notes": "Automated verification is complete. Human listening and physical target-device checks remain open."
     },
     "picker_rows": 108
+  },
+  "current_checkpoint": {
+    "name": "Line 6 Helix Stadium XL 4 OSC Generator project-authored Synth source",
+    "status": "verified",
+    "picker_index": 108,
+    "category": "Synth",
+    "official_source": {
+      "title": "Line 6 Helix Stadium model catalogue and current firmware notes",
+      "revision": "Live model catalogue checked 2026-11-24; lists Mono/Stereo, Line 6 Original, first appearing Stadium 1.0 and off-by-default operation. v1.4.2 hardware notes report no effect changes; installed firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "Catalogue confirms an independent source that makes sound without an instrument and advises keeping its block off by default; it provides no per-effect parameter table, note ranges/polyphony, numeric defaults, DSP cost, or latency. Project controls and DSP are independent."
+    },
+    "documented_controls": "The catalogue lists Mono/Stereo and identifies the model as a free-running source that makes sound without an instrument; its block is off by default. No oscillator parameter table or numeric controls are published.",
+    "project_controls": "Project-authored Synth row at picker index 108 (display row 109), disabled by default. Four fixed-phase voices expose sine/triangle/saw/square waveform, MIDI note 0–127, octave −2…+2, and level 0–1; output level 0–1. Defaults: four sine voices at MIDI 48/55/60/64, 0.15 each, output 0.35. The source replaces input before the standard effect chain; it does not track guitar pitch or consume MIDI. These are not Line 6 settings, DSP, or sound parity.",
+    "verification": {
+      "native_ctest": "make web-test passed 110/110 CTest tests and 11/11 audio fixture safety checks, including four-voice independence, bounds, stereo output, peak ceiling, and zero process-time allocation.",
+      "focused_browser": "make web-test-line6-four-osc-generator passed with the local prerecorded Guitar-TECHS DI fixture at 48 kHz/48,000 frames. The browser verified Synth category, index 108, disabled default, 17 controls and captured Play output through downstream distortion: peak 0.3548133969, 95,998 active samples, difference RMS 0.3102750372, and 168 B effect memory.",
+      "full_browser": "make web-test passed: 109 picker entries and 78 optional processor stages; maximum absolute browser/native error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,342,696 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. Full-chain parity keeps the independent generator disabled.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.0709/0.1552/0.1706/0.4751/0.7286% of deadline; 176 B native owned state, no fixed algorithmic delay, no process-time allocation. Desktop processor-call measurement, not target-device performance.",
+      "notes": "Automated tests/builds pass. Human listening and physical target-device checks remain open; no Line 6 settings, DSP or sound parity."
+    },
+    "picker_rows": 109
   },
   "next_research": [
     {

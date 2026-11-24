@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Line 6 4 OSC Generator-inspired Synth source (2026-11-24)
+
+The source uses four fixed-phase oscillators with per-voice waveform, static MIDI note and octave controls; the sum replaces input before the downstream chain. Defaults are sine C3/G3/C4/E4 (MIDI 48/55/60/64), 0.15 voice levels, and 0.35 output. At 48 kHz stereo its native owned state is 176 B (the browser reports 168 B); it adds zero fixed algorithmic delay and `process()` allocates no memory. This is project-authored DSP and not Line 6's implementation.
+
+An AMD Ryzen 9 5950X Release benchmark at 48 kHz stereo/128 frames (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max at 0.0709/0.1552/0.1706/0.4751/0.7286% of the callback deadline. These are isolated native processor-call measurements, not whole-chain, WebAssembly-device, or hardware performance.
+
+Native allocation/bounds tests and focused browser/WASM Play using the existing local Guitar-TECHS DI fixture pass. The Play check confirms the Synth category, source off by default, captured output after downstream distortion, 95,998 active samples, peak 0.3548134, difference RMS 0.3102750, and 168 B reported effect memory. Full-chain browser parity intentionally keeps the independent source off. Human listening and target-device checks remain open.
+
 ## Project-authored Fender Uni-Verse Vibe-inspired Modulation (2026-11-24)
 
 The project implementation uses two first-order all-pass stages, a swept phase coefficient, and a 10 ms control ramp. Defaults are 1.5 Hz, 65% intensity, unity linear Volume, Modern tone, and Chorus. Project bounds are 0.1–10 Hz, 0–100% intensity, and 0–2 linear Volume; local tempo sync uses 20–300 BPM and 12 project-chosen divisions. Vintage adds a project-selected 6 kHz one-pole low-pass. Vibrato selects the project wet-only phase path. These DSP choices are independent of Fender's documented control roles and do not claim algorithm or sound parity. The processor adds zero fixed algorithmic delay, owns 240 B of native state (224 B reported for the WASM effect), and allocates nothing during processing.

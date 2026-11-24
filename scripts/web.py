@@ -163,6 +163,7 @@ def build_web() -> None:
         "_tf_chain_set_pitch_arpeggiator",
         "_tf_chain_set_mono_guitar_synth",
         "_tf_chain_set_note_generator",
+        "_tf_chain_set_four_osc_generator",
         "_tf_chain_set_fractal_three_voice_synth",
         "_tf_chain_set_enhancer",
         "_tf_chain_deluxe_looper_command",
@@ -724,7 +725,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  step_tremolo_only: bool = False,
                  fractal_bias_trem_only: bool = False,
                  vibratone_only: bool = False,
-                 uni_verse_vibe_only: bool = False) -> None:
+                 uni_verse_vibe_only: bool = False,
+                 four_osc_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1224,6 +1226,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fender-vibratone"
         elif uni_verse_vibe_only:
             url = base_url + "/web/index.html?selftest=uni-verse-vibe"
+        elif four_osc_only:
+            url = base_url + "/web/index.html?selftest=four-osc-generator"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1422,6 +1426,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
                 None if volume_pan_only or stereo_filter_only or step_tremolo_only or
                 fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
+                or four_osc_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1456,6 +1461,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif uni_verse_vibe_only:
             print("Focused Uni-Verse Vibe browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif four_osc_only:
+            print("Focused Line 6 4 OSC Generator browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1513,6 +1521,7 @@ def main() -> None:
         "test-fractal-bias-trem",
         "test-fender-vibratone",
         "test-fender-universe-vibe",
+        "test-line6-four-osc-generator",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1536,6 +1545,8 @@ def main() -> None:
         browser_test(vibratone_only=True)
     elif action == "test-fender-universe-vibe":
         browser_test(uni_verse_vibe_only=True)
+    elif action == "test-line6-four-osc-generator":
+        browser_test(four_osc_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

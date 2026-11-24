@@ -28,7 +28,7 @@ PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic
 PUBLISH_CHECKPOINTS += fractal-optical-tremolo
 PUBLISH_CHECKPOINTS += fractal-bias-trem
-PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe
+PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe line6-four-osc-generator
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -71,7 +71,7 @@ web-test-stereo-filter:
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
 .PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem
-.PHONY: test-vibe test-vibratone web-test-fender-vibratone web-test-fender-universe-vibe
+.PHONY: test-vibe test-vibratone test-note-generator web-test-fender-vibratone web-test-fender-universe-vibe web-test-line6-four-osc-generator
 test-vibe:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_vibe_tests
 
@@ -90,11 +90,17 @@ web-test-fractal-bias-trem: web-build
 test-vibratone:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_vibratone_tests
 
+test-note-generator:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_note_generator_tests
+
 web-test-fender-vibratone: web-build
 	$(PYTHON) scripts/web.py test-fender-vibratone
 
 web-test-fender-universe-vibe: web-build
 	$(PYTHON) scripts/web.py test-fender-universe-vibe
+
+web-test-line6-four-osc-generator: web-build
+	$(PYTHON) scripts/web.py test-line6-four-osc-generator
 
 web-test-step-tremolo:
 	$(PYTHON) scripts/web.py test-step-tremolo

@@ -198,6 +198,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="105"><span class="effect-number">106</span><span class="effect-name">Bias Trem · project-authored Fractal Blocks Guide-inspired controls</span><span class="effect-default">LFO amplitude modulation with a mild asymmetric curve</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="106"><span class="effect-number">107</span><span class="effect-name">Vibratone · project-authored rotating-baffle effect</span><span class="effect-default">Fast/Slow speed · ramp · input dynamics</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="107"><span class="effect-number">108</span><span class="effect-name">Uni-Verse Vibe · project-authored</span><span class="effect-default">Speed · Intensity · Vintage/Modern · Chorus/Vibrato</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="108"><span class="effect-number">109</span><span class="effect-name">4 OSC Generator · project-authored controls</span><span class="effect-default">Four free-running voices · disabled by default</span><span class="effect-category-tag">Synth</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1385,6 +1386,11 @@
           <label class="mix-control" for="note-generator-voice-3-level"><span>Oscillator 3 · level · 0–100%</span><output id="note-generator-voice-3-level-value" for="note-generator-voice-3-level">25%</output><input id="note-generator-voice-3-level" type="range" min="0" max="1" step="0.01" value="0.25"></label>
           <label class="mix-control" for="note-generator-output-level"><span>Output level · 0–100%</span><output id="note-generator-output-level-value" for="note-generator-output-level">60%</output><input id="note-generator-output-level" type="range" min="0" max="1" step="0.01" value="0.6"></label>
         </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="4 OSC Generator controls">
+        <h3>Helix Stadium 4 OSC Generator · project-authored controls</h3>
+        <p class="hint">Line 6 documents this mono/stereo source as free-running and off by default, but does not publish its parameter table. These four sine/triangle/saw/square oscillators, static MIDI note and octave controls, levels, and safe output level are TabletFX choices; oscillator count is not guitar-input polyphony. When enabled, this source replaces the incoming audio before the effect chain.</p>
+        <div class="gain-controls" id="four-osc-generator-control-list"></div>
       </div>
       <div class="effect-parameter-group" aria-label="Three-Voice Tracked Synth controls">
         <h3>Three-Voice Tracked Synth · project-authored Fractal-inspired controls</h3>
