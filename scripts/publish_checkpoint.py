@@ -381,6 +381,19 @@ ROTARY_SPEAKER_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FRACTAL_ROTARY_DEPTH_CHECKPOINT_PATHS = (
+    "include/tabletfx/effects/rotary_speaker.hpp",
+    "src/effects/rotary_speaker.cpp",
+    "tests/test_rotary_speaker.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 RING_MOD_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2032,6 +2045,8 @@ CHECKPOINTS = {
                    "feat: add project-authored auto swell"),
     "rotary-speaker": (ROTARY_SPEAKER_CHECKPOINT_PATHS,
                        "feat: add project-authored rotary speaker"),
+    "fractal-rotary-depth": (FRACTAL_ROTARY_DEPTH_CHECKPOINT_PATHS,
+                             "fix: respect rotary Hi Depth at zero"),
     "ring-mod": (RING_MOD_CHECKPOINT_PATHS,
                  "feat: add project-authored ring modulation"),
     "rhythmic-slicer": (RHYTHMIC_SLICER_CHECKPOINT_PATHS,

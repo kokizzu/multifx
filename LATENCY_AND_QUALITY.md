@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal Rotary Speaker Hi Depth behavior (2026-11-24)
+
+The June 2023 FM9-family Blocks Guide (printed p. 87) says setting Hi Depth to zero can simulate drum-only operation; it does not publish numeric bounds or define the control mapping. The project now scales the horn/Doppler path with Hi Depth, so Rotor Length cannot move the horn at zero depth. A regression checks that zero-depth case and verifies that Rotor Length still changes the high-rotor output with nonzero depth. This is project-authored behavior, not Fractal DSP/settings/sound parity.
+
+`make bench` on an AMD Ryzen 9 5950X, Release build, 48 kHz stereo, 128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks reports p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of the callback deadline. Owned state is 1,208 B; there is no fixed algorithmic latency, and `process()` does not allocate. This is a desktop processor-call estimate. FM9-family v12.0 download listings name FM9 Original and Turbo but not Mark II Turbo; installed firmware and device performance are unknown. [Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf) · [FM9 downloads](https://www.fractalaudio.com/fm9-downloads/)
+
 ## Chromatic Pitch Delay and extended Arpeggiator range (2026-11-24)
 
 The project-authored Chromatic Pitch Delay was measured in a Release build on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks). Its processor-call p50/p95/p99/p99.9/max was 10.4013/14.0888/16.7569/22.0945/26.3696% of one callback, with 1,262,216 B directly owned state. A wet pitch repeat has 256 samples (5.333 ms) of pitch-engine latency; dry remains immediate. `process()` allocates no memory. These are one desktop benchmark run and do not predict Android tablet load or end-to-end route latency.

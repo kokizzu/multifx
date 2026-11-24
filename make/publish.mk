@@ -21,6 +21,7 @@ PUBLISH_CHECKPOINTS += fractal-filter-auto-wah
 PUBLISH_CHECKPOINTS += fractal-filter-envelope
 PUBLISH_CHECKPOINTS += fractal-filter-ladder
 PUBLISH_CHECKPOINTS += chromatic-pitch-delay
+PUBLISH_CHECKPOINTS += fractal-rotary-depth
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

@@ -137,7 +137,8 @@ void RotarySpeaker::process(std::span<float> interleaved,
         const float distance_scale = 1.0F - 0.5F * parameters_.mic_distance;
         const float modulation_depth_scale =
             1.0F - 0.4F * parameters_.mic_distance;
-        const float delay_depth_samples = parameters_.rotor_length *
+        const float delay_depth_samples = parameters_.hi_depth *
+            parameters_.rotor_length *
             (kMaximumRotorDelayMs * sample_rate_ / 1000.0F) * distance_scale;
 
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {

@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "68873ffa2bc54d57cd2642ada1c88e52cb9132d2",
+  "previous_checkpoint_commit": "dc69dc0392c421bb2092e00131f18a7ca78b2fbc",
   "completed_checkpoints": [
     {
       "name": "Fractal FM9-family Dynamic Formant Morph",
@@ -13,7 +13,7 @@
       "category": "Filters & wah",
       "official_source": {
         "title": "Fractal Audio Systems Blocks Guide",
-        "revision": "November 2026",
+        "revision": "June 2023",
         "pages": [3, 4, 51],
         "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
         "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
@@ -63,7 +63,7 @@
       "category": "Filters & wah",
       "official_source": {
         "title": "Fractal Audio Systems Blocks Guide",
-        "revision": "November 2026; printed pp. 45–47. FM9-family guide; firmware downloads checked 2026-11-24.",
+        "revision": "June 2023; printed pp. 45–47. FM9-family guide; firmware downloads checked 2026-11-24.",
         "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
         "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
         "qualification": "Guide covers the FM9 family but does not name FM9 Mark II Turbo in the device comparison; firmware v12.0 lists Original/Turbo, not Mark II Turbo explicitly. Applicability to Mark II Turbo is family-level inference; installed firmware is unknown."
@@ -79,27 +79,6 @@
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Dynamic Delay timing, filters, and modulation",
-    "status": "verified",
-    "picker_index": 39,
-    "category": "Delay",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide",
-      "revision": "v1.1.100 / Rev. A, printed p. 45; firmware page checked through v1.8.85 (2026-11-18).",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide names Dynamic Delay controls. Firmware v1.6.34 is the latest checked source here to state a Time range of 30–2,000 ms; the other numeric ranges/defaults and any unit-installed firmware remain unknown."
-    },
-    "documented_controls": "Time, Feedback, Mix, Tap Division, repeat Low Cut and High Cut, Threshold, Attenuation, Release, Mod Rate, Mod Depth, Mod Mode (SINE/TRI/RAND/TRIG), and Spillover Switch.",
-    "project_controls": "Project-authored Ducking Delay with free/tempo time, repeat filters, Sine/Triangle/Random/Triggered Ramp modulation, and optional block-bypass Spillover. Project ranges/defaults/DSP are not Fender settings or parity.",
-    "verification": {
-      "picker_rows": 99,
-      "browser": "Local Guitar-TECHS DI Play at Delay index 39 captured modulated output; browser/native comparison passed.",
-      "isolated_benchmark": "Ryzen 9 5950X, 48 kHz stereo/128 frames. Default p50/p95/p99/p99.9/max 0.1331/0.1335/0.1797/1.7003/2.8043%; filtered/modulated 0.1823/0.1838/0.2355/1.6733/1.7640%; 768,296 B owned state.",
-      "notes": "Published on main as 68873ffa2bc54d57cd2642ada1c88e52cb9132d2. Human listening and device behavior remained open."
-    }
-  },
-  "current_checkpoint": {
     "name": "Fender Chromatic Pitch Delay and Fractal Arpeggiator ±24 range",
     "status": "verified",
     "picker_index": 99,
@@ -123,6 +102,28 @@
       "windows": "make windows-cross-build passed for the native core and offline renderer.",
       "notes": "Automated project implementation verified; controls/DSP are project-authored and do not claim manufacturer parity. Human listening, actual guitar tracking feel, tablet performance, and live device checks remain open."
     }
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Rotary Speaker Hi Depth / Rotor Length behavior",
+    "status": "verified",
+    "picker_index": 33,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+      "revision": "June 2023 cover date; printed p. 87; FM9-family documentation. Firmware v12.0 posted 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "Guide content is family-level evidence and the current linked PDF has a June 2023 cover date. Applicability to FM9 Mark II Turbo is family-level inference; the firmware page does not name Mark II Turbo and does not establish installed firmware."
+    },
+    "documented_controls": "Rate/Tempo, Drive, Hi/Low Depth, Hi Level, Rotor Length, Low Rate Multiplier, separate Low/Hi Time Constants, separate LF/HF Mic Spacing, Mic Distance, Stereo Spread, Mix, Level, Balance, and Input Select. The guide says zero Hi Depth can simulate drum-only operation but gives no numeric ranges or control mappings.",
+    "project_controls": "Project-authored dual-rotor model. Hi Depth now controls both horn level modulation and high-rotor Doppler motion; at zero the horn is parked and Rotor Length cannot move it. Project bounds, crossover, motor model, mapping, and DSP are not Fractal settings or sound parity. Zero fixed algorithmic latency; no process allocation; 1,208 B owned state.",
+    "verification": {
+      "native_ctest": "make test passed: 104/104 CTest tests and 11/11 audio-fixture safety checks, including a zero-Hi-Depth/Rotor-Length regression.",
+      "browser": "make web-test passed: full 104/104 native suite plus browser/WASM chain comparison using local prerecorded Guitar-TECHS DI. Rotary is active in the chain; no isolated Rotary browser Play measurement is claimed.",
+      "windows": "make windows-cross-build passed for the native core and offline renderer.",
+      "isolated_benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up plus 5,000 measured blocks: p50/p95/p99/p99.9/max 0.4819/0.4917/0.6994/1.0369/1.5627% of a 2.667 ms callback; 1,208 B object state; zero fixed latency; no per-block allocation. Processor-call estimate, not live device performance."
+    },
+    "notes": "Project-authored behavior only. No Fractal DSP/settings parity, hardware test, or human listening result. Manual listening and device comparison remain open."
   },
   "next_research": [
     {
@@ -159,7 +160,7 @@
     {
       "device": "Fractal FM9 Mark II Turbo",
       "feature": "Remaining Pitch/Synth/Tremolo controls and FM9 Filter MIX/physical detector source",
-      "source": "Fractal Audio Systems Blocks Guide dated November 2026, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-23",
+      "source": "Fractal Audio Systems Blocks Guide dated June 2023, printed p.109; FM9 firmware/downloads and exact-model product/About pages checked 2026-11-23",
       "source_urls": [
         "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
         "https://www.fractalaudio.com/fm9-downloads/",
@@ -168,7 +169,7 @@
       ],
       "status": "Volume/Pan, the full 20/20 named Stereo Filter type set including Touch-Ladder and Touch-Wah, and the project Arpeggiator ±24-scale-degree range are implemented. Ring Mod and the three-voice synth also expose project-authored Guitar/Bass tracking-range controls, but bass tracking quality is unverified. Touch-Wah MIX, physical detector selection, Fractal's separate ±24-semitone polyphonic pitch shift, multi-voice/custom-scale Diatonic harmonies, and Bias/Optical/Neon Tremolo variants remain open.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
-      "qualification": "The current guide cover includes FM9-family products and is dated November 2026. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
+      "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },
     {
       "device": "HeadRush Prime",

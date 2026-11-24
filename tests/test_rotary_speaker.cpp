@@ -238,7 +238,7 @@ void test_rotor_controls_and_delay_are_finite() {
     tabletfx::RotarySpeakerParameters dry_controls;
     dry_controls.speed = tabletfx::RotarySpeed::fast;
     dry_controls.mix = 1.0F;
-    dry_controls.hi_depth = 0.0F;
+    dry_controls.hi_depth = 1.0F;
     dry_controls.low_depth = 0.0F;
     dry_controls.high_level = 1.0F;
     dry_controls.rotor_length = 0.0F;
@@ -274,6 +274,51 @@ void test_rotor_controls_and_delay_are_finite() {
     }
     require(different,
             "rotor length, high level, and drive controls did not affect output");
+}
+
+void test_hi_depth_zero_parks_horn_and_disables_its_doppler_motion() {
+    const auto render = [](float hi_depth, float rotor_length) {
+        tabletfx::RotarySpeakerParameters parameters;
+        parameters.speed = tabletfx::RotarySpeed::fast;
+        parameters.rate_hz = 6.0F;
+        parameters.hi_depth = hi_depth;
+        parameters.low_depth = 0.0F;
+        parameters.high_level = 1.0F;
+        parameters.rotor_length = rotor_length;
+        parameters.hi_time_constant_ms = 10.0F;
+        parameters.low_time_constant_ms = 10.0F;
+        tabletfx::RotarySpeaker rotary(48000.0F, 1, parameters);
+
+        std::vector<float> audio(24000);
+        for (std::size_t frame = 0; frame < audio.size(); ++frame) {
+            audio[frame] = 0.5F * std::sin(
+                2.0F * 3.14159265358979323846F * 3200.0F *
+                static_cast<float>(frame) / 48000.0F);
+        }
+        rotary.process(audio, 1);
+        return audio;
+    };
+
+    const auto horn_parked_short = render(0.0F, 0.0F);
+    const auto horn_parked_long = render(0.0F, 1.0F);
+    require(horn_parked_short == horn_parked_long,
+            "zero Hi Depth must remove horn Doppler motion regardless of Rotor Length");
+
+    const auto horn_moving_short = render(1.0F, 0.0F);
+    const auto horn_moving_long = render(1.0F, 1.0F);
+    bool rotor_length_changed_output = false;
+    for (std::size_t frame = 100; frame < horn_moving_short.size(); ++frame) {
+        require(std::isfinite(horn_moving_short[frame]) &&
+                    std::isfinite(horn_moving_long[frame]),
+                "horn Doppler motion generated non-finite samples");
+        if (std::abs(horn_moving_short[frame] - horn_moving_long[frame]) >
+            1.0e-3F) {
+            rotor_length_changed_output = true;
+            break;
+        }
+    }
+    require(rotor_length_changed_output,
+            "Rotor Length did not control horn Doppler motion when Hi Depth was enabled");
 }
 
 void test_variable_blocks_preserve_motor_and_audio_state() {
@@ -448,6 +493,7 @@ int main() {
         test_mix_bypass_input_select_and_stereo_width();
         test_low_and_high_mic_spacing_are_independent();
         test_rotor_controls_and_delay_are_finite();
+        test_hi_depth_zero_parks_horn_and_disables_its_doppler_motion();
         test_variable_blocks_preserve_motor_and_audio_state();
         test_reset_invalid_samples_layout_and_no_allocations();
         test_extreme_finite_stereo_sum_does_not_poison_state();

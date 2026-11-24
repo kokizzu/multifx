@@ -33,6 +33,8 @@ struct RotarySpeakerParameters {
     float slow_speed_multiplier = 0.12F;
 
     float drive = 0.0F;
+    // High-frequency horn modulation depth. Zero leaves the high band
+    // stationary and removes horn motion from the project-authored model.
     float hi_depth = 0.75F;
     float high_level = 1.0F;
     float low_depth = 0.55F;
@@ -60,9 +62,11 @@ struct RotarySpeakerParameters {
 
 // Project-authored rotary-speaker effect. A one-pole crossover feeds an
 // independently accelerating drum and horn model. The horn path uses a small,
-// construction-time delay ring for Doppler-like motion; level modulation and
-// linked mic phases create stereo movement. No signal-dependent tail or
-// unbounded feedback state is used. process() performs no allocation.
+// construction-time delay ring for Doppler-like motion; Hi Depth controls both
+// horn amplitude modulation and Doppler motion, so zero leaves only stationary
+// high-band output. Linked mic phases create stereo movement. No
+// signal-dependent tail or unbounded feedback state is used. process() performs
+// no allocation.
 //
 // This is not a Fender, Line 6, HeadRush, or Fractal model. The Fractal Blocks
 // Guide is a control/reference inventory only; ranges, defaults, crossover,
