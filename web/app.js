@@ -14005,11 +14005,11 @@ async function runBrowserSelfTest() {
                !EFFECT_NAMES[113]?.startsWith("Global EQ · project-authored XR1-inspired") ||
                effectRows[113]?.dataset.category !== "eq" ||
                effectRows[113]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
-                !EFFECT_NAMES[114]?.startsWith("7-Band Parametric EQ · project-authored Helix Stadium-inspired") ||
-                effectRows[114]?.dataset.category !== "eq" ||
-                effectRows[114]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
-                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
-                initialEffectState[114] ||
+               !EFFECT_NAMES[114]?.startsWith("7-Band Parametric EQ · project-authored Helix Stadium-inspired") ||
+               effectRows[114]?.dataset.category !== "eq" ||
+               effectRows[114]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
+               initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
+               initialEffectState[114] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -14046,7 +14046,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-        throw new Error(`The effect picker must list 115 ordered, categorized effects (IDs 0–114), including the XR1-inspired Global EQ and Stadium-inspired seven-band PEQ; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[114]}, row114=${effectRows[114]?.dataset.category}/${effectRows[114]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[114]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+               throw new Error(`The effect picker must list 115 ordered, categorized effects (IDs 0–114), including the XR1-inspired Global EQ and Stadium-inspired seven-band PEQ; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[114]}, row114=${effectRows[114]?.dataset.category}/${effectRows[114]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[114]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -15723,7 +15723,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-      if (parityEnabled.length !== 115 || activeProcessorIndices.length !== 78 ||
+     if (parityEnabled.length !== 115 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
