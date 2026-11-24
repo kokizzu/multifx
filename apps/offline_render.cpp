@@ -1177,7 +1177,18 @@ Options parse_options(int argc, char** argv, int first) {
                 else if (value == "minor-pentatonic") parameters.scale = tabletfx::effects::DiatonicScale::MinorPentatonic;
                 else if (value == "blues") parameters.scale = tabletfx::effects::DiatonicScale::Blues;
                 else if (value == "chromatic") parameters.scale = tabletfx::effects::DiatonicScale::Chromatic;
+                else if (value == "custom") parameters.scale = tabletfx::effects::DiatonicScale::Custom;
                 else throw std::invalid_argument("Unknown diatonic harmonizer scale");
+            } else if (setting == "custom-scale-count") {
+                const long count = std::lround(parse_float(key, argv[i]));
+                parameters.custom_scale_note_count = static_cast<std::uint8_t>(
+                    std::clamp(count, 4L, 8L));
+            } else if (setting == "custom-scale-notes") {
+                const auto values = parse_float_array<8>(key, value);
+                for (std::size_t index = 0; index < values.size(); ++index) {
+                    parameters.custom_scale_notes[index] = static_cast<std::uint8_t>(
+                        std::clamp(std::lround(values[index]), 0L, 11L));
+                }
             } else if (setting == "tone-hz") {
                 parameters.tone_hz = parse_float(key, argv[i]);
             } else if (setting == "delay-ms") {
@@ -5129,6 +5140,18 @@ void run_bench() {
         tabletfx::effects::DiatonicHarmonizerConfig parameters;
         parameters.mix = 1.0F;
         parameters.pitch_interval = 2;
+        effect->configure(parameters);
+        return effect;
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("diatonic-harmonizer-custom-scale", [=] {
+        auto effect = std::make_unique<tabletfx::effects::DiatonicHarmonizer>(
+            static_cast<float>(sample_rate));
+        tabletfx::effects::DiatonicHarmonizerConfig parameters;
+        parameters.mix = 1.0F;
+        parameters.pitch_interval = 2;
+        parameters.scale = tabletfx::effects::DiatonicScale::Custom;
+        parameters.custom_scale_notes = {0U, 2U, 5U, 7U, 0U, 0U, 0U, 0U};
+        parameters.custom_scale_note_count = 4U;
         effect->configure(parameters);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);

@@ -160,6 +160,7 @@ def build_web() -> None:
         "_tf_chain_set_triple_double_chorus",
         "_tf_chain_set_four_band_resonator",
         "_tf_chain_set_diatonic_harmonizer",
+        "_tf_chain_set_diatonic_custom_scale",
         "_tf_chain_set_pitch_arpeggiator",
         "_tf_chain_set_mono_guitar_synth",
         "_tf_chain_set_note_generator",
@@ -730,7 +731,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  uni_verse_vibe_only: bool = False,
                   four_osc_only: bool = False,
                   poly_detune_only: bool = False,
-                  fractal_poly_pitch_only: bool = False) -> None:
+                  fractal_poly_pitch_only: bool = False,
+                  fractal_diatonic_custom_scale_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1236,6 +1238,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=poly-detune"
         elif fractal_poly_pitch_only:
             url = base_url + "/web/index.html?selftest=fractal-poly-pitch-range"
+        elif fractal_diatonic_custom_scale_only:
+            url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
         elif volume_pan_only:
@@ -1435,6 +1439,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 None if volume_pan_only or stereo_filter_only or step_tremolo_only or
                 fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
                 or four_osc_only or poly_detune_only or fractal_poly_pitch_only
+                or fractal_diatonic_custom_scale_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1478,6 +1483,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif fractal_poly_pitch_only:
             print("Focused Fractal-family poly-pitch ±24 browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fractal_diatonic_custom_scale_only:
+            print("Focused Fractal-family custom-scale browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1538,6 +1546,7 @@ def main() -> None:
         "test-line6-four-osc-generator",
         "test-line6-poly-detune",
         "test-fractal-poly-pitch-range",
+        "test-fractal-diatonic-custom-scale",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1567,6 +1576,8 @@ def main() -> None:
         browser_test(poly_detune_only=True)
     elif action == "test-fractal-poly-pitch-range":
         browser_test(fractal_poly_pitch_only=True)
+    elif action == "test-fractal-diatonic-custom-scale":
+        browser_test(fractal_diatonic_custom_scale_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

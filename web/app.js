@@ -160,6 +160,7 @@ const DEFAULT_PARAMETERS = {
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
     -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5],
   diatonicHarmonizer: [0.35, 2, 0, 0, 8000, 0, 0.2, 0, 120],
+  diatonicHarmonizerCustomScale: [7, 0, 2, 4, 5, 7, 9, 11, 0],
   pitchArpeggiator: [1, 1, 1, 0, 0, 4, 0, 7, 120, 250, 0, 0, 0, 0,
     0, 2, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -90],
   monoGuitarSynth: [2, 0.75, 0.6, -54, 8, 180, 8],
@@ -376,6 +377,15 @@ const diatonicHarmonizerControls = [
   document.querySelector("#diatonic-harmonizer-division"),
   document.querySelector("#diatonic-harmonizer-tempo"),
 ];
+const diatonicCustomScaleCount = document.querySelector(
+  "#diatonic-harmonizer-custom-scale-count",
+);
+const diatonicCustomScaleNotes = [
+  ...document.querySelectorAll("[data-diatonic-custom-scale-note]"),
+];
+const diatonicCustomScaleGroup = document.querySelector(
+  "#diatonic-harmonizer-custom-scale-controls",
+);
 const pitchArpeggiatorControls = [
   document.querySelector("#pitch-arpeggiator-run"),
   document.querySelector("#pitch-arpeggiator-mix"),
@@ -5067,11 +5077,46 @@ function updateDiatonicHarmonizer() {
   if (workletNode) {
     workletNode.port.postMessage({ type: "diatonic-harmonizer", value: values });
   }
+  updateDiatonicCustomScale();
+}
+
+function updateDiatonicCustomScale() {
+  const noteCount = Number(diatonicCustomScaleCount.value);
+  const values = [noteCount];
+  let previous = -1;
+  for (let index = 0; index < diatonicCustomScaleNotes.length; index += 1) {
+    const control = diatonicCustomScaleNotes[index];
+    const active = index < noteCount;
+    control.closest("label").hidden = !active;
+    if (!active) {
+      values.push(0);
+      continue;
+    }
+    const minimum = previous + 1;
+    const maximum = 11 - (noteCount - 1 - index);
+    const requested = Number(control.value);
+    const sanitized = Math.max(minimum, Math.min(maximum,
+      Number.isFinite(requested) ? Math.round(requested) : minimum));
+    control.value = String(sanitized);
+    values.push(sanitized);
+    previous = sanitized;
+  }
+  DEFAULT_PARAMETERS.diatonicHarmonizerCustomScale = values;
+  diatonicCustomScaleGroup.hidden = diatonicHarmonizerControls[3].value !== "13";
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "diatonic-custom-scale", value: values });
+  }
 }
 
 for (const control of diatonicHarmonizerControls) {
   control.addEventListener("input", updateDiatonicHarmonizer);
   control.addEventListener("change", updateDiatonicHarmonizer);
+}
+diatonicCustomScaleCount.addEventListener("input", updateDiatonicCustomScale);
+diatonicCustomScaleCount.addEventListener("change", updateDiatonicCustomScale);
+for (const control of diatonicCustomScaleNotes) {
+  control.addEventListener("input", updateDiatonicCustomScale);
+  control.addEventListener("change", updateDiatonicCustomScale);
 }
 updateDiatonicHarmonizer();
 
@@ -10787,6 +10832,138 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
   }
 }
 
+async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousHarmonizer = diatonicHarmonizerControls.map((control) => control.value);
+  const previousScaleCount = diatonicCustomScaleCount.value;
+  const previousCustomNotes = diatonicCustomScaleNotes.map((control) => control.value);
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Diatonic custom-scale smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const effectIndex = 50;
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const customOption = diatonicHarmonizerControls[3].querySelector('option[value="13"]');
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmonizer") ||
+        !checkbox || !customOption || effectMemory.length !== 110 ||
+        !(effectMemory[effectIndex] > 0) || diatonicCustomScaleNotes.length !== 8) {
+      throw new Error("Diatonic custom scale is missing its categorized picker row or controls.");
+    }
+
+    document.querySelectorAll("[data-effect]").forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const setMainControl = (index, value) => {
+      diatonicHarmonizerControls[index].value = String(value);
+      diatonicHarmonizerControls[index].dispatchEvent(
+        new Event("input", { bubbles: true }),
+      );
+    };
+    setMainControl(0, 1);
+    setMainControl(1, 2);
+    setMainControl(2, 0);
+    setMainControl(3, 0);
+    setMainControl(4, 8000);
+    setMainControl(5, 0);
+    setMainControl(6, 0);
+    setMainControl(7, 0);
+    setMainControl(8, 120);
+
+    const captureAt = async (label) => {
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${label} harmonizer playback.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const majorOutput = await captureAt("major-scale");
+    diatonicHarmonizerControls[3].value = "13";
+    diatonicCustomScaleCount.value = "4";
+    [0, 2, 5, 7, 0, 0, 0, 0].forEach((value, index) => {
+      diatonicCustomScaleNotes[index].value = String(value);
+    });
+    diatonicHarmonizerControls[3].dispatchEvent(new Event("input", { bubbles: true }));
+    diatonicCustomScaleCount.dispatchEvent(new Event("input", { bubbles: true }));
+    const customOutput = await captureAt("custom-scale");
+
+    let squareSum = 0;
+    let changedSamples = 0;
+    let peak = 0;
+    for (let index = 0; index < customOutput.length; index += 1) {
+      const sample = customOutput[index];
+      if (!Number.isFinite(sample)) {
+        throw new Error(`Custom-scale output contains a non-finite sample at ${index}.`);
+      }
+      peak = Math.max(peak, Math.abs(sample));
+      const delta = sample - majorOutput[index];
+      squareSum += delta * delta;
+      if (Math.abs(delta) > 1e-6) changedSamples += 1;
+    }
+    const differenceRms = customOutput.length > 0
+      ? Math.sqrt(squareSum / customOutput.length) : 0;
+    if (peak < 1e-5 || differenceRms < 1e-5 || changedSamples < 32) {
+      throw new Error("Custom scale did not produce an audible browser output change.");
+    }
+    return {
+      category: "Pitch",
+      enabledEffectIndex: effectIndex,
+      customScaleNoteCount: Number(diatonicCustomScaleCount.value),
+      customScaleSemitoneOffsets: DEFAULT_PARAMETERS.diatonicHarmonizerCustomScale.slice(1),
+      scaleComparison: { peak, differenceRms, changedSamples },
+      effectMemoryBytes: effectMemory[effectIndex],
+      playOutputCaptured: true,
+    };
+  } finally {
+    stopSource(false);
+    previousHarmonizer.forEach((value, index) => {
+      diatonicHarmonizerControls[index].value = value;
+    });
+    diatonicCustomScaleCount.value = previousScaleCount;
+    previousCustomNotes.forEach((value, index) => {
+      diatonicCustomScaleNotes[index].value = value;
+    });
+    updateDiatonicHarmonizer();
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      document.querySelectorAll("[data-effect]").forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = polyDetuneControls.map((control) => control.value);
@@ -14044,6 +14221,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX poly-pitch range browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-custom-scale") {
+          testResult.textContent = "Checking the custom-scale harmonizer browser Play with local guitar audio…";
+          const customScaleSmoke = await runFractalDiatonicCustomScaleBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            diatonicCustomScale: customScaleSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX custom-scale browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {

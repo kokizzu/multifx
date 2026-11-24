@@ -1270,6 +1270,32 @@ def check_diatonic_harmonizer(executable: Path) -> None:
         if not all(math.isfinite(sample) for sample in rendered) or max(map(abs, rendered)) < 0.01:
             raise AssertionError("Diatonic Harmonizer returned invalid or silent audio")
 
+        custom_output = root / "custom-harmonized.wav"
+        custom = subprocess.run(
+            [str(executable), "render", str(source), str(custom_output),
+             "--diatonic-harmonizer-mix", "1",
+             "--diatonic-harmonizer-interval", "2",
+             "--diatonic-harmonizer-key", "0",
+             "--diatonic-harmonizer-scale", "custom",
+             "--diatonic-harmonizer-custom-scale-count", "4",
+             "--diatonic-harmonizer-custom-scale-notes", "0,2,5,7,0,0,0,0",
+             "--diatonic-harmonizer-tone-hz", "8000",
+             "--diatonic-harmonizer-delay-ms", "0",
+             "--diatonic-harmonizer-feedback", "0",
+             "--diatonic-harmonizer-tap-division", "free",
+             "--diatonic-harmonizer-tempo-bpm", "120"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in custom.stdout:
+            raise AssertionError("Custom Diatonic scale did not instantiate one processor")
+        custom_samples = struct.unpack(
+            "<8192f", custom_output.read_bytes()[44:44 + 8192 * 4]
+        )
+        if not all(math.isfinite(sample) for sample in custom_samples) or max(map(abs, custom_samples)) < 0.01:
+            raise AssertionError("Custom Diatonic scale returned invalid or silent audio")
+        if math.sqrt(sum((left - right) ** 2 for left, right in zip(rendered, custom_samples)) / len(rendered)) < 1e-5:
+            raise AssertionError("Custom Diatonic scale did not change the harmonized output")
+
         invalid = subprocess.run(
             [str(executable), "render", str(source), str(root / "invalid.wav"),
              "--diatonic-harmonizer-scale", "not-a-scale"],

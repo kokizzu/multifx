@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -9,11 +10,19 @@
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
+#include <new>
 
 using tabletfx::effects::DiatonicHarmonizer;
 using tabletfx::effects::DiatonicHarmonizerConfig;
 using tabletfx::effects::DiatonicScale;
 using tabletfx::effects::TapDivision;
+
+namespace {
+
+std::atomic<bool> track_allocations{false};
+std::atomic<std::size_t> allocation_count{0};
+
+} // namespace
 
 // Keep the checks active in Release builds, where NDEBUG would otherwise
 // remove every assertion from this standalone test executable.
@@ -39,6 +48,7 @@ DiatonicHarmonizer latency_44100(44100.0F);
 DiatonicHarmonizer latency_96000(96000.0F);
 DiatonicHarmonizer pitch_check(48000.0F);
 DiatonicHarmonizer wide_pitch_check(48000.0F, 24);
+DiatonicHarmonizer custom_scale_check(48000.0F);
 DiatonicHarmonizer adapter_reference(48000.0F);
 DiatonicHarmonizer adapter_in_place(48000.0F);
 
@@ -109,6 +119,110 @@ void test_scale_mapping() {
     assert(DiatonicHarmonizer::harmony_midi_note(
                60, -1, DiatonicScale::Major, 1) == 62); // key clamped to C
     assert(DiatonicHarmonizer::scale_name(DiatonicScale::Blues) == "Blues");
+}
+
+void test_custom_scale_mapping_and_key() {
+    constexpr std::array<std::uint8_t, 8> a_major_pentatonic{
+        0U, 2U, 4U, 7U, 9U, 0U, 0U, 0U};
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               69, 9, 1, a_major_pentatonic, 5U) == 71); // A to B
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               69, 9, 2, a_major_pentatonic, 5U) == 73); // A to C#
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               69, 9, -1, a_major_pentatonic, 5U) == 66); // A down to F#
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               62, 9, 1, a_major_pentatonic, 5U) == 64); // D snaps to C#, then E
+    // Key controls pitch membership. With key C the same relative template
+    // maps A up one degree to C5 instead of B4.
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               69, 0, 1, a_major_pentatonic, 5U) == 72);
+    assert(DiatonicHarmonizer::harmony_midi_note(
+               60, 0, DiatonicScale::Custom, 2) == 64);
+    assert(DiatonicHarmonizer::scale_name(DiatonicScale::Custom) == "Custom");
+
+    // Invalid count falls back to four active notes; the short all-zero input
+    // is deterministically projected to four valid ascending semitones.
+    constexpr std::array<std::uint8_t, 8> repeated{};
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               60, 0, 1, repeated, 0U) == 61);
+    // Counts over the supported eight-note maximum clamp to eight, with enough
+    // room reserved for every later note.
+    constexpr std::array<std::uint8_t, 8> all_high{
+        255U, 255U, 255U, 255U, 255U, 255U, 255U, 255U};
+    assert(DiatonicHarmonizer::harmony_midi_note_custom(
+               60, 0, 1, all_high, 255U) == 64);
+}
+
+void test_custom_scale_config_sanitization_and_allocation_free_processing() {
+    DiatonicHarmonizerConfig requested;
+    requested.scale = DiatonicScale::Custom;
+    requested.key = 7;
+    requested.custom_scale_note_count = 6U;
+    requested.custom_scale_notes = {9U, 9U, 255U, 1U, 5U, 5U, 8U, 11U};
+    custom_scale_check.configure(requested);
+    const auto& sanitized = custom_scale_check.config();
+    assert(sanitized.scale == DiatonicScale::Custom);
+    assert(sanitized.key == 7);
+    assert(sanitized.custom_scale_note_count == 6U);
+    constexpr std::array<std::uint8_t, 6> expected{6U, 7U, 8U, 9U, 10U, 11U};
+    for (std::size_t index = 0; index < expected.size(); ++index) {
+        assert(sanitized.custom_scale_notes[index] == expected[index]);
+        if (index > 0U) {
+            assert(sanitized.custom_scale_notes[index] >=
+                   sanitized.custom_scale_notes[index - 1U] + 1U);
+        }
+    }
+    assert(sanitized.custom_scale_notes[6] == 0U &&
+           sanitized.custom_scale_notes[7] == 0U);
+
+    requested.custom_scale_note_count = 1U;
+    requested.custom_scale_notes = {0U, 2U, 4U, 5U, 7U, 9U, 11U, 0U};
+    requested.key = 99;
+    custom_scale_check.configure(requested);
+    assert(custom_scale_check.config().custom_scale_note_count == 4U);
+    assert(custom_scale_check.config().key == 11);
+    assert(custom_scale_check.config().custom_scale_notes[0] == 0U &&
+           custom_scale_check.config().custom_scale_notes[1] == 2U &&
+           custom_scale_check.config().custom_scale_notes[2] == 4U &&
+           custom_scale_check.config().custom_scale_notes[3] == 5U);
+
+    requested.custom_scale_note_count = 9U;
+    requested.custom_scale_notes.fill(0U);
+    custom_scale_check.configure(requested);
+    assert(custom_scale_check.config().custom_scale_note_count == 8U);
+    for (std::size_t index = 0; index < 8U; ++index) {
+        assert(custom_scale_check.config().custom_scale_notes[index] == index);
+    }
+
+    // Use a custom A major pentatonic mapping in the live detector path:
+    // A3 plus one custom scale degree should produce B3.
+    requested.custom_scale_note_count = 5U;
+    requested.custom_scale_notes = {0U, 2U, 4U, 7U, 9U, 0U, 0U, 0U};
+    requested.key = 9;
+    requested.pitch_interval = 1;
+    requested.mix = 1.0F;
+    requested.delay_ms = 0.0F;
+    requested.feedback = 0.0F;
+    custom_scale_check.configure(requested);
+    custom_scale_check.reset();
+    std::array<float, 12000> input{};
+    std::array<float, 12000> output{};
+    for (std::size_t frame = 0; frame < input.size(); ++frame) {
+        input[frame] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * 220.0F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+    allocation_count.store(0U, std::memory_order_relaxed);
+    track_allocations.store(true, std::memory_order_relaxed);
+    custom_scale_check.process(input.data(), nullptr, output.data(), nullptr,
+                               input.size());
+    const std::size_t observed_allocations = allocation_count.load(
+        std::memory_order_relaxed);
+    track_allocations.store(false, std::memory_order_relaxed);
+    assert(observed_allocations == 0U);
+    const float measured = estimate_tone_hz(output.data() + 2500U,
+                                            output.size() - 2500U, 48000.0F);
+    assert(std::abs(measured - 246.94F) <= 8.0F);
 }
 
 void test_extended_scale_degree_audio_bounds() {
@@ -440,6 +554,8 @@ void test_in_place_effect_api() {
 
 int main() {
     test_scale_mapping();
+    test_custom_scale_mapping_and_key();
+    test_custom_scale_config_sanitization_and_allocation_free_processing();
     test_extended_scale_degree_audio_bounds();
     test_config_bounds_and_latency();
     test_block_partition_and_finite_recovery();
@@ -448,4 +564,40 @@ int main() {
     test_generated_pitch_and_out_of_scale_correction();
     test_in_place_effect_api();
     return 0;
+}
+
+void* operator new(std::size_t size) {
+    if (track_allocations.load(std::memory_order_relaxed)) {
+        allocation_count.fetch_add(1U, std::memory_order_relaxed);
+    }
+    if (void* memory = std::malloc(size == 0U ? 1U : size)) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+void* operator new[](std::size_t size) {
+    if (track_allocations.load(std::memory_order_relaxed)) {
+        allocation_count.fetch_add(1U, std::memory_order_relaxed);
+    }
+    if (void* memory = std::malloc(size == 0U ? 1U : size)) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+void operator delete(void* memory) noexcept {
+    std::free(memory);
+}
+
+void operator delete(void* memory, std::size_t) noexcept {
+    std::free(memory);
+}
+
+void operator delete[](void* memory) noexcept {
+    std::free(memory);
+}
+
+void operator delete[](void* memory, std::size_t) noexcept {
+    std::free(memory);
 }

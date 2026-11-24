@@ -44,7 +44,7 @@ float clamp_finite(float value, float fallback, float low, float high) noexcept 
 
 bool valid_scale(DiatonicScale scale) noexcept {
     return static_cast<unsigned>(scale) <=
-           static_cast<unsigned>(DiatonicScale::Chromatic);
+           static_cast<unsigned>(DiatonicScale::Custom);
 }
 
 bool valid_tap_division(TapDivision division) noexcept {
@@ -67,6 +67,7 @@ std::uint16_t scale_mask(DiatonicScale scale) noexcept {
         case DiatonicScale::MinorPentatonic: return 0x04A9U;
         case DiatonicScale::Blues: return 0x04E9U;
         case DiatonicScale::Chromatic: return 0x0FFFU;
+        case DiatonicScale::Custom: return 0x0AB5U;
     }
     return 0x0AB5U;
 }
@@ -103,6 +104,73 @@ int move_scale_degrees(int root_note,
     while (remaining > 0) {
         note += direction;
         if (note_is_in_scale(note, key, scale)) {
+            --remaining;
+        }
+    }
+    return note;
+}
+
+void sanitize_custom_scale(std::array<std::uint8_t, 8>& notes,
+                          std::uint8_t& count) noexcept {
+    const unsigned bounded_count = std::clamp<unsigned>(count, 4U, 8U);
+    count = static_cast<std::uint8_t>(bounded_count);
+    int previous = -1;
+    for (unsigned index = 0; index < bounded_count; ++index) {
+        const int minimum = previous + 1;
+        const int maximum = 11 - static_cast<int>(bounded_count - 1U - index);
+        const int requested = static_cast<int>(notes[index]);
+        const int sanitized = std::clamp(requested, minimum, maximum);
+        notes[index] = static_cast<std::uint8_t>(sanitized);
+        previous = sanitized;
+    }
+    for (unsigned index = bounded_count; index < notes.size(); ++index) {
+        notes[index] = 0U;
+    }
+}
+
+bool note_is_in_custom_scale(
+    int midi_note, int key,
+    const std::array<std::uint8_t, 8>& notes,
+    std::uint8_t count) noexcept {
+    const int pitch_class = ((midi_note - key) % 12 + 12) % 12;
+    for (std::uint8_t index = 0U; index < count; ++index) {
+        if (static_cast<int>(notes[index]) == pitch_class) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int nearest_custom_scale_note(
+    int midi_note, int key,
+    const std::array<std::uint8_t, 8>& notes,
+    std::uint8_t count) noexcept {
+    int best_note = midi_note;
+    int best_distance = std::numeric_limits<int>::max();
+    for (int candidate = midi_note - 6; candidate <= midi_note + 6; ++candidate) {
+        if (!note_is_in_custom_scale(candidate, key, notes, count)) {
+            continue;
+        }
+        const int distance = std::abs(candidate - midi_note);
+        if (distance < best_distance ||
+            (distance == best_distance && candidate < best_note)) {
+            best_note = candidate;
+            best_distance = distance;
+        }
+    }
+    return best_note;
+}
+
+int move_custom_scale_degrees(
+    int root_note, int key,
+    const std::array<std::uint8_t, 8>& notes,
+    std::uint8_t count, int interval_steps) noexcept {
+    int note = root_note;
+    const int direction = interval_steps < 0 ? -1 : 1;
+    int remaining = std::abs(interval_steps);
+    while (remaining > 0) {
+        note += direction;
+        if (note_is_in_custom_scale(note, key, notes, count)) {
             --remaining;
         }
     }
@@ -160,6 +228,8 @@ void DiatonicHarmonizer::configure(
     if (!valid_scale(config_.scale)) {
         config_.scale = DiatonicScale::Major;
     }
+    sanitize_custom_scale(config_.custom_scale_notes,
+                          config_.custom_scale_note_count);
     config_.tone_hz = clamp_finite(config_.tone_hz, 8000.0F,
                                    kMinToneHz, kMaxToneHz);
     config_.delay_ms = clamp_finite(config_.delay_ms, 0.0F,
@@ -416,6 +486,12 @@ int DiatonicHarmonizer::harmony_midi_note(int midi_note,
                                          int key,
                                          DiatonicScale scale,
                                          int interval_steps) noexcept {
+    if (scale == DiatonicScale::Custom) {
+        constexpr std::array<std::uint8_t, 8> kDefaultCustomNotes{
+            0U, 2U, 4U, 5U, 7U, 9U, 11U, 0U};
+        return harmony_midi_note_custom(midi_note, key, interval_steps,
+                                        kDefaultCustomNotes, 7U);
+    }
     key = std::clamp(key, 0, 11);
     if (!valid_scale(scale)) {
         scale = DiatonicScale::Major;
@@ -424,6 +500,21 @@ int DiatonicHarmonizer::harmony_midi_note(int midi_note,
                                  kMaximumScaleDegreeShift);
     const int scale_root = nearest_scale_note(midi_note, key, scale);
     return move_scale_degrees(scale_root, key, scale, interval_steps);
+}
+
+int DiatonicHarmonizer::harmony_midi_note_custom(
+    int midi_note, int key, int interval_steps,
+    const std::array<std::uint8_t, 8>& custom_scale_notes,
+    std::uint8_t custom_scale_note_count) noexcept {
+    key = std::clamp(key, 0, 11);
+    auto notes = custom_scale_notes;
+    sanitize_custom_scale(notes, custom_scale_note_count);
+    interval_steps = std::clamp(interval_steps, -kMaximumScaleDegreeShift,
+                                kMaximumScaleDegreeShift);
+    const int scale_root = nearest_custom_scale_note(
+        midi_note, key, notes, custom_scale_note_count);
+    return move_custom_scale_degrees(scale_root, key, notes,
+                                     custom_scale_note_count, interval_steps);
 }
 
 const char* DiatonicHarmonizer::scale_name(DiatonicScale scale) noexcept {
@@ -441,6 +532,7 @@ const char* DiatonicHarmonizer::scale_name(DiatonicScale scale) noexcept {
         case DiatonicScale::MinorPentatonic: return "Minor Pentatonic";
         case DiatonicScale::Blues: return "Blues";
         case DiatonicScale::Chromatic: return "Chromatic";
+        case DiatonicScale::Custom: return "Custom";
     }
     return "Major";
 }
@@ -568,10 +660,22 @@ void DiatonicHarmonizer::detect_pitch() noexcept {
         return;
     }
     const int nearest_midi = static_cast<int>(std::floor(midi + 0.5F));
-    const int source_scale_note = nearest_scale_note(
-        nearest_midi, config_.key, config_.scale);
-    const int target_note = move_scale_degrees(
-        source_scale_note, config_.key, config_.scale, config_.pitch_interval);
+    int source_scale_note = 0;
+    int target_note = 0;
+    if (config_.scale == DiatonicScale::Custom) {
+        source_scale_note = nearest_custom_scale_note(
+            nearest_midi, config_.key, config_.custom_scale_notes,
+            config_.custom_scale_note_count);
+        target_note = move_custom_scale_degrees(
+            source_scale_note, config_.key, config_.custom_scale_notes,
+            config_.custom_scale_note_count, config_.pitch_interval);
+    } else {
+        source_scale_note = nearest_scale_note(
+            nearest_midi, config_.key, config_.scale);
+        target_note = move_scale_degrees(
+            source_scale_note, config_.key, config_.scale,
+            config_.pitch_interval);
+    }
     // The interval is applied to the detected input pitch, not the snapped
     // scale note. Including the correction from an out-of-scale input note
     // keeps the generated voice on the intended target scale degree.

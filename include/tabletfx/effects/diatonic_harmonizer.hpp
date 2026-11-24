@@ -29,6 +29,7 @@ enum class DiatonicScale : std::uint8_t {
     MinorPentatonic,
     Blues,
     Chromatic,
+    Custom,
 };
 
 // Project-authored tempo divisions for the effect's delay control.
@@ -60,6 +61,14 @@ struct DiatonicHarmonizerConfig {
     TapDivision tap_division = TapDivision::Free;
     float tempo_bpm = 120.0F;
     bool spillover = false;
+    // Project-authored custom scale. Entries are ascending semitone offsets
+    // [0, 11]; Key transposes these offsets for harmony. The Fractal guide's
+    // separate Tonic control is a display reference, not another DSP root.
+    // Configuration sanitizes the active count to 4–8 and enforces strictly
+    // ascending notes at least one semitone apart.
+    std::array<std::uint8_t, 8> custom_scale_notes = {0U, 2U, 4U, 5U,
+                                                      7U, 9U, 11U, 0U};
+    std::uint8_t custom_scale_note_count = 7U;
 };
 
 // A project-authored experimental/practice-only monophonic guitar harmonizer.
@@ -145,6 +154,10 @@ public:
                                                int key,
                                                DiatonicScale scale,
                                                int interval_steps) noexcept;
+    [[nodiscard]] static int harmony_midi_note_custom(
+        int midi_note, int key, int interval_steps,
+        const std::array<std::uint8_t, 8>& custom_scale_notes,
+        std::uint8_t custom_scale_note_count) noexcept;
     [[nodiscard]] static const char* scale_name(DiatonicScale scale) noexcept;
 
 private:

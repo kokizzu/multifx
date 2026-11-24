@@ -2019,7 +2019,9 @@ public:
                                         float tone_hz, float delay_ms,
                                         float feedback, std::uint32_t tap_division,
                                         float tempo_bpm) noexcept {
-        tabletfx::effects::DiatonicHarmonizerConfig config;
+        auto* harmonizer = static_cast<tabletfx::effects::DiatonicHarmonizer*>(
+            effects_[50].effect.get());
+        auto config = harmonizer->config();
         config.mix = mix;
         config.pitch_interval = static_cast<int>(std::lround(pitch_interval));
         config.key = static_cast<int>(key);
@@ -2030,8 +2032,26 @@ public:
         config.tap_division = static_cast<tabletfx::effects::TapDivision>(tap_division);
         config.tempo_bpm = tempo_bpm;
         config.spillover = false;
-        static_cast<tabletfx::effects::DiatonicHarmonizer*>(effects_[50].effect.get())
-            ->configure(config);
+        harmonizer->configure(config);
+    }
+
+    void configure_diatonic_custom_scale(
+        std::uint32_t note_count, std::uint32_t note_0, std::uint32_t note_1,
+        std::uint32_t note_2, std::uint32_t note_3, std::uint32_t note_4,
+        std::uint32_t note_5, std::uint32_t note_6,
+        std::uint32_t note_7) noexcept {
+        auto* harmonizer = static_cast<tabletfx::effects::DiatonicHarmonizer*>(
+            effects_[50].effect.get());
+        auto config = harmonizer->config();
+        config.custom_scale_note_count = static_cast<std::uint8_t>(
+            std::clamp(note_count, 0U, 255U));
+        const std::array<std::uint32_t, 8> requested{
+            note_0, note_1, note_2, note_3, note_4, note_5, note_6, note_7};
+        for (std::size_t index = 0; index < requested.size(); ++index) {
+            config.custom_scale_notes[index] = static_cast<std::uint8_t>(
+                std::min(requested[index], 11U));
+        }
+        harmonizer->configure(config);
     }
 
     void configure_pitch_arpeggiator(const float* values,
@@ -4123,6 +4143,18 @@ TABLETFX_WASM_EXPORT void tf_chain_set_diatonic_harmonizer(
         as_chain(opaque)->configure_diatonic_harmonizer(
             mix, pitch_interval, key, scale, tone_hz, delay_ms, feedback,
             tap_division, tempo_bpm);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_diatonic_custom_scale(
+    void* opaque, std::uint32_t note_count, std::uint32_t note_0,
+    std::uint32_t note_1, std::uint32_t note_2, std::uint32_t note_3,
+    std::uint32_t note_4, std::uint32_t note_5, std::uint32_t note_6,
+    std::uint32_t note_7) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_diatonic_custom_scale(
+            note_count, note_0, note_1, note_2, note_3, note_4, note_5, note_6,
+            note_7);
     }
 }
 

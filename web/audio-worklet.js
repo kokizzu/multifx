@@ -451,6 +451,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const diatonicHarmonizer = parameters.diatonicHarmonizer ||
         [0.35, 2, 0, 0, 8000, 0, 0.2, 0, 120];
       module._tf_chain_set_diatonic_harmonizer(this.chain, ...diatonicHarmonizer);
+      const diatonicCustomScale = parameters.diatonicHarmonizerCustomScale ||
+        [7, 0, 2, 4, 5, 7, 9, 11, 0];
+      module._tf_chain_set_diatonic_custom_scale(this.chain, ...diatonicCustomScale);
       this.configurePitchArpeggiator(parameters.pitchArpeggiator ||
         [1, 1, 1, 0, 0, 4, 0, 7, 120, 250, 0, 0, 0, 0,
           0, 2, 4, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -90]);
@@ -574,6 +577,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     this.module._tf_chain_set_diatonic_harmonizer(this.chain, ...values);
+  }
+
+  configureDiatonicCustomScale(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 9) {
+      return;
+    }
+    this.module._tf_chain_set_diatonic_custom_scale(this.chain, ...values);
   }
 
   configureGrainDelay(values) {
@@ -1300,6 +1310,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFourBandResonator(message.value);
     } else if (message.type === "diatonic-harmonizer" && this.ready) {
       this.configureDiatonicHarmonizer(message.value);
+    } else if (message.type === "diatonic-custom-scale" && this.ready) {
+      this.configureDiatonicCustomScale(message.value);
     } else if (message.type === "pitch-arpeggiator" && this.ready) {
       this.configurePitchArpeggiator(message.value);
     } else if (message.type === "mono-guitar-synth" && this.ready) {

@@ -2157,6 +2157,27 @@ FRACTAL_POLY_PITCH_RANGE_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FRACTAL_DIATONIC_CUSTOM_SCALE_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/diatonic_harmonizer.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/diatonic_harmonizer.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_diatonic_harmonizer.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2530,6 +2551,10 @@ CHECKPOINTS = {
     "fractal-poly-pitch-range": (
         FRACTAL_POLY_PITCH_RANGE_CHECKPOINT_PATHS,
         "feat: expose Fractal-range poly pitch transpose",
+    ),
+    "fractal-diatonic-custom-scale": (
+        FRACTAL_DIATONIC_CUSTOM_SCALE_CHECKPOINT_PATHS,
+        "feat: add categorized custom-scale harmonizer mode",
     ),
 }
 

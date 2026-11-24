@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "9bc5957b2f16f80576fc7ef006f541b2c37a5c6e",
+  "previous_checkpoint_commit": "4da741f7052d4bcbfaf29d4d26a8ad57cb1f4ac1",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -290,34 +290,33 @@
         "notes": "Automated native, browser/WASM, Windows, and benchmark checks pass. Human listening and target-device checks remain open. No Fractal DSP/settings/sound parity."
       },
       "picker_rows": 110
+    },
+    {
+      "name": "Fractal FM9-family Diatonic custom-scale editor",
+      "status": "verified",
+      "picker_index": 50,
+      "category": "Pitch",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+        "revision": "November 2026 cover, checked 2026-11-24; printed p.81 custom-scale parameters; FM9-family guide. Firmware v12.0 dated 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The current guide describes FM9-family blocks and documents 4–8-note custom scales for Diatonic Harmony types. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown. The feature is a project-authored one-voice scale editor, not Fractal's separate Custom Shifter or multi-voice routing."
+      },
+      "documented_controls": "Each Diatonic Harmony type supports a custom scale with 4–8 notes. Note entries are semitone offsets relative to Tonic; each scale degree must be at least a half step above the previous one. Tonic changes only the displayed example and not the scale's sound. The guide distinguishes two-/four-voice types and says Diatonic shifting is intelligent/monophonic; it does not guarantee input-tracking quality or simultaneous availability.",
+      "project_controls": "The existing project-authored Diatonic Harmonizer at Pitch picker index 50 adds Custom selection plus 4–8 ascending semitone offsets, key transposition, and browser/WASM and CLI controls. It retains one monophonic-tracked harmony voice, its existing shifter and delay path, and adds no processor, voice, or fixed latency. It does not claim Fractal DSP/settings/sound parity.",
+      "verification": {
+        "native_ctest": "make test passed: documentation validation (333 requirements/346 rows), 11/11 audio-fixture safety tests, and 111/111 CTest tests including custom-scale mapping, sanitization, audio path, and no-allocation coverage.",
+        "focused_browser": "make web-test-fractal-diatonic-custom-scale passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. It verifies Pitch category/index 50, the Custom selector, eight note controls, a four-note pattern [0,2,5,7], and captured Play output (peak 0.314677, difference RMS 0.0705676, 93,944 changed samples). Browser-reported effect memory: 1,020,012 B.",
+        "full_browser": "`make web-test` passed: 111/111 CTest tests and 11/11 fixture-safety checks, then the 110-entry browser and 78-processor native/WASM chain comparison. Maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. The full-chain profile uses the default preset scale; focused Custom-mode Play is recorded separately.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Custom 4-note mode p50/p95/p99/p99.9/max 15.9815/19.8729/24.5211/29.4923/34.2197% of callback; 13-preset C-major mode from the same run 15.9001/21.1528/26.7656/33.0583/46.7383%. Both report 1,024,664 B owned stereo state; this feature adds no processor or voice. Desktop processor-call timing only.",
+        "notes": "Automated native, focused browser/WASM, Windows, and benchmark checks pass. Estimated first-note response remains 26.7 ms at 48 kHz, above the provisional 20 ms gate. Manual listening, real guitar transients/chords, and target-device checks remain open. No Fractal DSP/settings/sound parity."
+      },
+      "picker_rows": 110
     }
   ],
   "previous_checkpoint": {
-    "name": "Line 6 Helix Stadium XL Poly Detune-inspired Modulation implementation",
-    "status": "verified",
-    "picker_index": 109,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Line 6 Helix Stadium model catalogue and live Owner's Manual",
-      "revision": "Catalogue checked 2026-11-24; Poly Detune listed Mono, Line 6 Original, first appearing Stadium 1.0. Live manual carries a combined v1.4 Rev D / v1.3 Rev B / v1.2 revision label; installed firmware unknown.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "dynamic_dsp_url": "https://manuals.line6.com/en/helix-stadium/live/dynamic-dsp",
-      "effects_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "qualification": "Catalogue labels Poly Detune Mono. Dynamic DSP groups it with high-DSP Poly effects, limited to two per preset and one per primary path; this does not establish input-note polyphony. The live Effects manual publishes no model-specific controls. Installed firmware is unknown."
-    },
-    "documented_controls": "The catalogue labels it Mono. The live Effects manual directs users to the device editor for model details but provides no parameter table, numeric ranges/defaults, DSP use, or latency.",
-    "project_controls": "Project-authored Modulation row at picker index 109, disabled by default. Immediate dry path plus up to two short modulated-delay taps around 5 ms. Defaults: two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, 0 dB level. No note tracking or static pitch shift; one shared ring allocated at construction and zero process-time allocations. No Line 6 DSP/settings/sound parity.",
-    "verification": {
-      "native_ctest": "make web-test passed: 111/111 CTest tests and 11/11 audio-fixture safety tests.",
-      "focused_browser": "Local prerecorded Guitar-TECHS DI Play passed at 48 kHz stereo/48,000 frames; peak 0.1852493435, 95,999 active samples, difference RMS 0.0218924462, and 3,620 B reported effect memory.",
-      "full_browser": "110 picker entries and 78 browser/native processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; processor state 80,346,468 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames: p50/p95/p99/p99.9/max 0.0548/0.0818/0.0862/0.3075/0.6544% of 2.667 ms callback; native state 3,656 B, WASM effect memory 3,620 B, no fixed latency or process-time allocation.",
-      "notes": "Automated checks complete. Human listening and target-device verification remain open."
-    },
-    "picker_rows": 110
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Poly Pitch transpose-range extension",
     "status": "verified",
     "picker_index": 22,
@@ -330,14 +329,38 @@
       "qualification": "The guide describes Dual Chromatic (two voices), Quad Chromatic (four voices), and Quad Chromatic Delay (four voices), each with individual Shift range ±24 semitones. This work extends the project's existing single shifter range; it does not implement independent Fractal voice layouts. Exact Mark II Turbo firmware applicability and installed firmware remain unknown."
     },
     "documented_controls": "The guide lists Shift 1–4 as applicable to the selected algorithm, each ±24 semitones, and per-voice Detune ±50 cents. Quad Chromatic Delay also documents Delay 0–2,000 ms and feedback after pitch shifting; Quad Chromatic has no feedback. Voice count and control availability depend on Dual/Quad algorithm. Documentation does not establish tracking quality, latency, or simultaneous availability with other effects.",
-    "project_controls": "Project-authored extension of the existing Pitch row at picker index 22, with ±24-semitone UI/CLI/browser range. Browser and offline renderer select the existing shifter's ±24 profile; global transpose default remains zero and no new processor is added. The project still does not provide independent two-/four-voice routing or Fractal settings/sound parity.",
+    "project_controls": "Project-authored extension of the existing Pitch row at picker index 22, with ±24-semitone UI/CLI/browser range. Browser and offline renderer select the existing shifter's ±24 profile; global transpose default remains zero and no new processor is added. Independent two-/four-voice routing remains unimplemented.",
     "verification": {
-      "native_ctest": "make web-test passed 111/111 CTest tests and 11/11 audio-fixture safety checks. Added native chord tests at ±24 endpoints.",
+      "native_ctest": "make web-test passed 111/111 CTest tests and 11/11 audio-fixture safety checks; added native chord tests at ±24 endpoints.",
       "focused_browser": "make web-test-fractal-poly-pitch-range passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. UI range and Pitch index 22 were checked. Captured ±12-versus-±24 output differences: positive peak 0.72953057 / RMS 0.14669138 / 95,598 changed samples; negative peak 0.10692947 / RMS 0.03783733 / 95,580 changed samples. Effect memory 489,416 B.",
-      "full_browser": "The browser/native full-chain comparison passed with 111 picker entries and 78 processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,346,468 B plus 10,364 B tuner state within fixed 100,663,296 B WASM memory. However, two recent combined make web-test runs exited 2 later in the existing Stereo Crossover local-guitar Play smoke (max difference 0.0348242, RMS 0.00733673). A separate make web-browser-test run passed once, and the focused pitch-range browser test passes; full-suite Crossover parity remains flaky/unresolved and is not attributed to this range change.",
+      "full_browser": "make web-test passed: 111 picker entries and 78 browser/native processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,346,468 B plus 10,364 B tuner state within fixed 100,663,296 B WASM memory.",
       "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Existing shifter in ±24 profile: p50/p95/p99/p99.9/max 10.2614/13.7768/17.9694/26.8763/40.8795% of callback; native state 494,016 B; about 5.333 ms algorithmic latency. This is processor-call timing on one desktop CPU, not a mobile or general device guarantee; high tail load needs target-device listening/performance checks.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Existing shifter in ±24 profile: p50/p95/p99/p99.9/max 10.2614/13.7768/17.9694/26.8763/40.8795% of callback; native state 494,016 B; about 5.333 ms algorithmic latency. Desktop processor-call timing only; high tail load needs target-device checks.",
       "notes": "Automated native, browser/WASM, Windows, and benchmark checks pass. Human listening and target-device checks remain open. No Fractal DSP/settings/sound parity."
+    },
+    "picker_rows": 110
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Diatonic custom-scale editor",
+    "status": "verified",
+    "picker_index": 50,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide — Complete Reference for Blocks and Parameters",
+      "revision": "November 2026 cover, checked 2026-11-24; printed p.81 custom-scale parameters; FM9-family guide. Firmware v12.0 dated 2026-07-07 is listed for FM9 Original and FM9 Turbo, not Mark II Turbo by name; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The current guide describes FM9-family blocks and documents 4–8-note custom scales for Diatonic Harmony types. Exact firmware applicability to Mark II Turbo and installed firmware remain unknown. The feature is a project-authored one-voice scale editor, not Fractal's separate Custom Shifter or multi-voice routing."
+    },
+    "documented_controls": "Each Diatonic Harmony type supports a custom scale with 4–8 notes. Note entries are semitone offsets relative to Tonic; each scale degree must be at least a half step above the previous one. Tonic changes only the displayed example and not the scale's sound. The guide distinguishes two-/four-voice types and says Diatonic shifting is intelligent/monophonic; it does not guarantee input-tracking quality or simultaneous availability.",
+    "project_controls": "The existing project-authored Diatonic Harmonizer at Pitch picker index 50 adds Custom selection plus 4–8 ascending semitone offsets, key transposition, and browser/WASM and CLI controls. It retains one monophonic-tracked harmony voice, its existing shifter and delay path, and adds no processor, voice, or fixed latency. It does not claim Fractal DSP/settings/sound parity.",
+    "verification": {
+      "native_ctest": "make test passed: documentation validation (333 requirements/346 rows), 11/11 audio-fixture safety tests, and 111/111 CTest tests including custom-scale mapping, sanitization, audio path, and no-allocation coverage.",
+      "focused_browser": "make web-test-fractal-diatonic-custom-scale passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. It verifies Pitch category/index 50, the Custom selector, eight note controls, a four-note pattern [0,2,5,7], and captured Play output (peak 0.314677, difference RMS 0.0705676, 93,944 changed samples). Browser-reported effect memory: 1,020,012 B.",
+      "full_browser": "`make web-test` passed: 111/111 CTest tests and 11/11 fixture-safety checks, then the 110-entry browser and 78-processor native/WASM chain comparison. Maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; processor state 80,346,516 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. The full-chain profile uses the default preset scale; focused Custom-mode Play is recorded separately.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X, GCC 13.3.0, Release, 48 kHz stereo/128-frame blocks (2.667 ms callback), 2,000 warm-up and 5,000 measured. Custom 4-note mode p50/p95/p99/p99.9/max 15.9815/19.8729/24.5211/29.4923/34.2197% of callback; 13-preset C-major mode from the same run 15.9001/21.1528/26.7656/33.0583/46.7383%. Both report 1,024,664 B owned stereo state; this feature adds no processor or voice. Desktop processor-call timing only.",
+      "notes": "Automated native, focused browser/WASM, Windows, and benchmark checks pass. Estimated first-note response remains 26.7 ms at 48 kHz, above the provisional 20 ms gate. Manual listening, real guitar transients/chords, and target-device checks remain open. No Fractal DSP/settings/sound parity."
     },
     "picker_rows": 110
   },
@@ -373,7 +396,7 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit",
         "https://www.fractalaudio.com/about/"
       ],
-      "status": "Volume/Pan, the full 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, and project Bias Trem are implemented. The existing Pitch row now reaches ±24 semitones, matching the documented per-voice range; independent two-/four-voice routing from Dual/Quad Chromatic, multi-voice/custom-scale Diatonic harmonies, Touch-Wah MIX, and physical-input detector selection remain open. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking-range controls, but bass tracking quality is unverified.",
+      "status": "Volume/Pan, the 20/20 named Stereo Filter type set, project Arpeggiator ±24-scale-degree range, Optical 1/2 plus Neon Tremolo, Bias Trem, and the existing Pitch row's ±24-semitone profile are implemented. The Diatonic Harmonizer now has a project-authored custom scale editor for its one monophonic-tracked harmony voice. Remaining gaps include independent two-/four-voice routing and per-voice controls, Touch-Wah MIX, physical-input detector selection, and additional synth behavior. Ring Mod and the three-voice synth expose project-authored Guitar/Bass tracking ranges; real-bass tracking quality is unverified.",
       "known_controls": "Volume/Pan guide lists Type (Volume/Auto-Swell), Volume, Auto-Swell Threshold/Attack/Release/Hysteresis, Balance, Taper (LINEAR, Log 30A/20A/15A/10A/5A, S-TAPER), Input Select (STEREO/LEFT ONLY/RIGHT ONLY), Pan Left, Pan Right, Bypass Mode (input pass or mute), and Output Level independent of Volume. No numeric ranges/defaults are published. Stereo channel selection and separate L/R output pans are documented; mono duplication/downmix and detailed channel-routing behavior are not.",
       "qualification": "The current guide cover includes FM9-family products and is dated June 2023. Firmware v12.0 is labeled for FM9 Original and FM9 Turbo, not Mark II Turbo by name; applicability to the exact Mark II Turbo is inferred from FM9-family coverage and is not explicit firmware confirmation. Installed firmware is unknown. Existing project Volume pedal, envelope Auto-Swell, and modulated Stereo Panner are distinct roles; Output Level overlaps only the independent output-gain role. All implementation ranges, defaults, mapping, and DSP must remain project-authored, with no Fractal parity claim."
     },

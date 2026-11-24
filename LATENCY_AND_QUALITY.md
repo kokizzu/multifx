@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal-family Diatonic custom-scale extension (2026-11-24)
+
+The existing Diatonic Harmonizer now supports a project-authored custom scale of 4–8 ascending semitone offsets in the native processor, offline CLI, and categorized Pitch browser/WASM control at picker index 50. It reuses the same one-voice processor and audio path; no separate block, voice, sample buffer, or fixed latency was added. Native owned state is 1,024,664 B in stereo (the focused browser reports 1,020,012 B effect memory). Processing remains allocation-free. The shared shifter contributes 5.333 ms nominal buffering at 48 kHz, while the tracker frame plus shifter gives an estimated 26.7 ms first-note response before host/device buffers; this exceeds the provisional ≤20 ms live-transposition target.
+
+The focused local prerecorded Guitar-TECHS DI browser/WASM Play check verified the Pitch category, index 50, a four-note custom scale [0, 2, 5, 7], and captured output change (peak 0.314677, difference RMS 0.0705676, 93,944 changed samples). `make test` passes 111/111 CTest tests and 11/11 audio-fixture safety checks; Windows MinGW core/offline build passes. The custom-mode test does not validate guitar note accuracy or sound quality.
+
+An AMD Ryzen 9 5950X, GCC 13.3.0, Release `make bench` run at 48 kHz stereo/128 frames (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) measured custom mode at p50/p95/p99/p99.9/max 15.9815/19.8729/24.5211/29.4923/34.2197% of the callback deadline. The same-run 13-preset C-major configuration measured 15.9001/21.1528/26.7656/33.0583/46.7383%. These are isolated native processor-call timings; they do not predict Android, Windows runtime, or other device performance. Human listening, chord/transient behavior, and target-device latency remain open.
+
 ## Existing polyphonic pitch shifter — Fractal-range profile (2026-11-24)
 
 The browser Pitch row (index 22) and offline-renderer pitch stage now configure the existing `PolyPitchShifter` with a ±24-semitone limit; neutral remains 0 semitones. Other `PolyPitchShifter` instances retain their existing per-instance profiles. A wider limit creates no second engine: it adds no processor state or extra fixed latency. The shifter itself has 5.333 ms algorithmic latency at 48 kHz, owns 494,016 B in the native stereo benchmark, and reports 489,416 B for the focused WASM effect.
