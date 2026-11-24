@@ -1520,6 +1520,17 @@ PITCH_SEQUENCE_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FENDER_PITCH_SEQUENCE_AUDIT_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 RHYTHM_TAP_DELAY_CHECKPOINT_PATHS = (
     "include/tabletfx/effects/ten_tap_delay.hpp",
     "src/effects/ten_tap_delay.cpp",
@@ -2703,6 +2714,10 @@ CHECKPOINTS = {
     "fractal-chromatic-harmonizer": (
         FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS,
         "feat: add project-authored four-voice chromatic harmonizer",
+    ),
+    "fender-pitch-sequence-audit": (
+        FENDER_PITCH_SEQUENCE_AUDIT_CHECKPOINT_PATHS,
+        "perf: benchmark project-authored pitch sequence",
     ),
 }
 

@@ -4949,6 +4949,11 @@ void run_bench() {
               << " warmup_blocks=" << warmup_blocks << " measured_blocks=" << measured_blocks
               << " metric=elapsed_block_us/callback_deadline_us*100\n";
     std::cout << "processor,median_pct,p95_pct,p99_pct,p99_9_pct,max_pct,owned_memory_bytes,output_rms\n";
+    const tabletfx::effects::PitchSequence pitch_sequence_latency_probe(
+        static_cast<float>(sample_rate), channels);
+    std::cout << "# pitch_sequence_algorithmic_latency_ms="
+              << std::fixed << std::setprecision(4)
+              << pitch_sequence_latency_probe.pitch_shifter_latency_ms() << '\n';
     benchmark_one("cabinet-ir-xr1-format", [=] {
         auto effect = std::make_unique<tabletfx::CabinetIr>(
             static_cast<float>(sample_rate), channels);
@@ -5237,6 +5242,21 @@ void run_bench() {
         parameters.mix = 0.5F;
         return std::make_unique<tabletfx::effects::PitchArpeggiator>(
             static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("pitch-sequence-pitch-glitch-freeze", [=] {
+        tabletfx::effects::PitchSequenceParameters parameters;
+        parameters.steps = 3U;
+        parameters.run = true;
+        parameters.free_step_ms = 30.0F;
+        parameters.semitones[1] = 5;
+        parameters.semitones[2] = -7;
+        parameters.mode[1] =
+            tabletfx::effects::PitchSequenceStepMode::Glitch;
+        parameters.mode[2] =
+            tabletfx::effects::PitchSequenceStepMode::Freeze;
+        parameters.mix = 1.0F;
+        return std::make_unique<tabletfx::effects::PitchSequence>(
+            static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("mono-guitar-synth", [=] {
         tabletfx::effects::MonoGuitarSynthConfig parameters;

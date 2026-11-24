@@ -1,5 +1,9 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Pitch Sequencer coverage benchmark (2026-11-25)
+
+The existing project-authored Pitch Sequence at Pitch picker ID 74 combines programmed Pitch, Glitch, and sample-loop Freeze steps. Its project-reported pitch-shifter latency is **256 frames / 5.333 ms at 48 kHz**; it adds no further sequence buffer. Native owned state is **542,480 B** at 48 kHz stereo. In `make bench`, a three-step mixed Pitch/Glitch/Freeze sequence at 48 kHz stereo/128 frames (2.667 ms callback deadline; 2,000 warm-up and 5,000 measured blocks) used **13.7265/17.0997/20.0034/25.8018/34.1402%** of the callback at p50/p95/p99/p99.9/max. This is isolated processor-call timing on an AMD Ryzen 9 5950X Release build, not a mobile or whole-chain guarantee. The random-noise benchmark input is for repeatable load coverage; the browser Play test separately uses local prerecorded guitar DI. Fender documents the effect's broad creative behaviors but publishes neither its parameter table nor DSP/latency, so these figures describe only the project implementation.
+
 ## Fractal FM9 family — four-voice chromatic harmonizer (2026-11-25)
 
 TabletFX's project-authored Pitch row at picker ID 112 uses four fixed-interval STFT pitch voices. The asymmetric 2048/128 analysis/synthesis path reports 256 frames of algorithmic latency, or **5.333 ms at 48 kHz**. This does not include audio-device, browser, or output buffering. The processor has no process-time allocation. Lazy state accounting is 675,480 B native with delay off and 670,556 B for the browser/WASM effect; requesting all four two-second voice delay lines raises native state to 2,211,496 B. The first enable allocates and prewarms the processor in the worklet control handler; target-device first-use timing is unmeasured.

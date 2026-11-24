@@ -4,7 +4,24 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "bc98b85ba3ca1ff4e2d9293617832f2ca36f18ea",
+  "previous_checkpoint_commit": "6987dd88f9ca8945aff1a96436c8096de001ff71",
+  "latest_audit": {
+    "name": "Fender Tone Master Pro Pitch Sequencer coverage and performance audit",
+    "status": "verified project coverage; exact Fender controls and parity unresolved",
+    "date": "2026-11-25",
+    "picker_index": 74,
+    "category": "Pitch",
+    "official_source": "Fender firmware history checked through v1.8.87 dated 2026-11-23; Pitch Sequencer introduced in v1.8.45; step-effect crash fix in v1.8.58. Fender's feature overview names sequence, glitch, glide, and freeze-like behavior. The v1.1.100 / Rev. A Model Guide does not contain this later effect.",
+    "project_controls": "Existing project-authored Pitch/Glitch/sample-loop Freeze sequence; project parameters are not Fender settings or algorithm parity.",
+    "verification": {
+      "focused_native": "make test-pitch-sequence passed 1/1 CTest.",
+      "full_native": "make test passed documentation validation, 11/11 fixture-safety checks, and 114/114 CTest cases.",
+      "browser": "make web-test passed with local prerecorded guitar DI Pitch/Glitch/Freeze Play coverage and full browser/native comparison.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up/5,000 measured: latency 256 frames/5.333 ms; memory 542,480 B; p50/p95/p99/p99.9/max 13.7265/17.0997/20.0034/25.8018/34.1402% of callback. Desktop isolated processor-call measurement, not target-device performance."
+    },
+    "remaining": "Manufacturer control table, numeric ranges/defaults, tracking/polyphony, DSP/latency, settings parity, physical device behavior, human listening, and target-device latency/load remain unknown."
+  },
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",

@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## Fender Tone Master Pro Pitch Sequencer research and performance audit (2026-11-25)
+
+- [x] Rechecked official firmware history through v1.8.87 dated 2026-11-23. Pitch Sequencer was added in v1.8.45; v1.8.58 fixed a crash risk affecting step effects. The current v1.8.87 note covers Virtual Capo and makes no Pitch Sequencer change. Fender's overview describes melody sequences, glitches, glides, and freeze-like sounds, but publishes no controls, bounds/defaults, tracking/polyphony, latency, or DSP. The v1.1.100 / Rev. A Model Guide does not include this later effect.
+- [x] Confirmed the existing project-authored Pitch/Glitch/sample-loop Freeze sequence is categorized at Pitch picker ID 74. `make test-pitch-sequence` passes.
+- [x] Added an isolated mixed Pitch/Glitch/Freeze benchmark row. At 48 kHz stereo/128 frames (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) it uses 13.7265/17.0997/20.0034/25.8018/34.1402% p50/p95/p99/p99.9/max on Ryzen 9 5950X Release. It reports 542,480 B native state and 256 frames / 5.333 ms pitch-shifter latency. This is project performance, not Fender DSP.
+- [x] `make web-test` passed with the existing prerecorded-guitar Pitch/Glitch/Freeze Play smoke and full browser/native comparison; `make windows-cross-build` passed for the Windows MinGW core and offline renderer. `make test` passed documentation validation, 11/11 fixture-safety checks, and 114/114 CTest cases.
+- [ ] Fender settings/algorithm parity, human listening, hardware behavior, and target-device latency/load remain unverified.
+
 ## Fractal FM9 family — four-voice chromatic harmonizer (2026-11-25)
 
 - [x] The November 2026 Blocks Guide (printed pp. 76–79) documents Dual Chromatic with two voices and Quad Chromatic / Quad Chromatic Delay with four; per-voice Shift ±24 semitones, Detune ±50 cents, Level, Pan, and Delay up to 2,000 ms. Quad Chromatic Delay has post-shift feedback. The guide does not state input-note polyphony or feedback bounds. FM9 v12.0 downloads name Original/Turbo, not Mark II Turbo separately; installed firmware is unknown.
