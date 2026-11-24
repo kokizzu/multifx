@@ -40,6 +40,7 @@ PUBLISH_CHECKPOINTS += fractal-touch-wah-mix
 PUBLISH_CHECKPOINTS += flagship-control-routing
 PUBLISH_CHECKPOINTS += stadium-mutant-filter
 PUBLISH_CHECKPOINTS += fractal-chromatic-harmonizer
+PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -85,6 +86,14 @@ web-test-volume-pan:
 
 web-test-stereo-filter:
 	$(PYTHON) scripts/web.py test-stereo-filter
+
+.PHONY: test-fractal-resonator-input-gain web-test-fractal-resonator-input-gain
+test-fractal-resonator-input-gain:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_four_band_resonator_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-resonator-input-gain: web-build
+	$(PYTHON) scripts/web.py test-fractal-resonator-input-gain
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
 .PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem

@@ -744,7 +744,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fender_pedal_shifter_only: bool = False,
                   fender_pedal_detune_only: bool = False,
                   fractal_diatonic_custom_scale_only: bool = False,
-                  fractal_chromatic_harmonizer_only: bool = False) -> None:
+                  fractal_chromatic_harmonizer_only: bool = False,
+                  fractal_resonator_input_gain_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -770,6 +771,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         long_convolution_ir_path = temp_dir / "convolution-ir-10s.wav"
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
+            if fractal_resonator_input_gain_only:
+                raise SystemExit(
+                    "Focused resonator Input Gain browser test requires the local prerecorded guitar DI fixture."
+                )
             make_test_audio(input_path)
             print("Browser guitar input: generated deterministic fallback fixture")
         else:
@@ -1258,6 +1263,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
         elif fractal_chromatic_harmonizer_only:
             url = base_url + "/web/index.html?selftest=fractal-chromatic-harmonizer"
+        elif fractal_resonator_input_gain_only:
+            url = base_url + "/web/index.html?selftest=fractal-resonator-input-gain"
         elif mutant_filter_only:
             url = base_url + "/web/index.html?selftest=mutant-filter"
         elif stereo_filter_only:
@@ -1461,6 +1468,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 or four_osc_only or poly_detune_only or fractal_poly_pitch_only
                 or fender_pedal_shifter_only or fender_pedal_detune_only
                 or fractal_diatonic_custom_scale_only
+                or fractal_resonator_input_gain_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1513,6 +1521,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif fractal_diatonic_custom_scale_only:
             print("Focused Fractal-family custom-scale browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fractal_resonator_input_gain_only:
+            print("Focused Fractal-family Resonator Input Gain browser/WASM prerecorded-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1577,6 +1588,7 @@ def main() -> None:
         "test-fender-pedal-detune",
         "test-fractal-diatonic-custom-scale",
         "test-fractal-chromatic-harmonizer",
+        "test-fractal-resonator-input-gain",
         "inspect-build-path", "inspect-smoke-path",
     ))
     action = parser.parse_args().action
@@ -1616,6 +1628,8 @@ def main() -> None:
         browser_test(fractal_diatonic_custom_scale_only=True)
     elif action == "test-fractal-chromatic-harmonizer":
         browser_test(fractal_chromatic_harmonizer_only=True)
+    elif action == "test-fractal-resonator-input-gain":
+        browser_test(fractal_resonator_input_gain_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

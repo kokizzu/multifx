@@ -1222,7 +1222,8 @@ def check_four_band_resonator(executable: Path) -> None:
              "--four-band-resonator-feedback", "0.65,0.55,0.45,0.35",
              "--four-band-resonator-q", "2,2.5,3,3.5",
              "--four-band-resonator-filter-locations", "pre,post,pre,post",
-             "--four-band-resonator-input-mode", "mono"],
+             "--four-band-resonator-input-mode", "mono",
+             "--four-band-resonator-input-gain-db", "6"],
             capture_output=True, text=True, check=True,
         )
         if "processors=1" not in result.stdout:

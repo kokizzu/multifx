@@ -48,11 +48,126 @@ void test_defaults_bounds_and_memory() {
                 defaults.master_q == 1.0F &&
                 defaults.input_mode ==
                     tabletfx::FourBandResonatorInputMode::Mono &&
-                defaults.mix == 0.5F,
+                defaults.mix == 0.5F && defaults.input_gain_db == 0.0F,
             "project-authored defaults changed");
     require(resonator.memory_bytes() ==
                 sizeof(resonator) + 4U * 2U * 962U * sizeof(float),
             "delay-buffer memory estimate is inaccurate at 48 kHz");
+}
+
+void test_input_gain_bounds_and_nonfinite_fallback() {
+    tabletfx::FourBandResonatorParameters parameters;
+    parameters.input_gain_db = -100.0F;
+    tabletfx::FourBandResonator minimum(48000.0F, parameters);
+    require(minimum.parameters().input_gain_db == -24.0F,
+            "input gain did not clamp to its project-authored minimum");
+
+    parameters.input_gain_db = 100.0F;
+    tabletfx::FourBandResonator maximum(48000.0F, parameters);
+    require(maximum.parameters().input_gain_db == 12.0F,
+            "input gain did not clamp to its project-authored maximum");
+
+    parameters.input_gain_db = std::numeric_limits<float>::quiet_NaN();
+    tabletfx::FourBandResonator invalid(48000.0F, parameters);
+    require(invalid.parameters().input_gain_db == 0.0F,
+            "nonfinite input gain did not fall back to project unity");
+}
+
+void test_input_gain_changes_wet_feed_but_not_dry() {
+    tabletfx::FourBandResonatorParameters parameters;
+    parameters.manual_frequency_hz = {220.0F, 220.0F, 220.0F, 220.0F};
+    parameters.feedback.fill(0.0F);
+    parameters.level.fill(1.0F);
+    parameters.mix = 1.0F;
+
+    std::array<float, 4096> source{};
+    for (std::size_t frame = 0; frame < source.size(); ++frame) {
+        source[frame] = 0.1F * std::sin(
+            2.0F * 3.14159265358979323846F * 220.0F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+    auto unity_audio = source;
+    auto boosted_audio = source;
+    tabletfx::FourBandResonator unity(48000.0F, parameters);
+    parameters.input_gain_db = 12.0F;
+    tabletfx::FourBandResonator boosted(48000.0F, parameters);
+    unity.process(unity_audio, 1);
+    boosted.process(boosted_audio, 1);
+
+    const float expected_gain = std::pow(10.0F, 12.0F / 20.0F);
+    std::size_t compared = 0;
+    double baseline_energy = 0.0;
+    double error_energy = 0.0;
+    for (std::size_t frame = 100; frame < source.size(); ++frame) {
+        if (std::abs(unity_audio[frame]) < 1.0e-5F) continue;
+        const double expected = static_cast<double>(unity_audio[frame]) *
+                                static_cast<double>(expected_gain);
+        const double error = static_cast<double>(boosted_audio[frame]) - expected;
+        baseline_energy += expected * expected;
+        error_energy += error * error;
+        ++compared;
+    }
+    require(compared > 1000U,
+            "input-gain wet-response test did not compare enough active samples");
+    const double relative_error = std::sqrt(error_energy / baseline_energy);
+    require(relative_error < 1.0e-4,
+            "input gain did not scale the resonator wet feed in dB; relative error=" +
+                std::to_string(relative_error));
+
+    parameters.mix = 0.0F;
+    parameters.input_gain_db = -24.0F;
+    tabletfx::FourBandResonator dry(48000.0F, parameters);
+    auto dry_audio = source;
+    dry.process(dry_audio, 1);
+    require(dry_audio == source,
+            "input gain changed the dry signal with zero wet mix");
+}
+
+void test_input_gain_stereo_block_partition_and_reset() {
+    tabletfx::FourBandResonatorParameters parameters;
+    parameters.input_mode = tabletfx::FourBandResonatorInputMode::Stereo;
+    parameters.input_gain_db = 6.0F;
+    parameters.mix = 0.75F;
+
+    std::vector<float> source(6000U * 2U);
+    for (std::size_t frame = 0; frame < source.size() / 2U; ++frame) {
+        source[frame * 2U] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * 110.0F *
+            static_cast<float>(frame) / 48000.0F);
+        source[frame * 2U + 1U] = 0.17F * std::sin(
+            2.0F * 3.14159265358979323846F * 164.8138F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+
+    auto whole_audio = source;
+    auto partitioned_audio = source;
+    tabletfx::FourBandResonator whole(48000.0F, parameters);
+    tabletfx::FourBandResonator partitioned(48000.0F, parameters);
+    whole.process(whole_audio, 2);
+    std::size_t frame_offset = 0;
+    constexpr std::array<std::size_t, 5> block_sizes{1U, 17U, 128U, 509U, 73U};
+    std::size_t block_index = 0;
+    while (frame_offset < source.size() / 2U) {
+        const std::size_t frames = std::min(
+            block_sizes[block_index++ % block_sizes.size()],
+            source.size() / 2U - frame_offset);
+        partitioned.process(
+            std::span<float>(partitioned_audio).subspan(frame_offset * 2U,
+                                                        frames * 2U),
+            2);
+        frame_offset += frames;
+    }
+    require(whole_audio == partitioned_audio,
+            "input gain changed stereo behavior across irregular blocks");
+
+    tabletfx::FourBandResonator resettable(48000.0F, parameters);
+    auto first = source;
+    resettable.process(first, 2);
+    resettable.reset();
+    auto second = source;
+    resettable.process(second, 2);
+    require(first == second && resettable.parameters().input_gain_db == 6.0F,
+            "reset did not preserve gain while restoring deterministic response");
 }
 
 void test_manual_frequency_and_parameter_bounds() {
@@ -356,7 +471,9 @@ void test_reset_block_invariance_and_finite_recovery() {
 }
 
 void test_process_does_not_allocate() {
-    tabletfx::FourBandResonator resonator;
+    tabletfx::FourBandResonatorParameters parameters;
+    parameters.input_gain_db = 6.0F;
+    tabletfx::FourBandResonator resonator(48000.0F, parameters);
     std::array<float, 256> audio{};
     const std::size_t before = allocation_count.load();
     for (int i = 0; i < 20; ++i) {
@@ -381,6 +498,9 @@ void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_input_gain_bounds_and_nonfinite_fallback();
+        test_input_gain_changes_wet_feed_but_not_dry();
+        test_input_gain_stereo_block_partition_and_reset();
         test_manual_frequency_and_parameter_bounds();
         test_chord_frequency_mapping_and_sample_rate_limit();
         test_filter_location_is_independent_per_band();

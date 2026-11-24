@@ -67,6 +67,10 @@ void FourBandResonator::set_parameters(
     parameters.master_q = bounded(parameters.master_q, 1.0F,
                                   kMinimumMasterQ, kMaximumMasterQ);
     parameters.mix = bounded(parameters.mix, 0.5F, 0.0F, 1.0F);
+    parameters.input_gain_db = bounded(
+        parameters.input_gain_db, 0.0F, kMinimumInputGainDb,
+        kMaximumInputGainDb);
+    input_gain_linear_ = std::pow(10.0F, parameters.input_gain_db / 20.0F);
     for (std::size_t band = 0; band < kBands; ++band) {
         if (parameters.filter_location[band] !=
                 FourBandResonatorFilterLocation::Pre &&
@@ -105,17 +109,19 @@ void FourBandResonator::process(std::span<float> interleaved,
         const std::size_t offset = frame * channels;
         std::array<float, kMaximumChannels> original{};
         std::array<float, kMaximumChannels> input{};
+        std::array<float, kMaximumChannels> effect_input{};
         for (std::uint16_t channel = 0; channel < channels; ++channel) {
             const float sample = interleaved[offset + channel];
             original[channel] = std::isfinite(sample) ? sample : 0.0F;
             input[channel] = std::clamp(original[channel],
                                         -kMaximumInputMagnitude,
                                         kMaximumInputMagnitude);
+            effect_input[channel] = input[channel] * input_gain_linear_;
         }
 
         const float mono_input = channels == 2
-            ? 0.5F * (input[0] + input[1])
-            : input[0];
+            ? 0.5F * (effect_input[0] + effect_input[1])
+            : effect_input[0];
         double wet_mono = 0.0;
         double wet_left = 0.0;
         double wet_right = 0.0;
@@ -131,7 +137,7 @@ void FourBandResonator::process(std::span<float> interleaved,
                 channels == 2 && parameters_.input_mode ==
                                      FourBandResonatorInputMode::Mono
                     ? mono_input
-                    : input[source_channel];
+                    : effect_input[source_channel];
             const float delayed = delayed_sample(
                 band, source_channel, delay_samples_[band]);
             const bool filter_before =

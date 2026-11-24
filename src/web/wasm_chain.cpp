@@ -1208,7 +1208,7 @@ public:
 
     void configure_rhythm_tap_delay(const float* values,
                                     std::uint32_t value_count) noexcept {
-        constexpr std::uint32_t kParameterCount = 34U;
+        constexpr std::uint32_t kParameterCount = 35U;
         if (values == nullptr || value_count != kParameterCount) return;
         auto* delay = static_cast<tabletfx::RhythmTapDelay*>(
             effects_[75].effect.get());
@@ -2059,7 +2059,7 @@ public:
 
     void configure_four_band_resonator(const float* values,
                                        std::uint32_t value_count) noexcept {
-        constexpr std::uint32_t kParameterCount = 34U;
+        constexpr std::uint32_t kParameterCount = 35U;
         if (values == nullptr || value_count != kParameterCount) {
             return;
         }
@@ -2096,6 +2096,7 @@ public:
         parameters.master_feedback = values[31];
         parameters.master_q = values[32];
         parameters.mix = values[33];
+        parameters.input_gain_db = values[34];
         static_cast<tabletfx::FourBandResonator*>(effects_[49].effect.get())
             ->set_parameters(parameters);
     }

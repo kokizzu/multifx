@@ -800,6 +800,26 @@ FOUR_BAND_RESONATOR_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_RESONATOR_INPUT_GAIN_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/four_band_resonator.hpp",
+    "src/effects/four_band_resonator.cpp",
+    "tests/test_four_band_resonator.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 DIATONIC_HARMONIZER_CHECKPOINT_PATHS = (
     "Makefile",
     "CMakeLists.txt",
@@ -2523,6 +2543,10 @@ CHECKPOINTS = {
                               "feat: add categorized triple-double chorus"),
     "four-band-resonator": (FOUR_BAND_RESONATOR_CHECKPOINT_PATHS,
                             "feat: add categorized four-band resonator"),
+    "fractal-resonator-input-gain": (
+        FRACTAL_RESONATOR_INPUT_GAIN_CHECKPOINT_PATHS,
+        "feat: add Fractal-inspired resonator input gain",
+    ),
     "diatonic-harmonizer": (DIATONIC_HARMONIZER_CHECKPOINT_PATHS,
                             "feat: add categorized diatonic harmonizer"),
     "grain-delay": (GRAIN_DELAY_CHECKPOINT_PATHS,

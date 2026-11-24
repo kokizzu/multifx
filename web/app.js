@@ -170,7 +170,7 @@ const DEFAULT_PARAMETERS = {
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
-    -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5],
+    -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5, 0],
   diatonicHarmonizer: [0.35, 2, 0, 0, 8000, 0, 0.2, 0, 120],
   diatonicHarmonizerCustomScale: [7, 0, 2, 4, 5, 7, 9, 11, 0],
   pitchArpeggiator: [1, 1, 1, 0, 0, 4, 0, 7, 120, 250, 0, 0, 0, 0,
@@ -710,6 +710,9 @@ function buildFourBandResonatorControls() {
   });
   appendResonatorControl(modeGroup, "Mix · project-authored range", 33, {
     id: "mix", format: "percent", min: 0, max: 1, step: 0.01,
+  });
+  appendResonatorControl(modeGroup, "Input Gain · project-authored range", 34, {
+    id: "input-gain-db", format: "db", min: -24, max: 12, step: 0.1,
   });
   fourBandResonatorControls.append(modeGroup);
 
@@ -5553,7 +5556,7 @@ for (const control of [tripleDoubleChorusPresetSwitch,
 
 function updateFourBandResonator() {
   const controls = [...fourBandResonatorControls.querySelectorAll("[data-resonator-index]")];
-  const values = Array(34).fill(0);
+  const values = Array(35).fill(0);
   for (const control of controls) {
     const index = Number(control.dataset.resonatorIndex);
     const value = Number(control.value);
@@ -5564,6 +5567,7 @@ function updateFourBandResonator() {
       case "factor": output.value = `${value.toFixed(2)}×`; break;
       case "ratio": output.value = value.toFixed(2); break;
       case "percent": output.value = `${Math.round(value * 100)}%`; break;
+      case "db": output.value = `${value.toFixed(1)} dB`; break;
       case "pan": output.value = value.toFixed(2); break;
       default: output.value = control.selectedOptions[0].textContent;
     }
@@ -11909,6 +11913,123 @@ async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, cap
   }
 }
 
+async function runFractalResonatorInputGainBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousParameters = DEFAULT_PARAMETERS.fourBandResonator.slice();
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Resonator input-gain smoke requires the local prerecorded guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "resonator";
+    updateEffectBrowser();
+
+    const effectIndex = 49;
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const controls = [...fourBandResonatorControls.querySelectorAll("[data-resonator-index]")];
+    const mixControl = controls.find((control) => control.dataset.resonatorIndex === "33");
+    const gainControl = controls.find((control) => control.dataset.resonatorIndex === "34");
+    if (row?.dataset.category !== "resonator" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Resonator" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Four-band resonator") ||
+        !checkbox || !mixControl || !gainControl || gainControl.min !== "-24" ||
+        gainControl.max !== "12" || DEFAULT_PARAMETERS.fourBandResonator.length !== 35 ||
+        !(effectMemory[effectIndex] > 0)) {
+      throw new Error("Four-band resonator picker row or Input Gain control is missing/misclassified.");
+    }
+
+    document.querySelectorAll("[data-effect]").forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const setControl = (control, value) => {
+      control.value = String(value);
+      control.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    setControl(mixControl, 1);
+
+    const captureAt = async (gainDb) => {
+      setControl(gainControl, gainDb);
+      if (DEFAULT_PARAMETERS.fourBandResonator[34] !== gainDb) {
+        throw new Error(`Input Gain UI did not send ${gainDb} dB at WASM vector index 34.`);
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting ${gainDb} dB resonator playback.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const unity = await captureAt(0);
+    const boosted = await captureAt(6);
+    let referenceSquares = 0;
+    let differenceSquares = 0;
+    let peakDifference = 0;
+    let activeSamples = 0;
+    for (let index = 0; index < Math.min(unity.length, boosted.length); index += 1) {
+      const baseline = unity[index];
+      const difference = boosted[index] - baseline;
+      referenceSquares += baseline * baseline;
+      differenceSquares += difference * difference;
+      peakDifference = Math.max(peakDifference, Math.abs(difference));
+      if (Math.abs(baseline) > 1.0e-6 || Math.abs(boosted[index]) > 1.0e-6) {
+        activeSamples += 1;
+      }
+    }
+    const rmsDifference = Math.sqrt(differenceSquares / Math.max(1, unity.length));
+    const relativeDifference = Math.sqrt(differenceSquares / Math.max(1.0e-20, referenceSquares));
+    if (activeSamples < 1000 || peakDifference < 1.0e-5 || relativeDifference < 0.05) {
+      throw new Error(`Input Gain did not measurably change local-guitar Play output: ` +
+        `active=${activeSamples}, peak=${peakDifference}, relative=${relativeDifference}.`);
+    }
+    return {
+      category: "Resonator",
+      effectIndex,
+      fixtureFrames: reference.frames,
+      unityGainDb: 0,
+      activeGainDb: 6,
+      vectorLength: DEFAULT_PARAMETERS.fourBandResonator.length,
+      rmsDifference,
+      relativeDifference,
+      peakDifference,
+      activeSamples,
+    };
+  } finally {
+    stopSource(false);
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    document.querySelectorAll("[data-effect]").forEach((box, index) => {
+      const enabled = Boolean(previousEffectState[index]);
+      box.checked = enabled;
+      if (workletNode) workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    previousParameters.forEach((value, index) => {
+      const control = fourBandResonatorControls.querySelector(
+        `[data-resonator-index="${index}"]`,
+      );
+      if (control) control.value = String(value);
+    });
+    updateFourBandResonator();
+  }
+}
+
 async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -13823,7 +13944,7 @@ async function runBrowserSelfTest() {
     const defaultFourBandResonator = [...DEFAULT_PARAMETERS.fourBandResonator];
     const testFourBandResonator = [1, 2, 1.1, 220, 330, 440, 660, 220,
       0.65, 0.55, 0.45, 0.35, 2, 2.5, 3, 3.5, 0.8, 0.7, 0.6, 0.5,
-      -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65];
+      -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65, 6];
     const fourBandControls = [...fourBandResonatorControls.querySelectorAll("[data-resonator-index]")];
     for (const control of fourBandControls) {
       control.value = String(testFourBandResonator[Number(control.dataset.resonatorIndex)]);
@@ -15375,7 +15496,7 @@ async function runBrowserSelfTest() {
         tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
         fourBandResonator: [1, 2, 1.1, 220, 330, 440, 660, 220,
           0.65, 0.55, 0.45, 0.35, 2, 2.5, 3, 3.5, 0.8, 0.7, 0.6, 0.5,
-          -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65],
+          -0.75, -0.25, 0.25, 0.75, 0, 1, 0, 1, 0, 0.9, -0.25, 0.75, 1.2, 0.65, 6],
         diatonicHarmonizer: [0.7, 2, 7, 0, 8000, 120, 0.2, 0, 120],
         grainDelay: [350, 0.25, 0.35, 80, 2, 7, 35],
          pitchFeedbackDelay: [350, 0.35, 0.25, 7],
@@ -15854,6 +15975,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Pedal Detune browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-resonator-input-gain") {
+          testResult.textContent = "Checking Fractal-family Resonator Input Gain with local guitar Play…";
+          const resonatorInputGainSmoke = await runFractalResonatorInputGainBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            resonatorInputGain: resonatorInputGainSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Fractal Resonator Input Gain browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-custom-scale") {

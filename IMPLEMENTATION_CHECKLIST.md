@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## Fractal FM9-family Resonator Input Gain (2026-11-25)
+
+- [x] Verified the official June 2023 Blocks Guide, printed p. 81 (no separate revision number): Resonator Input Gain changes the signal fed to the effect processor while leaving dry unchanged. The guide does not publish a numeric range or default. FM9 v12.0 downloads list Original/Turbo, not Mark II Turbo separately; installed firmware remains unknown.
+- [x] Added a project-authored Input Gain control to the existing Four-band Resonator, Resonator picker ID 49. The chosen project default is 0 dB and its project-only range is −24…+12 dB. A cached linear scalar multiplies the wet input before band routing/delay excitation; dry and feedback return remain unchanged. No extra chain stage, block buffer, process allocation, or fixed latency is added. This is an in-chain parameter, not a global preset/output assignment or Fractal DSP/settings parity.
+- [x] `make test` passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases. `make web-test-fractal-resonator-input-gain` passed with the local prerecorded 48 kHz stereo guitar DI: picker category remained Resonator, vector index 34 updated to 0/+6 dB, and Play output changed (RMS difference 0.0103064, peak difference 0.0429585, 95,706 active samples). `make windows-cross-build` passed for the MinGW core and offline renderer.
+- [x] `make bench` on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms), 2,000 warm-up/5,000 measured: 31,144 B owned state, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max is 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB is 0.4283/0.5625/0.7350/1.8207/2.6288% of the callback budget. These are desktop isolated processor-call timings, not device guarantees.
+- [ ] Human listening, physical FM9 behavior, exact Mark II Turbo firmware applicability, and target-device CPU/latency remain unverified.
+
 ## Fender Tone Master Pro Virtual Capo Mix (2026-11-25)
 
 - [x] Verified current official firmware history: v1.8.85 introduced the rebuilt polyphonic Virtual Capo over ±12 semitones; Fender describes unity gain, unchanged CPU use, flat frequency response, cleaner attacks, and low latency. Current v1.8.87 fixes a public-beta semitone error at +1 through +OCT. Fender's feature article confirms Mix blends shifted/original signals but does not publish bounds or defaults.

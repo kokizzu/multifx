@@ -63,13 +63,18 @@ struct FourBandResonatorParameters {
     float master_feedback = 1.0F;
     float master_q = 1.0F;
     float mix = 0.5F;
+    // Project-authored effect-input trim. This scales the resonator feed only;
+    // the dry path and the existing feedback return are unchanged.
+    float input_gain_db = 0.0F;
 };
 
 /*
  * Project-authored four-band feedback-delay resonator. Each band has an
  * independent fractional delay and band-pass filter. The public frequency
  * controls preserve the documented MANUAL/CHORD distinction and Manual
- * master scaling. Each band's BPF can be set before or after that band’s
+ * master scaling. Its input gain scales the wet effect feed only, leaving dry
+ * audio and the existing feedback return unchanged. Each band's BPF can be
+ * set before or after that band’s
  * resonator. The pre/post signal routing, master-frequency scale range,
  * feedback, Q, gain, panning, defaults, other bounds, and DSP details are
  * project-authored. Master Level/Pan/Feedback/Q and Mono/Stereo input routing
@@ -122,6 +127,8 @@ private:
     static constexpr float kMaximumMasterFeedback = 1.0F;
     static constexpr float kMinimumMasterQ = 0.1F;
     static constexpr float kMaximumMasterQ = 4.0F;
+    static constexpr float kMinimumInputGainDb = -24.0F;
+    static constexpr float kMaximumInputGainDb = 12.0F;
     static constexpr float kMinimumFeedback = 0.0F;
     static constexpr float kMaximumFeedback = 0.98F;
     static constexpr float kMinimumQ = 0.5F;
@@ -164,6 +171,7 @@ private:
     std::size_t write_frame_ = 0;
     std::vector<float> delay_storage_;
     FourBandResonatorParameters parameters_{};
+    float input_gain_linear_ = 1.0F;
     std::array<float, kBands> effective_frequencies_hz_{};
     std::array<float, kBands> delay_samples_{};
     std::array<Coefficients, kBands> coefficients_{};

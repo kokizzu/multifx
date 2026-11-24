@@ -4,23 +4,23 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "7e5dcb2c8719c23186fb37122100abcc3d3e14f4",
+  "previous_checkpoint_commit": "57e0268bca970391ff079d6ee54feb3a015dc084",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Pitch Sequencer coverage and performance audit",
-    "status": "verified project coverage; exact Fender controls and parity unresolved",
+    "name": "Fractal FM9-family Resonator Input Gain control",
+    "status": "verified; automated checks pass; hardware listening remains",
     "date": "2026-11-25",
-    "picker_index": 74,
-    "category": "Pitch",
-    "official_source": "Fender firmware history checked through v1.8.87 dated 2026-11-23; Pitch Sequencer introduced in v1.8.45; step-effect crash fix in v1.8.58. Fender's feature overview names sequence, glitch, glide, and freeze-like behavior. The v1.1.100 / Rev. A Model Guide does not contain this later effect.",
-    "project_controls": "Existing project-authored Pitch/Glitch/sample-loop Freeze sequence; project parameters are not Fender settings or algorithm parity.",
+    "picker_index": 49,
+    "category": "Resonator",
+    "official_source": "The family guide says Resonator Input Gain changes signal fed to the effect processor while leaving dry signal unchanged. It publishes no numeric range or default. FM9 firmware v12.0 is listed for Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown.",
+    "project_controls": "Project-authored control on the existing Four-band Resonator row, picker ID 49; default 0 dB, project-selected range −24…+12 dB. A cached linear multiplier scales wet feed before band routing/delay excitation; dry path and existing feedback return are unchanged. It remains an in-chain control, not a preset-global/output assignment. No extra stage, fixed algorithmic latency, buffer, or process-time allocation; total state 31,144 B at 48 kHz stereo. No Fractal DSP/settings/sound parity.",
     "verification": {
-      "focused_native": "make test-pitch-sequence passed 1/1 CTest.",
-      "full_native": "make test passed documentation validation, 11/11 fixture-safety checks, and 114/114 CTest cases.",
-      "browser": "make web-test passed with local prerecorded guitar DI Pitch/Glitch/Freeze Play coverage and full browser/native comparison.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up/5,000 measured: latency 256 frames/5.333 ms; memory 542,480 B; p50/p95/p99/p99.9/max 13.7265/17.0997/20.0034/25.8018/34.1402% of callback. Desktop isolated processor-call measurement, not target-device performance."
+      "focused_native": "make test-fractal-resonator-input-gain passed the focused Four-band Resonator CTest and offline-renderer CLI checks, including the 6 dB renderer flag.",
+      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+      "browser": "make web-test-fractal-resonator-input-gain passed with the local prerecorded 48 kHz stereo guitar DI; Resonator category and picker row 49 verified, UI/WASM index 34 mapped, and 0/+6 dB Play output differed by RMS 0.0103064 / peak 0.0429585 across 95,706 active samples.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback budget, 2,000 warm-up/5,000 measured: owned state 31,144 B, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB 0.4283/0.5625/0.7350/1.8207/2.6288%. Isolated desktop processor-call measurement, not target-device performance."
     },
-    "remaining": "Manufacturer control table, numeric ranges/defaults, tracking/polyphony, DSP/latency, settings parity, physical device behavior, human listening, and target-device latency/load remain unknown."
+    "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
   },
   "completed_checkpoints": [
     {
@@ -514,33 +514,33 @@
         "notes": "Automated native, browser/WASM local-guitar Play, full suite, Windows cross-build, and benchmark pass. Human listening, Stadium hardware behavior, device performance, and exact Stadium settings/DSP remain unknown."
       },
       "picker_rows": 112
+    },
+    {
+      "name": "Fractal FM9-family Resonator Input Gain control",
+      "status": "verified; automated checks pass; hardware listening remains",
+      "picker_index": 49,
+      "category": "Resonator",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 firmware downloads",
+        "revision": "Blocks Guide June 2023 revision, printed p. 81 (no distinct revision number); firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The family guide says Resonator Input Gain changes signal fed to the effect processor while leaving dry signal unchanged. It publishes no numeric range or default. FM9 firmware v12.0 is listed for Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown."
+      },
+      "documented_controls": "Resonator Input Gain controls the effect-processor input and does not affect dry signal. The guide does not publish numeric bounds/defaults.",
+      "project_controls": "Project-authored control on the existing Four-band Resonator row, picker ID 49; default 0 dB, project-selected range −24…+12 dB. A cached linear multiplier scales wet feed before band routing/delay excitation; dry path and existing feedback return are unchanged. It remains an in-chain control, not a preset-global/output assignment. No extra stage, fixed algorithmic latency, buffer, or process-time allocation; total state 31,144 B at 48 kHz stereo. No Fractal DSP/settings/sound parity.",
+      "verification": {
+        "focused_native": "make test-fractal-resonator-input-gain passed the focused Four-band Resonator CTest and offline-renderer CLI checks, including the 6 dB renderer flag.",
+        "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+        "browser": "make web-test-fractal-resonator-input-gain passed with the local prerecorded 48 kHz stereo guitar DI; Resonator category and picker row 49 verified, UI/WASM index 34 mapped, and 0/+6 dB Play output differed by RMS 0.0103064 / peak 0.0429585 across 95,706 active samples.",
+        "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback budget, 2,000 warm-up/5,000 measured: owned state 31,144 B, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB 0.4283/0.5625/0.7350/1.8207/2.6288%. Isolated desktop processor-call measurement, not target-device performance."
+      },
+      "picker_rows": "Existing inventory membership and picker count unchanged.",
+      "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
     }
   ],
   "previous_checkpoint": {
-    "name": "XRecer XR1-inspired in-chain Global EQ",
-    "status": "verified",
-    "picker_index": 113,
-    "category": "Equalizer",
-    "official_source": {
-      "title": "XRecer XR1 User Manual V1.1.0 and official FAQ",
-      "revision": "User Manual V1.1.0, November 2026, Global EQ section; official FAQ checked 2026-11-25. Installed XR1 OS is unknown.",
-      "url": "https://wiki.xrecer.com/docs/global-eq/index.html",
-      "faq_url": "https://www.xrecer.com/pages/faq",
-      "qualification": "The manual documents per-band Assign, Type, Gain, Freq, Q, and Bypass plus master Bypass/Reset, but not numeric ranges/defaults, filter topology, or output-bus routing. FAQ says Global EQ applies to selected outputs and dry DI bypasses it. Project ID 113 is an in-chain approximation only."
-    },
-    "documented_controls": "Five bands; each has Assign, Type (Peak/HP/LP/Hi-Shelf/Lo-Shelf), Gain, Freq, Q, and Bypass; master Bypass and Reset. The exact page provides no numeric ranges/defaults, filter topology, or output-bus routing table.",
-    "project_controls": "Project-authored Equalizer ID 113: Stereo/Left/Right assignment; Peak, high-pass, low-pass, high-shelf, low-shelf; gain ±12 dB; frequency 20–20,000 Hz capped at 0.45 × sample rate; Q 0.25–10; neutral peak defaults at 80/250/750/2,200/6,600 Hz; per-band/master bypass and reset. This consumes one chain slot and does not apply across presets/selected outputs or reproduce dry-DI bypass.",
-    "verification": {
-      "native_ctest": "make test passed 115/115 CTest cases and 11/11 fixture checks, including Mix endpoints/clamping, aligned dry delay, blend arithmetic, and no process-time allocations.",
-      "focused_browser": "make web-test-fender-pedal-shifter passed using the existing local prerecorded Guitar-TECHS guitar DI at 48 kHz stereo. Browser Play verified 0%, 50%, and 100% Mix; the 50% result differed from the captured wet/dry mean by 1.51e-9 RMS and 7.45e-9 maximum error.",
-      "full_browser": "make web-browser-test reached the 60-second page deadline while the page still displayed normal audio-source progress; no final browser/native comparison was produced. Full-suite comparison remains unverified.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: full-wet p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix 10.597/13.989/17.349/21.551/35.216% of callback budget. Native stereo state 496,080 B, including a 2,048 B dry-history ring; 256-frame / 5.333 ms latency. Desktop processor-call timing, not target-device performance.",
-      "notes": "Native, build, focused local-guitar browser/WASM Play, Windows cross-build, and isolated benchmark checks pass. Full browser/native comparison, human listening, Tone Master Pro hardware behavior, and target-device performance remain open. No Fender Mix bounds/defaults, measured device latency, DSP, settings, or sound parity are claimed."
-    },
-    "picker_rows": 114
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Virtual Capo Mix control",
     "status": "verified",
     "picker_index": 22,
@@ -564,20 +564,31 @@
     },
     "picker_rows": 114
   },
-  "next_research": [
-    {
-      "device": "Fractal FM9 Mark II Turbo",
-      "feature": "Resonator Input Gain control exposure",
-      "source": "Fractal Audio Blocks Guide, June 2023 FM9-family revision, printed p.81; firmware v12.0 downloads list FM9 Original/Turbo but do not name Mark II Turbo separately.",
-      "source_urls": [
-        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "https://www.fractalaudio.com/fm9-downloads/",
-        "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit"
-      ],
-      "status": "The guide documents Resonator Input Gain as controlling the signal feeding the effect processor without changing the dry signal. TabletFX FourBandResonator has no equivalent control yet. The next safe project change is a cached wet-input gain scalar before band routing and delay excitation, leaving dry and feedback unchanged; no buffer or added latency is needed.",
-      "known_controls": "Input Gain is listed for Resonator and is explicitly described as wet-processor input level; no numeric bounds/default are given. Any project default/range must be labeled project-authored. Exact Mark II Turbo firmware applicability and installed device firmware remain unknown.",
-      "qualification": "Use a focused regression to prove dry remains unchanged while wet changes, parameter bounds/non-finite handling, stereo/block behavior and zero process-time allocation. Add a benchmark comparison at unity and active gain and expose the control in the existing categorized Resonator UI. Do not claim Fractal DSP, range, firmware or sound parity."
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Resonator Input Gain control",
+    "status": "verified; automated checks pass; hardware listening remains",
+    "picker_index": 49,
+    "category": "Resonator",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide and FM9 firmware downloads",
+      "revision": "Blocks Guide June 2023 revision, printed p. 81 (no distinct revision number); firmware v12.0 dated 2026-07-07, downloads page checked 2026-11-25; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The family guide says Resonator Input Gain changes signal fed to the effect processor while leaving dry signal unchanged. It publishes no numeric range or default. FM9 firmware v12.0 is listed for Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown."
     },
+    "documented_controls": "Resonator Input Gain controls the effect-processor input and does not affect dry signal. The guide does not publish numeric bounds/defaults.",
+    "project_controls": "Project-authored control on the existing Four-band Resonator row, picker ID 49; default 0 dB, project-selected range −24…+12 dB. A cached linear multiplier scales wet feed before band routing/delay excitation; dry path and existing feedback return are unchanged. It remains an in-chain control, not a preset-global/output assignment. No extra stage, fixed algorithmic latency, buffer, or process-time allocation; total state 31,144 B at 48 kHz stereo. No Fractal DSP/settings/sound parity.",
+    "verification": {
+      "focused_native": "make test-fractal-resonator-input-gain passed the focused Four-band Resonator CTest and offline-renderer CLI checks, including the 6 dB renderer flag.",
+      "full_native": "make test passed documentation validation, 11/11 fixture checks, and 115/115 CTest cases.",
+      "browser": "make web-test-fractal-resonator-input-gain passed with the local prerecorded 48 kHz stereo guitar DI; Resonator category and picker row 49 verified, UI/WASM index 34 mapped, and 0/+6 dB Play output differed by RMS 0.0103064 / peak 0.0429585 across 95,706 active samples.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback budget, 2,000 warm-up/5,000 measured: owned state 31,144 B, 0 added fixed-latency samples. Unity p50/p95/p99/p99.9/max 0.3484/0.5359/0.7466/1.9940/3.0263%; +12 dB 0.4283/0.5625/0.7350/1.8207/2.6288%. Isolated desktop processor-call measurement, not target-device performance."
+    },
+    "picker_rows": "Existing inventory membership and picker count unchanged.",
+    "remaining": "Exact firmware applicability to FM9 Mark II Turbo, installed firmware, physical-hardware behavior, target-device CPU/latency, and human listening remain unverified."
+  },
+  "next_research": [
     {
       "device": "Fender Tone Master Pro",
       "feature": "Pitch Sequencer parameter surface and categorized project implementation",

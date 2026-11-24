@@ -22,6 +22,7 @@
 #include "tabletfx/effects/octave_divider.hpp"
 #include "tabletfx/effects/double_take.hpp"
 #include "tabletfx/effects/eq5_graphic.hpp"
+#include "tabletfx/effects/four_band_resonator.hpp"
 #include "tabletfx/effects/fractal_bias_trem.hpp"
 #include "tabletfx/effects/optical_tremolo.hpp"
 #include "tabletfx/effects/auto_swell.hpp"
@@ -1699,6 +1700,8 @@ Options parse_options(int argc, char** argv, int first) {
                 parameters.master_feedback = parse_float(key, argv[i]);
             } else if (setting == "master-q") {
                 parameters.master_q = parse_float(key, argv[i]);
+            } else if (setting == "input-gain-db") {
+                parameters.input_gain_db = parse_float(key, argv[i]);
             } else if (setting == "mix") {
                 parameters.mix = parse_float(key, argv[i]);
             } else {
@@ -4983,6 +4986,18 @@ void run_bench() {
         effect->configure({4.0F, -3.0F, 6.0F, -2.0F, 3.0F}, 0.0F);
         return effect;
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-resonator-input-gain-unity-project-authored", [=] {
+        tabletfx::FourBandResonatorParameters parameters;
+        parameters.input_gain_db = 0.0F;
+        return std::make_unique<tabletfx::FourBandResonator>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-resonator-input-gain-plus12db-project-authored", [=] {
+        tabletfx::FourBandResonatorParameters parameters;
+        parameters.input_gain_db = 12.0F;
+        return std::make_unique<tabletfx::FourBandResonator>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("optical-tremolo-project-authored", [=] {
         return std::make_unique<tabletfx::OpticalTremolo>(
             static_cast<float>(sample_rate));
@@ -5695,6 +5710,7 @@ void print_usage() {
                    " [--four-band-resonator-master-level value] [--four-band-resonator-master-pan -1..1]"
                    " [--four-band-resonator-master-feedback 0..1] [--four-band-resonator-master-q 0.1..4]"
                    " [--four-band-resonator-mix 0..1]"
+                   " [--four-band-resonator-input-gain-db -24..12 (project-authored)]"
                     " [--diatonic-harmonizer] [--diatonic-harmonizer-mix 0..1]"
                     " [--diatonic-harmonizer-interval -7..7] [--diatonic-harmonizer-key 0..11]"
                     " [--diatonic-harmonizer-scale major|natural-minor|dorian|phrygian|lydian|mixolydian|locrian|harmonic-minor|melodic-minor|major-pentatonic|minor-pentatonic|blues|chromatic]"

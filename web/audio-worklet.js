@@ -477,7 +477,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFourBandResonator(parameters.fourBandResonator ||
         [0, 0, 1, 110, 164.81, 220, 329.63, 110,
           0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
-          -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5]);
+          -0.75, -0.25, 0.25, 0.75, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0.5, 0]);
       const diatonicHarmonizer = parameters.diatonicHarmonizer ||
         [0.35, 2, 0, 0, 8000, 0, 0.2, 0, 120];
       module._tf_chain_set_diatonic_harmonizer(this.chain, ...diatonicHarmonizer);
@@ -603,7 +603,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
   }
 
   configureFourBandResonator(values) {
-    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
+    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 35) {
       return;
     }
     const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
