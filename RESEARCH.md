@@ -1,5 +1,13 @@
 # Research and source audit
 
+## Line 6 Helix Stadium Poly Detune audit and project implementation (2026-11-24)
+
+The official [Helix Stadium model catalogue](https://line6.com/helix-stadium-models/) lists Poly Detune as Mono, a Line 6 Original first appearing in Stadium 1.0. The current live [Dynamic DSP page](https://manuals.line6.com/en/helix-stadium/live/dynamic-dsp) groups it with high-DSP Poly effects, with a limit of two per preset and one per primary path. That resource grouping does not establish polyphonic note tracking and does not override the catalogue's Mono label. The current [Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) explains that detailed controls appear in the device editor but does not publish a Poly Detune parameter table. The online manual has a combined revision label (v1.4 Rev D / v1.3 Rev B / v1.2); the exact installed firmware is unknown. This audit therefore does not claim manufacturer parameter values, DSP cost, or control parity.
+
+TabletFX adds a project-authored Modulation row at picker index 109. It processes the full waveform without note tracking: an immediate dry path is mixed with up to two short modulated-delay taps around a 5 ms base. Project defaults are two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, and 0 dB level. It is a delay-based widening effect, not static pitch shifting or a recreation of Line 6's algorithm. One ring buffer is allocated during construction; processing makes no allocations and performs no per-sample trigonometric calls.
+
+Native tests, focused browser/WASM Play using local prerecorded Guitar-TECHS DI, full browser/native comparison, and Windows MinGW core/offline build pass. See [LATENCY_AND_QUALITY.md](LATENCY_AND_QUALITY.md) for the reproducible callback benchmark, native/WASM memory, and browser capture measurements. Human listening and target-device checks remain open.
+
 ## Line 6 Helix Stadium XL 4 OSC Generator audit and implementation (2026-11-24)
 
 The current official [Helix Stadium model catalogue](https://line6.com/helix-stadium-models/) lists 4 OSC Generator as Mono/Stereo, Line 6 Original, first appearing in Stadium 1.0. Its note says the 3 Note Generator and 4 OSC Generator make sound without an instrument and their blocks are off by default. The catalogue does not provide a per-model parameter table, oscillator waveforms/count behavior, note ranges, input-note polyphony, DSP cost, or latency; no undocumented Line 6 controls are inferred here.

@@ -14,6 +14,7 @@ add_library(tabletfx_core
     src/effects/chorus.cpp
     src/effects/triple_double_chorus.cpp
     src/effects/dimension_chorus.cpp
+    src/effects/poly_detune.cpp
     src/effects/four_band_resonator.cpp
     src/effects/diatonic_harmonizer.cpp
     src/effects/pitch_arpeggiator.cpp
@@ -206,6 +207,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_note_generator_tests tests/test_note_generator.cpp)
     target_link_libraries(tabletfx_note_generator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_note_generator_tests COMMAND tabletfx_note_generator_tests)
+
+    add_executable(tabletfx_poly_detune_tests tests/test_poly_detune.cpp)
+    target_link_libraries(tabletfx_poly_detune_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_poly_detune_tests COMMAND tabletfx_poly_detune_tests)
 
     add_executable(tabletfx_fractal_three_voice_synth_tests
         tests/test_fractal_three_voice_synth.cpp)

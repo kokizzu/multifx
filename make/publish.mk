@@ -28,7 +28,7 @@ PUBLISH_CHECKPOINTS += line6-double-take
 PUBLISH_CHECKPOINTS += fender-eq5-graphic
 PUBLISH_CHECKPOINTS += fractal-optical-tremolo
 PUBLISH_CHECKPOINTS += fractal-bias-trem
-PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe line6-four-osc-generator
+PUBLISH_CHECKPOINTS += fender-vibratone fender-universe-vibe line6-four-osc-generator line6-poly-detune
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api
@@ -71,7 +71,7 @@ web-test-stereo-filter:
 
 .PHONY: test-step-tremolo web-test-step-tremolo inspect-web-build-path inspect-web-smoke-path
 .PHONY: test-optical-tremolo test-fractal-bias-trem web-test-fractal-bias-trem
-.PHONY: test-vibe test-vibratone test-note-generator web-test-fender-vibratone web-test-fender-universe-vibe web-test-line6-four-osc-generator
+.PHONY: test-vibe test-vibratone test-note-generator web-test-fender-vibratone web-test-fender-universe-vibe web-test-line6-four-osc-generator test-poly-detune web-test-line6-poly-detune
 test-vibe:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_vibe_tests
 
@@ -101,6 +101,12 @@ web-test-fender-universe-vibe: web-build
 
 web-test-line6-four-osc-generator: web-build
 	$(PYTHON) scripts/web.py test-line6-four-osc-generator
+
+test-poly-detune:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_poly_detune_tests
+
+web-test-line6-poly-detune: web-build
+	$(PYTHON) scripts/web.py test-line6-poly-detune
 
 web-test-step-tremolo:
 	$(PYTHON) scripts/web.py test-step-tremolo

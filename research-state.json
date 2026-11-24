@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "ffb6d157f95159c2edbe63053c7e842e5ae688ab",
+  "previous_checkpoint_commit": "d303355823072a5f14f672c191b20983a986418c",
   "completed_checkpoints": [
     {
       "name": "HeadRush Prime C-Verb 10-second stereo IR capacity",
@@ -241,33 +241,34 @@
         "notes": "Automated tests/builds pass. Human listening and physical target-device checks remain open; no Line 6 settings, DSP or sound parity."
       },
       "picker_rows": 109
+    },
+    {
+      "name": "Line 6 Helix Stadium XL Poly Detune-inspired Modulation implementation",
+      "status": "verified",
+      "picker_index": 109,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalogue and live Owner's Manual",
+        "revision": "Catalogue checked 2026-11-24; Poly Detune listed Mono, Line 6 Original, first appearing Stadium 1.0. Live manual carries a combined v1.4 Rev D / v1.3 Rev B / v1.2 revision label; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "dynamic_dsp_url": "https://manuals.line6.com/en/helix-stadium/live/dynamic-dsp",
+        "effects_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "qualification": "Catalogue labels Poly Detune Mono. Dynamic DSP groups it with high-DSP Poly effects, limited to two per preset and one per primary path; this does not establish input-note polyphony. The live Effects manual publishes no model-specific controls. Installed firmware is unknown."
+      },
+      "documented_controls": "The catalogue labels it Mono. The live Effects manual directs users to the device editor for model details but provides no parameter table, numeric ranges/defaults, DSP use, or latency.",
+      "project_controls": "Project-authored Modulation row at picker index 109, disabled by default. Immediate dry path plus up to two short modulated-delay taps around 5 ms. Defaults: two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, 0 dB level. No note tracking or static pitch shift; one shared ring allocated at construction and zero process-time allocations. No Line 6 DSP/settings/sound parity.",
+      "verification": {
+        "native_ctest": "make web-test passed 111/111 CTest tests and 11/11 fixture-safety tests.",
+        "focused_browser": "Local prerecorded Guitar-TECHS DI Play passed at 48 kHz stereo/48,000 frames; peak 0.1852493435, 95,999 active samples, difference RMS 0.0218924462, and 3,620 B reported effect memory.",
+        "full_browser": "110 picker entries and 78 browser/native processor stages; maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; processor state 80,346,468 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames: p50/p95/p99/p99.9/max 0.0548/0.0818/0.0862/0.3075/0.6544% of 2.667 ms callback; native state 3,656 B, WASM effect memory 3,620 B, no fixed latency or process-time allocation.",
+        "notes": "Automated checks complete. Human listening and target-device verification remain open."
+      },
+      "picker_rows": 110
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Uni-Verse Vibe project-authored Modulation implementation",
-    "status": "verified",
-    "picker_index": 107,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and Fender firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A; firmware history checked 2026-11-24 through v1.8.85 dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide documents control roles and qualitative Vintage/Modern and Chorus/Vibrato distinctions but no numeric ranges/defaults, division list, algorithmic delay, DSP cost, or block limit. v1.8.85 release notes do not mention a Uni-Verse Vibe change. Installed firmware is unknown."
-    },
-    "documented_controls": "Speed (overall speed), Intensity (effect depth), Volume (output loudness), Tap Division (subdivision of current tempo), Vintage/Modern (darker/brighter), Chorus/Vibrato (lush Chorus/pitch-modulated Vibrato). No numeric ranges/defaults or available division list are published in the checked guide.",
-    "project_controls": "Separate project-authored Modulation row at picker index 107. Defaults: 1.5 Hz, 65% intensity, unity linear Volume, Free Hz, quarter note at 120 BPM, Modern, Chorus. Project ranges: 0.1–10 Hz, intensity 0–100%, linear Volume 0–2, tempo 20–300 BPM, 12 project note divisions. Tempo is local, not device tap/MIDI clock. Two first-order all-pass stages with a 10 ms control ramp; Vintage adds a project-selected 6 kHz one-pole low-pass; Vibrato selects the wet-only phase path. No fixed algorithmic delay, process-time allocation, Fender DSP/settings/sound parity, or device-performance claim.",
-    "verification": {
-      "native_ctest": "make web-test passed: 110/110 CTest cases and 11/11 audio-fixture safety tests; make test-docs passed with 333 source requirements and 346 tracked rows.",
-      "focused_browser": "make web-test-fender-universe-vibe passed with local prerecorded Guitar-TECHS DI at 48 kHz/48,000 fixture frames; Modulation category, enabled index 107, Vintage/Vibrato self-test, captured Play output peak 0.2644857466, 96,000 active samples, difference RMS 0.065084842, and 224 B reported WASM effect memory.",
-      "full_browser": "make web-test passed: 108 picker entries, 78 optional processor stages, max absolute native/browser error 3.4009652569721993e-6, RMS error 5.880494784542642e-7; 80,342,360 B processor state plus 10,364 B tuner state in fixed 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passed, compiling the shared Vibe DSP and offline renderer with MinGW.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up and 5,000 measured blocks: p50/p95/p99/p99.9/max 0.0964/0.1032/0.1418/1.0774/2.8602% of deadline; native sizeof 240 B; no fixed delay or process allocation. Desktop processor-call measurement, not target-device performance.",
-      "notes": "Automated verification is complete. Human listening and physical target-device checks remain open."
-    },
-    "picker_rows": 108
-  },
-  "current_checkpoint": {
     "name": "Line 6 Helix Stadium XL 4 OSC Generator project-authored Synth source",
     "status": "verified",
     "picker_index": 108,
@@ -282,21 +283,46 @@
     "documented_controls": "The catalogue lists Mono/Stereo and identifies the model as a free-running source that makes sound without an instrument; its block is off by default. No oscillator parameter table or numeric controls are published.",
     "project_controls": "Project-authored Synth row at picker index 108 (display row 109), disabled by default. Four fixed-phase voices expose sine/triangle/saw/square waveform, MIDI note 0–127, octave −2…+2, and level 0–1; output level 0–1. Defaults: four sine voices at MIDI 48/55/60/64, 0.15 each, output 0.35. The source replaces input before the standard effect chain; it does not track guitar pitch or consume MIDI. These are not Line 6 settings, DSP, or sound parity.",
     "verification": {
-      "native_ctest": "make web-test passed 110/110 CTest tests and 11/11 audio fixture safety checks, including four-voice independence, bounds, stereo output, peak ceiling, and zero process-time allocation.",
+      "native_ctest": "make web-test passed 111/111 CTest tests and 11/11 audio fixture safety checks, including independent static voices, parameter bounds, mono/stereo output, peak limit, and zero process-time allocation.",
       "focused_browser": "make web-test-line6-four-osc-generator passed with the local prerecorded Guitar-TECHS DI fixture at 48 kHz/48,000 frames. The browser verified Synth category, index 108, disabled default, 17 controls and captured Play output through downstream distortion: peak 0.3548133969, 95,998 active samples, difference RMS 0.3102750372, and 168 B effect memory.",
-      "full_browser": "make web-test passed: 109 picker entries and 78 optional processor stages; maximum absolute browser/native error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,342,696 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. Full-chain parity keeps the independent generator disabled.",
+      "full_browser": "make web-test passed: 110 picker entries and 78 optional processor stages; maximum absolute browser/native error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7. Processor state 80,346,468 B plus 10,364 B tuner state in fixed 100,663,296 B WASM memory. Full-chain parity keeps the independent generator disabled.",
       "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
       "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame blocks (2.667 ms deadline), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.0709/0.1552/0.1706/0.4751/0.7286% of deadline; 176 B native owned state, no fixed algorithmic delay, no process-time allocation. Desktop processor-call measurement, not target-device performance.",
       "notes": "Automated tests/builds pass. Human listening and physical target-device checks remain open; no Line 6 settings, DSP or sound parity."
     },
     "picker_rows": 109
   },
+  "current_checkpoint": {
+    "name": "Line 6 Helix Stadium XL Poly Detune-inspired Modulation implementation",
+    "status": "verified",
+    "picker_index": 109,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Line 6 Helix Stadium model catalogue and live Owner's Manual",
+      "revision": "Catalogue checked 2026-11-24; Poly Detune listed Mono, Line 6 Original, first appearing Stadium 1.0. Live manual carries a combined v1.4 Rev D / v1.3 Rev B / v1.2 revision label; installed firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "dynamic_dsp_url": "https://manuals.line6.com/en/helix-stadium/live/dynamic-dsp",
+      "effects_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "qualification": "Catalogue labels Poly Detune Mono. The Dynamic DSP page groups it with high-DSP Poly effects, limited to two per preset and one per primary path; that resource group does not establish input-note polyphony. The live Effects manual does not publish model-specific controls, numeric ranges/defaults, DSP use, or latency. Installed firmware is unknown."
+    },
+    "documented_controls": "The catalogue lists Mono and the Dynamic DSP page classifies it among high-DSP Poly effects. The current live Effects manual directs users to view model-specific details on the device editor and provides no Poly Detune parameter table. No input-note tracking or static-shift behavior is established by these pages.",
+    "project_controls": "Project-authored Modulation row at picker index 109 (display row 110), disabled by default. It combines an immediate dry path with up to two short modulated-delay taps around a 5 ms base. Project defaults: two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, and 0 dB level. It processes the waveform without note tracking and is not a static pitch shifter. One ring buffer is allocated at construction; process() allocates nothing and uses no per-sample trigonometric functions. These controls, ranges, topology, and DSP are not Line 6 settings or parity.",
+    "verification": {
+      "native_ctest": "make web-test passed: 111/111 CTest tests and 11/11 audio-fixture safety tests; focused Poly Detune native tests cover parameter bounds, one/two taps, mono/stereo behavior, reset, irregular blocks, finite recovery, and no callback allocations.",
+      "focused_browser": "make web-test-line6-poly-detune passed with local prerecorded Guitar-TECHS DI at 48 kHz stereo/48,000 frames. The browser verified Modulation category and picker index 109, captured Play output with peak 0.1852493435, 95,999 active samples, difference RMS 0.0218924462, and 3,620 B reported effect memory.",
+      "full_browser": "make web-test passed: 110 picker entries and 78 browser/native processor stages, maximum absolute error 3.4009652569721993e-6 and RMS error 5.880494784542642e-7; 80,346,468 B processor state plus 10,364 B tuner state within fixed 100,663,296 B WASM memory.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline), 2,000 warm-up and 5,000 measured: p50/p95/p99/p99.9/max 0.0548/0.0818/0.0862/0.3075/0.6544% of deadline; 3,656 B native owned state, 3,620 B WASM effect memory, immediate dry path, no fixed algorithmic latency and no process-time allocation. Desktop processor-call timing, not device performance.",
+      "notes": "Automated native, browser, full-chain, and Windows checks pass. Human listening and target-device checks remain open; no Line 6 DSP/settings/sound parity."
+    },
+    "picker_rows": 110
+  },
   "next_research": [
     {
       "device": "Line 6 Helix Stadium XL",
-      "feature": "Poly Detune plus Stadium-specific Synth, Delay, Reverb, and Looper algorithm details",
+      "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "Poly Sustain is implemented and verified. The current Stadium live manual omits individual model parameter tables and directs users to the device edit screen; Poly Detune and other Stadium-specific controls remain unresolved, and older Helix controls are not substituted.",
+      "status": "Project-authored Poly Detune-inspired Modulation at picker index 109 is implemented and verified. The current Stadium live manual omits its individual model parameter table and directs users to the device edit screen; exact controls and behavior remain unresolved. Poly Sustain has a separate project-authored partial implementation. Older Helix controls are not substituted.",
       "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0.",
       "qualification": "These controls are from older Helix firmware notes, not a Stadium parameter table. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },

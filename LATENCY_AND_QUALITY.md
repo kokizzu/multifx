@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Project-authored Line 6 Helix Stadium Poly Detune-inspired Modulation (2026-11-24)
+
+The project effect is a short modulated-delay widener, not a note tracker or static pitch shifter. Its direct path is immediate; the wet path uses up to two modulated taps around a 5 ms base delay. Defaults are two taps, 0.25 Hz, 0.75 ms depth, 0.75 width, 25% mix, and 0 dB level. Project bounds and smoothing are not Line 6 controls. The effect uses one preallocated shared ring, does not evaluate trigonometric functions per sample, and allocates nothing in `process()`. At 48 kHz stereo it owns 3,656 B natively; the browser reports 3,620 B of effect memory. This is a project-authored approximation, not Line 6 DSP or sound parity.
+
+An isolated AMD Ryzen 9 5950X Release benchmark at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks) recorded p50/p95/p99/p99.9/max at 0.0548/0.0818/0.0862/0.3075/0.6544% of the callback deadline. This is processor-call timing on that desktop, not whole-chain, WebAssembly-device, or hardware performance. The modulated wet taps are delayed; there is no added fixed delay on the dry path.
+
+Native tests, focused browser/WASM Play with local prerecorded Guitar-TECHS DI, full browser/native comparison, and Windows MinGW core/offline build pass. The focused browser capture used 48,000 stereo frames, with peak 0.1852493, 95,999 active samples, difference RMS 0.0218924, and 3,620 B reported effect memory. Full `make web-test` passes 111/111 CTest cases and 11/11 fixture-safety checks; its 110-entry/78-stage comparison reports maximum absolute error 3.400965e−6 and RMS error 5.880495e−7. Human listening and target-device checks remain open.
+
 ## Project-authored Line 6 4 OSC Generator-inspired Synth source (2026-11-24)
 
 The source uses four fixed-phase oscillators with per-voice waveform, static MIDI note and octave controls; the sum replaces input before the downstream chain. Defaults are sine C3/G3/C4/E4 (MIDI 48/55/60/64), 0.15 voice levels, and 0.35 output. At 48 kHz stereo its native owned state is 176 B (the browser reports 168 B); it adds zero fixed algorithmic delay and `process()` allocates no memory. This is project-authored DSP and not Line 6's implementation.

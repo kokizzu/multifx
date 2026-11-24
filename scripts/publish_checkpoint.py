@@ -2118,6 +2118,28 @@ LINE6_FOUR_OSC_GENERATOR_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+LINE6_POLY_DETUNE_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/poly_detune.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/poly_detune.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_poly_detune.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS = (
     "AUDIO_COMPATIBILITY.md",
     "EFFECTS_MATRIX.md",
@@ -2483,6 +2505,10 @@ CHECKPOINTS = {
     "line6-four-osc-generator": (
         LINE6_FOUR_OSC_GENERATOR_CHECKPOINT_PATHS,
         "feat: add categorized 4 OSC Generator source",
+    ),
+    "line6-poly-detune": (
+        LINE6_POLY_DETUNE_CHECKPOINT_PATHS,
+        "feat: add categorized Poly Detune-inspired modulation",
     ),
 }
 

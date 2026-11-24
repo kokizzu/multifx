@@ -199,6 +199,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="106"><span class="effect-number">107</span><span class="effect-name">Vibratone · project-authored rotating-baffle effect</span><span class="effect-default">Fast/Slow speed · ramp · input dynamics</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="107"><span class="effect-number">108</span><span class="effect-name">Uni-Verse Vibe · project-authored</span><span class="effect-default">Speed · Intensity · Vintage/Modern · Chorus/Vibrato</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="108"><span class="effect-number">109</span><span class="effect-name">4 OSC Generator · project-authored controls</span><span class="effect-default">Four free-running voices · disabled by default</span><span class="effect-category-tag">Synth</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="109"><span class="effect-number">110</span><span class="effect-name">Poly Detune · project-authored micro-delay</span><span class="effect-default">Modulated short delay · no pitch tracking</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1391,6 +1392,18 @@
         <h3>Helix Stadium 4 OSC Generator · project-authored controls</h3>
         <p class="hint">Line 6 documents this mono/stereo source as free-running and off by default, but does not publish its parameter table. These four sine/triangle/saw/square oscillators, static MIDI note and octave controls, levels, and safe output level are TabletFX choices; oscillator count is not guitar-input polyphony. When enabled, this source replaces the incoming audio before the effect chain.</p>
         <div class="gain-controls" id="four-osc-generator-control-list"></div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Poly Detune controls">
+        <h3>Helix Stadium Poly Detune · project-authored modulation</h3>
+        <p class="hint">The Stadium catalogue lists Poly Detune as a mono effect first appearing in Stadium 1.0, but its current manual does not provide a parameter table or numeric defaults. This project implementation is a short modulated-delay widener: it processes the whole waveform without note tracking, and is not a static pitch shifter or Line 6 DSP/sound match. All settings below are project choices.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="poly-detune-voices"><span>Delay taps</span><output id="poly-detune-voices-value" for="poly-detune-voices">2</output><select id="poly-detune-voices"><option value="1">1</option><option value="2" selected>2</option></select></label>
+          <label class="mix-control" for="poly-detune-rate"><span>Modulation rate</span><output id="poly-detune-rate-value" for="poly-detune-rate">0.25 Hz</output><input id="poly-detune-rate" type="range" min="0.05" max="2" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="poly-detune-depth"><span>Delay depth</span><output id="poly-detune-depth-value" for="poly-detune-depth">0.75 ms</output><input id="poly-detune-depth" type="range" min="0" max="2" step="0.01" value="0.75"></label>
+          <label class="mix-control" for="poly-detune-width"><span>Stereo width</span><output id="poly-detune-width-value" for="poly-detune-width">75%</output><input id="poly-detune-width" type="range" min="0" max="1" step="0.01" value="0.75"></label>
+          <label class="mix-control" for="poly-detune-mix"><span>Mix</span><output id="poly-detune-mix-value" for="poly-detune-mix">25%</output><input id="poly-detune-mix" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="poly-detune-level-db"><span>Level</span><output id="poly-detune-level-db-value" for="poly-detune-level-db">0.0 dB</output><input id="poly-detune-level-db" type="range" min="-24" max="12" step="0.1" value="0"></label>
+        </div>
       </div>
       <div class="effect-parameter-group" aria-label="Three-Voice Tracked Synth controls">
         <h3>Three-Voice Tracked Synth · project-authored Fractal-inspired controls</h3>

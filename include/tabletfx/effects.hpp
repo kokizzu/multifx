@@ -53,6 +53,7 @@
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
+#include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/triple_double_chorus.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/five_band_eq.hpp"

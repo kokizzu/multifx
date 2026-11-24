@@ -110,6 +110,7 @@ const EFFECT_NAMES = [
   "Vibratone · project-authored rotating-baffle effect",
   "Uni-Verse Vibe · project-authored",
   "4 OSC Generator · project-authored free-running source",
+  "Poly Detune · project-authored modulated micro-delay",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -165,6 +166,7 @@ const DEFAULT_PARAMETERS = {
   noteGenerator: [3, 0, 40, 0, 0.45, 1, 47, 1, 0.3, 2, 52, 0, 0.25, 0.6],
   fourOscGenerator: [0, 48, 0, 0.15, 0, 55, 0, 0.15,
     0, 60, 0, 0.15, 0, 64, 0, 0.15, 0.35],
+  polyDetune: [2, 0.25, 0.75, 0.75, 0.25, 0],
   fractalThreeVoiceSynth: [
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -416,6 +418,14 @@ const noteGeneratorControls = [
   document.querySelector("#note-generator-output-level"),
 ];
 const fourOscGeneratorControls = [];
+const polyDetuneControls = [
+  document.querySelector("#poly-detune-voices"),
+  document.querySelector("#poly-detune-rate"),
+  document.querySelector("#poly-detune-depth"),
+  document.querySelector("#poly-detune-width"),
+  document.querySelector("#poly-detune-mix"),
+  document.querySelector("#poly-detune-level-db"),
+];
 const fractalThreeVoiceSynthControls = [];
 const enhancerControls = [
   document.querySelector("#enhancer-mode"),
@@ -5211,6 +5221,32 @@ for (const control of fourOscGeneratorControls) {
 }
 updateFourOscGenerator();
 
+function updatePolyDetune() {
+  const values = polyDetuneControls.map((control) => Number(control.value));
+  values[0] = values[0] >= 1.5 ? 2 : 1;
+  DEFAULT_PARAMETERS.polyDetune = values;
+  const formatters = [
+    (value) => `${value} tap${value === 1 ? "" : "s"}`,
+    (value) => `${value.toFixed(2)} Hz`,
+    (value) => `${value.toFixed(2)} ms`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} dB`,
+  ];
+  polyDetuneControls.forEach((control, index) => {
+    control.parentElement.querySelector("output").value = formatters[index](values[index]);
+  });
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "poly-detune", value: values });
+  }
+}
+
+for (const control of polyDetuneControls) {
+  control.addEventListener("input", updatePolyDetune);
+  control.addEventListener("change", updatePolyDetune);
+}
+updatePolyDetune();
+
 function updateFractalThreeVoiceSynth() {
   const values = fractalThreeVoiceSynthControls.map((control) => Number(control.value));
   DEFAULT_PARAMETERS.fractalThreeVoiceSynth = values;
@@ -9920,7 +9956,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 109 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -10022,7 +10058,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 109 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -10129,7 +10165,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 109 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -10242,7 +10278,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 109 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -10354,7 +10390,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 109 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -10462,7 +10498,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-        effectMemory.length !== 109 || !(effectMemory[107] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -10561,7 +10597,7 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
         !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
-        effectMemory.length !== 109 || !(effectMemory[108] > 0) ||
+        effectMemory.length !== 110 || !(effectMemory[108] > 0) ||
         DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
           "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
       throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
@@ -10624,6 +10660,111 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         control.value = previousControls[index];
       });
       updateFourOscGenerator();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = polyDetuneControls.map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Poly Detune browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    updatePolyDetune();
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="109"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Poly Detune") ||
+        !checkbox || checkbox.checked || polyDetuneControls.length !== 6 ||
+        effectMemory.length !== 110 || !(effectMemory[109] > 0) ||
+        DEFAULT_PARAMETERS.polyDetune.join(",") !== "2,0.25,0.75,0.75,0.25,0") {
+      throw new Error("Poly Detune is missing its categorized row, safe defaults, or controls.");
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const capturePlay = async (label) => {
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting Poly Detune ${label} playback.`)), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const dry = await capturePlay("dry");
+    checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Poly Detune picker row did not enable from its click handler.");
+    }
+    const wet = await capturePlay("effect");
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    for (let index = 0; index < wet.length; index += 1) {
+      const sample = wet[index];
+      if (!Number.isFinite(sample)) {
+        throw new Error(`Poly Detune output contains a non-finite sample at ${index}.`);
+      }
+      peak = Math.max(peak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+      const difference = sample - dry[index];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = wet.length > 0
+      ? Math.sqrt(differenceSquares / wet.length) : 0;
+    if (peak < 1e-5 || peak > 2 || activeSamples < 32 || differenceRms < 1e-5) {
+      throw new Error(`Poly Detune produced unexpected output (peak ${peak}, difference RMS ${differenceRms}).`);
+    }
+    return {
+      category: "Modulation", enabledEffectIndex: 109,
+      projectAuthoredModulatedDelay: true, pitchTracking: false,
+      parameters: DEFAULT_PARAMETERS.polyDetune,
+      playOutputCaptured: true, peak, activeSamples, differenceRms,
+      effectMemoryBytes: effectMemory[109],
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      polyDetuneControls.forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updatePolyDetune();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -11490,8 +11631,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 109 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 109 || effectRows.length !== 109 ||
+    const expectedEffectIds = Array.from({ length: 110 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 110 || effectRows.length !== 110 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -11568,6 +11709,12 @@ async function runBrowserSelfTest() {
               !EFFECT_NAMES[107]?.startsWith("Uni-Verse Vibe") ||
               effectRows[107]?.dataset.category !== "modulation" ||
               effectRows[107]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+               !EFFECT_NAMES[108]?.startsWith("4 OSC Generator") ||
+               effectRows[108]?.dataset.category !== "synth" ||
+               effectRows[108]?.querySelector(".effect-category-tag")?.textContent !== "Synth" ||
+               !EFFECT_NAMES[109]?.startsWith("Poly Detune") ||
+               effectRows[109]?.dataset.category !== "modulation" ||
+               effectRows[109]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -11587,7 +11734,7 @@ async function runBrowserSelfTest() {
         initialEffectState[100] || initialEffectState[101] || initialEffectState[102] ||
         initialEffectState[103] || initialEffectState[104] ||
         initialEffectState[105] || initialEffectState[106] || initialEffectState[107] ||
-        initialEffectState[108] ||
+         initialEffectState[108] || initialEffectState[109] ||
         initialEffectState[29] || initialEffectState[30] || initialEffectState[31] ||
         initialEffectState[32] || initialEffectState[33] || initialEffectState[34] ||
         initialEffectState[35] || initialEffectState[36] || initialEffectState[37] ||
@@ -13214,6 +13361,8 @@ async function runBrowserSelfTest() {
     const captureView = new Int32Array(captureControl);
     const parityEnabled = Array.from({ length: EFFECT_NAMES.length }, () => true);
     parityEnabled[108] = false;
+    // Poly Detune is covered by a separate focused browser smoke.
+    parityEnabled[109] = false;
        // Project-authored Vibe, Multi-Delay, Porta Preamp, Pitch Sequence, Rhythm Tap, Plex Delay, Celestial/Cloud Reverb, and Fractal synth have separate browser playback smokes.
     parityEnabled[71] = false;
     parityEnabled[72] = false;
@@ -13269,7 +13418,7 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-    if (parityEnabled.length !== 109 || activeProcessorIndices.length !== 78 ||
+    if (parityEnabled.length !== 110 || activeProcessorIndices.length !== 78 ||
             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
              throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
     }
@@ -13747,6 +13896,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX 4 OSC Generator browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "poly-detune") {
+          testResult.textContent = "Checking Poly Detune browser Play with the local guitar fixture…";
+          const polyDetuneSmoke = await runPolyDetuneBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            polyDetune: polyDetuneSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Poly Detune browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-bias-trem") {
