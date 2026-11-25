@@ -307,10 +307,10 @@ const DEFAULT_PARAMETERS = {
   guitarGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
   bassGraphicEQ: [1, 0, 0, 0, 0, 0, 0, 0],
   shelfTiltEQ: [0, 1000, 0],
-  roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
-  hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
-  plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
-  springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
+  roomReverb: [0, 0.8, 10, 6000, 0.2, 0, 0],
+  hallReverb: [3.2, 32, 9000, 100, 0.25, 0, 0],
+  plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0, 0],
+  springReverb: [2.4, 0, 8000, 0.35, 0.2, 0, 0],
   autoSwell: [-36, 250, 250, 6, 6, 1],
   rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0, 0.75, 1, 0.55, 0.5, 0.72,
     800, 450, 0, 0, 0.25, 1, 1, 1, 0, 0],
@@ -1769,6 +1769,8 @@ const roomReverbMix = document.querySelector("#room-reverb-mix");
 const roomReverbMixValue = document.querySelector("#room-reverb-mix-value");
 const roomReverbLevel = document.querySelector("#room-reverb-level-db");
 const roomReverbLevelValue = document.querySelector("#room-reverb-level-value");
+const roomReverbSpillover = document.querySelector("#room-reverb-spillover");
+const roomReverbSpilloverValue = document.querySelector("#room-reverb-spillover-value");
 const hallReverbDecay = document.querySelector("#hall-reverb-decay-seconds");
 const hallReverbDecayValue = document.querySelector("#hall-reverb-decay-value");
 const hallReverbPreDelay = document.querySelector("#hall-reverb-pre-delay-ms");
@@ -1781,6 +1783,8 @@ const hallReverbMix = document.querySelector("#hall-reverb-mix");
 const hallReverbMixValue = document.querySelector("#hall-reverb-mix-value");
 const hallReverbLevel = document.querySelector("#hall-reverb-level-db");
 const hallReverbLevelValue = document.querySelector("#hall-reverb-level-value");
+const hallReverbSpillover = document.querySelector("#hall-reverb-spillover");
+const hallReverbSpilloverValue = document.querySelector("#hall-reverb-spillover-value");
 const plateReverbDecay = document.querySelector("#plate-reverb-decay-seconds");
 const plateReverbDecayValue = document.querySelector("#plate-reverb-decay-value");
 const plateReverbPreDelay = document.querySelector("#plate-reverb-pre-delay-ms");
@@ -1795,6 +1799,8 @@ const plateReverbMix = document.querySelector("#plate-reverb-mix");
 const plateReverbMixValue = document.querySelector("#plate-reverb-mix-value");
 const plateReverbLevel = document.querySelector("#plate-reverb-level-db");
 const plateReverbLevelValue = document.querySelector("#plate-reverb-level-value");
+const plateReverbSpillover = document.querySelector("#plate-reverb-spillover");
+const plateReverbSpilloverValue = document.querySelector("#plate-reverb-spillover-value");
 const springReverbDecay = document.querySelector("#spring-reverb-decay-seconds");
 const springReverbDecayValue = document.querySelector("#spring-reverb-decay-value");
 const springReverbPreDelay = document.querySelector("#spring-reverb-pre-delay-ms");
@@ -1807,6 +1813,8 @@ const springReverbMix = document.querySelector("#spring-reverb-mix");
 const springReverbMixValue = document.querySelector("#spring-reverb-mix-value");
 const springReverbLevel = document.querySelector("#spring-reverb-level-db");
 const springReverbLevelValue = document.querySelector("#spring-reverb-level-value");
+const springReverbSpillover = document.querySelector("#spring-reverb-spillover");
+const springReverbSpilloverValue = document.querySelector("#spring-reverb-spillover-value");
 const autoSwellThreshold = document.querySelector("#auto-swell-threshold-db");
 const autoSwellThresholdValue = document.querySelector("#auto-swell-threshold-db-value");
 const autoSwellAttack = document.querySelector("#auto-swell-attack-ms");
@@ -7041,12 +7049,14 @@ function updateRoomReverb() {
     Number(roomReverbDamping.value),
     Number(roomReverbMix.value) / 100,
     Number(roomReverbLevel.value),
+    Number(roomReverbSpillover.checked),
   ];
   roomReverbDecayValue.value = `${values[1].toFixed(2)} s`;
   roomReverbPreDelayValue.value = `${values[2].toFixed(1)} ms`;
   roomReverbDampingValue.value = `${values[3].toFixed(0)} Hz`;
   roomReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
   roomReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  roomReverbSpilloverValue.value = values[6] ? "On" : "Off";
   DEFAULT_PARAMETERS.roomReverb = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "room-reverb", value: values });
@@ -7061,6 +7071,7 @@ function updateHallReverb() {
     Number(hallReverbLowCut.value),
     Number(hallReverbMix.value) / 100,
     Number(hallReverbLevel.value),
+    Number(hallReverbSpillover.checked),
   ];
   hallReverbDecayValue.value = `${values[0].toFixed(2)} s`;
   hallReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
@@ -7068,6 +7079,7 @@ function updateHallReverb() {
   hallReverbLowCutValue.value = `${values[3].toFixed(0)} Hz`;
   hallReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
   hallReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  hallReverbSpilloverValue.value = values[6] ? "On" : "Off";
   DEFAULT_PARAMETERS.hallReverb = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "hall-reverb", value: values });
@@ -7083,6 +7095,7 @@ function updatePlateReverb() {
     Number(plateReverbBalance.value) / 100,
     Number(plateReverbMix.value) / 100,
     Number(plateReverbLevel.value),
+    Number(plateReverbSpillover.checked),
   ];
   plateReverbDecayValue.value = `${values[0].toFixed(2)} s`;
   plateReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
@@ -7091,6 +7104,7 @@ function updatePlateReverb() {
   plateReverbBalanceValue.value = `${Math.round(values[4] * 100)}% late`;
   plateReverbMixValue.value = `${Math.round(values[5] * 100)}%`;
   plateReverbLevelValue.value = `${values[6].toFixed(1)} dB`;
+  plateReverbSpilloverValue.value = values[7] ? "On" : "Off";
   DEFAULT_PARAMETERS.plateReverb = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "plate-reverb", value: values });
@@ -7105,6 +7119,7 @@ function updateSpringReverb() {
     Number(springReverbDwell.value) / 100,
     Number(springReverbMix.value) / 100,
     Number(springReverbLevel.value),
+    Number(springReverbSpillover.checked),
   ];
   springReverbDecayValue.value = `${values[0].toFixed(2)} s`;
   springReverbPreDelayValue.value = `${values[1].toFixed(1)} ms`;
@@ -7112,6 +7127,7 @@ function updateSpringReverb() {
   springReverbDwellValue.value = `${Math.round(values[3] * 100)}%`;
   springReverbMixValue.value = `${Math.round(values[4] * 100)}%`;
   springReverbLevelValue.value = `${values[5].toFixed(1)} dB`;
+  springReverbSpilloverValue.value = values[6] ? "On" : "Off";
   DEFAULT_PARAMETERS.springReverb = values;
   if (workletNode) {
     workletNode.port.postMessage({ type: "spring-reverb", value: values });
@@ -7641,22 +7657,23 @@ for (const input of [shelfTiltMode, shelfTiltFrequency, shelfTiltGain]) {
   input.addEventListener("change", updateShelfTiltEQ);
 }
 for (const input of [roomReverbSize, roomReverbDecay, roomReverbPreDelay,
-  roomReverbDamping, roomReverbMix, roomReverbLevel]) {
+  roomReverbDamping, roomReverbMix, roomReverbLevel, roomReverbSpillover]) {
   input.addEventListener("input", updateRoomReverb);
   input.addEventListener("change", updateRoomReverb);
 }
 for (const input of [hallReverbDecay, hallReverbPreDelay, hallReverbDamping,
-  hallReverbLowCut, hallReverbMix, hallReverbLevel]) {
+  hallReverbLowCut, hallReverbMix, hallReverbLevel, hallReverbSpillover]) {
   input.addEventListener("input", updateHallReverb);
   input.addEventListener("change", updateHallReverb);
 }
 for (const input of [plateReverbDecay, plateReverbPreDelay, plateReverbDamping,
-  plateReverbDiffusion, plateReverbBalance, plateReverbMix, plateReverbLevel]) {
+  plateReverbDiffusion, plateReverbBalance, plateReverbMix, plateReverbLevel,
+  plateReverbSpillover]) {
   input.addEventListener("input", updatePlateReverb);
   input.addEventListener("change", updatePlateReverb);
 }
 for (const input of [springReverbDecay, springReverbPreDelay, springReverbDamping,
-  springReverbDwell, springReverbMix, springReverbLevel]) {
+  springReverbDwell, springReverbMix, springReverbLevel, springReverbSpillover]) {
   input.addEventListener("input", updateSpringReverb);
   input.addEventListener("change", updateSpringReverb);
 }
@@ -9389,6 +9406,157 @@ async function runCelestialReverbBrowserSmokeTest(reference, captureView, captur
       updateCelestialReverb();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runReverbBypassTailsBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const reverbRows = [...document.querySelectorAll("[data-effect]")];
+  const tailCases = [
+    { group: "Room reverb controls", update: updateRoomReverb, message: "room-reverb" },
+    { group: "Hall reverb controls", update: updateHallReverb, message: "hall-reverb" },
+    { group: "Plate reverb controls", update: updatePlateReverb, message: "plate-reverb" },
+    { group: "Spring reverb controls", update: updateSpringReverb, message: "spring-reverb" },
+  ].map((item) => ({
+    ...item,
+    control: document.querySelector(
+      `.effect-parameter-group[aria-label="${item.group}"] input[type="checkbox"]`,
+    ),
+  }));
+  const roomControlIds = [
+    "room-reverb-size", "room-reverb-decay-seconds", "room-reverb-pre-delay-ms",
+    "room-reverb-damping-hz", "room-reverb-mix", "room-reverb-level-db",
+  ];
+  const roomControls = [
+    ...roomControlIds.map((id) => document.getElementById(id)),
+    tailCases[0].control,
+  ];
+  if (tailCases.some(({ control }) => !control) || roomControls.some((control) => !control)) {
+    throw new Error("All four reverb Tails on bypass controls must be present in the effect picker.");
+  }
+  const previousTailValues = tailCases.map(({ control }) => control.checked);
+  const previousRoomValues = roomControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousWorklet = workletNode;
+  const testEnabled = previousEffectState.map((_, index) => index === 0 || index === 28);
+  let source = null;
+  try {
+    const messages = [];
+    workletNode = { port: { postMessage: (message) => messages.push(message) } };
+    for (const { control, update, message } of tailCases) {
+      control.checked = true;
+      update();
+      const latest = messages.at(-1);
+      if (latest?.type !== message || latest.value.at(-1) !== 1) {
+        throw new Error(`${message} must serialize its Tails on bypass checkbox to the WASM worklet.`);
+      }
+    }
+    workletNode = previousWorklet;
+    roomControls[0].value = "0";
+    roomControls[1].value = "8";
+    roomControls[2].value = "0";
+    roomControls[3].value = "18000";
+    roomControls[4].value = "100";
+    roomControls[5].value = "0";
+    roomControls[6].checked = true;
+    updateRoomReverb();
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Reverb Tails smoke test requires the ready WASM chain and local guitar DI audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    reverbRows.forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    const input = decodedAudio.getChannelData(0);
+    const firstActiveFrame = input.findIndex((sample) => Math.abs(sample) > 1e-4);
+    if (firstActiveFrame < 0) {
+      throw new Error("The local guitar DI fixture contains no active sample for the Reverb Tails Play smoke test.");
+    }
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = firstActiveFrame / decodedAudio.sampleRate;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting the local guitar DI Reverb Tails Play smoke test.")), 5000,
+      )),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    source = activeSource;
+    if (!source) throw new Error("Play did not create a source for the local guitar DI fixture.");
+    source.onended = null;
+    try { source.stop(); } catch { /* The bounded DI segment already ended. */ }
+    try { source.disconnect(); } catch { /* Already disconnected. */ }
+    activeSource = null;
+
+    reverbRows[28].checked = false;
+    workletNode.port.postMessage({ type: "enable", index: 28, value: false });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    const captureStartedAt = performance.now();
+    const captureCapacitySamples = captureBuffer.byteLength / Float32Array.BYTES_PER_ELEMENT;
+    const minimumTailSamples = Math.min(captureCapacitySamples, 2048 * reference.channels);
+    while (Atomics.load(captureView, 0) < minimumTailSamples) {
+      if (performance.now() - captureStartedAt > 2000) {
+        throw new Error("Timed out capturing Room Reverb output after bypass with zero new guitar input.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const capturedSamples = Math.min(Atomics.load(captureView, 0), captureCapacitySamples);
+    const tail = new Float32Array(captureBuffer, 0, capturedSamples);
+    let tailPeak = 0;
+    let tailSquares = 0;
+    for (const sample of tail) {
+      tailPeak = Math.max(tailPeak, Math.abs(sample));
+      tailSquares += sample * sample;
+    }
+    const tailRms = Math.sqrt(tailSquares / Math.max(1, capturedSamples));
+    if (tailPeak < 1e-6 || tailRms < 1e-8) {
+      throw new Error(`Room Reverb Tails on bypass produced no captured wet drain from local guitar DI (peak ${tailPeak}, rms ${tailRms}).`);
+    }
+    return {
+      result: "passed",
+      localGuitarDi: true,
+      playButton: true,
+      uiWasmSerialization: tailCases.map(({ message }) => message),
+      enabledEffectIndex: 28,
+      tailsOnBypass: true,
+      zeroNewInputDuringCapture: activeSource === null,
+      capturedSamples,
+      tailPeak,
+      tailRms,
+    };
+  } finally {
+    if (source) {
+      try { source.stop(); } catch { /* Already stopped. */ }
+      try { source.disconnect(); } catch { /* Already disconnected. */ }
+    }
+    stopSource(false);
+    workletNode = previousWorklet;
+    tailCases.forEach(({ control }, index) => { control.checked = previousTailValues[index]; });
+    roomControls.forEach((control, index) => {
+      if (control.type === "checkbox") control.checked = previousRoomValues[index];
+      else control.value = previousRoomValues[index];
+    });
+    updateRoomReverb();
+    updateHallReverb();
+    updatePlateReverb();
+    updateSpringReverb();
+    if (workletNode) {
+      reverbRows.forEach((checkbox, index) => {
         checkbox.checked = previousEffectState[index];
         workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
       });
@@ -17421,10 +17589,10 @@ async function runBrowserSelfTest() {
         guitarGraphicEQ: [1, 1.5, -1, 0, 1, 0.5, -0.5, 1],
         bassGraphicEQ: [1, -1, 0.5, 2, -2, 0.5, 1, -0.5],
         shelfTiltEQ: [2, 1200, 2],
-        roomReverb: [0, 0.8, 10, 6000, 0.2, 0],
-        hallReverb: [3.2, 32, 9000, 100, 0.25, 0],
-        plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0],
-        springReverb: [2.4, 0, 8000, 0.35, 0.2, 0],
+        roomReverb: [0, 0.8, 10, 6000, 0.2, 0, 0],
+        hallReverb: [3.2, 32, 9000, 100, 0.25, 0, 0],
+        plateReverb: [1.8, 0, 7500, 0.82, 0.5, 0.2, 0, 0],
+        springReverb: [2.4, 0, 8000, 0.35, 0.2, 0, 0],
         autoSwell: [-90, 100, 150, 6, 0, 0.9],
          rotarySpeaker: [6, 0, 120, 1, 0, 0.12, 0.15, 0.75, 1, 0.55, 0.5,
            0.72, 800, 450, 0.4, 0.75, 0.25, 1, 1, 1, 0, 0],
@@ -17711,10 +17879,12 @@ async function runBrowserSelfTest() {
     [roomReverbSize.value, roomReverbDecay.value, roomReverbPreDelay.value,
       roomReverbDamping.value, roomReverbMix.value, roomReverbLevel.value] =
       ["0", "0.8", "10", "6000", "20", "0"];
+    roomReverbSpillover.checked = false;
     updateRoomReverb();
     [springReverbDecay.value, springReverbPreDelay.value, springReverbDamping.value,
       springReverbDwell.value, springReverbMix.value, springReverbLevel.value] =
       ["2.4", "0", "8000", "35", "20", "0"];
+    springReverbSpillover.checked = false;
     updateSpringReverb();
     [shimmerReverbControls[0].value, shimmerReverbControls[1].value,
       shimmerReverbControls[2].value, shimmerReverbControls[3].value,
@@ -18509,6 +18679,10 @@ async function runBrowserSelfTest() {
     const cloudReverbSmoke = await runCloudReverbBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking reverb Tails on bypass controls and Room tail drain on local guitar DI…";
+    const reverbBypassTailsSmoke = await runReverbBypassTailsBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     testResult.textContent = "Checking Three-Stage Distortion playback on local guitar audio…";
     const mercatorDistortionSmoke = await runMercatorDistortionBrowserSmokeTest(
       reference, captureView, captureBuffer,
@@ -18732,6 +18906,7 @@ async function runBrowserSelfTest() {
       plexDelay: plexDelaySmoke,
       celestialReverb: celestialReverbSmoke,
       cloudReverb: cloudReverbSmoke,
+      reverbBypassTails: reverbBypassTailsSmoke,
       threeStageDistortion: mercatorDistortionSmoke,
       manualThruZeroFlanger: manualThruZeroFlangerSmoke,
        octobot: octobotSmoke,

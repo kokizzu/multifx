@@ -221,6 +221,7 @@ inspect-web-build-path:
 
 inspect-web-smoke-path:
 	$(PYTHON) scripts/web.py inspect-smoke-path
+PUBLISH_CHECKPOINTS += prime-reverb-tails
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
 
 publish-plan:

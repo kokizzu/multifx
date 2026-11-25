@@ -253,13 +253,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_bass_graphic_eq(this.chain, ...bassGraphicEQ);
       const shelfTiltEQ = parameters.shelfTiltEQ || [0, 1000, 0];
       module._tf_chain_set_shelf_tilt_eq(this.chain, ...shelfTiltEQ);
-       const roomReverb = parameters.roomReverb || [0, 0.8, 10, 6000, 0.2, 0];
+       const roomReverb = parameters.roomReverb || [0, 0.8, 10, 6000, 0.2, 0, 0];
        module._tf_chain_set_room_reverb(this.chain, ...roomReverb);
-        const hallReverb = parameters.hallReverb || [3.2, 32, 9000, 100, 0.25, 0];
+        const hallReverb = parameters.hallReverb || [3.2, 32, 9000, 100, 0.25, 0, 0];
         module._tf_chain_set_hall_reverb(this.chain, ...hallReverb);
-        const plateReverb = parameters.plateReverb || [1.8, 0, 7500, 0.82, 0.5, 0.2, 0];
+        const plateReverb = parameters.plateReverb || [1.8, 0, 7500, 0.82, 0.5, 0.2, 0, 0];
         module._tf_chain_set_plate_reverb(this.chain, ...plateReverb);
-       const springReverb = parameters.springReverb || [2.4, 0, 8000, 0.35, 0.2, 0];
+       const springReverb = parameters.springReverb || [2.4, 0, 8000, 0.35, 0.2, 0, 0];
        module._tf_chain_set_spring_reverb(this.chain, ...springReverb);
        const autoSwell = parameters.autoSwell || [-36, 250, 250, 6, 6, 1];
        module._tf_chain_set_auto_swell(this.chain, ...autoSwell);

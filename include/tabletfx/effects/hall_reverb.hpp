@@ -14,6 +14,7 @@ struct HallReverbParameters {
     float low_cut_hz = 100.0F;
     float mix = 0.25F;
     float level_db = 0.0F;
+    bool spillover = false;
 };
 
 // Project-authored, algorithmic Hall reverb. The dry path has no added
@@ -30,6 +31,8 @@ public:
     [[nodiscard]] HallReverbParameters parameters() const noexcept { return parameters_; }
     void configure(HallReverbParameters parameters) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -45,6 +48,7 @@ private:
 
     void update_targets() noexcept;
     void advance_parameters() noexcept;
+    void process_internal(std::span<float> interleaved, bool bypassed) noexcept;
     [[nodiscard]] float read_predelay(std::uint16_t channel, float input) noexcept;
     [[nodiscard]] float process_comb(DelayLine& line, float input) noexcept;
     [[nodiscard]] float process_diffuser(DelayLine& line, float input) noexcept;
@@ -78,6 +82,7 @@ private:
     std::array<float, 2> highpass_previous_{};
     std::array<DelayLine, 12> combs_{};
     std::array<DelayLine, 4> diffusers_{};
+    bool bypass_cleared_ = true;
 };
 
 } // namespace tabletfx

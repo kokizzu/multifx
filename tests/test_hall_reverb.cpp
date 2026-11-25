@@ -1,4 +1,5 @@
 #include "tabletfx/effects/hall_reverb.hpp"
+#include "reverb_bypass_test_helpers.hpp"
 
 #include <algorithm>
 #include <array>
@@ -240,6 +241,7 @@ void test_block_partition_parameter_smoothing_and_invalid_audio() {
 
 void test_process_does_not_allocate() {
     tabletfx::HallReverbParameters parameters;
+    parameters.spillover = true;
     tabletfx::HallReverb reverb(48000.0F, 2, parameters);
     std::array<float, 1024> audio{};
     for (std::size_t frame = 0; frame < audio.size() / 2; ++frame) {
@@ -248,8 +250,25 @@ void test_process_does_not_allocate() {
     }
     const auto before = allocation_count.load(std::memory_order_relaxed);
     reverb.process(audio, 2);
+    reverb.process_bypassed(audio, 2);
     const auto after = allocation_count.load(std::memory_order_relaxed);
-    require(after == before, "Hall reverb process() allocated memory");
+    require(after == before, "Hall reverb processing allocated memory");
+}
+
+void test_bypass_spillover() {
+    tabletfx::HallReverbParameters parameters;
+    parameters.decay_seconds = 1.8F;
+    parameters.pre_delay_ms = 0.0F;
+    parameters.mix = 0.55F;
+    auto tails_parameters = parameters;
+    tails_parameters.spillover = true;
+    tabletfx::HallReverb no_tails(48000.0F, 1, parameters);
+    tabletfx::HallReverb tails(48000.0F, 1, tails_parameters);
+    tabletfx::HallReverb partitioned(48000.0F, 1, tails_parameters);
+    tabletfx::HallReverb dry_input(48000.0F, 1, tails_parameters);
+    tabletfx::HallReverb reenabled(48000.0F, 1, tails_parameters);
+    reverb_test_support::verify_bypass_spillover(
+        no_tails, tails, partitioned, dry_input, reenabled, "Hall reverb");
 }
 
 void test_invalid_constructor_inputs_are_rejected() {
@@ -294,6 +313,7 @@ int main() {
         test_decay_and_damping_change_the_tail();
         test_stereo_isolation_reset_and_channel_guard();
         test_block_partition_parameter_smoothing_and_invalid_audio();
+        test_bypass_spillover();
         test_process_does_not_allocate();
         test_invalid_constructor_inputs_are_rejected();
         std::cout << "All Hall reverb tests passed.\n";

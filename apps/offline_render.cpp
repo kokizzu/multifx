@@ -4502,6 +4502,50 @@ void benchmark_one(std::string_view name, Factory make_effect, std::uint32_t sam
               << signal.rms << '\n';
 }
 
+template <typename Factory>
+void benchmark_reverb_tail_drain(std::string_view name, Factory make_effect,
+                                std::uint32_t sample_rate, std::uint16_t channels,
+                                std::size_t block_frames, std::size_t measured_blocks) {
+    auto effect = make_effect();
+    std::vector<float> buffer(block_frames * channels);
+    std::uint32_t noise = 0x7654321U;
+    for (std::size_t block = 0; block < 96; ++block) {
+        for (float& sample : buffer) {
+            noise = noise * 1664525U + 1013904223U;
+            sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
+        }
+        effect->process(buffer, channels);
+    }
+    std::fill(buffer.begin(), buffer.end(), 0.0F);
+    effect->process_bypassed(buffer, channels);
+
+    std::vector<double> percentages;
+    percentages.reserve(measured_blocks);
+    const double deadline_us = static_cast<double>(block_frames) * 1'000'000.0 / sample_rate;
+    double output_squares = 0.0;
+    for (std::size_t block = 0; block < measured_blocks; ++block) {
+        std::fill(buffer.begin(), buffer.end(), 0.0F);
+        const auto start = Clock::now();
+        effect->process_bypassed(buffer, channels);
+        const auto end = Clock::now();
+        const double elapsed_us = std::chrono::duration<double, std::micro>(end - start).count();
+        percentages.push_back(100.0 * elapsed_us / deadline_us);
+        for (const float sample : buffer) {
+            output_squares += static_cast<double>(sample) * sample;
+        }
+    }
+    const double output_rms = std::sqrt(
+        output_squares / static_cast<double>(measured_blocks * buffer.size()));
+    std::cout << name << "," << std::fixed << std::setprecision(4)
+              << percentile(percentages, 0.50) << ","
+              << percentile(percentages, 0.95) << ","
+              << percentile(percentages, 0.99) << ","
+              << percentile(percentages, 0.999) << ","
+              << *std::max_element(percentages.begin(), percentages.end()) << ","
+              << effect->memory_bytes() << ","
+              << output_rms << '\n';
+}
+
 void benchmark_touch_wah_physical_detector(std::uint32_t sample_rate,
                                            std::uint16_t channels,
                                            std::size_t block_frames,
@@ -5301,6 +5345,17 @@ void run_bench() {
         return std::make_unique<tabletfx::RoomReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_reverb_tail_drain("room-reverb-tail-drain", [=] {
+        tabletfx::RoomReverbParameters parameters;
+        parameters.size = tabletfx::RoomSize::large;
+        parameters.decay_seconds = 1.2F;
+        parameters.pre_delay_ms = 18.0F;
+        parameters.damping_hz = 5000.0F;
+        parameters.mix = 0.3F;
+        parameters.spillover = true;
+        return std::make_unique<tabletfx::RoomReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, measured_blocks);
     benchmark_one("hall-reverb", [=] {
         tabletfx::HallReverbParameters parameters;
         parameters.decay_seconds = 3.2F;
@@ -5311,15 +5366,38 @@ void run_bench() {
         return std::make_unique<tabletfx::HallReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_reverb_tail_drain("hall-reverb-tail-drain", [=] {
+        tabletfx::HallReverbParameters parameters;
+        parameters.decay_seconds = 3.2F;
+        parameters.pre_delay_ms = 32.0F;
+        parameters.damping_hz = 9000.0F;
+        parameters.low_cut_hz = 100.0F;
+        parameters.mix = 0.25F;
+        parameters.spillover = true;
+        return std::make_unique<tabletfx::HallReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, measured_blocks);
     benchmark_one("plate-reverb", [=] {
         tabletfx::PlateReverbParameters parameters;
         return std::make_unique<tabletfx::PlateReverb>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_reverb_tail_drain("plate-reverb-tail-drain", [=] {
+        tabletfx::PlateReverbParameters parameters;
+        parameters.spillover = true;
+        return std::make_unique<tabletfx::PlateReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, measured_blocks);
     benchmark_one("spring-reverb", [=] {
         return std::make_unique<tabletfx::SpringReverb>(
             static_cast<float>(sample_rate), channels);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_reverb_tail_drain("spring-reverb-tail-drain", [=] {
+        tabletfx::SpringReverbParameters parameters;
+        parameters.spillover = true;
+        return std::make_unique<tabletfx::SpringReverb>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, measured_blocks);
     benchmark_one("auto-swell", [=] {
         return std::make_unique<tabletfx::AutoSwell>(
             static_cast<float>(sample_rate));

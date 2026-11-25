@@ -4,38 +4,56 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "32b3be5bcac54fc35a558332961a0cbbddaf1708",
+  "previous_checkpoint_commit": "65e0bbc1a470bee2607d23372b14f737c74fef23",
   "latest_audit": {
-    "name": "Fractal FM9-family Chorus Tempo",
-    "status": "Project-authored quarter-note tempo sync added to the existing categorized Chorus; native/offline, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+    "name": "HeadRush Prime Reverb Tails on bypass",
+    "status": "Project-authored default-off bypass-tail control added to existing Room, Hall, Plate, and Spring Reverbs; native, browser/WASM, Windows cross-build, benchmark, and documentation checks pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 16,
-    "category": "Modulation",
+    "category": "Reverb",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "Cover dated November 2026; printed pp. 25–27. Current FM9 downloads page checked 2026-11-26; v12.0 lists FM9 Original/Turbo, not Mark II Turbo by name. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Do not claim Fractal controls, ranges, DSP, phase behavior, latency, or sound parity."
+      "title": "HeadRush Prime User Guide",
+      "revision": "v5.0.0, printed p. 11 §4.1.3 and p. 22 §4.4.1. Official downloads page checked 2026-11-26 lists v5.2.0; the v5.2 guide was not readable in this pass. Installed firmware is unknown.",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+      "firmware_url": "https://www.headrushfx.com/downloads",
+      "qualification": "The v5.0 guide documents generic per-effect Reverb/Delay tails after bypass. Eleven Reverb screen values are examples, not ranges/defaults. The v5.2 notes do not mention Eleven Reverb; continuity and installed firmware remain unknown. No Eleven algorithm, HeadRush DSP/settings, or sound parity is claimed."
     },
-    "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. The guide also lists 2–8 voices and Delay Time/Delay Range controls as separate possible gaps.",
-    "project_controls": "Existing categorized Chorus remains at picker ID 16. Project-authored Rate mode is Free or Quarter-note; free Rate keeps its 0.8 Hz default and 0.05–8 Hz bounds. Tempo BPM is project-authored, default 120 BPM, bounded 20–300 BPM, and quarter-note Rate is BPM/60. Free mode restores the manual rate. No new picker slot, buffer, allocation, or fixed latency is added.",
+    "documented_controls": "Prime v5.0.0 p. 11 §4.1.3 documents per-effect Reverb/Delay tails continuing after bypass. The p. 22 §4.4.1 Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails; pictured values are examples only.",
+    "project_controls": "Project-authored `Tails on bypass`, default off, is available for existing Room, Hall, Plate, and Spring Reverb controls in the Reverb category. Off preserves immediate clearing. On preserves dry input and drains stored wet output with zero new excitation. Existing networks/storage are reused; no additional delay buffer, fixed latency, or process-time allocation is added. This is not an Eleven Reverb algorithm.",
     "verification": {
-      "native": "make test-fractal-chorus-tempo passed focused tabletfx_chorus_tests, including tempo mapping, clamping, manual-rate restoration, changed output, and no process-time allocation.",
-      "offline_cli": "The focused target passed offline renderer tests for Free 0.8 Hz, quarter-note 120 BPM (2 Hz), quarter-note 60 BPM (1 Hz), and invalid/missing switches.",
-      "browser": "make web-test-fractal-chorus-tempo passed. Chromium 151 played the existing local Guitar-TECHS DI at 48 kHz stereo, verified Modulation picker ID 16 and Free/quarter-note 120/60 BPM readouts, and observed RMS output differences Free→120 = 0.0573244 and 120→60 = 0.0553278. The full 71-stage browser/native comparison passed; WASM memory was 931,350 bytes for the module and effect state was 12,424 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core, offline renderer, and benchmark build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state 12,456 B; algorithmic latency 0 samples; process output remained finite. Free p50/p95/p99/p99.9/max 0.043/0.066/0.072/0.270/1.030%; quarter-note/120 BPM 0.043/0.069/0.073/0.264/0.510% of the callback deadline. Isolated desktop timing, not target-device performance."
+      "native": "make test passed documentation/fixture checks and 117/117 CTest tests, including per-reverb default-off clearing, enabled tail drain, dry continuity, zero excitation, block partitioning, re-enable/toggle safety, and no allocation.",
+      "browser": "make web-browser-test passed. Browser/WASM control serialization was checked for Room, Hall, Plate, and Spring; local prerecorded guitar-DI Play captured Room wet tail after bypass. The final full make web-test rerun also passed the browser/native comparison and existing browser checks.",
+      "windows": "make windows-cross-build passed for the modified DSP and offline renderer. The target is compile-only with BUILD_TESTING=OFF; Windows test execution was not performed.",
+      "benchmark": "make bench passed on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms callback). For Room/Hall/Plate/Spring, tail-drain p50/p95/p99/p99.9/max callback use was 0.1414/0.1433/0.2359/0.4223/1.2390%, 0.3083/0.3863/0.5753/0.7613/2.1417%, 0.8659/0.9038/1.1828/1.7749/5.3259%, and 0.9698/1.4269/1.6122/1.7817/3.0856% respectively. Owned state matched active state at 115,696 B, 193,764 B, 147,496 B, and 51,700 B. These isolated desktop processor timings do not guarantee full-chain or target-device performance."
     },
-    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
+    "remaining": "Human listening, physical Prime comparison, and target-device timing remain open. Exact v5.2 control continuity, installed firmware, numeric bounds/defaults, Eleven Reverb algorithm/DSP, and sound parity remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "HeadRush Prime",
-    "next_feature": "Verify per-effect Reverb Tails bypass behavior from Prime User Guide v5.0.0 p.11 §4.1.3; p.22 §4.4.1 Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails. Treat screen values as examples only, not ranges/defaults. Official downloads list v5.2.0 and its notes have no Eleven-Reverb-specific change; the v5.2 guide was unreadable and installed firmware is unknown. Consider optional default-off tail spillover in existing Room/Hall/Plate/Spring; do not claim Eleven algorithm/settings parity.",
-    "qualification": "Fractal Chorus Tempo is implemented and verified but exact Mark II Turbo applicability remains unknown; LFO1 SYNC remains separate and unimplemented. Continue remaining flagship effects while preserving unrelated audit queues and manual/device checks."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Add a project-authored Duty Cycle control to the existing Modulation Tremolo, limited initially to Square waveform so undocumented interactions with other shapes are not inferred. Preserve the symmetric default with 50%; choose and label project-only bounds. Exact guide Model Guide v1.1.100 / Rev. A p.34 defines Duty Cycle as percentage of time signal is on but publishes no range/default or Shape interaction. Firmware v1.8.87 (2026-11-23) lists no Tremolo change; installed firmware unknown. Keep it distinct from LFO Clip.",
+    "qualification": "Prime Reverb Tails is implemented and verified, but v5.2 guide readability and installed firmware remain unknown. Continue remaining flagship effects while preserving unrelated audit queues and manual/device checks."
   },
   "completed_checkpoints": [
+    {
+      "name": "HeadRush Prime Reverb Tails on bypass",
+      "status": "verified; automated tests/builds and benchmark pass; manual/device checks remain",
+      "category": "Reverb",
+      "official_source": {
+        "title": "HeadRush Prime User Guide",
+        "revision": "v5.0.0, printed p. 11 §4.1.3 and p. 22 §4.4.1; v5.2.0 listed as current but its guide was unreadable in this pass; installed firmware unknown",
+        "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "qualification": "The guide documents per-effect Reverb/Delay tails after bypass; Eleven Reverb screen values are examples, not bounds/defaults. No Eleven algorithm or DSP parity is claimed."
+      },
+      "documented_controls": "Per-effect Tails can keep Reverb/Delay decay audible after bypass. Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails.",
+      "project_controls": "Default-off Tails on bypass for existing Room, Hall, Plate, and Spring rows. Enabled mode preserves dry input and drains stored wet output using zero excitation; existing state is reused with no extra delay storage or fixed latency.",
+      "verification": {
+        "native": "make test passed docs/fixture checks and 117/117 CTest cases, including all four reverb spillover cases.",
+        "browser": "make web-browser-test passed all four settings serializations and local guitar-DI Room tail capture after bypass; final full make web-test passed the browser/native comparison and existing browser checks.",
+        "windows": "make windows-cross-build passed; compile-only, no Windows test execution.",
+        "benchmark": "make bench passed. At 48 kHz stereo/128 frames on Ryzen 9 5950X, tail-drain p99 was 0.2359/0.5753/1.1828/1.6122% of callback deadline for Room/Hall/Plate/Spring; maximum observed 5.3259%. Owned state 115,696/193,764/147,496/51,700 B matched active-mode state."
+      },
+      "remaining": "Human listening, target-device timing, Prime v5.2 guide/control continuity, installed firmware, and any Eleven Reverb ranges/defaults/DSP remain unverified."
+    },
     {
       "name": "Fractal FM9-family three-voice Synth comparison and browser verification",
       "status": "verified; automated tests pass; manual audio checks remain",

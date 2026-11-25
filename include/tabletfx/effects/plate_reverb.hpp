@@ -18,6 +18,7 @@ struct PlateReverbParameters {
     float balance = 0.5F;
     float mix = 0.2F;
     float level_db = 0.0F;
+    bool spillover = false;
 };
 
 // Project-authored plate-style reverb using a short allpass diffuser followed
@@ -37,6 +38,8 @@ public:
     // Configure outside the audio callback; changes are smoothed over 20 ms.
     void configure(PlateReverbParameters parameters) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -55,6 +58,7 @@ private:
 
     void update_targets() noexcept;
     void advance_parameters() noexcept;
+    void process_internal(std::span<float> interleaved, bool bypassed) noexcept;
     [[nodiscard]] float read_predelay(std::uint16_t channel, float input) noexcept;
     [[nodiscard]] float process_diffuser(DelayLine& line, float input,
                                          float diffusion) noexcept;
@@ -89,6 +93,7 @@ private:
     std::array<std::size_t, 2> predelay_index_{};
     std::array<DelayLine, kFeedbackLineCount * 2> feedback_lines_{};
     std::array<DelayLine, kDiffuserCount * 2> diffusers_{};
+    bool bypass_cleared_ = true;
 };
 
 } // namespace tabletfx

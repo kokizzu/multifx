@@ -206,15 +206,34 @@ float PlateReverb::process_diffuser(DelayLine& line, float input,
 void PlateReverb::process(std::span<float> interleaved,
                           std::uint16_t channels) noexcept {
     if (channels != channels_ || channels == 0) return;
-    const std::size_t frames = interleaved.size() / channels;
+    bypass_cleared_ = false;
+    process_internal(interleaved, false);
+}
+
+void PlateReverb::process_bypassed(std::span<float> interleaved,
+                                   std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0) return;
+    if (!parameters_.spillover) {
+        if (!bypass_cleared_) reset();
+        bypass_cleared_ = true;
+        return;
+    }
+    bypass_cleared_ = false;
+    process_internal(interleaved, true);
+}
+
+void PlateReverb::process_internal(std::span<float> interleaved,
+                                   bool bypassed) noexcept {
+    const std::size_t frames = interleaved.size() / channels_;
     for (std::size_t frame = 0; frame < frames; ++frame) {
         advance_parameters();
-        const std::size_t frame_offset = frame * channels;
-        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+        const std::size_t frame_offset = frame * channels_;
+        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t sample_index = frame_offset + channel;
-            const float dry = std::isfinite(interleaved[sample_index])
-                                  ? std::clamp(interleaved[sample_index], -8.0F, 8.0F)
-                                  : 0.0F;
+            const float passthrough = std::isfinite(interleaved[sample_index])
+                                          ? interleaved[sample_index]
+                                          : 0.0F;
+            const float dry = bypassed ? 0.0F : std::clamp(passthrough, -8.0F, 8.0F);
             const float wet_input = read_predelay(channel, dry);
             float diffused = wet_input;
             const std::size_t diffuser_offset = static_cast<std::size_t>(channel) * kDiffuserCount;
@@ -250,7 +269,8 @@ void PlateReverb::process(std::span<float> interleaved,
 
             const float early = (diffused - wet_input) * 0.35F;
             const float wet = early * (1.0F - balance_) + late * balance_;
-            const float output = dry * (1.0F - mix_) + wet * mix_ * level_;
+            const float output = bypassed ? passthrough + wet * mix_ * level_
+                                          : dry * (1.0F - mix_) + wet * mix_ * level_;
             interleaved[sample_index] = std::isfinite(output) ? output : 0.0F;
         }
     }
@@ -265,6 +285,7 @@ void PlateReverb::reset() noexcept {
     }
     for (auto& line : diffusers_) line.index = 0;
     settle_parameters();
+    bypass_cleared_ = true;
 }
 
 } // namespace tabletfx

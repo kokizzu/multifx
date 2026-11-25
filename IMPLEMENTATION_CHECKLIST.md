@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## HeadRush Prime per-effect Reverb Tails (2026-11-26)
+
+- [x] Checked the exact Prime User Guide v5.0.0: printed p. 11 §4.1.3 documents per-effect Reverb/Delay tails continuing after bypass; p. 22 §4.4.1 shows Eleven Reverb Decay, Tone, Pre-Delay, Mix, and Tails. Screen values are examples, not ranges/defaults. HeadRush lists v5.2.0 as current; its guide was not readable in this pass and its v5.2.0 notes contain no Eleven Reverb-specific change. Installed firmware is unknown.
+- [x] Added project-authored `Tails on bypass`, default off, to the existing Room, Hall, Plate, and Spring controls in the Reverb category. Off preserves immediate tail clearing. On passes dry input unchanged while draining the stored wet state using zero excitation. It reuses each existing network, adds no delay buffer or fixed latency, and does not allocate in processing. This does not add an Eleven Reverb algorithm or claim HeadRush settings/DSP/sound parity.
+- [x] `make test` passes documentation/fixture checks and 117/117 CTest cases, including per-reverb defaults, drain, dry continuity, zero excitation, partitioning, re-enable/toggle safety, and allocation tests. The browser suite verifies all four UI-to-WASM settings, captures Room tail decay after local prerecorded guitar-DI Play and bypass, and passes full browser/native comparison. `make windows-cross-build` compiles the modified DSP and offline renderer with MinGW; it is compile-only (`BUILD_TESTING=OFF`), so Windows tests were not run.
+- [x] `make bench` measures each active reverb and tail-drain path at 48 kHz stereo/128 frames on Ryzen 9 5950X Release. Tail-drain p99 is 0.2359% Room, 0.5753% Hall, 1.1828% Plate, and 1.6122% Spring of the 2.667 ms callback deadline; maximum observed is 5.3259% (Plate). Tail-enabled state matches active state: 115,696 B Room, 193,764 B Hall, 147,496 B Plate, and 51,700 B Spring. Full percentiles are in [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md). These are isolated desktop timings, not device guarantees.
+- [ ] Human listening, physical Prime comparison, and target-device timing remain manual. Exact v5.2 control continuity, installed firmware, numeric ranges/defaults, Eleven Reverb algorithm/DSP, and sound parity remain unverified.
+
 ## Fender Tone Master Pro Volume Pedal exact heel mute (2026-11-25)
 
 - [x] Checked Fender's official firmware history: v1.3.74 (2024-06-03) says the Volume Pedal fully mutes at 0%; the current listed release is v1.8.87 (2026-11-23). The exact-model v1.1.100 / Rev. A Model Guide lists a `Volume` control but does not specify numeric bounds, defaults, or taper. Installed hardware firmware is unknown.

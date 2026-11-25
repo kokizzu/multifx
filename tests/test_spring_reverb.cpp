@@ -1,4 +1,5 @@
 #include "tabletfx/effects/spring_reverb.hpp"
+#include "reverb_bypass_test_helpers.hpp"
 
 #include <algorithm>
 #include <array>
@@ -254,6 +255,7 @@ void test_block_partition_and_invalid_input() {
 void test_process_does_not_allocate() {
     tabletfx::SpringReverbParameters parameters;
     parameters.mix = 0.5F;
+    parameters.spillover = true;
     tabletfx::SpringReverb reverb(48000.0F, 2, parameters);
     std::array<float, 1024> audio{};
     for (std::size_t frame = 0; frame < audio.size() / 2; ++frame) {
@@ -262,8 +264,25 @@ void test_process_does_not_allocate() {
     }
     const auto before = allocation_count.load(std::memory_order_relaxed);
     reverb.process(audio, 2);
+    reverb.process_bypassed(audio, 2);
     const auto after = allocation_count.load(std::memory_order_relaxed);
-    require(after == before, "spring reverb process() allocated memory");
+    require(after == before, "spring reverb processing allocated memory");
+}
+
+void test_bypass_spillover() {
+    tabletfx::SpringReverbParameters parameters;
+    parameters.decay_seconds = 1.8F;
+    parameters.pre_delay_ms = 0.0F;
+    parameters.mix = 0.55F;
+    auto tails_parameters = parameters;
+    tails_parameters.spillover = true;
+    tabletfx::SpringReverb no_tails(48000.0F, 1, parameters);
+    tabletfx::SpringReverb tails(48000.0F, 1, tails_parameters);
+    tabletfx::SpringReverb partitioned(48000.0F, 1, tails_parameters);
+    tabletfx::SpringReverb dry_input(48000.0F, 1, tails_parameters);
+    tabletfx::SpringReverb reenabled(48000.0F, 1, tails_parameters);
+    reverb_test_support::verify_bypass_spillover(
+        no_tails, tails, partitioned, dry_input, reenabled, "spring reverb");
 }
 
 } // namespace
@@ -290,6 +309,7 @@ int main() {
         test_decay_and_damping_change_tail();
         test_stereo_isolation_reset_and_channel_guard();
         test_block_partition_and_invalid_input();
+        test_bypass_spillover();
         test_process_does_not_allocate();
         std::cout << "All spring reverb tests passed.\n";
         return 0;

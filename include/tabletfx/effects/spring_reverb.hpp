@@ -16,6 +16,7 @@ struct SpringReverbParameters {
     float dwell = 0.35F;
     float mix = 0.2F;
     float level_db = 0.0F;
+    bool spillover = false;
 };
 
 // Project-authored spring-style reverb using dispersive feedback delay lines.
@@ -37,6 +38,8 @@ public:
     void configure(SpringReverbParameters parameters) noexcept;
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -56,6 +59,7 @@ private:
 
     void update_targets() noexcept;
     void advance_parameters() noexcept;
+    void process_internal(std::span<float> interleaved, bool bypassed) noexcept;
     [[nodiscard]] float read_predelay(std::uint16_t channel, float input) noexcept;
     [[nodiscard]] float process_diffuser(DelayLine& line, float input) noexcept;
     [[nodiscard]] float process_spring_line(SpringLine& line, float input,
@@ -88,6 +92,7 @@ private:
     float level_step_ = 0.0F;
     std::size_t parameter_ramp_total_ = 1;
     std::size_t parameter_ramp_remaining_ = 0;
+    bool bypass_cleared_ = true;
 };
 
 } // namespace tabletfx

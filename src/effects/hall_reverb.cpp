@@ -197,15 +197,34 @@ float HallReverb::process_diffuser(DelayLine& line, float input) noexcept {
 void HallReverb::process(std::span<float> interleaved,
                          std::uint16_t channels) noexcept {
     if (channels == 0 || channels != channels_) return;
-    const std::size_t frames = interleaved.size() / channels;
+    bypass_cleared_ = false;
+    process_internal(interleaved, false);
+}
+
+void HallReverb::process_bypassed(std::span<float> interleaved,
+                                  std::uint16_t channels) noexcept {
+    if (channels == 0 || channels != channels_) return;
+    if (!parameters_.spillover) {
+        if (!bypass_cleared_) reset();
+        bypass_cleared_ = true;
+        return;
+    }
+    bypass_cleared_ = false;
+    process_internal(interleaved, true);
+}
+
+void HallReverb::process_internal(std::span<float> interleaved,
+                                  bool bypassed) noexcept {
+    const std::size_t frames = interleaved.size() / channels_;
     for (std::size_t frame = 0; frame < frames; ++frame) {
         advance_parameters();
-        const std::size_t frame_offset = frame * channels;
-        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+        const std::size_t frame_offset = frame * channels_;
+        for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t sample_index = frame_offset + channel;
-            const float dry = std::isfinite(interleaved[sample_index])
-                                  ? std::clamp(interleaved[sample_index], -8.0F, 8.0F)
-                                  : 0.0F;
+            const float passthrough = std::isfinite(interleaved[sample_index])
+                                          ? interleaved[sample_index]
+                                          : 0.0F;
+            const float dry = bypassed ? 0.0F : std::clamp(passthrough, -8.0F, 8.0F);
             const float highpassed = highpass_alpha_ *
                                      (highpass_previous_[channel] + dry -
                                       input_previous_[channel]);
@@ -224,7 +243,8 @@ void HallReverb::process(std::span<float> interleaved,
             wet = process_diffuser(diffusers_[diffuser_offset], wet);
             wet = process_diffuser(diffusers_[diffuser_offset + 1], wet);
 
-            const float output = dry * (1.0F - mix_) + wet * mix_ * level_;
+            const float output = bypassed ? passthrough + wet * mix_ * level_
+                                          : dry * (1.0F - mix_) + wet * mix_ * level_;
             interleaved[sample_index] = std::isfinite(output) ? output : 0.0F;
         }
     }
@@ -248,6 +268,7 @@ void HallReverb::reset() noexcept {
     mix_ = target_mix_;
     level_ = target_level_;
     parameter_ramp_remaining_ = 0;
+    bypass_cleared_ = true;
 }
 
 } // namespace tabletfx

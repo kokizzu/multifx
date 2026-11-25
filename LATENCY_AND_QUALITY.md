@@ -1,5 +1,20 @@
 # Latency, quality, and DSP-load protocol
 
+## HeadRush Prime Reverb Tails on bypass (2026-11-26)
+
+The Prime User Guide v5.0.0 documents per-effect reverb/delay tails continuing after bypass (printed p. 11 §4.1.3). TabletFX adds project-authored, default-off `Tails on bypass` to its existing Room, Hall, Plate, and Spring Reverbs. When enabled, the reverb network advances with zero new excitation and adds only stored wet tail over the unchanged dry path. It reuses existing delay state, adds no fixed latency or delay storage, and allocates nothing during processing. The v5.0.0 Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails, but the pictured values are examples rather than ranges/defaults. The v5.2.0 guide could not be read in this pass; installed firmware is unknown. No Eleven algorithm, DSP, or settings parity is claimed.
+
+`make bench` measured active processing and the bypass-tail drain sequence on AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline). Each drain case follows 96 active excitation blocks with zero-input bypass blocks. Percentages are processor callback time divided by the deadline; values are p50/p95/p99/p99.9/max.
+
+| Reverb | Active CPU (%) | Tail-drain CPU (%) | Owned state (active = drain) | Drain aggregate RMS |
+|---|---:|---:|---:|---:|
+| Room | 0.1418 / 0.1436 / 0.2213 / 0.4478 / 2.3828 | 0.1414 / 0.1433 / 0.2359 / 0.4223 / 1.2390 | 115,696 B | 0.0084 |
+| Hall | 0.1913 / 0.2591 / 0.3236 / 0.8614 / 2.3168 | 0.3083 / 0.3863 / 0.5753 / 0.7613 / 2.1417 | 193,764 B | 0.0090 |
+| Plate | 0.4046 / 0.5325 / 0.6769 / 0.8198 / 0.9657 | 0.8659 / 0.9038 / 1.1828 / 1.7749 / 5.3259 | 147,496 B | 0.0004 |
+| Spring | 0.7107 / 1.0002 / 1.0613 / 1.4858 / 2.8396 | 0.9698 / 1.4269 / 1.6122 / 1.7817 / 3.0856 | 51,700 B | 0.0031 |
+
+The one-profile maxima are desktop processor-call measurements, not full-chain or target-device bounds. Browser tail-output verification uses a local prerecorded guitar DI, and native tests cover all four reverbs; real-device behavior and human listening remain open.
+
 ## Fender Tone Master Pro Stereo Flanger L/R Phase (2026-11-26)
 
 Fender's Model Guide v1.1.100 / Rev. A, printed p. 38, lists L/R Phase on Stereo Flanger and describes its left/right phasing role, but publishes no numeric range/default. TabletFX adds a project-authored 0–360° right-channel LFO offset, default 180° to preserve the existing opposing modulation. It follows the Flanger's 10 ms parameter ramp, adds no delay buffer or fixed latency, and keeps process() allocation-free. Native stereo state is 4,816 B; the focused WebAssembly effect reports 4,784 B at 48 kHz. The browser full chain continues to pass native/WASM comparison.

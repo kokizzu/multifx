@@ -562,7 +562,28 @@ public:
             return false;
         }
         if ((index >= 28U && index <= 31U) && effects_[index].enabled && !enabled) {
-            effects_[index].effect->reset();
+            bool spillover = false;
+            switch (index) {
+            case 28U:
+                spillover = static_cast<tabletfx::RoomReverb*>(
+                    effects_[index].effect.get())->parameters().spillover;
+                break;
+            case 29U:
+                spillover = static_cast<tabletfx::HallReverb*>(
+                    effects_[index].effect.get())->parameters().spillover;
+                break;
+            case 30U:
+                spillover = static_cast<tabletfx::PlateReverb*>(
+                    effects_[index].effect.get())->parameters().spillover;
+                break;
+            case 31U:
+                spillover = static_cast<tabletfx::SpringReverb*>(
+                    effects_[index].effect.get())->parameters().spillover;
+                break;
+            default:
+                break;
+            }
+            if (!spillover) effects_[index].effect->reset();
         }
         if (index == 32U && effects_[index].enabled && !enabled) {
             effects_[index].effect->reset();
@@ -3048,7 +3069,7 @@ public:
 
     void configure_room_reverb(std::uint32_t size, float decay_seconds,
                                float pre_delay_ms, float damping_hz, float mix,
-                               float level_db) noexcept {
+                               float level_db, std::uint32_t spillover) noexcept {
         auto* reverb = static_cast<tabletfx::RoomReverb*>(effects_[28].effect.get());
         tabletfx::RoomReverbParameters parameters;
         parameters.size = size == 0U ? tabletfx::RoomSize::small
@@ -3058,12 +3079,13 @@ public:
         parameters.damping_hz = damping_hz;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.spillover = spillover != 0U;
         reverb->configure(parameters);
     }
 
     void configure_hall_reverb(float decay_seconds, float pre_delay_ms,
                                float damping_hz, float low_cut_hz, float mix,
-                               float level_db) noexcept {
+                               float level_db, std::uint32_t spillover) noexcept {
         auto* reverb = static_cast<tabletfx::HallReverb*>(effects_[29].effect.get());
         tabletfx::HallReverbParameters parameters;
         parameters.decay_seconds = decay_seconds;
@@ -3072,12 +3094,14 @@ public:
         parameters.low_cut_hz = low_cut_hz;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.spillover = spillover != 0U;
         reverb->configure(parameters);
     }
 
     void configure_plate_reverb(float decay_seconds, float pre_delay_ms,
                                 float damping_hz, float diffusion, float balance,
-                                float mix, float level_db) noexcept {
+                                float mix, float level_db,
+                                std::uint32_t spillover) noexcept {
         auto* reverb = static_cast<tabletfx::PlateReverb*>(effects_[30].effect.get());
         tabletfx::PlateReverbParameters parameters;
         parameters.decay_seconds = decay_seconds;
@@ -3087,12 +3111,13 @@ public:
         parameters.balance = balance;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.spillover = spillover != 0U;
         reverb->configure(parameters);
     }
 
     void configure_spring_reverb(float decay_seconds, float pre_delay_ms,
                                  float damping_hz, float dwell, float mix,
-                                 float level_db) noexcept {
+                                 float level_db, std::uint32_t spillover) noexcept {
         auto* reverb = static_cast<tabletfx::SpringReverb*>(effects_[31].effect.get());
         tabletfx::SpringReverbParameters parameters;
         parameters.decay_seconds = decay_seconds;
@@ -3101,6 +3126,7 @@ public:
         parameters.dwell = dwell;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.spillover = spillover != 0U;
         reverb->configure(parameters);
     }
 
@@ -4211,37 +4237,45 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shelf_tilt_eq(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_room_reverb(
     void* opaque, std::uint32_t size, float decay_seconds, float pre_delay_ms,
-    float damping_hz, float mix, float level_db) noexcept {
+    float damping_hz, float mix, float level_db,
+    std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_room_reverb(
-            size, decay_seconds, pre_delay_ms, damping_hz, mix, level_db);
+            size, decay_seconds, pre_delay_ms, damping_hz, mix, level_db,
+            spillover);
     }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_hall_reverb(
     void* opaque, float decay_seconds, float pre_delay_ms, float damping_hz,
-    float low_cut_hz, float mix, float level_db) noexcept {
+    float low_cut_hz, float mix, float level_db,
+    std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_hall_reverb(
-            decay_seconds, pre_delay_ms, damping_hz, low_cut_hz, mix, level_db);
+            decay_seconds, pre_delay_ms, damping_hz, low_cut_hz, mix, level_db,
+            spillover);
     }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_plate_reverb(
     void* opaque, float decay_seconds, float pre_delay_ms, float damping_hz,
-    float diffusion, float balance, float mix, float level_db) noexcept {
+    float diffusion, float balance, float mix, float level_db,
+    std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_plate_reverb(
-            decay_seconds, pre_delay_ms, damping_hz, diffusion, balance, mix, level_db);
+            decay_seconds, pre_delay_ms, damping_hz, diffusion, balance, mix,
+            level_db, spillover);
     }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_spring_reverb(
     void* opaque, float decay_seconds, float pre_delay_ms, float damping_hz,
-    float dwell, float mix, float level_db) noexcept {
+    float dwell, float mix, float level_db,
+    std::uint32_t spillover) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_spring_reverb(
-            decay_seconds, pre_delay_ms, damping_hz, dwell, mix, level_db);
+            decay_seconds, pre_delay_ms, damping_hz, dwell, mix, level_db,
+            spillover);
     }
 }
 

@@ -1,4 +1,5 @@
 #include "tabletfx/effects.hpp"
+#include "reverb_bypass_test_helpers.hpp"
 
 #include <algorithm>
 #include <array>
@@ -245,6 +246,7 @@ void test_variable_block_partition_and_finite_recovery() {
 void test_process_does_not_allocate() {
     tabletfx::RoomReverbParameters parameters;
     parameters.mix = 0.5F;
+    parameters.spillover = true;
     tabletfx::RoomReverb reverb(48000.0F, 2, parameters);
     std::array<float, 1024> audio{};
     for (std::size_t frame = 0; frame < audio.size() / 2; ++frame) {
@@ -253,8 +255,25 @@ void test_process_does_not_allocate() {
     }
     const auto before = allocation_count.load(std::memory_order_relaxed);
     reverb.process(audio, 2);
+    reverb.process_bypassed(audio, 2);
     const auto after = allocation_count.load(std::memory_order_relaxed);
-    require(after == before, "room reverb process() allocated memory");
+    require(after == before, "room reverb processing allocated memory");
+}
+
+void test_bypass_spillover() {
+    tabletfx::RoomReverbParameters parameters;
+    parameters.decay_seconds = 1.8F;
+    parameters.pre_delay_ms = 0.0F;
+    parameters.mix = 0.55F;
+    auto tails_parameters = parameters;
+    tails_parameters.spillover = true;
+    tabletfx::RoomReverb no_tails(48000.0F, 1, parameters);
+    tabletfx::RoomReverb tails(48000.0F, 1, tails_parameters);
+    tabletfx::RoomReverb partitioned(48000.0F, 1, tails_parameters);
+    tabletfx::RoomReverb dry_input(48000.0F, 1, tails_parameters);
+    tabletfx::RoomReverb reenabled(48000.0F, 1, tails_parameters);
+    reverb_test_support::verify_bypass_spillover(
+        no_tails, tails, partitioned, dry_input, reenabled, "room reverb");
 }
 
 } // namespace
@@ -282,6 +301,7 @@ int main() {
         test_decay_and_damping_change_tail();
         test_stereo_isolation_reset_and_channel_guard();
         test_variable_block_partition_and_finite_recovery();
+        test_bypass_spillover();
         test_process_does_not_allocate();
         std::cout << "All room reverb tests passed.\n";
         return 0;

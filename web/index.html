@@ -687,8 +687,9 @@
           <label class="mix-control" for="room-reverb-damping-hz"><span>Damping</span><output id="room-reverb-damping-value" for="room-reverb-damping-hz">6000 Hz</output><input id="room-reverb-damping-hz" type="range" min="200" max="18000" step="100" value="6000"></label>
           <label class="mix-control" for="room-reverb-mix"><span>Mix</span><output id="room-reverb-mix-value" for="room-reverb-mix">20%</output><input id="room-reverb-mix" type="range" min="0" max="100" step="1" value="20"></label>
           <label class="mix-control" for="room-reverb-level-db"><span>Wet level</span><output id="room-reverb-level-value" for="room-reverb-level-db">0.0 dB</output><input id="room-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="room-reverb-spillover"><span>Tails on bypass</span><output id="room-reverb-spillover-value" for="room-reverb-spillover">Off</output><input id="room-reverb-spillover" type="checkbox"></label>
         </div>
-        <p class="hint">This is a project-authored Schroeder-style room effect, not a specific product emulation. Pre-delay affects only the wet path. Bypass clears the tail (no spillover); changing room size can alter an active tail’s texture.</p>
+        <p class="hint">This is a project-authored Schroeder-style room effect, not a specific product emulation. Pre-delay affects only the wet path. Tails on bypass is off by default; when enabled, only stored wet reverb decays after bypass. Changing room size can alter an active tail’s texture.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Hall reverb controls">
         <h3>Hall reverb · project-authored</h3>
@@ -699,8 +700,9 @@
           <label class="mix-control" for="hall-reverb-low-cut-hz"><span>Wet low cut</span><output id="hall-reverb-low-cut-value" for="hall-reverb-low-cut-hz">100 Hz</output><input id="hall-reverb-low-cut-hz" type="range" min="20" max="1500" step="10" value="100"></label>
           <label class="mix-control" for="hall-reverb-mix"><span>Mix</span><output id="hall-reverb-mix-value" for="hall-reverb-mix">25%</output><input id="hall-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
           <label class="mix-control" for="hall-reverb-level-db"><span>Wet level</span><output id="hall-reverb-level-value" for="hall-reverb-level-db">0.0 dB</output><input id="hall-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="hall-reverb-spillover"><span>Tails on bypass</span><output id="hall-reverb-spillover-value" for="hall-reverb-spillover">Off</output><input id="hall-reverb-spillover" type="checkbox"></label>
         </div>
-        <p class="hint">A project-authored algorithmic Hall reverb; it is not a Line 6 or Fender product emulation. Wet pre-delay affects only the reverb path. Bypass clears the tail. The wet low-cut acts before the reverb network.</p>
+        <p class="hint">A project-authored algorithmic Hall reverb; it is not a Line 6 or Fender product emulation. Wet pre-delay affects only the reverb path. Tails on bypass is off by default; when enabled, only stored wet reverb decays after bypass. The wet low-cut acts before the reverb network.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Plate reverb controls">
         <h3>Plate reverb · project-authored</h3>
@@ -712,8 +714,9 @@
           <label class="mix-control" for="plate-reverb-balance"><span>Early / late balance</span><output id="plate-reverb-balance-value" for="plate-reverb-balance">50% late</output><input id="plate-reverb-balance" type="range" min="0" max="100" step="1" value="50"></label>
           <label class="mix-control" for="plate-reverb-mix"><span>Mix</span><output id="plate-reverb-mix-value" for="plate-reverb-mix">20%</output><input id="plate-reverb-mix" type="range" min="0" max="100" step="1" value="20"></label>
           <label class="mix-control" for="plate-reverb-level-db"><span>Wet level</span><output id="plate-reverb-level-value" for="plate-reverb-level-db">0.0 dB</output><input id="plate-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="plate-reverb-spillover"><span>Tails on bypass</span><output id="plate-reverb-spillover-value" for="plate-reverb-spillover">Off</output><input id="plate-reverb-spillover" type="checkbox"></label>
         </div>
-        <p class="hint">A project-authored algorithmic plate-style reverb, not a Tone Master Pro or Helix Stadium emulation. Diffusion and early/late balance are controls chosen for this implementation; they do not reproduce every manufacturer model control. Wet pre-delay affects only the reverb path. Bypass clears the tail.</p>
+        <p class="hint">A project-authored algorithmic plate-style reverb, not a Tone Master Pro or Helix Stadium emulation. Diffusion and early/late balance are controls chosen for this implementation; they do not reproduce every manufacturer model control. Wet pre-delay affects only the reverb path. Tails on bypass is off by default; when enabled, only stored wet reverb decays after bypass.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Spring reverb controls">
         <h3>Spring reverb · project-authored</h3>
@@ -724,8 +727,9 @@
           <label class="mix-control" for="spring-reverb-dwell"><span>Dwell</span><output id="spring-reverb-dwell-value" for="spring-reverb-dwell">35%</output><input id="spring-reverb-dwell" type="range" min="0" max="100" step="1" value="35"></label>
           <label class="mix-control" for="spring-reverb-mix"><span>Mix</span><output id="spring-reverb-mix-value" for="spring-reverb-mix">20%</output><input id="spring-reverb-mix" type="range" min="0" max="100" step="1" value="20"></label>
           <label class="mix-control" for="spring-reverb-level-db"><span>Wet level</span><output id="spring-reverb-level-value" for="spring-reverb-level-db">0.0 dB</output><input id="spring-reverb-level-db" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="spring-reverb-spillover"><span>Tails on bypass</span><output id="spring-reverb-spillover-value" for="spring-reverb-spillover">Off</output><input id="spring-reverb-spillover" type="checkbox"></label>
         </div>
-        <p class="hint">A project-authored dispersive feedback-delay-line spring-style effect, not an emulation of a named product or amp circuit. Dwell controls tank excitation and nonlinear drive. Wet pre-delay affects only the wet path. Bypass clears the tail (no spillover).</p>
+        <p class="hint">A project-authored dispersive feedback-delay-line spring-style effect, not an emulation of a named product or amp circuit. Dwell controls tank excitation and nonlinear drive. Wet pre-delay affects only the wet path. Tails on bypass is off by default; when enabled, only stored wet reverb decays after bypass.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Shimmer reverb controls">
         <h3>Shimmer Reverb · project-authored pitch-fed reverb</h3>

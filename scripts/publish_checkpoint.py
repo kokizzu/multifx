@@ -1881,6 +1881,7 @@ FRACTAL_TZF_AUTO_CHECKPOINT_PATHS = (
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
     "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
     "research-state.json",
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
@@ -2758,7 +2759,39 @@ LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/hall_reverb.hpp",
+    "include/tabletfx/effects/plate_reverb.hpp",
+    "include/tabletfx/effects/spring_reverb.hpp",
+    "src/effects/room_reverb.cpp",
+    "src/effects/hall_reverb.cpp",
+    "src/effects/plate_reverb.cpp",
+    "src/effects/spring_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/reverb_bypass_test_helpers.hpp",
+    "tests/test_room_reverb.cpp",
+    "tests/test_hall_reverb.cpp",
+    "tests/test_plate_reverb.cpp",
+    "tests/test_spring_reverb.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "scripts/publish_checkpoint.py",
+)
+
 CHECKPOINTS = {
+    "prime-reverb-tails": (
+        PRIME_REVERB_TAILS_CHECKPOINT_PATHS,
+        "feat: add optional reverb tails on bypass",
+    ),
     "all": (CHECKPOINT_PATHS, "feat: add multi-head delay, compressors, and EQs"),
     "dly08": (DLY08_CHECKPOINT_PATHS, "feat: add multi-head tape echo"),
     "effect-modules": (EFFECT_MODULE_CHECKPOINT_PATHS,

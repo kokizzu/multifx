@@ -1,4 +1,5 @@
 #include "tabletfx/effects/plate_reverb.hpp"
+#include "reverb_bypass_test_helpers.hpp"
 
 #include <algorithm>
 #include <array>
@@ -296,6 +297,7 @@ void test_partition_invariance_invalid_samples_and_construction() {
 void test_process_does_not_allocate() {
     tabletfx::PlateReverbParameters parameters;
     parameters.mix = 0.5F;
+    parameters.spillover = true;
     tabletfx::PlateReverb reverb(48000.0F, 2, parameters);
     std::array<float, 1024> audio{};
     for (std::size_t frame = 0; frame < audio.size() / 2U; ++frame) {
@@ -304,8 +306,25 @@ void test_process_does_not_allocate() {
     }
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     reverb.process(audio, 2);
+    reverb.process_bypassed(audio, 2);
     const std::size_t after = allocation_count.load(std::memory_order_relaxed);
-    require(after == before, "plate reverb process() allocated memory");
+    require(after == before, "plate reverb processing allocated memory");
+}
+
+void test_bypass_spillover() {
+    tabletfx::PlateReverbParameters parameters;
+    parameters.decay_seconds = 1.8F;
+    parameters.pre_delay_ms = 0.0F;
+    parameters.mix = 0.55F;
+    auto tails_parameters = parameters;
+    tails_parameters.spillover = true;
+    tabletfx::PlateReverb no_tails(48000.0F, 1, parameters);
+    tabletfx::PlateReverb tails(48000.0F, 1, tails_parameters);
+    tabletfx::PlateReverb partitioned(48000.0F, 1, tails_parameters);
+    tabletfx::PlateReverb dry_input(48000.0F, 1, tails_parameters);
+    tabletfx::PlateReverb reenabled(48000.0F, 1, tails_parameters);
+    reverb_test_support::verify_bypass_spillover(
+        no_tails, tails, partitioned, dry_input, reenabled, "plate reverb");
 }
 
 } // namespace
@@ -332,6 +351,7 @@ int main() {
         test_decay_damping_and_diffusion_controls();
         test_stereo_decorrelation_reset_and_channel_guard();
         test_partition_invariance_invalid_samples_and_construction();
+        test_bypass_spillover();
         test_process_does_not_allocate();
         std::cout << "All plate reverb tests passed.\n";
         return 0;
