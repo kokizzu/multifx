@@ -4,39 +4,38 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "10afac3bf884371539f1bdc701036357e5f1f1a2",
+  "previous_checkpoint_commit": "54705836088133bd753d5c2a6fff57e280dff04d",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium Feedbacker-inspired project interval modes",
-    "status": "project implementation and automated checks pass; first-note response target and manual/device checks remain",
+    "name": "Fractal FM9-family Enhancer mono-to-stereo routing and CPU verification",
+    "status": "existing categorized implementation re-audited; browser mono-to-stereo path and automated checks pass; native/live and manual checks remain",
     "date": "2026-11-25",
-    "picker_index": 56,
-    "category": "Dynamics",
+    "picker_index": 61,
+    "category": "Stereo & image",
     "official_source": {
-      "title": "Helix Stadium model catalogue and live effect-block manual; Line 6 Helix software-family Feedbacker description",
-      "revision": "Checked 2026-11-25. Stadium live manual selector v1.4 Rev D; hardware v1.4.2 released 2026-10-27; installed device firmware unknown. Software-family control description is not a Stadium-specific parameter table.",
+      "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
+      "revision": "November 2026 Blocks Guide p. 44, checked 2026-11-25; FM9 downloads list firmware v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
       "urls": [
-        "https://line6.com/helix-stadium-models/",
-        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-        "https://line6.com/software/index.html?locale=nl_BE&name=Helix+Native&os=All&submit_form=set"
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/"
       ],
-      "qualification": "Stadium catalog lists Feedbacker as Mono, Line 6 Original, first appearing in v1.0. Stadium-specific numeric ranges/defaults, DSP and latency are not published. Older software-family control names are source concepts only and do not establish Stadium settings or parity."
+      "qualification": "The guide is FM9-family evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
     },
-    "documented_controls": "Family source lists Fdbk Type: −Octave, Unison, +Octave, Oct +5th, +2 Octaves, 2 Oct+3rd, 2 Oct+5th, 2 Oct+7th, Mid to Low, High to Low, Rndm Onset, and Rndm Trigger; plus Attack, Release, Dry Kill Off/On/Always, Dry Level, Reference Lowest/Loudest, Silence Thr, Onset Thr, Offset Thr, Retrigger, and Trails. Numeric bounds/defaults are not stated.",
-    "project_controls": "Project-authored mono-tracked sine sustain at one interval: −12, 0, +12, +19, +24, +28, +31, or +35 semitones. The oscillator does not stack voices. Generated Level 0–1 (default 0.35); Attack 0–2,000 ms (15); Release 0–5,000 ms (600); Dry Kill Off/On (Off); Dry Level 0–1 (1); Silence Threshold −90…0 dBFS (−48); hard output limit ±1.0. Tracker covers about 55–1,100 Hz with a 1,024-sample frame; it remains monophonic. All project controls, bounds, defaults, oscillator shape and processing are independent of Line 6.",
+    "documented_controls": "Modern: Width, Depth, Low Cut, High Cut. Classic: Width as right-channel delay 0–20 ms, Phase Invert, Pan Left/Right, Balance. Stereoizer: Depth sets band count and Width sets spread. All three types have Level and Bypass on Config and no Mix page. The guide publishes no numeric bounds/defaults except Classic Width.",
+    "project_controls": "Project-authored Modern M/S side-band widening, Classic right wet-path delay (7 ms default, 0–20 ms), and all-pass-derived Stereoizer; independent project bounds/defaults and Mix. Standalone core mono in-place processing is sanitized pass-through; browser Modern duplicates mono input before building a stereo chain.",
     "verification": {
-      "official_source_review": "Checked 2026-11-25. Stadium model list, current live v1.4 Rev D effects manual, and official Helix software-family Feedbacker control description.",
-      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including interval mapping, output safety and latency getters.",
-      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI and browser/WASM/native comparison: 79 processors; max absolute error 1.686768271724759e-6; RMS error 2.9085876089063937e-7. Browser self-test verifies all eight category labels and project-control updates.",
-      "windows": "make windows-cross-build passed Windows MinGW core and offline-renderer builds.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms), 1,000 warm-up and 3,000 measured callbacks per profile. State 1,028,976 B. At 220 Hz, eight modes had 10.677–10.844% p50; worst observed maximum 57.810%; low-E −12/+35 modes had 10.680–10.755% p50 and 24.541–34.222% maximum. Full p50/p95/p99/p99.9/max table is in LATENCY_AND_QUALITY.md. No deadline misses occurred."
+      "source_review": "Official Blocks Guide and FM9 downloads page checked 2026-11-25.",
+      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including Enhancer mode, mono pass-through, reset, bounds, finite recovery, and allocation coverage.",
+      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI; 79 optional processors; browser/native comparison maximum absolute error 1.686768271724759e-6 and RMS error 2.9085876089063937e-7. Mono Modern smoke: 12,000 frames, input 1 channel, output 2 channels, peak 0.299381852, mean L/R difference 0.057089917. WASM fixed memory 100,663,296 B; processor state 80,621,904 B plus 10,364 B tuner state.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
     },
-    "remaining": "The existing tracker response bound is 21.333 ms at 48 kHz, above the provisional ≤20 ms target. Real-instrument response, human listening, target-device CPU/latency and physical Stadium behavior remain manual. Do not claim Stadium algorithm, control, firmware, DSP, tracking or sound parity."
+    "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Verify the existing Fractal Enhancer path against the current FM9 Blocks Guide, measure its isolated CPU/memory cost, correct the stale mono-to-stereo comparison note, then select the next undocumented exact-control gap.",
-    "qualification": "The project already exposes Modern/Classic/Stereoizer in the Stereo & image category and the browser host creates stereo output from mono input for Modern; the core in-place mono Effect itself remains pass-through. Do not claim Fractal DSP/settings/sound parity. FM9 family firmware v12.0 lists Original/Turbo but not Mark II Turbo separately; installed device firmware is unknown. Continue prioritizing exact official controls, low latency, no process allocation, measured callback CPU and memory."
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Extend the existing Shuffling Looper from its 4-second project cap with a user-selected, memory-bounded capacity. Preserve 4 seconds as the default; support up to the documented 60 seconds mono / 30 seconds stereo at 48 kHz only when the memory budget permits. Test native, local-guitar browser/WASM playback, Windows, CPU, and memory before publishing.",
+    "qualification": "The v1.4 Rev D Stadium manual lists Slices, SeqLength, Shuffle, Pitch, Reverse, Repeat, Smoothing, Seq Drift, Playback, Low Cut, High Cut, and Interval 1/2, plus 60-second mono / 30-second stereo full-speed capacity and no half-speed for this model. Existing control ranges/defaults are project-authored; do not claim Line 6 DSP, setting, or sound parity. Default allocation must remain small and process() allocation-free."
   },
   "completed_checkpoints": [
     {
@@ -701,35 +700,35 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms), 1,000 warm-up and 3,000 measured callbacks per profile. State 1,028,976 B. At 220 Hz, eight modes had 10.677–10.844% p50; worst observed maximum 57.810%; low-E −12/+35 modes had 10.680–10.755% p50 and 24.541–34.222% maximum. Full p50/p95/p99/p99.9/max table is in LATENCY_AND_QUALITY.md. No deadline misses occurred."
       },
       "remaining": "The existing tracker response bound is 21.333 ms at 48 kHz, above the provisional ≤20 ms target. Real-instrument response, human listening, target-device CPU/latency and physical Stadium behavior remain manual. Do not claim Stadium algorithm, control, firmware, DSP, tracking or sound parity."
+    },
+    {
+      "name": "Fractal FM9-family Enhancer mono-to-stereo routing and CPU verification",
+      "status": "existing categorized implementation re-audited; browser mono-to-stereo path and automated checks pass; native/live and manual checks remain",
+      "date": "2026-11-25",
+      "picker_index": 61,
+      "category": "Stereo & image",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
+        "revision": "November 2026 Blocks Guide p. 44, checked 2026-11-25; FM9 downloads list firmware v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
+        "urls": [
+          "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+          "https://www.fractalaudio.com/fm9-downloads/"
+        ],
+        "qualification": "The guide is FM9-family evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
+      },
+      "documented_controls": "Modern: Width, Depth, Low Cut, High Cut. Classic: Width as right-channel delay 0–20 ms, Phase Invert, Pan Left/Right, Balance. Stereoizer: Depth sets band count and Width sets spread. All three types have Level and Bypass on Config and no Mix page. The guide publishes no numeric bounds/defaults except Classic Width.",
+      "project_controls": "Project-authored Modern M/S side-band widening, Classic right wet-path delay (7 ms default, 0–20 ms), and all-pass-derived Stereoizer; independent project bounds/defaults and Mix. Standalone core mono in-place processing is sanitized pass-through; browser Modern duplicates mono input before building a stereo chain.",
+      "verification": {
+        "source_review": "Official Blocks Guide and FM9 downloads page checked 2026-11-25.",
+        "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including Enhancer mode, mono pass-through, reset, bounds, finite recovery, and allocation coverage.",
+        "browser": "make web-test passed with local prerecorded Guitar-TECHS DI; 79 optional processors; browser/native comparison maximum absolute error 1.686768271724759e-6 and RMS error 2.9085876089063937e-7. Mono Modern smoke: 12,000 frames, input 1 channel, output 2 channels, peak 0.299381852, mean L/R difference 0.057089917. WASM fixed memory 100,663,296 B; processor state 80,621,904 B plus 10,364 B tuner state.",
+        "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
+      },
+      "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Dual/Quad Diatonic Harmony project effect",
-    "status": "implementation and automated checks pass; first-note response target and manual/device checks remain",
-    "date": "2026-11-25",
-    "picker_index": 115,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "November 2026; printed pp. 76, 80 and 86. Current FM9 downloads page checked 2026-11-25: firmware v12.0 lists FM9 Original and FM9 Turbo, not FM9 Mark II Turbo by name; installed device firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide names Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4), and explicitly classifies them as intelligent monophonic shifting. Exact firmware applicability to Mark II Turbo remains a family-level inference."
-    },
-    "documented_controls": "Key, Scale, Learn, Harmony 1–4 and Glide Time; per-voice Harmony shift up to ±25 scale degrees, detune ±50 cents, Level, Pan, Delay 0–2,000 ms. Only Quad Diatonic Delay has feedback after the shifter. Harmony is scale-degree targeting (1=unison; 0 unavailable), not semitones. The Custom Scale supports 4–8 notes with at least a half-step between successive notes; Tonic is a display aid and Key changes sounding transposition. Common Pitch mix controls include Mix, Level, Balance, Bypass, Bypass Mode, Input Gain, Kill Dry and Global Mix. Numeric ranges/defaults for most parameters, tracking accuracy, latency and DSP cost are not published.",
-    "project_controls": "Project-authored default-off Pitch effect at ID115: Dual, C major, project-indexed +2/+4 scale steps, 0 detune, 40% levels, pans −30%/+30%, no delay/feedback, 50% Mix. Exposes Dual/Quad, Key, Scale, Learn, Mix, Glide, custom 4–8 note scale, and four independent voice controls for scale-step interval, detune, level, pan, delay and feedback. Project interval 0 means unison, unlike Fractal Harmony 1. One YIN-like monophonic tracker (approximately 55–1,100 Hz) drives generated voices; no input chord tracking. Ranges, defaults, detector, routing and DSP are project-authored and are not Fractal parity.",
-    "verification": {
-      "official_source_review": "Checked 2026-11-25. Current November 2026 Blocks Guide pp. 76, 80 and 86 plus live FM9 downloads applicability; firmware v12.0 lists Original/Turbo only.",
-      "native": "make test passed documentation validation, 11/11 fixture-safety checks and 117/117 CTest cases, including offline-renderer coverage. Native memory: 728,984 B without delay, 1,496,992 B with two 2-second delay lines, and 2,265,000 B with four. Process path allocates no heap memory.",
-      "focused_browser": "Focused local prerecorded Guitar-TECHS DI Play verifies Pitch category, picker ID115, Dual/Quad mode, voice setting updates and captured output. After enabling with delays off, effect memory is 724,036 B; guitarDifferenceRms 0.0593070, settingsDifferenceRms 0.00578656, peak 0.120349.",
-      "full_browser": "make web-test passed full browser/WASM plus native comparison with local Guitar-TECHS DI: 79 optional processors, max absolute error 1.686768271724759e-6, RMS error 2.9085876089063937e-7. Full chain reported 81,115,396 B processor state plus 10,364 B tuner state in 100,663,296 B fixed WASM memory; these are full-chain totals.",
-      "windows": "make windows-cross-build passed Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured per profile. Dual 220Hz no-delay 12.768/16.511/18.991/22.640/34.109%, Dual low-E 14.382/18.588/21.365/26.137/32.306%, Quad 220Hz 22.099/28.010/31.360/39.018/63.458%, Quad low-E 24.088/30.562/34.355/41.665/63.661%; two/four 2-second delay profiles: Dual 220Hz 12.465/15.746/17.827/22.602/30.293%, Quad 220Hz 21.349/27.051/30.699/38.103/49.026%, Dual low-E 14.448/18.711/21.929/29.585/46.133%, Quad low-E 23.088/29.862/34.084/41.589/110.787%. One callback miss in the last 5,000-profile run. Percent values are p50/p95/p99/p99.9/max of this isolated processor, not Android or full-chain performance.",
-      "response": "Conservative tracker+shifter bound is 21.333 ms around 220 Hz and 29.333 ms at low E. On existing prerecorded EGFxSet guitar takes the first accepted estimate was 1,408/2,688/1,536 samples (34.667/61.333/37.333 ms), with 84/84, 74/74, and 83/83 reference notes matched and p95/max cent errors 29.922/39.656, 26.665/31.780, and 33.033/46.646 respectively. These do not establish listening quality or live latency."
-    },
-    "remaining": "The provisional ≤20ms response objective is not met; optimize detector responsiveness while preserving note stability and reporting low-E misses. Manual audio/listening, Android device timing, real instrument response, and physical FM9 validation remain open. FM9 Mark II Turbo firmware applicability and installed firmware are unknown. Do not claim Fractal tracking, DSP, settings, firmware or sound parity."
-  },
-  "current_checkpoint": {
     "name": "Line 6 Helix Stadium Feedbacker-inspired project interval modes",
     "status": "project implementation and automated checks pass; first-note response target and manual/device checks remain",
     "date": "2026-11-25",
@@ -756,7 +755,45 @@
     },
     "remaining": "The existing tracker response bound is 21.333 ms at 48 kHz, above the provisional ≤20 ms target. Real-instrument response, human listening, target-device CPU/latency and physical Stadium behavior remain manual. Do not claim Stadium algorithm, control, firmware, DSP, tracking or sound parity."
   },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Enhancer mono-to-stereo routing and CPU verification",
+    "status": "existing categorized implementation re-audited; browser mono-to-stereo path and automated checks pass; native/live and manual checks remain",
+    "date": "2026-11-25",
+    "picker_index": 61,
+    "category": "Stereo & image",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
+      "revision": "November 2026 Blocks Guide p. 44, checked 2026-11-25; FM9 downloads list firmware v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
+      "urls": [
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/"
+      ],
+      "qualification": "The guide is FM9-family evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
+    },
+    "documented_controls": "Modern: Width, Depth, Low Cut, High Cut. Classic: Width as right-channel delay 0–20 ms, Phase Invert, Pan Left/Right, Balance. Stereoizer: Depth sets band count and Width sets spread. All three types have Level and Bypass on Config and no Mix page. The guide publishes no numeric bounds/defaults except Classic Width.",
+    "project_controls": "Project-authored Modern M/S side-band widening, Classic right wet-path delay (7 ms default, 0–20 ms), and all-pass-derived Stereoizer; independent project bounds/defaults and Mix. Standalone core mono in-place processing is sanitized pass-through; browser Modern duplicates mono input before building a stereo chain.",
+    "verification": {
+      "source_review": "Official Blocks Guide and FM9 downloads page checked 2026-11-25.",
+      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including Enhancer mode, mono pass-through, reset, bounds, finite recovery, and allocation coverage.",
+      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI; 79 optional processors; browser/native comparison maximum absolute error 1.686768271724759e-6 and RMS error 2.9085876089063937e-7. Mono Modern smoke: 12,000 frames, input 1 channel, output 2 channels, peak 0.299381852, mean L/R difference 0.057089917. WASM fixed memory 100,663,296 B; processor state 80,621,904 B plus 10,364 B tuner state.",
+      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
+    },
+    "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
+  },
   "next_research": [
+    {
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Shuffling Looper capacity and bounded allocation",
+      "source": "Helix Stadium live manual v1.4 Rev D, checked 2026-11-25.",
+      "source_urls": [
+        "https://manuals.line6.com/en/helix-stadium/live/looper-block",
+        "https://line6.com/helix-stadium-models/"
+      ],
+      "status": "Existing TabletFX Shuffling Looper already exposes the documented model controls, but caps recordings at 4 seconds. Manual lists 60 seconds mono and 30 seconds stereo at full speed; half-speed is not available. The project capacity extension is next. Default must remain 4 seconds; larger capacities are explicit project choices and require a bounded memory estimate/acceptance check before allocation. The model is one looper per preset; loops are not stored with presets and clear on power-off.",
+      "known_controls": "Slices, SeqLength, Shuffle, Pitch, Reverse, Repeat, Smoothing, Seq Drift, Playback, Low Cut, High Cut, Interval 1 and Interval 2. The manual gives qualitative/probability roles and octave range for intervals but no numeric bounds/defaults for most controls.",
+      "qualification": "Do not copy unverified control ranges/defaults, internal DSP, processor percentage, or sound parity. The memory-per-capacity setting is project-authored."
+    },
     {
       "device": "Fender Tone Master Pro",
       "feature": "Pitch Sequencer parameter surface and categorized project implementation",

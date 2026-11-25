@@ -4992,6 +4992,24 @@ void run_bench() {
         return std::make_unique<tabletfx::DoubleTake>(
             static_cast<float>(sample_rate), channels);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-enhancer-modern-project-authored", [=] {
+        tabletfx::EnhancerParameters parameters;
+        parameters.mode = tabletfx::EnhancerMode::Modern;
+        return std::make_unique<tabletfx::Enhancer>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-enhancer-classic-project-authored", [=] {
+        tabletfx::EnhancerParameters parameters;
+        parameters.mode = tabletfx::EnhancerMode::Classic;
+        return std::make_unique<tabletfx::Enhancer>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-enhancer-stereoizer-project-authored", [=] {
+        tabletfx::EnhancerParameters parameters;
+        parameters.mode = tabletfx::EnhancerMode::Stereoizer;
+        return std::make_unique<tabletfx::Enhancer>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("eq5-graphic-project-authored", [=] {
         auto effect = std::make_unique<tabletfx::EQ5Graphic>(
             static_cast<float>(sample_rate), channels);
