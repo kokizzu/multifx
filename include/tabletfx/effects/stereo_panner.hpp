@@ -20,6 +20,7 @@ enum class StereoPannerWaveform : std::uint8_t {
     Exponential,
     Trapezoid,
     Astable,
+    Envelope,
 };
 
 struct StereoPannerParameters {

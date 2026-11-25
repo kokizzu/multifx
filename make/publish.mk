@@ -12,6 +12,7 @@ PUBLISH_CHECKPOINTS := \
   celestial-reverb cloud-reverb mercator-dist fractal-three-voice-synth fractal-tzf octobot am-ring-mod tape-echo octave-fuzz fractal-xvr asheville-pattrn rock-box-dist rock-box-boost stereo-panner headrush-bbd-mode headrush-cverb-ten-second-ir poly-sustain step-filter-delay fractal-volume-pan deluxe-looper
 PUBLISH_CHECKPOINTS += fender-pitch-sequence-audit
 PUBLISH_CHECKPOINTS += fender-virtual-capo-mix
+PUBLISH_CHECKPOINTS += fender-studio-delay-pan
 
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
@@ -228,3 +229,7 @@ bench-feedback-generator:
 .PHONY: bench-shuffling-looper
 bench-shuffling-looper:
 	$(PYTHON) scripts/run_cmake.py bench-shuffling-looper
+
+.PHONY: web-test-stereo-panner
+web-test-stereo-panner: test web-build
+	$(PYTHON) scripts/web.py test-stereo-panner

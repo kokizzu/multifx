@@ -1,5 +1,6 @@
 #include "tabletfx/effects/stereo_panner.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -173,6 +174,60 @@ void test_ducking_and_smoothing() {
             "stereo panner allocated memory in process()");
 }
 
+void test_envelope_mode_widens_quieter_input() {
+    constexpr std::size_t frames = 8000U;
+    constexpr std::size_t measurement_start = 4000U;
+    tabletfx::StereoPannerParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.width_percent = 100.0F;
+    parameters.waveform = tabletfx::StereoPannerWaveform::Envelope;
+    parameters.phase_degrees = 180.0F;
+    parameters.ducking_percent = 0.0F;
+    parameters.smoothing_ms = 0.0F;
+
+    std::vector<float> quiet(frames * 2U, 0.01F);
+    std::vector<float> loud(frames * 2U, 0.5F);
+    tabletfx::StereoPanner quiet_panner(8000.0F, parameters);
+    tabletfx::StereoPanner loud_panner(8000.0F, parameters);
+    quiet_panner.process(quiet, 2U);
+    loud_panner.process(loud, 2U);
+
+    const auto normalized_side_rms = [](const std::vector<float>& audio,
+                                        float input_level) {
+        double sum_squares = 0.0;
+        for (std::size_t frame = measurement_start; frame < frames; ++frame) {
+            const double side = static_cast<double>(audio[frame * 2U]) -
+                                static_cast<double>(audio[frame * 2U + 1U]);
+            sum_squares += side * side;
+        }
+        return std::sqrt(sum_squares /
+                         static_cast<double>(frames - measurement_start)) /
+               static_cast<double>(input_level);
+    };
+    const double quiet_motion = normalized_side_rms(quiet, 0.01F);
+    const double loud_motion = normalized_side_rms(loud, 0.5F);
+    require(quiet_motion > loud_motion * 2.0,
+            "Envelope mode should pan quiet input wider than loud input");
+    require(quiet_panner.memory_bytes() == sizeof(quiet_panner) &&
+                loud_panner.memory_bytes() == sizeof(loud_panner),
+            "Envelope mode should keep fixed, accurately reported state");
+    require(std::all_of(quiet.begin(), quiet.end(), [](float sample) {
+                return std::isfinite(sample);
+            }) && std::all_of(loud.begin(), loud.end(), [](float sample) {
+                return std::isfinite(sample);
+            }),
+            "Envelope mode produced non-finite output");
+
+    std::array<float, 256> callback{};
+    callback.fill(0.1F);
+    allocation_count = 0U;
+    count_allocations = true;
+    quiet_panner.process(callback, 2U);
+    count_allocations = false;
+    require(allocation_count == 0U,
+            "Envelope mode allocated memory in process()");
+}
+
 void test_mono_passthrough_and_finite_sanitization() {
     tabletfx::StereoPanner panner;
     std::array<float, 5> mono{0.25F, -0.5F,
@@ -201,6 +256,7 @@ int main() {
         test_stereo_motion_and_zero_width();
         test_tempo_duty_waveforms_and_overwidth();
         test_ducking_and_smoothing();
+        test_envelope_mode_widens_quieter_input();
         test_mono_passthrough_and_finite_sanitization();
         std::cout << "Stereo Panner tests passed\n";
         return 0;

@@ -2781,6 +2781,7 @@ function updateStereoPannerOptions() {
     `${Math.round(values[13])} ms`;
   stereoPannerControls[4].disabled = values[3] === 0;
   stereoPannerControls[5].disabled = values[3] === 0;
+  stereoPannerControls[10].disabled = values[2] === 10;
   if (workletNode) {
     workletNode.port.postMessage({ type: "stereo-panner", value: values });
   }
@@ -10163,9 +10164,13 @@ async function runStereoPannerBrowserSmokeTest(reference, captureView, captureBu
       stereoPannerControls[8].value, stereoPannerControls[9].value,
       stereoPannerControls[10].value, stereoPannerControls[11].value,
       stereoPannerControls[12].value, stereoPannerControls[13].value] =
-      ["2.5", "100", "0", false, "120", "5", "50", "50", "180", "0",
+      ["2.5", "100", "10", false, "120", "5", "50", "50", "180", "0",
         "0", "0", "0", "0"];
     updateStereoPannerOptions();
+    if (Number(stereoPannerControls[2].value) !== 10 ||
+        !stereoPannerControls[10].disabled) {
+      throw new Error("Stereo Panner Envelope mode did not select its level-following behavior.");
+    }
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     checkboxes.forEach((checkbox, index) => {
       checkbox.checked = testEnabled[index];
@@ -10213,7 +10218,8 @@ async function runStereoPannerBrowserSmokeTest(reference, captureView, captureBu
       throw new Error(`Stereo Panner did not produce measurable stereo guitar output (peak ${peak}, source difference RMS ${differenceRms}, L/R difference RMS ${stereoDifferenceRms}).`);
     }
     return { peak, activeSamples, differenceRms, stereoDifferenceRms,
-      enabledEffectIndex: 90, rateHz: 2.5, widthPercent: 100, phaseDegrees: 180 };
+      enabledEffectIndex: 90, rateHz: 2.5, widthPercent: 100,
+      panMode: "envelope", phaseDegrees: 180 };
   } finally {
     stopSource(false);
     if (workletNode) {
@@ -16743,6 +16749,24 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "stereo-panner") {
+          testResult.textContent = "Checking Stereo Panner Envelope mode with prerecorded stereo guitar audio…";
+          const stereoPannerSmoke = await runStereoPannerBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            stereoPanner: stereoPannerSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Stereo Panner browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "uni-verse-vibe") {
           testResult.textContent = "Checking Uni-Verse Vibe browser Play with the local guitar fixture…";
           const uniVerseVibeSmoke = await runUniVerseVibeBrowserSmokeTest(

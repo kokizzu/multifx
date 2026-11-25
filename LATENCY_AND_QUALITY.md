@@ -502,3 +502,18 @@ On an AMD Ryzen 9 5950X Release build at 48 kHz, 128-frame callbacks (2.667 ms),
 | Stereo, Beat | 0.1406% | 0.2276% | 0.2591% | 1.9227% | 2.4706% | 0/5,000 |
 
 `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench-shuffling-looper` pass. Browser playback uses the repository's local prerecorded guitar DI. These isolated Linux processor-call timings do not predict Android/tablet load or XR1 performance. Manual listening, target-device timing, and physical footswitch checks remain open; no XR1 DSP/settings/sound parity is claimed.
+
+## Tone Master Pro Studio Delay Envelope pan-mode mapping (2026-11-25)
+
+The existing categorized Stereo Panner now exposes an `Envelope` option that follows input strength and reduces the sine-pan excursion on louder passages. This maps the Tone Master Pro Model Guide v1.1.100 / Rev. A's Studio Delay Envelope Pan Mode description, but remains a standalone project panner; it is not a Studio Delay block, does not pan only wet repeats, and does not claim Fender DSP or sound parity.
+
+`make test` passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases, including Envelope response, finite output, fixed state, and no allocation in `process()`. `make web-test-stereo-panner` passed HeadlessChrome 151 WASM playback capture from the local prerecorded stereo Guitar-TECHS DI; measured output peak was 0.242084, L/R difference RMS 0.039952, and the selected mode was Envelope. `make windows-cross-build` passed the MinGW core and offline renderer build.
+
+The isolated Release benchmark used a synthetic stereo guitar-like signal, 3,000 warm-up and 20,000 measured 128-frame callbacks at 48 kHz, on an AMD Ryzen 9 5950X. The callback deadline is 2,666.667 μs. The effect object owns 120 B, allocates nothing during processing, and adds zero algorithmic latency. Percentages are elapsed effect-call time as a share of one callback deadline:
+
+| Mode | p50 | p95 | p99 | p99.9 | Max | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Sine | 0.373% | 0.474% | 0.587% | 0.807% | 4.954% | 0/20,000 |
+| Envelope | 0.355% | 0.437% | 0.540% | 0.837% | 5.084% | 0/20,000 |
+
+These are isolated desktop estimates, not tablet/Android performance. The broad `make web-browser-test` ran the panner playback check but later failed at the existing tuner response-time assertion (the A4 result was valid; the test's 300 ms limit was exceeded). The focused panner browser test passes. Human listening and live-device timing remain open.

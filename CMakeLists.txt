@@ -145,6 +145,8 @@ target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_shuffling_looper_bench
     apps/shuffling_looper_bench.cpp)
 target_link_libraries(tabletfx_shuffling_looper_bench PRIVATE tabletfx_core)
+add_executable(tabletfx_stereo_panner_bench apps/stereo_panner_bench.cpp)
+target_link_libraries(tabletfx_stereo_panner_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)

@@ -738,6 +738,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 
 
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
+                 stereo_panner_only: bool = False,
                  mutant_filter_only: bool = False,
                  step_tremolo_only: bool = False,
                  fractal_bias_trem_only: bool = False,
@@ -777,7 +778,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         long_convolution_ir_path = temp_dir / "convolution-ir-10s.wav"
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
-            if fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only:
+            if (fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only
+                    or stereo_panner_only):
                 raise SystemExit(
                     "Focused effect browser test requires the local prerecorded guitar DI fixture."
                 )
@@ -1274,6 +1276,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-diatonic-harmonizer"
         elif fractal_resonator_input_gain_only:
             url = base_url + "/web/index.html?selftest=fractal-resonator-input-gain"
+        elif stereo_panner_only:
+            url = base_url + "/web/index.html?selftest=stereo-panner"
         elif mutant_filter_only:
             url = base_url + "/web/index.html?selftest=mutant-filter"
         elif stereo_filter_only:
@@ -1472,7 +1476,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         try:
             result, stderr = run_chrome_page(
                 chrome, user_data, url, temp_dir / "chrome-stderr.log",
-                None if volume_pan_only or stereo_filter_only or step_tremolo_only or
+                None if volume_pan_only or stereo_filter_only or stereo_panner_only or
+                step_tremolo_only or
                 fractal_bias_trem_only or vibratone_only or uni_verse_vibe_only
                 or four_osc_only or poly_detune_only or fractal_poly_pitch_only
                 or fender_pedal_shifter_only or fender_pedal_detune_only
@@ -1497,6 +1502,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         report = json.loads(result.get("text", "{}"))
         if volume_pan_only:
             print("Focused Volume/Pan browser/WASM Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif stereo_panner_only:
+            print("Focused Stereo Panner browser/WASM prerecorded-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         elif stereo_filter_only:
             print("Focused Stereo Filter browser/WASM local-guitar Play smoke passed.")
@@ -1586,7 +1594,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
-        "test-volume-pan", "test-stereo-filter", "test-mutant-filter", "test-step-tremolo",
+        "test-volume-pan", "test-stereo-filter", "test-stereo-panner",
+        "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
         "test-fender-universe-vibe",
@@ -1614,6 +1623,8 @@ def main() -> None:
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":
         browser_test(stereo_filter_only=True)
+    elif action == "test-stereo-panner":
+        browser_test(stereo_panner_only=True)
     elif action == "test-mutant-filter":
         browser_test(mutant_filter_only=True)
     elif action == "test-step-tremolo":

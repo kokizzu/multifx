@@ -4,38 +4,35 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "54705836088133bd753d5c2a6fff57e280dff04d",
+  "previous_checkpoint_commit": "dd1ad51b7e758a8d7377c4eeeca0d7d795460cb0",
   "latest_audit": {
-    "name": "Fractal FM9-family Enhancer mono-to-stereo routing and CPU verification",
-    "status": "existing categorized implementation re-audited; browser mono-to-stereo path and automated checks pass; native/live and manual checks remain",
+    "name": "Fender Tone Master Pro Studio Delay Envelope pan-mode mapping",
+    "status": "project control-role mapping verified with native, focused browser/WASM playback, Windows build, CPU, memory, and latency checks; complete Studio Delay integration and manual/device checks remain",
     "date": "2026-11-25",
-    "picker_index": 61,
-    "category": "Stereo & image",
+    "picker_index": 90,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
-      "revision": "November 2026 Blocks Guide p. 44, checked 2026-11-25; FM9 downloads list firmware v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
-      "urls": [
-        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "https://www.fractalaudio.com/fm9-downloads/"
-      ],
-      "qualification": "The guide is FM9-family evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
+      "title": "Fender Tone Master Pro Model Guide",
+      "revision": "v1.1.100 / Rev. A, printed p. 50; guide control snapshot, not a statement of installed firmware.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "qualification": "Guide documents Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/TRI/ENV; ENV follows input strength and widens pan at lower input. Numeric limits, defaults, and exact DSP are not stated."
     },
-    "documented_controls": "Modern: Width, Depth, Low Cut, High Cut. Classic: Width as right-channel delay 0–20 ms, Phase Invert, Pan Left/Right, Balance. Stereoizer: Depth sets band count and Width sets spread. All three types have Level and Bypass on Config and no Mix page. The guide publishes no numeric bounds/defaults except Classic Width.",
-    "project_controls": "Project-authored Modern M/S side-band widening, Classic right wet-path delay (7 ms default, 0–20 ms), and all-pass-derived Stereoizer; independent project bounds/defaults and Mix. Standalone core mono in-place processing is sanitized pass-through; browser Modern duplicates mono input before building a stereo chain.",
+    "documented_controls": "Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/Triangle/Envelope. Envelope follows input strength and gives wider panning at lower input. Numeric ranges/defaults, wet-only behavior, and algorithm details remain undocumented in the reviewed guide.",
+    "project_controls": "Existing categorized Stereo Panner at Modulation index 90 adds Envelope. It uses the existing sine LFO and envelope detector, forcing full level-dependent excursion reduction in this mode; louder input narrows movement. Sine remains the default. This is a standalone project panner control-role mapping, not a Studio Delay block or wet-repeat panner. No extra processor/stage/buffer/state, fixed latency, or callback allocation; state remains 120 B.",
     "verification": {
-      "source_review": "Official Blocks Guide and FM9 downloads page checked 2026-11-25.",
-      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including Enhancer mode, mono pass-through, reset, bounds, finite recovery, and allocation coverage.",
-      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI; 79 optional processors; browser/native comparison maximum absolute error 1.686768271724759e-6 and RMS error 2.9085876089063937e-7. Mono Modern smoke: 12,000 frames, input 1 channel, output 2 channels, peak 0.299381852, mean L/R difference 0.057089917. WASM fixed memory 100,663,296 B; processor state 80,621,904 B plus 10,364 B tuner state.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
+      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Panner tests cover the quieter-input wider-motion response, finite output, fixed memory, and zero process allocations.",
+      "browser": "make web-test-stereo-panner passed HeadlessChrome 151 at 48 kHz stereo with the local prerecorded Guitar-TECHS DI. Envelope mode selected; captured output peak 0.242084, L/R difference RMS 0.039952, 95,964 active samples.",
+      "windows": "make windows-cross-build passed the MinGW core library and offline renderer build.",
+      "benchmark": "make bench measured Sine and Envelope over 20,000 callbacks after 3,000 warm-ups, 48 kHz stereo, 128 frames, Release on AMD Ryzen 9 5950X. Envelope: p50/p95/p99/p99.9/max 0.355/0.437/0.540/0.837/5.084% of a 2,666.667 us callback. Sine: 0.373/0.474/0.587/0.807/4.954%. Both have zero deadline misses in measured calls; object memory 120 B; algorithmic latency 0 samples.",
+      "full_browser_suite": "make web-browser-test failed after the panner smoke at the tuner response-time assertion: the valid A4 readout was 440.0017 Hz and +31.77 cents against 432 Hz, but the test exceeded its 300 ms response limit. This target is not claimed to pass."
     },
-    "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
+    "remaining": "Human listening, live-device timing, and a full wet-repeat Studio Delay implementation remain open. Do not claim Fender DSP/settings/sound parity."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "HeadRush Prime",
-    "next_feature": "Audit the current official v5.2 guide for Up Tune and Drop Tune controls, ranges, defaults, tracking mode, and firmware changes. v5.0.1 notes document Legacy and Refined modes but accessible current parameter detail is still unverified. Implement only a clearly labeled, project-authored gap that does not duplicate the existing Polyphonic Pitch Shifter.",
-    "qualification": "Stadium Shuffling Looper capacity and XR1-inspired beat alignment are implemented and automated native/browser/Windows checks plus CPU/memory measurements pass. XR1 FAQ confirms start/end alignment to a selected beat; project Beat mode is Off by default, uses a quarter-note grid and latches project tempo when armed. Subdivisions, XR1 defaults, and tempo-change policy remain unknown. No Stadium or XR1 DSP/settings/sound parity is claimed."
+    "next_feature": "Continue checking exact-model v5.2 controls for Prime Up Tune, Drop Tune, and other documented effects. The official manual PDF was not parsed by the earlier audit; find accessible official parameter detail before implementing, and record unknowns without borrowing from other HeadRush models.",
+    "qualification": "The Tone Master Pro Studio Delay Envelope pan-mode mapping is now fully checked as a standalone project control; this is not full Studio Delay or wet-repeat panning. A focused browser/WASM guitar Play test passes. The broader web test still has a tuner response-time assertion failure after the panner smoke; manual audio/device checks remain open."
   },
   "completed_checkpoints": [
     {
@@ -756,36 +753,32 @@
         "benchmark": "Ryzen 9 5950X Release, 48 kHz, 128-frame/2.667 ms callbacks, 1,000 warm-up and 5,000 measured per profile. Fixed state 1,488 B; max-profile state 11,521,488 B; sample storage 11,520,000 B; 16 MiB transition cap; 0/5,000 misses in all mono/stereo Off/Beat profiles. Per-percentiles are in LATENCY_AND_QUALITY.md; isolated desktop values are not device estimates."
       },
       "remaining": "Human listening, live-device timing, and physical footswitch mapping remain open. No XR1 settings, DSP, UI, latency, or sound parity is claimed."
+    },
+    {
+      "name": "Fender Tone Master Pro Studio Delay Envelope pan-mode mapping",
+      "status": "project control-role mapping verified with native, focused browser/WASM playback, Windows build, CPU, memory, and latency checks; complete Studio Delay integration and manual/device checks remain",
+      "date": "2026-11-25",
+      "picker_index": 90,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide",
+        "revision": "v1.1.100 / Rev. A, printed p. 50; guide control snapshot, not a statement of installed firmware.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "qualification": "Guide documents Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/TRI/ENV; ENV follows input strength and widens pan at lower input. Numeric limits, defaults, and exact DSP are not stated."
+      },
+      "documented_controls": "Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/Triangle/Envelope. Envelope follows input strength and gives wider panning at lower input. Numeric ranges/defaults, wet-only behavior, and algorithm details remain undocumented in the reviewed guide.",
+      "project_controls": "Existing categorized Stereo Panner at Modulation index 90 adds Envelope. It uses the existing sine LFO and envelope detector, forcing full level-dependent excursion reduction in this mode; louder input narrows movement. Sine remains the default. This is a standalone project panner control-role mapping, not a Studio Delay block or wet-repeat panner. No extra processor/stage/buffer/state, fixed latency, or callback allocation; state remains 120 B.",
+      "verification": {
+        "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Panner tests cover the quieter-input wider-motion response, finite output, fixed memory, and zero process allocations.",
+        "browser": "make web-test-stereo-panner passed HeadlessChrome 151 at 48 kHz stereo with the local prerecorded Guitar-TECHS DI. Envelope mode selected; captured output peak 0.242084, L/R difference RMS 0.039952, 95,964 active samples.",
+        "windows": "make windows-cross-build passed the MinGW core library and offline renderer build.",
+        "benchmark": "make bench measured Sine and Envelope over 20,000 callbacks after 3,000 warm-ups, 48 kHz stereo, 128 frames, Release on AMD Ryzen 9 5950X. Envelope: p50/p95/p99/p99.9/max 0.355/0.437/0.540/0.837/5.084% of a 2,666.667 us callback. Sine: 0.373/0.474/0.587/0.807/4.954%. Both have zero deadline misses in measured calls; object memory 120 B; algorithmic latency 0 samples.",
+        "full_browser_suite": "make web-browser-test failed after the panner smoke at the tuner response-time assertion: the valid A4 readout was 440.0017 Hz and +31.77 cents against 432 Hz, but the test exceeded its 300 ms response limit. This target is not claimed to pass."
+      },
+      "remaining": "Human listening, live-device timing, and a full wet-repeat Studio Delay implementation remain open. Do not claim Fender DSP/settings/sound parity."
     }
   ],
   "previous_checkpoint": {
-    "name": "Line 6 Helix Stadium Feedbacker-inspired project interval modes",
-    "status": "project implementation and automated checks pass; first-note response target and manual/device checks remain",
-    "date": "2026-11-25",
-    "picker_index": 56,
-    "category": "Dynamics",
-    "official_source": {
-      "title": "Helix Stadium model catalogue and live effect-block manual; Line 6 Helix software-family Feedbacker description",
-      "revision": "Checked 2026-11-25. Stadium live manual selector v1.4 Rev D; hardware v1.4.2 released 2026-10-27; installed device firmware unknown. Software-family control description is not a Stadium-specific parameter table.",
-      "urls": [
-        "https://line6.com/helix-stadium-models/",
-        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-        "https://line6.com/software/index.html?locale=nl_BE&name=Helix+Native&os=All&submit_form=set"
-      ],
-      "qualification": "Stadium catalog lists Feedbacker as Mono, Line 6 Original, first appearing in v1.0. Stadium-specific numeric ranges/defaults, DSP and latency are not published. Older software-family control names are source concepts only and do not establish Stadium settings or parity."
-    },
-    "documented_controls": "Family source lists Fdbk Type: −Octave, Unison, +Octave, Oct +5th, +2 Octaves, 2 Oct+3rd, 2 Oct+5th, 2 Oct+7th, Mid to Low, High to Low, Rndm Onset, and Rndm Trigger; plus Attack, Release, Dry Kill Off/On/Always, Dry Level, Reference Lowest/Loudest, Silence Thr, Onset Thr, Offset Thr, Retrigger, and Trails. Numeric bounds/defaults are not stated.",
-    "project_controls": "Project-authored mono-tracked sine sustain at one interval: −12, 0, +12, +19, +24, +28, +31, or +35 semitones. The oscillator does not stack voices. Generated Level 0–1 (default 0.35); Attack 0–2,000 ms (15); Release 0–5,000 ms (600); Dry Kill Off/On (Off); Dry Level 0–1 (1); Silence Threshold −90…0 dBFS (−48); hard output limit ±1.0. Tracker covers about 55–1,100 Hz with a 1,024-sample frame; it remains monophonic. All project controls, bounds, defaults, oscillator shape and processing are independent of Line 6.",
-    "verification": {
-      "official_source_review": "Checked 2026-11-25. Stadium model list, current live v1.4 Rev D effects manual, and official Helix software-family Feedbacker control description.",
-      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including interval mapping, output safety and latency getters.",
-      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI and browser/WASM/native comparison: 79 processors; max absolute error 1.686768271724759e-6; RMS error 2.9085876089063937e-7. Browser self-test verifies all eight category labels and project-control updates.",
-      "windows": "make windows-cross-build passed Windows MinGW core and offline-renderer builds.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms), 1,000 warm-up and 3,000 measured callbacks per profile. State 1,028,976 B. At 220 Hz, eight modes had 10.677–10.844% p50; worst observed maximum 57.810%; low-E −12/+35 modes had 10.680–10.755% p50 and 24.541–34.222% maximum. Full p50/p95/p99/p99.9/max table is in LATENCY_AND_QUALITY.md. No deadline misses occurred."
-    },
-    "remaining": "The existing tracker response bound is 21.333 ms at 48 kHz, above the provisional ≤20 ms target. Real-instrument response, human listening, target-device CPU/latency and physical Stadium behavior remain manual. Do not claim Stadium algorithm, control, firmware, DSP, tracking or sound parity."
-  },
-  "current_checkpoint": {
     "name": "XRecer XR1-inspired Shuffling Looper beat quantization",
     "status": "project implementation, automated native/browser/Windows checks, and CPU/memory measurements pass; manual listening and device checks remain",
     "date": "2026-11-25",
@@ -807,6 +800,29 @@
       "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz, 128-frame/2.667 ms callbacks; 1,000 warm-ups and 5,000 samples per profile. Fixed scheduler state 1,488 B; max-profile effect memory 11,521,488 B; sample storage 11,520,000 B; transition peaks 12,288,000 B mono / 13,056,000 B stereo. Mono Off p50/p95/p99/p99.9/max 0.0803/0.1298/0.1759/0.3945/1.5919%; Mono Beat 0.0836/0.1346/0.1455/0.4234/1.5240%; Stereo Off 0.1376/0.1391/0.2344/0.6402/2.0322%; Stereo Beat 0.1406/0.2276/0.2591/1.9227/2.4706%. All profiles 0/5,000 deadline misses. Isolated desktop measurements do not predict device performance."
     },
     "remaining": "Manual listening, live device timing, and physical footswitch mapping remain open. XR1 quantize subdivisions/defaults/tempo behavior and vendor DSP/latency remain unknown."
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Studio Delay Envelope pan-mode mapping",
+    "status": "project control-role mapping verified with native, focused browser/WASM playback, Windows build, CPU, memory, and latency checks; complete Studio Delay integration and manual/device checks remain",
+    "date": "2026-11-25",
+    "picker_index": 90,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fender Tone Master Pro Model Guide",
+      "revision": "v1.1.100 / Rev. A, printed p. 50; guide control snapshot, not a statement of installed firmware.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "qualification": "Guide documents Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/TRI/ENV; ENV follows input strength and widens pan at lower input. Numeric limits, defaults, and exact DSP are not stated."
+    },
+    "documented_controls": "Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/Triangle/Envelope. Envelope follows input strength and gives wider panning at lower input. Numeric ranges/defaults, wet-only behavior, and algorithm details remain undocumented in the reviewed guide.",
+    "project_controls": "Existing categorized Stereo Panner at Modulation index 90 adds Envelope. It uses the existing sine LFO and envelope detector, forcing full level-dependent excursion reduction in this mode; louder input narrows movement. Sine remains the default. This is a standalone project panner control-role mapping, not a Studio Delay block or wet-repeat panner. No extra processor/stage/buffer/state, fixed latency, or callback allocation; state remains 120 B.",
+    "verification": {
+      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Panner tests cover the quieter-input wider-motion response, finite output, fixed memory, and zero process allocations.",
+      "browser": "make web-test-stereo-panner passed HeadlessChrome 151 at 48 kHz stereo with the local prerecorded Guitar-TECHS DI. Envelope mode selected; captured output peak 0.242084, L/R difference RMS 0.039952, 95,964 active samples.",
+      "windows": "make windows-cross-build passed the MinGW core library and offline renderer build.",
+      "benchmark": "make bench measured Sine and Envelope over 20,000 callbacks after 3,000 warm-ups, 48 kHz stereo, 128 frames, Release on AMD Ryzen 9 5950X. Envelope: p50/p95/p99/p99.9/max 0.355/0.437/0.540/0.837/5.084% of a 2,666.667 us callback. Sine: 0.373/0.474/0.587/0.807/4.954%. Both have zero deadline misses in measured calls; object memory 120 B; algorithmic latency 0 samples.",
+      "full_browser_suite": "make web-browser-test failed after the panner smoke at the tuner response-time assertion: the valid A4 readout was 440.0017 Hz and +31.77 cents against 432 Hz, but the test exceeded its 300 ms response limit. This target is not claimed to pass."
+    },
+    "remaining": "Human listening, live-device timing, and a full wet-repeat Studio Delay implementation remain open. Do not claim Fender DSP/settings/sound parity."
   },
   "next_research": [
     {

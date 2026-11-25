@@ -141,6 +141,7 @@ StereoPannerWaveform StereoPanner::sanitize_waveform(
     case StereoPannerWaveform::Exponential:
     case StereoPannerWaveform::Trapezoid:
     case StereoPannerWaveform::Astable:
+    case StereoPannerWaveform::Envelope:
         return waveform;
     }
     return StereoPannerWaveform::Sine;
@@ -203,6 +204,11 @@ float StereoPanner::waveform_value(float phase) const noexcept {
         value = phase < duty ? 1.0F : -1.0F;
         value *= 0.85F + 0.15F * std::sin(kTwoPi * phase);
         break;
+    case StereoPannerWaveform::Envelope:
+        // The project-authored ENV interpretation keeps a sine pan cycle and
+        // lets input level widen/narrow its excursion in process().
+        value = std::sin(kTwoPi * phase);
+        break;
     }
     return shape_waveform(std::clamp(value, -1.0F, 1.0F));
 }
@@ -263,8 +269,12 @@ void StereoPanner::process(std::span<float> interleaved,
         const float stereo_motion = 0.5F * (left_wave - right_wave);
         const float activity = std::clamp(envelope_ / (envelope_ + 0.05F),
                                           0.0F, 1.0F);
+        const float ducking_percent = parameters_.waveform ==
+                StereoPannerWaveform::Envelope
+            ? 100.0F
+            : current_ducking_percent_;
         const float duck_factor = 1.0F -
-            (current_ducking_percent_ / 100.0F) * activity;
+            (ducking_percent / 100.0F) * activity;
         const float motion = stereo_motion * duck_factor;
         const float width_scale = current_width_percent_ / 100.0F;
         const float center_offset = current_pan_center_percent_ / 200.0F;

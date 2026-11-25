@@ -1963,6 +1963,26 @@ STEREO_PANNER_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_STUDIO_DELAY_PAN_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/stereo_panner_bench.cpp",
+    "include/tabletfx/effects/stereo_panner.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/stereo_panner.cpp",
+    "tests/test_stereo_panner.cpp",
+    "web/app.js",
+    "web/index.html",
+)
+
 HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -2792,6 +2812,10 @@ CHECKPOINTS = {
     "stereo-panner": (
         STEREO_PANNER_CHECKPOINT_PATHS,
         "feat: add categorized Fractal-style stereo panner",
+    ),
+    "fender-studio-delay-pan": (
+        FENDER_STUDIO_DELAY_PAN_CHECKPOINT_PATHS,
+        "feat: add Studio Delay envelope pan mode mapping",
     ),
     "headrush-bbd-mode": (
         HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,

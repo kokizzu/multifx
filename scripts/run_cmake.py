@@ -187,6 +187,12 @@ def main() -> None:
             else "tabletfx_fender_virtual_capo_mix_bench"
         )
         run([str(pitch_mix_benchmark)])
+        panner_benchmark = BUILD_DIR / (
+            "tabletfx_stereo_panner_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_stereo_panner_bench"
+        )
+        run([str(panner_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":
