@@ -176,7 +176,7 @@ const DEFAULT_PARAMETERS = {
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
   tremolo: [5, 0.5, 0, 0, 120, 1, 0],
   harmonicTremolo: [3, 0.65, 700, 0, 0, 120, 1, 1, 10],
-  chorus: [0.8, 15, 7, 0.3],
+  chorus: [0.8, 15, 7, 0.3, 0, 120],
   dimensionChorus: [0, 0, 0.5, 0],
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
@@ -1599,6 +1599,9 @@ const multiDelayControls = [
 ];
 const chorusRate = document.querySelector("#chorus-rate-hz");
 const chorusRateValue = document.querySelector("#chorus-rate-value");
+const chorusTempoMode = document.querySelector("#chorus-tempo-mode");
+const chorusTempoBpm = document.querySelector("#chorus-tempo-bpm");
+const chorusTempoBpmValue = document.querySelector("#chorus-tempo-bpm-value");
 const chorusDelay = document.querySelector("#chorus-delay-ms");
 const chorusDelayValue = document.querySelector("#chorus-delay-value");
 const chorusDepth = document.querySelector("#chorus-depth-ms");
@@ -5952,6 +5955,8 @@ updateAutoSwellDelay();
 
 function updateChorus() {
   const delayMs = Number(chorusDelay.value);
+  const tempoSync = chorusTempoMode.value === "quarter";
+  const tempoBpm = Math.min(300, Math.max(20, Number(chorusTempoBpm.value)));
   const maximumDepthMs = Math.max(0, Math.min(14, delayMs - 1, 30 - delayMs));
   chorusDepth.max = String(maximumDepthMs);
   chorusDepth.value = String(Math.min(Number(chorusDepth.value), maximumDepthMs));
@@ -5960,16 +5965,23 @@ function updateChorus() {
     delayMs,
     Number(chorusDepth.value),
     Number(chorusMix.value),
+    tempoSync ? 1 : 0,
+    tempoBpm,
   ];
   DEFAULT_PARAMETERS.chorus = values;
-  chorusRateValue.value = `${Number(chorusRate.value).toFixed(2)} Hz`;
+  const effectiveRate = tempoSync ? tempoBpm / 60 : Number(chorusRate.value);
+  chorusRate.disabled = tempoSync;
+  chorusTempoBpm.disabled = !tempoSync;
+  chorusRateValue.value = `${effectiveRate.toFixed(2)} Hz${tempoSync ? " · sync" : ""}`;
+  chorusTempoBpmValue.value = `${Math.round(tempoBpm)} BPM`;
   chorusDelayValue.value = `${Number(chorusDelay.value).toFixed(1)} ms`;
   chorusDepthValue.value = `${Number(chorusDepth.value).toFixed(1)} ms`;
   chorusMixValue.value = `${Math.round(Number(chorusMix.value) * 100)}%`;
   if (workletNode) workletNode.port.postMessage({ type: "chorus", value: values });
 }
 
-for (const control of [chorusRate, chorusDelay, chorusDepth, chorusMix]) {
+for (const control of [chorusRate, chorusTempoMode, chorusTempoBpm,
+  chorusDelay, chorusDepth, chorusMix]) {
   control.addEventListener("input", updateChorus);
   control.addEventListener("change", updateChorus);
 }
@@ -13082,6 +13094,124 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
   }
 }
 
+async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [chorusRate.value, chorusTempoMode.value,
+    chorusTempoBpm.value, chorusDelay.value, chorusDepth.value, chorusMix.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Chorus tempo smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="16"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        chorusTempoMode.value !== "free" || chorusRate.disabled ||
+        chorusRate.value !== "0.8" || chorusTempoMode.options.length !== 2 ||
+        chorusTempoBpm.min !== "20" || chorusTempoBpm.max !== "300" ||
+        chorusTempoBpm.value !== "120" || !chorusTempoBpm.disabled ||
+        !(effectMemory[16] > 0)) {
+      throw new Error("Chorus tempo controls or unchanged free-rate default are invalid.");
+    }
+
+    chorusDelay.value = "8";
+    chorusDepth.value = "6";
+    chorusMix.value = "0.7";
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 16;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (mode, bpm) => {
+      chorusTempoMode.value = mode;
+      chorusTempoBpm.value = String(bpm);
+      updateChorus();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Chorus tempo playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Chorus output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error("Chorus tempo output is silent.");
+      return { output, peak };
+    };
+
+    const free = await captureAt("free", 120);
+    const quarterAt120 = await captureAt("quarter", 120);
+    if (chorusRateValue.value !== "2.00 Hz · sync" || !chorusRate.disabled ||
+        chorusTempoBpm.disabled) {
+      throw new Error("Chorus quarter-note sync at 120 BPM did not select 2 Hz.");
+    }
+    const quarterAt60 = await captureAt("quarter", 60);
+    if (chorusRateValue.value !== "1.00 Hz · sync") {
+      throw new Error("Chorus quarter-note sync did not follow the tempo change to 60 BPM.");
+    }
+    const rmsDifference = (left, right) => {
+      let squared = 0;
+      for (let i = 0; i < left.length; i += 1) {
+        const difference = left[i] - right[i];
+        squared += difference * difference;
+      }
+      return Math.sqrt(squared / left.length);
+    };
+    const freeTo120 = rmsDifference(free.output, quarterAt120.output);
+    const tempoChange = rmsDifference(quarterAt120.output, quarterAt60.output);
+    if (freeTo120 < 1e-4 || tempoChange < 1e-4) {
+      throw new Error(`Chorus sync did not change captured audio (RMS ${freeTo120}, ${tempoChange}).`);
+    }
+    return {
+      category: "Modulation",
+      effectId: 16,
+      documentedRole: "Chorus Tempo parameter synchronizes Rate; LFO1 SYNC is separate",
+      projectSyncChoice: "quarter note",
+      projectTempoRangeBpm: [20, 300],
+      freeRateDefaultHz: 0.8,
+      quarterAt120Hz: 2,
+      quarterAt60Hz: 1,
+      playCaptures: 3,
+      peaks: [free.peak, quarterAt120.peak, quarterAt60.peak],
+      rmsDifferences: { freeToQuarter120: freeTo120, quarter120To60: tempoChange },
+      effectMemoryBytes: effectMemory[16],
+    };
+  } finally {
+    stopSource(false);
+    [chorusRate.value, chorusTempoMode.value, chorusTempoBpm.value,
+      chorusDelay.value, chorusDepth.value, chorusMix.value] = previousControls;
+    updateChorus();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderTremoloLfoClipBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -17281,7 +17411,7 @@ async function runBrowserSelfTest() {
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
         tremolo: [4, 0.2, 0, 0, 120, 1, 0],
         harmonicTremolo: [4.25, 0.8, 950, 1, 1, 96, 0.5, 0, 25],
-        chorus: [0.8, 15, 7, 0.2],
+        chorus: [0.8, 15, 7, 0.2, 0, 120],
          flanger: [0.25, 2, 1, 0.35, 1, 0.2, 180],
         phaser: [0.5, 250, 1600, 0.15, 6, 0.2, 0, 120, 4],
         vibrato: [5, 0.35, 0.35],
@@ -17873,6 +18003,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Phaser Tap Division browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-chorus-tempo") {
+          testResult.textContent = "Checking Chorus quarter-note tempo sync with local guitar audio…";
+          const chorusTempoSmoke = await runFractalChorusTempoBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            chorusTempo: chorusTempoSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Chorus Tempo browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fender-tremolo-lfo-clip") {

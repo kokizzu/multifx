@@ -1396,6 +1396,14 @@
           <span>Chorus rate</span><output id="chorus-rate-value" for="chorus-rate-hz">0.80 Hz</output>
           <input id="chorus-rate-hz" type="range" min="0.05" max="8" step="0.05" value="0.8">
         </label>
+        <label class="mix-control" for="chorus-tempo-mode">
+          <span>Rate mode</span>
+          <select id="chorus-tempo-mode"><option value="free" selected>Free Hz</option><option value="quarter">Quarter note sync</option></select>
+        </label>
+        <label class="mix-control" for="chorus-tempo-bpm">
+          <span>Tempo</span><output id="chorus-tempo-bpm-value" for="chorus-tempo-bpm">120 BPM</output>
+          <input id="chorus-tempo-bpm" type="range" min="20" max="300" step="1" value="120" disabled>
+        </label>
         <label class="mix-control" for="chorus-delay-ms">
           <span>Base delay</span><output id="chorus-delay-value" for="chorus-delay-ms">15.0 ms</output>
           <input id="chorus-delay-ms" type="range" min="2" max="30" step="0.5" value="15">
@@ -1409,6 +1417,7 @@
           <input id="chorus-mix" type="range" min="0" max="1" step="0.01" value="0.3">
         </label>
       </div>
+      <p class="hint">Project-authored tempo control: Quarter note uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Rate synchronization changes LFO speed but does not phase-align it. Fractal’s separate LFO1 SYNC source is not implemented.</p>
       <div class="gain-controls" aria-label="Dimension Chorus controls">
         <h3>Dimension Chorus · project-authored DSP</h3>
         <label class="mix-control" for="dimension-chorus-version">

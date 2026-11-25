@@ -2085,9 +2085,12 @@ public:
     }
 
     void configure_chorus(float rate_hz, float base_delay_ms, float depth_ms,
-                          float mix) noexcept {
+                          float mix, std::uint32_t tempo_sync,
+                          float tempo_bpm) noexcept {
         tabletfx::ChorusParameters parameters;
         parameters.rate_hz = rate_hz;
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
         parameters.base_delay_ms = base_delay_ms;
         parameters.depth_ms = depth_ms;
         parameters.mix = mix;
@@ -4573,9 +4576,11 @@ TABLETFX_WASM_EXPORT void tf_chain_set_auto_swell_delay(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_chorus(
     void* opaque, float rate_hz, float base_delay_ms,
-    float depth_ms, float mix) noexcept {
+    float depth_ms, float mix, std::uint32_t tempo_sync,
+    float tempo_bpm) noexcept {
     if (opaque != nullptr) {
-        as_chain(opaque)->configure_chorus(rate_hz, base_delay_ms, depth_ms, mix);
+        as_chain(opaque)->configure_chorus(rate_hz, base_delay_ms, depth_ms,
+                                           mix, tempo_sync, tempo_bpm);
     }
 }
 

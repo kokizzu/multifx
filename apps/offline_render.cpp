@@ -2465,6 +2465,17 @@ Options parse_options(int argc, char** argv, int first) {
             options.phaser_enabled = true;
             continue;
         }
+        if (key == "--chorus-tempo-sync") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --chorus-tempo-sync");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.chorus.tempo_sync = true;
+            else if (value == "off") options.chorus.tempo_sync = false;
+            else throw std::invalid_argument("Chorus tempo sync must be on or off");
+            options.chorus_enabled = true;
+            continue;
+        }
         if (key == "--phaser-tap-division") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --phaser-tap-division");
@@ -2750,6 +2761,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--chorus-rate-hz") {
             options.chorus.rate_hz = value;
+            options.chorus_enabled = true;
+        }
+        else if (key == "--chorus-tempo-bpm") {
+            options.chorus.tempo_bpm = value;
             options.chorus_enabled = true;
         }
         else if (key == "--chorus-delay-ms") {
@@ -5938,7 +5953,8 @@ void print_usage() {
                    " [--auto-swell-delay-mod 0..1] [--auto-swell-delay-tone 0..1]"
                    " [--auto-swell-delay-sense-db -72..0] [--auto-swell-delay-taper slow|normal|fast]"
                    " [--auto-swell-delay-dry on|off] [--auto-swell-delay-spillover on|off]"
-                  " [--chorus-rate-hz Hz] [--chorus-delay-ms ms]"
+                   " [--chorus-rate-hz 0.05..8] [--chorus-tempo-sync on|off]"
+                   " [--chorus-tempo-bpm 20..300 quarter-note] [--chorus-delay-ms ms]"
                   " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
                   " [--dimension-chorus] [--dimension-chorus-version C|D]"
                   " [--dimension-chorus-mode 1|2|3|4|1+2|1+3|1+4|2+3|2+4|3+4]"

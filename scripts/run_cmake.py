@@ -137,6 +137,17 @@ def bench_shuffling_looper(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_fractal_chorus_tempo(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fractal_chorus_tempo_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fractal_chorus_tempo_bench"
+    )
+    run([str(executable)])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -155,7 +166,8 @@ def main() -> None:
         "action",
         choices=("configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
-                 "bench-feedback-generator", "bench-shuffling-looper",
+                  "bench-feedback-generator", "bench-shuffling-looper",
+                  "bench-fractal-chorus-tempo",
                  "windows-build"),
     )
     parser.add_argument("--test-filter", default="")
@@ -199,6 +211,8 @@ def main() -> None:
         bench_feedback_generator(cmake)
     elif action == "bench-shuffling-looper":
         bench_shuffling_looper(cmake)
+    elif action == "bench-fractal-chorus-tempo":
+        bench_fractal_chorus_tempo(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 

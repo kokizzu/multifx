@@ -147,6 +147,9 @@ add_executable(tabletfx_shuffling_looper_bench
 target_link_libraries(tabletfx_shuffling_looper_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_stereo_panner_bench apps/stereo_panner_bench.cpp)
 target_link_libraries(tabletfx_stereo_panner_bench PRIVATE tabletfx_core)
+add_executable(tabletfx_fractal_chorus_tempo_bench
+    apps/fractal_chorus_tempo_bench.cpp)
+target_link_libraries(tabletfx_fractal_chorus_tempo_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)

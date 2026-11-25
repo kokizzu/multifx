@@ -744,6 +744,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  fender_stereo_flanger_phase_only: bool = False,
                  fender_flanger_tap_division_only: bool = False,
                  fender_phaser_90_tap_division_only: bool = False,
+                  fractal_chorus_tempo_only: bool = False,
                  fender_tremolo_lfo_clip_only: bool = False,
                  fractal_tzf_auto_only: bool = False,
                  stereo_panner_only: bool = False,
@@ -791,6 +792,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                     or headrush_drop_tune_only or fender_stereo_flanger_phase_only
                     or fender_flanger_tap_division_only
                     or fender_phaser_90_tap_division_only
+                    or fractal_chorus_tempo_only
                     or fractal_tzf_auto_only):
                 raise SystemExit(
                     "Focused effect browser test requires the local prerecorded guitar DI fixture."
@@ -1294,6 +1296,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fender-flanger-tap-division"
         elif fender_phaser_90_tap_division_only:
             url = base_url + "/web/index.html?selftest=fender-phaser-90-tap-division"
+        elif fractal_chorus_tempo_only:
+            url = base_url + "/web/index.html?selftest=fractal-chorus-tempo"
         elif fender_tremolo_lfo_clip_only:
             url = base_url + "/web/index.html?selftest=fender-tremolo-lfo-clip"
         elif fractal_tzf_auto_only:
@@ -1640,6 +1644,7 @@ def main() -> None:
         "test-fender-stereo-flanger-phase",
         "test-fender-flanger-tap-division",
         "test-fender-phaser-90-tap-division",
+        "test-fractal-chorus-tempo",
         "test-fender-tremolo-lfo-clip",
         "test-fractal-tzf-auto",
         "test-mutant-filter", "test-step-tremolo",
@@ -1678,6 +1683,8 @@ def main() -> None:
         browser_test(fender_flanger_tap_division_only=True)
     elif action == "test-fender-phaser-90-tap-division":
         browser_test(fender_phaser_90_tap_division_only=True)
+    elif action == "test-fractal-chorus-tempo":
+        browser_test(fractal_chorus_tempo_only=True)
     elif action == "test-fender-tremolo-lfo-clip":
         browser_test(fender_tremolo_lfo_clip_only=True)
     elif action == "test-fractal-tzf-auto":

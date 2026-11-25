@@ -30,7 +30,9 @@ void test_defaults_bounds_and_memory() {
     require(chorus.id() == "chorus", "chorus stable ID changed");
     require(parameters.rate_hz == 0.8F && parameters.base_delay_ms == 15.0F &&
                 parameters.depth_ms == 7.0F && parameters.mix == 0.3F &&
-                parameters.smoothing_ms == 10.0F,
+                parameters.smoothing_ms == 10.0F && !parameters.tempo_sync &&
+                parameters.tempo_bpm == 120.0F &&
+                chorus.effective_rate_hz() == 0.8F,
             "sane chorus defaults changed");
     require(chorus.memory_bytes() == sizeof(chorus) + 3076U * sizeof(float),
             "stereo chorus storage estimate is inaccurate at 48 kHz");
@@ -53,12 +55,71 @@ void test_defaults_bounds_and_memory() {
     bounded.depth_ms = std::numeric_limits<float>::quiet_NaN();
     bounded.mix = std::numeric_limits<float>::infinity();
     bounded.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
+    bounded.tempo_bpm = std::numeric_limits<float>::quiet_NaN();
     chorus.set_parameters(bounded);
     const auto finite = chorus.parameters();
     require(finite.rate_hz == 0.8F && finite.base_delay_ms == 15.0F &&
                 finite.depth_ms <= 7.0F && finite.mix == 0.3F &&
-                finite.smoothing_ms == 10.0F,
+                finite.smoothing_ms == 10.0F && finite.tempo_bpm == 120.0F,
             "non-finite chorus parameters did not use safe defaults");
+}
+
+void test_quarter_note_tempo_rate() {
+    tabletfx::Chorus chorus(48000.0F, 1);
+    auto parameters = chorus.parameters();
+    parameters.tempo_sync = true;
+    parameters.rate_hz = 0.8F;
+    parameters.tempo_bpm = 120.0F;
+    chorus.set_parameters(parameters);
+    require(chorus.effective_rate_hz() == 2.0F &&
+                chorus.parameters().rate_hz == 0.8F,
+            "quarter-note sync at 120 BPM should use 2 Hz and preserve manual rate");
+
+    parameters.tempo_bpm = 60.0F;
+    chorus.set_parameters(parameters);
+    require(chorus.effective_rate_hz() == 1.0F,
+            "quarter-note sync at 60 BPM should use 1 Hz");
+    parameters.tempo_bpm = 20.0F;
+    chorus.set_parameters(parameters);
+    require(std::abs(chorus.effective_rate_hz() - (1.0F / 3.0F)) < 1.0e-6F,
+            "quarter-note sync at 20 BPM should use one third Hz");
+    parameters.tempo_bpm = 300.0F;
+    chorus.set_parameters(parameters);
+    require(chorus.effective_rate_hz() == 5.0F,
+            "quarter-note sync at 300 BPM should use 5 Hz");
+    parameters.tempo_bpm = 10.0F;
+    chorus.set_parameters(parameters);
+    require(chorus.parameters().tempo_bpm == 20.0F,
+            "Chorus BPM should clamp to the project-authored 20 BPM minimum");
+    parameters.tempo_bpm = 400.0F;
+    chorus.set_parameters(parameters);
+    require(chorus.parameters().tempo_bpm == 300.0F,
+            "Chorus BPM should clamp to the project-authored 300 BPM maximum");
+    parameters.tempo_bpm = std::numeric_limits<float>::quiet_NaN();
+    chorus.set_parameters(parameters);
+    require(chorus.parameters().tempo_bpm == 120.0F,
+            "non-finite Chorus BPM should fall back to the project default");
+
+    std::vector<float> source(48000);
+    for (std::size_t i = 0; i < source.size(); ++i) {
+        source[i] = 0.4F * static_cast<float>(std::sin(
+            2.0 * 3.14159265358979323846 * 220.0 *
+            static_cast<double>(i) / 48000.0));
+    }
+    parameters.tempo_bpm = 120.0F;
+    parameters.depth_ms = 5.0F;
+    parameters.mix = 0.7F;
+    tabletfx::Chorus synced(48000.0F, 1, parameters);
+    parameters.tempo_sync = false;
+    tabletfx::Chorus manual(48000.0F, 1, parameters);
+    require(manual.effective_rate_hz() == 0.8F,
+            "Free Hz mode should restore the unchanged manual rate");
+    auto synced_audio = source;
+    auto manual_audio = source;
+    synced.process(synced_audio, 1);
+    manual.process(manual_audio, 1);
+    require(synced_audio != manual_audio,
+            "quarter-note sync should change the chorus modulation on local audio");
 }
 
 void test_integer_delay_and_mono_stereo_isolation() {
@@ -207,7 +268,10 @@ void test_invalid_samples_and_zero_process_allocations() {
 
     std::array<float, 512> block{};
     block.fill(0.25F);
-    tabletfx::Chorus stereo;
+    tabletfx::ChorusParameters synced_parameters;
+    synced_parameters.tempo_sync = true;
+    synced_parameters.tempo_bpm = 120.0F;
+    tabletfx::Chorus stereo(48000.0F, 2, synced_parameters);
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
         stereo.process(block, 2);
@@ -259,6 +323,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_quarter_note_tempo_rate();
         test_integer_delay_and_mono_stereo_isolation();
         test_modulation_and_mix();
         test_parameter_ramp_block_invariance_and_reset();

@@ -93,6 +93,19 @@ PUBLISH_CHECKPOINTS += feedback-generator-modes
 PUBLISH_CHECKPOINTS += line6-stadium-3osc-research
 PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 PUBLISH_CHECKPOINTS += stadium-seven-band-peq
+PUBLISH_CHECKPOINTS += fractal-chorus-tempo
+
+.PHONY: test-fractal-chorus-tempo web-test-fractal-chorus-tempo bench-fractal-chorus-tempo
+test-fractal-chorus-tempo:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_chorus_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-chorus-tempo: test-fractal-chorus-tempo web-build
+	$(PYTHON) scripts/web.py test-fractal-chorus-tempo
+
+bench-fractal-chorus-tempo:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-chorus-tempo
+
 .PHONY: publish-volume-pan-plan publish-volume-pan
 
 .PHONY: inspect-effect-api

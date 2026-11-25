@@ -1279,6 +1279,30 @@ STEP_FILTER_DELAY_CHECKPOINT_PATHS = (
     "scripts/inspect_volume_pan_path.py",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS = (
+    "apps/fractal_chorus_tempo_bench.cpp",
+    "apps/offline_render.cpp",
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects/chorus.hpp",
+    "src/effects/chorus.cpp",
+    "tests/test_chorus.cpp",
+    "scripts/inspect_fractal_chorus_tempo.py",
+    "scripts/run_cmake.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 VOLUME_PAN_CHECKPOINT_PATHS = (
     "apps/offline_render.cpp",
     "CMakeLists.txt",
@@ -2908,6 +2932,10 @@ CHECKPOINTS = {
     "step-tremolo": (
         STEP_TREMOLO_CHECKPOINT_PATHS,
         "feat: add categorized Step Tremolo",
+    ),
+    "fractal-chorus-tempo": (
+        FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS,
+        "feat: add Chorus quarter-note tempo sync",
     ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),

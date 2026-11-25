@@ -1129,6 +1129,58 @@ def check_chorus(executable: Path) -> None:
             )
 
 
+def check_chorus_tempo_sync(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-chorus-tempo-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-dry.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(path: Path, *, sync: bool, bpm: int) -> tuple[float, ...]:
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(path),
+                 "--chorus-rate-hz", "0.8", "--chorus-depth-ms", "6",
+                 "--chorus-mix", "0.7", "--chorus-tempo-sync",
+                 "on" if sync else "off", "--chorus-tempo-bpm", str(bpm)],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError("Chorus tempo options did not instantiate one processor")
+            data = path.read_bytes()
+            return struct.unpack("<" + "f" * frame_count,
+                                 data[44:44 + frame_count * 4])
+
+        free = render(root / "free.wav", sync=False, bpm=120)
+        quarter_120 = render(root / "quarter-120.wav", sync=True, bpm=120)
+        quarter_60 = render(root / "quarter-60.wav", sync=True, bpm=60)
+
+        def rms_difference(left: tuple[float, ...], right: tuple[float, ...]) -> float:
+            squared = sum((a - b) * (a - b) for a, b in zip(left, right))
+            return math.sqrt(squared / len(left))
+
+        if rms_difference(free, quarter_120) < 0.001:
+            raise AssertionError("Chorus quarter-note 120 BPM did not differ from free 0.8 Hz")
+        if rms_difference(quarter_120, quarter_60) < 0.001:
+            raise AssertionError("Chorus quarter-note 120 and 60 BPM produced identical output")
+
+        for arguments, expected in (
+            (["--chorus-tempo-sync"], "Missing value for --chorus-tempo-sync"),
+            (["--chorus-tempo-sync", "sometimes"],
+             "Chorus tempo sync must be on or off"),
+        ):
+            invalid = subprocess.run(
+                [str(executable), "render", str(source), str(root / "invalid.wav"),
+                 *arguments], capture_output=True, text=True, check=False,
+            )
+            if invalid.returncode == 0 or expected not in invalid.stderr:
+                raise AssertionError(f"Chorus tempo parser did not reject {arguments}")
+
+
 def check_dimension_chorus(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [
@@ -3377,6 +3429,7 @@ def main() -> None:
     check_multitap_delay(args.executable.resolve())
     check_tape_heads_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
+    check_chorus_tempo_sync(args.executable.resolve())
     check_dimension_chorus(args.executable.resolve())
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())

@@ -27,6 +27,7 @@ Chorus::Chorus(float sample_rate, std::uint16_t channels,
 
 void Chorus::set_parameters(ChorusParameters parameters) noexcept {
     parameters.rate_hz = bounded(parameters.rate_hz, 0.8F, 0.05F, 8.0F);
+    parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F, 20.0F, 300.0F);
     parameters.base_delay_ms = bounded(parameters.base_delay_ms, 15.0F, 2.0F,
                                        kMaximumDelayMs);
     const float maximum_depth = std::min(
@@ -124,7 +125,7 @@ float Chorus::bounded(float value, float fallback,
 }
 
 void Chorus::prepare_rate() noexcept {
-    const float step = kTwoPi * parameters_.rate_hz / sample_rate_;
+    const float step = kTwoPi * effective_rate_hz() / sample_rate_;
     sine_increment_ = std::sin(step);
     cosine_increment_ = std::cos(step);
 }

@@ -11,6 +11,8 @@ namespace tabletfx {
 
 struct ChorusParameters {
     float rate_hz = 0.8F;
+    bool tempo_sync = false;
+    float tempo_bpm = 120.0F;
     float base_delay_ms = 15.0F;
     float depth_ms = 7.0F;
     float mix = 0.3F;
@@ -32,6 +34,10 @@ public:
 
     void set_parameters(ChorusParameters parameters) noexcept;
     [[nodiscard]] ChorusParameters parameters() const noexcept { return parameters_; }
+    [[nodiscard]] float effective_rate_hz() const noexcept {
+        return parameters_.tempo_sync ? parameters_.tempo_bpm / 60.0F
+                                      : parameters_.rate_hz;
+    }
     [[nodiscard]] float current_mix() const noexcept { return current_mix_; }
 
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
