@@ -212,3 +212,10 @@ web-test-fractal-diatonic-harmonizer: web-build
 
 bench-fractal-diatonic-harmonizer:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-diatonic-harmonizer
+
+.PHONY: sync-primary-main-plan sync-primary-main-apply
+sync-primary-main-plan:
+	$(PYTHON) scripts/sync_published_main.py plan
+
+sync-primary-main-apply:
+	$(PYTHON) scripts/sync_published_main.py apply
