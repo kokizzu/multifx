@@ -656,6 +656,26 @@ FORMANT_FILTER_CHECKPOINT_PATHS = (
 FM9_FORMANT_MORPH_CHECKPOINT_PATHS = tuple(
     path for path in FORMANT_FILTER_CHECKPOINT_PATHS if path != "Makefile"
 ) + ("make/publish.mk", "research-state.json")
+FORMANT_CONTROL_LFO_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "include/tabletfx/effects/formant_filter.hpp",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/audio_regression.py",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/formant_filter.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_formant_filter.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2650,6 +2670,10 @@ CHECKPOINTS = {
     "fm9-formant-morph": (
         FM9_FORMANT_MORPH_CHECKPOINT_PATHS,
         "feat: add project-authored three-vowel formant mode",
+    ),
+    "fm9-formant-control-lfo": (
+        FORMANT_CONTROL_LFO_CHECKPOINT_PATHS,
+        "feat: add project-authored Formant Control LFO",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),

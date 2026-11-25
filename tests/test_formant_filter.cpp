@@ -48,7 +48,13 @@ void test_defaults_bounds_and_memory() {
     const auto defaults = filter.parameters();
     require(filter.id() == "formant-filter", "stable effect ID changed");
     require(defaults.vowel_position == 0.0F && defaults.resonance_q == 4.0F &&
-                defaults.mix == 1.0F && defaults.level_db == 0.0F,
+                defaults.mix == 1.0F && defaults.level_db == 0.0F &&
+                !defaults.control_lfo_enabled &&
+                defaults.control_lfo_waveform ==
+                    tabletfx::FormantControlLfoWaveform::sine &&
+                defaults.control_lfo_rate_hz == 0.5F &&
+                defaults.control_lfo_min_percent == 0.0F &&
+                defaults.control_lfo_max_percent == 100.0F,
             "project-authored defaults changed");
     require(filter.memory_bytes() == sizeof(filter),
             "fixed-state memory report is incorrect");
@@ -83,6 +89,20 @@ void test_defaults_bounds_and_memory() {
     require(actual.vowel_position == 0.0F && actual.resonance_q == 4.0F &&
                 actual.mix == 1.0F && actual.level_db == 0.0F,
             "non-finite controls did not fall back safely");
+
+    parameters.control_lfo_rate_hz = 100.0F;
+    parameters.control_lfo_min_percent = -20.0F;
+    parameters.control_lfo_max_percent = 150.0F;
+    parameters.control_lfo_waveform =
+        static_cast<tabletfx::FormantControlLfoWaveform>(255U);
+    filter.set_parameters(parameters);
+    actual = filter.parameters();
+    require(actual.control_lfo_rate_hz == 8.0F &&
+                actual.control_lfo_min_percent == 0.0F &&
+                actual.control_lfo_max_percent == 100.0F &&
+                actual.control_lfo_waveform ==
+                    tabletfx::FormantControlLfoWaveform::sine,
+            "Control LFO bounds and invalid waveform were not sanitized");
 
     tabletfx::FormantFilter low_rate(8000.0F);
     require(low_rate.memory_bytes() == sizeof(low_rate),
@@ -156,6 +176,53 @@ void test_three_vowel_morph_changes_profiles_and_clamps_controls() {
                 clamped.control_percent == 100.0F &&
                 clamped.balance_percent == -100.0F,
             "morph selections, Control, and Balance must stay in the project range");
+}
+
+void test_control_lfo_moves_three_vowel_morph() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::size_t frames = 24000U;
+    tabletfx::FormantFilterParameters parameters;
+    parameters.three_vowel_morph = true;
+    parameters.start_vowel = tabletfx::FormantVowel::aaa;
+    parameters.middle_vowel = tabletfx::FormantVowel::iii;
+    parameters.end_vowel = tabletfx::FormantVowel::ooo;
+    parameters.control_lfo_enabled = true;
+    parameters.control_lfo_waveform =
+        tabletfx::FormantControlLfoWaveform::triangle;
+    parameters.control_lfo_rate_hz = 2.0F;
+    parameters.control_lfo_min_percent = 0.0F;
+    parameters.control_lfo_max_percent = 100.0F;
+
+    auto audio = tone(sample_rate, 430.0F, frames);
+    tabletfx::FormantFilter filter(sample_rate, parameters);
+    filter.process(audio, 1);
+    const float start_response = rms(
+        std::span<const float>(audio.data(), 2400U), 0U);
+
+    auto middle_audio = tone(sample_rate, 430.0F, frames);
+    tabletfx::FormantFilter middle_filter(sample_rate, parameters);
+    middle_filter.process(std::span<float>(middle_audio.data(), 6000U), 1);
+    const float middle_response = rms(
+        std::span<const float>(middle_audio.data(), 6000U), 4800U);
+
+    require(std::isfinite(start_response) && std::isfinite(middle_response) &&
+                std::abs(start_response - middle_response) > 0.001F,
+            "the Control LFO did not move the three-vowel filter response");
+
+    auto split_audio = tone(sample_rate, 430.0F, frames);
+    tabletfx::FormantFilter split_filter(sample_rate, parameters);
+    std::size_t offset = 0U;
+    while (offset < split_audio.size()) {
+        const std::size_t count = std::min<std::size_t>(127U,
+                                                        split_audio.size() - offset);
+        split_filter.process(
+            std::span<float>(split_audio.data() + offset, count), 1);
+        offset += count;
+    }
+    for (std::size_t i = 0; i < frames; ++i) {
+        require(std::abs(audio[i] - split_audio[i]) < 1.0e-6F,
+                "Control LFO output depends on audio callback partitioning");
+    }
 }
 
 void test_stereo_balance_is_smoothed_and_mono_safe() {
@@ -266,7 +333,12 @@ void test_smoothing_block_invariance_invalid_samples_and_layout() {
 }
 
 void test_process_does_not_allocate() {
-    tabletfx::FormantFilter filter;
+    tabletfx::FormantFilterParameters parameters;
+    parameters.three_vowel_morph = true;
+    parameters.control_lfo_enabled = true;
+    parameters.control_lfo_waveform =
+        tabletfx::FormantControlLfoWaveform::triangle;
+    tabletfx::FormantFilter filter(48000.0F, parameters);
     std::array<float, 256> audio{};
     const std::size_t before = allocation_count.load();
     for (int i = 0; i < 20; ++i) filter.process(audio, 2);
@@ -291,6 +363,7 @@ int main() {
         test_defaults_bounds_and_memory();
         test_formant_profiles_change_spectral_response();
         test_three_vowel_morph_changes_profiles_and_clamps_controls();
+        test_control_lfo_moves_three_vowel_morph();
         test_stereo_balance_is_smoothed_and_mono_safe();
         test_mix_level_reset_and_stereo_isolation();
         test_smoothing_block_invariance_invalid_samples_and_layout();

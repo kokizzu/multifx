@@ -2809,6 +2809,7 @@ def check_formant_filter(executable: Path) -> None:
         dry_output = root / "dry.wav"
         wet_output = root / "formant.wav"
         morph_output = root / "formant-morph.wav"
+        lfo_output = root / "formant-lfo.wav"
         write_pcm16(source, sample_rate, source_samples)
         subprocess.run(
             [str(executable), "render", str(source), str(dry_output)],
@@ -2848,6 +2849,28 @@ def check_formant_filter(executable: Path) -> None:
             raise AssertionError("three-vowel Formant mode produced non-finite output")
         if max(abs(a - b) for a, b in zip(dry, morph, strict=True)) < 1.0e-3:
             raise AssertionError("three-vowel Formant controls did not change the rendered tone")
+
+        lfo_result = subprocess.run(
+            [str(executable), "render", str(source), str(lfo_output),
+             "--formant-filter-control-lfo", "--formant-filter-start-vowel-index", "0",
+             "--formant-filter-middle-vowel-index", "2",
+             "--formant-filter-end-vowel-index", "4",
+             "--formant-filter-control-lfo-waveform-index", "1",
+             "--formant-filter-control-lfo-rate-hz", "2",
+             "--formant-filter-control-lfo-min-percent", "0",
+             "--formant-filter-control-lfo-max-percent", "100",
+             "--formant-filter-q", "6", "--formant-filter-mix", "0.72",
+             "--formant-filter-level-db", "-2",
+             "--formant-filter-balance-percent", "25"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=1" not in lfo_result.stdout:
+            raise AssertionError("Control LFO did not enable one Formant processor")
+        lfo = struct.unpack("<" + "f" * frame_count, lfo_output.read_bytes()[44:])
+        if not all(math.isfinite(value) for value in lfo):
+            raise AssertionError("Formant Control LFO produced non-finite output")
+        if max(abs(a - b) for a, b in zip(morph, lfo, strict=True)) < 1.0e-3:
+            raise AssertionError("Formant Control LFO did not move the morph output")
 
 
 def check_harmonic_resonator(executable: Path) -> None:

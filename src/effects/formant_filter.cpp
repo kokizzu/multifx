@@ -11,6 +11,8 @@ constexpr float kDefaultQ = 4.0F;
 constexpr float kDefaultLevelDb = 0.0F;
 constexpr float kMaximumLevelDb = 12.0F;
 constexpr float kMinimumLevelDb = -24.0F;
+constexpr float kMinimumControlLfoRateHz = 0.05F;
+constexpr float kMaximumControlLfoRateHz = 8.0F;
 constexpr float kPi = 3.14159265358979323846F;
 
 // The rows are generic, project-authored A/E/I/O/U formant profiles in Hz.
@@ -107,13 +109,53 @@ void FormantFilter::set_parameters(FormantFilterParameters parameters) noexcept 
                                           0.0F, 100.0F);
     parameters.balance_percent = bounded(parameters.balance_percent, 0.0F,
                                           -100.0F, 100.0F);
+    switch (parameters.control_lfo_waveform) {
+    case FormantControlLfoWaveform::sine:
+    case FormantControlLfoWaveform::triangle:
+    case FormantControlLfoWaveform::square:
+        break;
+    default:
+        parameters.control_lfo_waveform = FormantControlLfoWaveform::sine;
+        break;
+    }
+    parameters.control_lfo_rate_hz = bounded(
+        parameters.control_lfo_rate_hz, 0.5F, kMinimumControlLfoRateHz,
+        kMaximumControlLfoRateHz);
+    parameters.control_lfo_min_percent = bounded(
+        parameters.control_lfo_min_percent, 0.0F, 0.0F, 100.0F);
+    parameters.control_lfo_max_percent = bounded(
+        parameters.control_lfo_max_percent, 100.0F, 0.0F, 100.0F);
     parameters_ = parameters;
+    control_lfo_phase_step_ = parameters_.control_lfo_rate_hz / sample_rate_;
 
+    const float control_percent = parameters_.three_vowel_morph &&
+                                  parameters_.control_lfo_enabled
+        ? control_lfo_value()
+        : parameters_.control_percent;
+    set_formant_coefficients(control_percent);
+
+    target_mix_ = parameters_.mix;
+    target_level_gain_ = std::pow(10.0F, parameters_.level_db / 20.0F);
+    const float balance = parameters_.balance_percent / 100.0F;
+    target_balance_left_gain_ = balance > 0.0F ? 1.0F - balance : 1.0F;
+    target_balance_right_gain_ = balance < 0.0F ? 1.0F + balance : 1.0F;
+    ramp_remaining_ = ramp_total_;
+    mix_step_ = (target_mix_ - mix_) / static_cast<float>(ramp_total_);
+    level_gain_step_ = (target_level_gain_ - level_gain_) /
+                       static_cast<float>(ramp_total_);
+    balance_left_gain_step_ = (target_balance_left_gain_ - balance_left_gain_) /
+                              static_cast<float>(ramp_total_);
+    balance_right_gain_step_ = (target_balance_right_gain_ - balance_right_gain_) /
+                               static_cast<float>(ramp_total_);
+}
+
+void FormantFilter::set_formant_coefficients(float control_percent) noexcept {
+    control_percent = bounded(control_percent, 0.0F, 0.0F, 100.0F);
     std::size_t lower = 0U;
     std::size_t upper = 0U;
     float fraction = 0.0F;
     if (parameters_.three_vowel_morph) {
-        const float morph = parameters_.control_percent / 100.0F;
+        const float morph = control_percent / 100.0F;
         if (morph <= 0.5F) {
             lower = static_cast<std::size_t>(parameters_.start_vowel);
             upper = static_cast<std::size_t>(parameters_.middle_vowel);
@@ -159,19 +201,7 @@ void FormantFilter::set_parameters(FormantFilterParameters parameters) noexcept 
         }
     }
 
-    target_mix_ = parameters_.mix;
-    target_level_gain_ = std::pow(10.0F, parameters_.level_db / 20.0F);
-    const float balance = parameters_.balance_percent / 100.0F;
-    target_balance_left_gain_ = balance > 0.0F ? 1.0F - balance : 1.0F;
-    target_balance_right_gain_ = balance < 0.0F ? 1.0F + balance : 1.0F;
     ramp_remaining_ = ramp_total_;
-    mix_step_ = (target_mix_ - mix_) / static_cast<float>(ramp_total_);
-    level_gain_step_ = (target_level_gain_ - level_gain_) /
-                       static_cast<float>(ramp_total_);
-    balance_left_gain_step_ = (target_balance_left_gain_ - balance_left_gain_) /
-                              static_cast<float>(ramp_total_);
-    balance_right_gain_step_ = (target_balance_right_gain_ - balance_right_gain_) /
-                               static_cast<float>(ramp_total_);
     for (std::size_t channel = 0; channel < coefficient_steps_.size(); ++channel) {
         for (std::size_t formant = 0; formant < kFormantCount; ++formant) {
             const auto& current = coefficients_[channel][formant];
@@ -186,6 +216,27 @@ void FormantFilter::set_parameters(FormantFilterParameters parameters) noexcept 
     }
 }
 
+float FormantFilter::control_lfo_value() const noexcept {
+    float bipolar = 0.0F;
+    switch (parameters_.control_lfo_waveform) {
+    case FormantControlLfoWaveform::sine:
+        bipolar = std::sin(2.0F * kPi * control_lfo_phase_ - 0.5F * kPi);
+        break;
+    case FormantControlLfoWaveform::triangle:
+        bipolar = control_lfo_phase_ < 0.5F
+            ? -1.0F + 4.0F * control_lfo_phase_
+            : 3.0F - 4.0F * control_lfo_phase_;
+        break;
+    case FormantControlLfoWaveform::square:
+        bipolar = control_lfo_phase_ < 0.5F ? -1.0F : 1.0F;
+        break;
+    }
+    const float normalized = 0.5F * (bipolar + 1.0F);
+    return parameters_.control_lfo_min_percent +
+           (parameters_.control_lfo_max_percent -
+            parameters_.control_lfo_min_percent) * normalized;
+}
+
 void FormantFilter::process(std::span<float> interleaved,
                             std::uint16_t channels) noexcept {
     if (channels == 0U || channels > 2U) {
@@ -193,7 +244,13 @@ void FormantFilter::process(std::span<float> interleaved,
     }
 
     const std::size_t frames = interleaved.size() / channels;
+    const bool control_lfo_active = parameters_.three_vowel_morph &&
+                                    parameters_.control_lfo_enabled;
     for (std::size_t frame = 0; frame < frames; ++frame) {
+        if (control_lfo_active && control_lfo_update_remaining_ == 0U) {
+            set_formant_coefficients(control_lfo_value());
+            control_lfo_update_remaining_ = kControlLfoUpdateFrames;
+        }
         const float mix = mix_;
         const float level = level_gain_;
         const std::size_t offset = frame * channels;
@@ -228,12 +285,26 @@ void FormantFilter::process(std::span<float> interleaved,
             }
         }
         advance_parameters();
+        if (control_lfo_active) {
+            control_lfo_phase_ += control_lfo_phase_step_;
+            if (control_lfo_phase_ >= 1.0F) {
+                control_lfo_phase_ -= 1.0F;
+            }
+            if (control_lfo_update_remaining_ > 0U) {
+                --control_lfo_update_remaining_;
+            }
+        }
     }
 }
 
 void FormantFilter::reset() noexcept {
     for (auto& channel : states_) {
         channel.fill(BiquadState{});
+    }
+    control_lfo_phase_ = 0.0F;
+    control_lfo_update_remaining_ = 0U;
+    if (parameters_.three_vowel_morph && parameters_.control_lfo_enabled) {
+        set_formant_coefficients(control_lfo_value());
     }
     coefficients_ = target_coefficients_;
     mix_ = target_mix_;

@@ -739,6 +739,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
                  volume_pedal_only: bool = False,
+                 formant_control_lfo_only: bool = False,
                  stereo_panner_only: bool = False,
                  mutant_filter_only: bool = False,
                  step_tremolo_only: bool = False,
@@ -780,7 +781,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
             if (fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only
-                    or stereo_panner_only):
+                    or stereo_panner_only or formant_control_lfo_only):
                 raise SystemExit(
                     "Focused effect browser test requires the local prerecorded guitar DI fixture."
                 )
@@ -1017,6 +1018,11 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 "--formant-filter-middle-vowel-index", "2",
                 "--formant-filter-end-vowel-index", "4",
                 "--formant-filter-control-percent", "65",
+                 "--formant-filter-control-lfo",
+                 "--formant-filter-control-lfo-waveform-index", "1",
+                 "--formant-filter-control-lfo-rate-hz", "1",
+                 "--formant-filter-control-lfo-min-percent", "0",
+                 "--formant-filter-control-lfo-max-percent", "100",
                 "--formant-filter-balance-percent", "25",
                 "--harmonic-resonator", "--harmonic-resonator-root-frequency-hz", "220",
                 "--harmonic-resonator-decay-seconds", "0.8",
@@ -1251,7 +1257,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        if volume_pedal_only:
+        if formant_control_lfo_only:
+            url = base_url + "/web/index.html?selftest=formant-control-lfo"
+        elif volume_pedal_only:
             url = base_url + "/web/index.html?selftest=volume-pedal"
         elif step_tremolo_only:
             url = base_url + "/web/index.html?selftest=step-tremolo"
@@ -1545,6 +1553,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif volume_pedal_only:
             print("Focused Volume Pedal browser/WASM local-guitar mute and toe playback smoke passed.")
             print(json.dumps(report, indent=2))
+        elif formant_control_lfo_only:
+            print("Focused Formant Control LFO browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
         elif fractal_resonator_input_gain_only:
             print("Focused Fractal-family Resonator Input Gain browser/WASM prerecorded-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
@@ -1601,6 +1612,7 @@ def main() -> None:
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
         "test-volume-pan", "test-volume-pedal", "test-stereo-filter", "test-stereo-panner",
+        "test-formant-control-lfo",
         "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
@@ -1627,6 +1639,8 @@ def main() -> None:
         browser_test()
     elif action == "test-volume-pedal":
         browser_test(volume_pedal_only=True)
+    elif action == "test-formant-control-lfo":
+        browser_test(formant_control_lfo_only=True)
     elif action == "test-volume-pan":
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":

@@ -14,6 +14,7 @@ PUBLISH_CHECKPOINTS += fender-pitch-sequence-audit
 PUBLISH_CHECKPOINTS += fender-virtual-capo-mix
 PUBLISH_CHECKPOINTS += fender-studio-delay-pan
 PUBLISH_CHECKPOINTS += fender-volume-pedal-mute
+PUBLISH_CHECKPOINTS += fm9-formant-control-lfo
 
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
@@ -66,6 +67,7 @@ web-test-fender-pedal-detune: web-build
 .PHONY: test-pitch-sequence test-poly-sustain
 .PHONY: test-volume-pan test-stereo-filter web-test-volume-pan web-test-stereo-filter
 .PHONY: test-volume-pedal web-test-volume-pedal
+.PHONY: test-formant-filter web-test-formant-control-lfo
 
 .PHONY: inspect-volume-pan-path
 inspect-volume-pan-path:
@@ -241,3 +243,9 @@ test-volume-pedal:
 
 web-test-volume-pedal: test web-build
 	$(PYTHON) scripts/web.py test-volume-pedal
+
+test-formant-filter:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_formant_filter_tests
+
+web-test-formant-control-lfo: test web-build
+	$(PYTHON) scripts/web.py test-formant-control-lfo

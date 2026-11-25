@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9-family Formant Control LFO (2026-11-26)
+
+The existing project-authored Formant Filter (Filters & wah, picker ID 43) now has a default-off LFO source for its three-vowel Control morph. The project choices are Sine/Triangle/Square, 0.05–8 Hz with 0.5 Hz default, and a 0–100% Control range with 0/100% endpoints. Control coefficients update every 32 frames and retain the existing 10 ms smoothing. The processor adds no audio buffer or fixed latency; its fixed native state is 680 B (the focused browser reports 664 B), and native tests verify no process allocation.
+
+On AMD Ryzen 9 5950X Release at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks), the manual profile uses 0.1125/0.1721/0.1946/0.5880/1.6020% and the active LFO profile uses 0.1613/0.2318/0.2985/0.6079/1.3935% at p50/p95/p99/p99.9/max. The LFO path costs 0.0488 percentage points at p50 and 0.1039 at p99 in this isolated test; both profiles remain below 1% at p99 on this desktop. This is processor-call timing, not an Android or complete-chain guarantee.
+
+Native tests, the focused categorized browser/WASM Play smoke using local prerecorded Guitar-TECHS DI, and the Windows MinGW core/offline build pass. The official November 2026 Blocks Guide permits Formant Control assignment to LFO/expression/modifier; the FM9 Owner’s Manual v3.x (2022-08-17 per downloads page) documents LFO controls but not this project mapping. The project’s LFO values, bounds, defaults, and coefficient-update interval are independent choices. Human listening and device checks remain open; no Fractal settings, DSP, or sound parity is claimed.
+
 ## Fractal FM9-family Dual/Quad Diatonic Harmony (2026-11-25)
 
 The November 2026 Blocks Guide (printed pp. 76 and 80) describes Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4) as intelligent monophonic shifters. TabletFX's project-authored Pitch effect at index 115 uses a single-note YIN-like tracker to drive two or four generated voices; the voice count does not mean chord tracking. Its STFT shifter adds 256 frames / 5.333 ms fixed audio latency at 48 kHz. Conservative tracker-plus-shifter control-response bounds are 21.333 ms for 220 Hz and 29.333 ms for low E (82.407 Hz), already above the provisional ≤20 ms target before host, browser, device and output buffering. On the existing prerecorded EGFxSet guitar DI, the tested takes accepted notes after 1,408 / 2,688 / 1,536 samples (34.667 / 61.333 / 37.333 ms); matched note counts and cent errors are tracker test results, not a sound-quality or latency claim. The measured response gate is therefore **not met**.

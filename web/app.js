@@ -322,7 +322,7 @@ const DEFAULT_PARAMETERS = {
     0.24, 0.78, 0.12, 0.9, 0.38, 0.68, 0.04, 0.84],
   ashevillePattrn: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0.5, 0.75, 3, 0.5, 10],
   notchFilter: [1000, 4, 1],
-  formantFilter: [0, 4, 1, 0, 0, 0, 1, 4, 0, 0],
+  formantFilter: [0, 4, 1, 0, 0, 0, 1, 4, 0, 0, 0, 0, 0.5, 0, 100],
   harmonicResonator: [110, 1.2, 0.55, 0.5],
   bitCrusher: [16, 1, 1],
   multibandCompressor: [250, 2500, 1,
@@ -1975,6 +1975,15 @@ const formantFilterMiddleVowel = document.querySelector("#formant-filter-middle-
 const formantFilterEndVowel = document.querySelector("#formant-filter-end-vowel");
 const formantFilterControl = document.querySelector("#formant-filter-control-percent");
 const formantFilterControlValue = document.querySelector("#formant-filter-control-percent-value");
+const formantFilterControlSource = document.querySelector("#formant-filter-control-source");
+const formantFilterControlLfoControls = document.querySelector("#formant-filter-control-lfo-controls");
+const formantFilterControlLfoRate = document.querySelector("#formant-filter-control-lfo-rate-hz");
+const formantFilterControlLfoRateValue = document.querySelector("#formant-filter-control-lfo-rate-hz-value");
+const formantFilterControlLfoWaveform = document.querySelector("#formant-filter-control-lfo-waveform");
+const formantFilterControlLfoMin = document.querySelector("#formant-filter-control-lfo-min-percent");
+const formantFilterControlLfoMinValue = document.querySelector("#formant-filter-control-lfo-min-percent-value");
+const formantFilterControlLfoMax = document.querySelector("#formant-filter-control-lfo-max-percent");
+const formantFilterControlLfoMaxValue = document.querySelector("#formant-filter-control-lfo-max-percent-value");
 const formantFilterQ = document.querySelector("#formant-filter-q");
 const formantFilterQValue = document.querySelector("#formant-filter-q-value");
 const formantFilterMix = document.querySelector("#formant-filter-mix");
@@ -7215,6 +7224,7 @@ function updateNotchFilter() {
 
 function updateFormantFilter() {
   const morphMode = Number(formantFilterMode.value);
+  const controlLfoMode = Number(formantFilterControlSource.value);
   const values = [
     Number(formantFilterVowel.value),
     Number(formantFilterQ.value),
@@ -7226,6 +7236,11 @@ function updateFormantFilter() {
     Number(formantFilterEndVowel.value),
     Number(formantFilterControl.value),
     Number(formantFilterBalance.value),
+    controlLfoMode,
+    Number(formantFilterControlLfoWaveform.value),
+    Number(formantFilterControlLfoRate.value),
+    Number(formantFilterControlLfoMin.value),
+    Number(formantFilterControlLfoMax.value),
   ];
   const vowels = ["A", "E", "I", "O", "U"];
   const morphVowels = ["AAA", "EEE", "III", "OHH", "OOO", "EHH", "AHH", "AWW", "UHH", "ERR"];
@@ -7237,12 +7252,17 @@ function updateFormantFilter() {
   const end = morphVowels[Math.round(values[7])];
   formantFilterVowel.closest("label").hidden = morphMode >= 0.5;
   formantFilterMorphControls.hidden = morphMode < 0.5;
+  formantFilterControl.closest("label").hidden = controlLfoMode >= 0.5;
+  formantFilterControlLfoControls.hidden = controlLfoMode < 0.5 || morphMode < 0.5;
   formantFilterVowelValue.value = morphMode >= 0.5
     ? `${start} → ${middle} → ${end}`
     : lower === upper || fraction < 0.005
       ? vowels[lower]
       : `${vowels[lower]} → ${vowels[upper]} ${Math.round(fraction * 100)}%`;
   formantFilterControlValue.value = `${Math.round(values[8])}%`;
+  formantFilterControlLfoRateValue.value = `${values[12].toFixed(2)} Hz`;
+  formantFilterControlLfoMinValue.value = `${Math.round(values[13])}%`;
+  formantFilterControlLfoMaxValue.value = `${Math.round(values[14])}%`;
   formantFilterQValue.value = values[1].toFixed(2);
   formantFilterMixValue.value = `${Math.round(values[2] * 100)}%`;
   formantFilterLevelValue.value = `${values[3].toFixed(1)} dB`;
@@ -7595,10 +7615,12 @@ for (const input of [notchFilterFrequency, notchFilterQ, notchFilterMix]) {
   input.addEventListener("input", updateNotchFilter);
   input.addEventListener("change", updateNotchFilter);
 }
-for (const input of [formantFilterVowel, formantFilterMode,
+   for (const input of [formantFilterVowel, formantFilterMode,
   formantFilterStartVowel, formantFilterMiddleVowel, formantFilterEndVowel,
-  formantFilterControl, formantFilterQ, formantFilterMix, formantFilterLevel,
-  formantFilterBalance]) {
+   formantFilterControl, formantFilterControlSource,
+   formantFilterControlLfoRate, formantFilterControlLfoWaveform,
+   formantFilterControlLfoMin, formantFilterControlLfoMax,
+   formantFilterQ, formantFilterMix, formantFilterLevel, formantFilterBalance]) {
   input.addEventListener("input", updateFormantFilter);
   input.addEventListener("change", updateFormantFilter);
 }
@@ -10621,6 +10643,147 @@ async function runVolumePanBrowserSmokeTest(reference, captureView, captureBuffe
         }
       });
       updateVolumePanOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFormantControlLfoBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const effectIndex = 43;
+  const previousEffectState = enabledEffects();
+  const previousControls = [formantFilterVowel, formantFilterMode,
+    formantFilterStartVowel, formantFilterMiddleVowel, formantFilterEndVowel,
+    formantFilterControl, formantFilterControlSource,
+    formantFilterControlLfoRate, formantFilterControlLfoWaveform,
+    formantFilterControlLfoMin, formantFilterControlLfoMax,
+    formantFilterQ, formantFilterMix, formantFilterLevel,
+    formantFilterBalance].map((control) => control.value);
+  const previousCategory = effectCategoryFilter.value;
+  const postedMessages = [];
+  const portPrototype = MessagePort.prototype;
+  const originalPost = portPrototype.postMessage;
+  portPrototype.postMessage = function(message, ...transfer) {
+    if (message?.type === "formant-filter" ||
+        (message?.type === "enable" && message.index === effectIndex)) {
+      postedMessages.push(message);
+    }
+    return originalPost.call(this, message, ...transfer);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Formant Control LFO smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "filter";
+    updateEffectBrowser();
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "filter" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Filters & wah" ||
+        !checkbox) {
+      throw new Error(`Formant Filter picker categorization failed: category=${row?.dataset.category}; tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}; checkbox=${Boolean(checkbox)}.`);
+    }
+
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      box.checked = false;
+      workletNode.port.postMessage({ type: "enable", index, value: false });
+    });
+    formantFilterMode.value = "1";
+    formantFilterStartVowel.value = "0";
+    formantFilterMiddleVowel.value = "2";
+    formantFilterEndVowel.value = "4";
+    formantFilterControl.value = "0";
+    formantFilterControlSource.value = "0";
+    formantFilterControlLfoRate.value = "2";
+    formantFilterControlLfoWaveform.value = "1";
+    formantFilterControlLfoMin.value = "0";
+    formantFilterControlLfoMax.value = "100";
+    formantFilterQ.value = "4";
+    formantFilterMix.value = "100";
+    formantFilterLevel.value = "0";
+    formantFilterBalance.value = "0";
+    updateFormantFilter();
+    checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Formant Filter picker row did not enable from its click handler.");
+    }
+
+    const capture = async () => {
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, reference.samples.length);
+    };
+
+    const manual = await capture();
+    formantFilterControlSource.value = "1";
+    updateFormantFilter();
+    if (!formantFilterControl.closest("label").hidden ||
+        formantFilterControlLfoControls.hidden) {
+      throw new Error("Selecting LFO did not replace manual Control with its LFO controls.");
+    }
+    const lfo = await capture();
+    let peak = 0;
+    let activeSamples = 0;
+    let differenceSquares = 0;
+    for (let i = 0; i < lfo.length; i += 1) {
+      peak = Math.max(peak, Math.abs(lfo[i]));
+      if (Math.abs(lfo[i]) > 1e-6) activeSamples += 1;
+      const difference = lfo[i] - manual[i];
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = Math.sqrt(differenceSquares / Math.max(1, lfo.length));
+    const sent = postedMessages.filter((message) =>
+      message.type === "formant-filter").at(-1)?.value;
+    if (sent?.length !== 15 || sent[10] !== 1 || sent[11] !== 1 ||
+        sent[12] !== 2 || sent[13] !== 0 || sent[14] !== 100 ||
+        peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-3) {
+      throw new Error(`Formant Control LFO settings or Play output failed: ${JSON.stringify({sent, peak, activeSamples, differenceRms})}`);
+    }
+    return {
+      category: "Filters & wah",
+      effectIndex,
+      controlSource: "Triangle LFO",
+      lfoRateHz: sent[12],
+      controlRangePercent: [sent[13], sent[14]],
+      playCaptures: 2,
+      effectMemoryBytes: effectMemory[effectIndex],
+      peak,
+      activeSamples,
+      manualVsLfoDifferenceRms: differenceRms,
+    };
+  } finally {
+    stopSource(false);
+    portPrototype.postMessage = originalPost;
+    if (workletNode) {
+      [formantFilterVowel, formantFilterMode, formantFilterStartVowel,
+        formantFilterMiddleVowel, formantFilterEndVowel, formantFilterControl,
+        formantFilterControlSource, formantFilterControlLfoRate,
+        formantFilterControlLfoWaveform, formantFilterControlLfoMin,
+        formantFilterControlLfoMax, formantFilterQ, formantFilterMix,
+        formantFilterLevel, formantFilterBalance].forEach((control, index) => {
+        control.value = previousControls[index];
+      });
+      updateFormantFilter();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -16479,7 +16642,7 @@ async function runBrowserSelfTest() {
            0, 0.75, 0.2, 0.9, 0.35, 0.6, 0.1, 1,
            0.25, 0.8, 0.15, 0.95, 0.4, 0.7, 0.05, 0.85],
         notchFilter: [713, 6, 0.72],
-        formantFilter: [1.5, 6, 0.72, -2, 1, 0, 2, 4, 65, 25],
+         formantFilter: [1.5, 6, 0.72, -2, 1, 0, 2, 4, 65, 25, 1, 1, 1, 0, 100],
         harmonicResonator: [220, 0.8, 0.7, 0.65],
         multibandCompressor: [500, 4000, 0,
           -30, 4, 0, 1, 30, 6, 0, 0,
@@ -16577,6 +16740,11 @@ async function runBrowserSelfTest() {
     formantFilterEndVowel.value = String(formantFilterParameters[7]);
     formantFilterControl.value = String(formantFilterParameters[8]);
     formantFilterBalance.value = String(formantFilterParameters[9]);
+    formantFilterControlSource.value = String(formantFilterParameters[10]);
+    formantFilterControlLfoWaveform.value = String(formantFilterParameters[11]);
+    formantFilterControlLfoRate.value = String(formantFilterParameters[12]);
+    formantFilterControlLfoMin.value = String(formantFilterParameters[13]);
+    formantFilterControlLfoMax.value = String(formantFilterParameters[14]);
     updateFormantFilter();
     if (DEFAULT_PARAMETERS.formantFilter[0] !== 1.5 ||
         DEFAULT_PARAMETERS.formantFilter[4] !== 1 ||
@@ -16585,7 +16753,11 @@ async function runBrowserSelfTest() {
         DEFAULT_PARAMETERS.formantFilter[1] !== 6 ||
         DEFAULT_PARAMETERS.formantFilter[2] !== 0.72 ||
         DEFAULT_PARAMETERS.formantFilter[3] !== -2 ||
-        DEFAULT_PARAMETERS.formantFilter[9] !== 25) {
+        DEFAULT_PARAMETERS.formantFilter[9] !== 25 ||
+        DEFAULT_PARAMETERS.formantFilter[10] !== 1 ||
+        DEFAULT_PARAMETERS.formantFilter[11] !== 1 ||
+        DEFAULT_PARAMETERS.formantFilter[12] !== 1 ||
+        formantFilterControlLfoControls.hidden) {
       throw new Error("Formant Filter controls must update morph vowels, Control, Resonance, mix, level, and Balance.");
     }
     const harmonicParameters = testOptions.parameters.harmonicResonator;
@@ -17131,6 +17303,24 @@ async function runBrowserSelfTest() {
         testResult.dataset.status = "passed";
         testResult.textContent = JSON.stringify(focusedReport);
         document.title = "PASS · TabletFX Mutant Filter browser test";
+        return;
+      }
+      if (new URLSearchParams(location.search).get("selftest") === "formant-control-lfo") {
+        testResult.textContent = "Checking Formant Control LFO browser Play with the local guitar fixture…";
+        const formantControlLfoSmoke = await runFormantControlLfoBrowserSmokeTest(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          formantControlLfo: formantControlLfoSmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Formant Control LFO browser test";
         return;
       }
       if (new URLSearchParams(location.search).get("selftest") === "fractal-chromatic-harmonizer") {

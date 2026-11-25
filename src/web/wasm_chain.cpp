@@ -3238,7 +3238,11 @@ public:
                                   float mix, float level_db, float morph_mode,
                                   float start_vowel, float middle_vowel,
                                   float end_vowel, float control_percent,
-                                  float balance_percent) noexcept {
+                                  float balance_percent, float control_lfo_mode,
+                                  float control_lfo_waveform,
+                                  float control_lfo_rate_hz,
+                                  float control_lfo_min_percent,
+                                  float control_lfo_max_percent) noexcept {
         tabletfx::FormantFilterParameters parameters;
         parameters.vowel_position = vowel_position;
         parameters.resonance_q = resonance_q;
@@ -3258,6 +3262,16 @@ public:
         parameters.end_vowel = vowel(end_vowel);
         parameters.control_percent = control_percent;
         parameters.balance_percent = balance_percent;
+        parameters.control_lfo_enabled = control_lfo_mode >= 0.5F;
+        const int waveform = std::isfinite(control_lfo_waveform)
+            ? std::clamp(static_cast<int>(std::lround(control_lfo_waveform)),
+                         0, 2)
+            : 0;
+        parameters.control_lfo_waveform =
+            static_cast<tabletfx::FormantControlLfoWaveform>(waveform);
+        parameters.control_lfo_rate_hz = control_lfo_rate_hz;
+        parameters.control_lfo_min_percent = control_lfo_min_percent;
+        parameters.control_lfo_max_percent = control_lfo_max_percent;
         static_cast<tabletfx::FormantFilter*>(effects_[43].effect.get())
             ->set_parameters(parameters);
     }
@@ -4350,11 +4364,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_notch_filter(
 TABLETFX_WASM_EXPORT void tf_chain_set_formant_filter(
     void* opaque, float vowel_position, float resonance_q, float mix,
     float level_db, float morph_mode, float start_vowel, float middle_vowel,
-    float end_vowel, float control_percent, float balance_percent) noexcept {
+    float end_vowel, float control_percent, float balance_percent,
+    float control_lfo_mode, float control_lfo_waveform,
+    float control_lfo_rate_hz, float control_lfo_min_percent,
+    float control_lfo_max_percent) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_formant_filter(
             vowel_position, resonance_q, mix, level_db, morph_mode, start_vowel,
-            middle_vowel, end_vowel, control_percent, balance_percent);
+            middle_vowel, end_vowel, control_percent, balance_percent,
+            control_lfo_mode, control_lfo_waveform, control_lfo_rate_hz,
+            control_lfo_min_percent, control_lfo_max_percent);
     }
 }
 

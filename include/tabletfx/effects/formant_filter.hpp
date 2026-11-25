@@ -22,6 +22,12 @@ enum class FormantVowel : std::uint8_t {
     err,
 };
 
+enum class FormantControlLfoWaveform : std::uint8_t {
+    sine,
+    triangle,
+    square,
+};
+
 struct FormantFilterParameters {
     // Continuous path through five project-defined vowel profiles: A, E, I, O, U.
     // Integer positions select a profile; intermediate positions crossfade the
@@ -36,6 +42,12 @@ struct FormantFilterParameters {
     FormantVowel end_vowel = FormantVowel::ooo;
     float control_percent = 0.0F;
     float balance_percent = 0.0F;
+    bool control_lfo_enabled = false;
+    FormantControlLfoWaveform control_lfo_waveform =
+        FormantControlLfoWaveform::sine;
+    float control_lfo_rate_hz = 0.5F;
+    float control_lfo_min_percent = 0.0F;
+    float control_lfo_max_percent = 100.0F;
 };
 
 /*
@@ -80,6 +92,7 @@ private:
     static constexpr float kParameterSmoothingMs = 10.0F;
     static constexpr std::size_t kFormantCount = 4U;
     static constexpr std::size_t kProfileCount = 5U;
+    static constexpr std::size_t kControlLfoUpdateFrames = 32U;
 
     struct BiquadCoefficients {
         float b0 = 1.0F;
@@ -98,6 +111,8 @@ private:
                                        float minimum, float maximum) noexcept;
     [[nodiscard]] BiquadCoefficients make_coefficients(
         float frequency_hz, float q, float gain_db) const noexcept;
+    void set_formant_coefficients(float control_percent) noexcept;
+    [[nodiscard]] float control_lfo_value() const noexcept;
     [[nodiscard]] float filter_sample(float input, std::uint16_t channel) noexcept;
     void advance_parameters() noexcept;
 
@@ -121,6 +136,9 @@ private:
     float balance_right_gain_step_ = 0.0F;
     std::size_t ramp_remaining_ = 0;
     std::size_t ramp_total_ = 1;
+    float control_lfo_phase_ = 0.0F;
+    float control_lfo_phase_step_ = 0.0F;
+    std::size_t control_lfo_update_remaining_ = 0U;
 };
 
 } // namespace tabletfx

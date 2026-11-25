@@ -1777,6 +1777,12 @@ Options parse_options(int argc, char** argv, int first) {
             options.formant_filter_enabled = true;
             continue;
         }
+        if (key == "--formant-filter-control-lfo") {
+            options.formant_filter.control_lfo_enabled = true;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+            continue;
+        }
         if (key == "--harmonic-resonator") {
             options.harmonic_resonator_enabled = true;
             continue;
@@ -3485,6 +3491,32 @@ Options parse_options(int argc, char** argv, int first) {
             options.formant_filter.balance_percent = value;
             options.formant_filter_enabled = true;
         }
+        else if (key == "--formant-filter-control-lfo-waveform-index") {
+            const auto index = std::clamp(static_cast<int>(std::lround(value)), 0, 2);
+            options.formant_filter.control_lfo_waveform =
+                static_cast<tabletfx::FormantControlLfoWaveform>(index);
+            options.formant_filter.control_lfo_enabled = true;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-control-lfo-rate-hz") {
+            options.formant_filter.control_lfo_rate_hz = value;
+            options.formant_filter.control_lfo_enabled = true;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-control-lfo-min-percent") {
+            options.formant_filter.control_lfo_min_percent = value;
+            options.formant_filter.control_lfo_enabled = true;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
+        else if (key == "--formant-filter-control-lfo-max-percent") {
+            options.formant_filter.control_lfo_max_percent = value;
+            options.formant_filter.control_lfo_enabled = true;
+            options.formant_filter.three_vowel_morph = true;
+            options.formant_filter_enabled = true;
+        }
         else if (key == "--formant-filter-q") {
             options.formant_filter.resonance_q = value;
             options.formant_filter_enabled = true;
@@ -5108,6 +5140,19 @@ void run_bench() {
         return std::make_unique<tabletfx::FormantFilter>(
             static_cast<float>(sample_rate));
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("formant-filter-control-lfo", [=] {
+        tabletfx::FormantFilterParameters parameters;
+        parameters.three_vowel_morph = true;
+        parameters.start_vowel = tabletfx::FormantVowel::aaa;
+        parameters.middle_vowel = tabletfx::FormantVowel::iii;
+        parameters.end_vowel = tabletfx::FormantVowel::ooo;
+        parameters.control_lfo_enabled = true;
+        parameters.control_lfo_waveform =
+            tabletfx::FormantControlLfoWaveform::triangle;
+        parameters.control_lfo_rate_hz = 2.0F;
+        return std::make_unique<tabletfx::FormantFilter>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("fractal-touch-wah-mix-project-authored", [=] {
         tabletfx::StereoFilterParameters parameters;
         parameters.type = tabletfx::StereoFilterType::TouchWahFilter;
@@ -5997,6 +6042,11 @@ void print_usage() {
                      " [--formant-filter-middle-vowel-index 0..9]"
                      " [--formant-filter-end-vowel-index 0..9]"
                      " [--formant-filter-control-percent 0..100]"
+                      " [--formant-filter-control-lfo]"
+                      " [--formant-filter-control-lfo-waveform-index 0..2]"
+                      " [--formant-filter-control-lfo-rate-hz 0.05..8]"
+                      " [--formant-filter-control-lfo-min-percent 0..100]"
+                      " [--formant-filter-control-lfo-max-percent 0..100]"
                      " [--formant-filter-balance-percent -100..100]\n"
                    << "                 [--harmonic-resonator]"
                       " [--harmonic-resonator-root-frequency-hz 20..1000]"
