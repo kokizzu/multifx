@@ -39,21 +39,44 @@ void Chorus::set_parameters(ChorusParameters parameters) noexcept {
         voice_step_sine_ = std::sin(voice_step);
         voice_step_cosine_ = std::cos(voice_step);
     }
-    parameters.base_delay_ms = bounded(parameters.base_delay_ms, 15.0F, 2.0F,
-                                       kMaximumDelayMs);
-    const float maximum_depth = std::min(
-        {14.0F, parameters.base_delay_ms - 1.0F,
-         kMaximumDelayMs - parameters.base_delay_ms});
-    const float bounded_depth = std::max(0.0F, maximum_depth);
-    parameters.depth_ms = bounded(parameters.depth_ms,
-                                  std::min(7.0F, bounded_depth),
-                                  0.0F, bounded_depth);
+    const bool use_legacy_center_depth =
+        parameters.minimum_delay_ms == 8.0F &&
+        parameters.delay_range_ms == 14.0F &&
+        (parameters.base_delay_ms != 15.0F || parameters.depth_ms != 7.0F);
+    float center_delay_ms = 0.0F;
+    float modulation_depth_ms = 0.0F;
+    if (use_legacy_center_depth) {
+        center_delay_ms = bounded(parameters.base_delay_ms, 15.0F, 2.0F, 30.0F);
+        const float maximum_depth = std::max(
+            0.0F, std::min({14.0F, center_delay_ms - 1.0F,
+                            30.0F - center_delay_ms}));
+        modulation_depth_ms = bounded(parameters.depth_ms,
+                                      std::min(7.0F, maximum_depth),
+                                      0.0F, maximum_depth);
+        parameters.minimum_delay_ms = center_delay_ms - modulation_depth_ms;
+        parameters.delay_range_ms = modulation_depth_ms * 2.0F;
+    } else {
+        parameters.minimum_delay_ms = bounded(
+            parameters.minimum_delay_ms, 8.0F, kMinimumDelayMs,
+            kMaximumMinimumDelayMs);
+        parameters.delay_range_ms = bounded(
+            parameters.delay_range_ms, 14.0F, kMinimumDelayRangeMs,
+            kMaximumDelayRangeMs);
+        center_delay_ms = parameters.minimum_delay_ms +
+                          parameters.delay_range_ms * 0.5F;
+        modulation_depth_ms = parameters.delay_range_ms * 0.5F;
+    }
+    // Keep the former public values readable as center/depth aliases. Canonical
+    // min/range controls drive new callers; legacy callers that only changed
+    // these aliases are mapped above when the canonical fields are untouched.
+    parameters.base_delay_ms = center_delay_ms;
+    parameters.depth_ms = modulation_depth_ms;
     parameters.mix = bounded(parameters.mix, 0.3F, 0.0F, 1.0F);
     parameters.smoothing_ms = bounded(parameters.smoothing_ms, 10.0F, 0.0F,
                                       1000.0F);
     parameters_ = parameters;
-    target_base_delay_ms_ = parameters_.base_delay_ms;
-    target_depth_ms_ = parameters_.depth_ms;
+    target_base_delay_ms_ = center_delay_ms;
+    target_depth_ms_ = modulation_depth_ms;
     target_mix_ = parameters_.mix;
     prepare_rate();
     retarget(false);

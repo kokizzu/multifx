@@ -32,9 +32,11 @@ void test_defaults_bounds_and_memory() {
                 parameters.depth_ms == 7.0F && parameters.mix == 0.3F &&
                 parameters.smoothing_ms == 10.0F && !parameters.tempo_sync &&
                 parameters.tempo_bpm == 120.0F && parameters.number_of_voices == 1U &&
+                parameters.minimum_delay_ms == 8.0F &&
+                parameters.delay_range_ms == 14.0F &&
                 chorus.effective_rate_hz() == 0.8F,
             "sane chorus defaults changed");
-    require(chorus.memory_bytes() == sizeof(chorus) + 3076U * sizeof(float),
+    require(chorus.memory_bytes() == sizeof(chorus) + 8644U * sizeof(float),
             "stereo chorus storage estimate is inaccurate at 48 kHz");
 
     tabletfx::ChorusParameters bounded;
@@ -62,6 +64,158 @@ void test_defaults_bounds_and_memory() {
                 finite.depth_ms <= 7.0F && finite.mix == 0.3F &&
                 finite.smoothing_ms == 10.0F && finite.tempo_bpm == 120.0F,
             "non-finite chorus parameters did not use safe defaults");
+}
+
+void test_minimum_delay_range_bounds_and_legacy_center_depth() {
+    tabletfx::Chorus chorus;
+    auto bounded = chorus.parameters();
+    bounded.minimum_delay_ms = 0.0F;
+    bounded.delay_range_ms = 0.0F;
+    chorus.set_parameters(bounded);
+    require(chorus.parameters().minimum_delay_ms == 0.1F &&
+                chorus.parameters().delay_range_ms == 1.0F,
+            "minimum delay/range lower bounds were not enforced");
+    bounded = chorus.parameters();
+    bounded.minimum_delay_ms = 100.0F;
+    bounded.delay_range_ms = 100.0F;
+    chorus.set_parameters(bounded);
+    require(chorus.parameters().minimum_delay_ms == 50.0F &&
+                chorus.parameters().delay_range_ms == 40.0F,
+            "minimum delay/range upper bounds were not enforced");
+
+    tabletfx::ChorusParameters legacy;
+    legacy.rate_hz = 1.25F;
+    legacy.base_delay_ms = 12.0F;
+    legacy.depth_ms = 5.0F;
+    legacy.mix = 0.65F;
+    legacy.smoothing_ms = 0.0F;
+    tabletfx::ChorusParameters canonical = legacy;
+    canonical.minimum_delay_ms = 7.0F;
+    canonical.delay_range_ms = 10.0F;
+    canonical.base_delay_ms = 15.0F;
+    canonical.depth_ms = 7.0F;
+    tabletfx::Chorus legacy_chorus(48000.0F, 2, legacy);
+    tabletfx::Chorus canonical_chorus(48000.0F, 2, canonical);
+    require(legacy_chorus.parameters().minimum_delay_ms == 7.0F &&
+                legacy_chorus.parameters().delay_range_ms == 10.0F &&
+                legacy_chorus.parameters().base_delay_ms == 12.0F &&
+                legacy_chorus.parameters().depth_ms == 5.0F,
+            "legacy center/depth did not map to minimum/range");
+    std::vector<float> source(4096U);
+    for (std::size_t frame = 0; frame < source.size() / 2U; ++frame) {
+        const float sample = 0.3F * static_cast<float>(std::sin(
+            2.0 * 3.14159265358979323846 * 330.0 *
+            static_cast<double>(frame) / 48000.0));
+        source[frame * 2U] = sample;
+        source[frame * 2U + 1U] = -sample * 0.4F;
+    }
+    auto legacy_output = source;
+    auto canonical_output = source;
+    legacy_chorus.process(legacy_output, 2);
+    canonical_chorus.process(canonical_output, 2);
+    require(legacy_output == canonical_output,
+            "legacy center/depth and equivalent minimum/range audio differ");
+}
+
+void test_minimum_and_maximum_sweep_timing() {
+    tabletfx::ChorusParameters minimum_parameters;
+    minimum_parameters.rate_hz = 0.05F;
+    minimum_parameters.minimum_delay_ms = 0.1F;
+    minimum_parameters.delay_range_ms = 1.0F;
+    minimum_parameters.mix = 1.0F;
+    minimum_parameters.smoothing_ms = 0.0F;
+    tabletfx::Chorus minimum(8000.0F, 1, minimum_parameters);
+    std::vector<float> to_minimum(120000U, 0.0F);
+    minimum.process(to_minimum, 1);
+    std::array<float, 1> impulse{1.0F};
+    minimum.process(impulse, 1);
+    std::array<float, 4> minimum_response{};
+    minimum.process(minimum_response, 1);
+    require(std::abs(minimum_response[0] - 1.0F) < 1.0e-5F,
+            "0.1 ms minimum-delay sweep did not reach the one-sample floor");
+
+    tabletfx::ChorusParameters maximum_parameters;
+    maximum_parameters.rate_hz = 0.05F;
+    maximum_parameters.minimum_delay_ms = 50.0F;
+    maximum_parameters.delay_range_ms = 40.0F;
+    maximum_parameters.mix = 1.0F;
+    maximum_parameters.smoothing_ms = 0.0F;
+    tabletfx::Chorus maximum(8000.0F, 1, maximum_parameters);
+    std::vector<float> to_maximum(40000U, 0.0F);
+    maximum.process(to_maximum, 1);
+    std::array<float, 1> maximum_impulse{1.0F};
+    maximum.process(maximum_impulse, 1);
+    std::array<float, 730> maximum_response{};
+    maximum.process(maximum_response, 1);
+    const auto peak = std::max_element(
+        maximum_response.begin(), maximum_response.end(),
+        [](float left, float right) { return std::abs(left) < std::abs(right); });
+    const std::size_t peak_frame = static_cast<std::size_t>(
+        peak - maximum_response.begin()) + 1U;
+    require(peak_frame >= 718U && peak_frame <= 722U && *peak > 0.7F,
+            "50 ms minimum plus 40 ms range peak was at frame " +
+                std::to_string(peak_frame) + " with value " +
+                std::to_string(*peak));
+}
+
+void test_default_is_sample_identical_to_legacy_center_depth_path() {
+    constexpr float sample_rate = 48000.0F;
+    constexpr std::uint16_t channels = 2U;
+    constexpr std::size_t frames = 2048U;
+    constexpr std::size_t legacy_capacity_frames = 1538U;
+    constexpr float pi = 3.14159265358979323846F;
+    constexpr float two_pi = 2.0F * pi;
+    std::vector<float> source(frames * channels);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const float sample = 0.35F * static_cast<float>(std::sin(
+            2.0 * 3.14159265358979323846 * 220.0 *
+            static_cast<double>(frame) / sample_rate));
+        source[frame * 2U] = sample;
+        source[frame * 2U + 1U] = sample * -0.6F;
+    }
+
+    auto expected = source;
+    std::vector<float> legacy_storage(legacy_capacity_frames * channels, 0.0F);
+    float sine_increment = std::sin(two_pi * 0.8F / sample_rate);
+    float cosine_increment = std::cos(two_pi * 0.8F / sample_rate);
+    float sine_phase = 0.0F;
+    float cosine_phase = 1.0F;
+    std::size_t write_frame = 0U;
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        for (std::uint16_t channel = 0U; channel < channels; ++channel) {
+            const std::size_t index = frame * channels + channel;
+            const float input = source[index];
+            legacy_storage[write_frame * channels + channel] = input;
+            const float modulation = channel == 0U ? sine_phase : -sine_phase;
+            const float delay = std::clamp(
+                15.0F * (sample_rate * 0.001F) +
+                    7.0F * (sample_rate * 0.001F) * modulation,
+                1.0F, static_cast<float>(legacy_capacity_frames - 2U));
+            const std::size_t whole_delay = static_cast<std::size_t>(delay);
+            const float fraction = delay - static_cast<float>(whole_delay);
+            std::size_t read_frame = write_frame + legacy_capacity_frames - whole_delay;
+            if (read_frame >= legacy_capacity_frames) read_frame -= legacy_capacity_frames;
+            const std::size_t older_frame = read_frame == 0U
+                ? legacy_capacity_frames - 1U : read_frame - 1U;
+            const float newer = legacy_storage[read_frame * channels + channel];
+            const float older = legacy_storage[older_frame * channels + channel];
+            const float wet = newer * (1.0F - fraction) + older * fraction;
+            expected[index] = input * 0.7F + wet * 0.3F;
+        }
+        ++write_frame;
+        if (write_frame == legacy_capacity_frames) write_frame = 0U;
+        const float old_sine = sine_phase;
+        sine_phase = old_sine * cosine_increment +
+                     cosine_phase * sine_increment;
+        cosine_phase = cosine_phase * cosine_increment -
+                       old_sine * sine_increment;
+    }
+
+    tabletfx::Chorus chorus(sample_rate, channels);
+    auto actual = source;
+    chorus.process(actual, channels);
+    require(actual == expected,
+            "default 8 ms minimum/14 ms range changed the legacy 15±7 ms output");
 }
 
 void test_number_of_voices_bounds_and_one_voice_identity() {
@@ -314,8 +468,8 @@ void test_parameter_ramp_block_invariance_and_reset() {
 
     tabletfx::ChorusParameters changed = initial;
     changed.rate_hz = 3.5F;
-    changed.base_delay_ms = 17.0F;
-    changed.depth_ms = 8.0F;
+    changed.minimum_delay_ms = 9.0F;
+    changed.delay_range_ms = 16.0F;
     changed.mix = 0.75F;
     whole.set_parameters(changed);
     chunked.set_parameters(changed);
@@ -428,6 +582,9 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_minimum_delay_range_bounds_and_legacy_center_depth();
+        test_minimum_and_maximum_sweep_timing();
+        test_default_is_sample_identical_to_legacy_center_depth_path();
         test_number_of_voices_bounds_and_one_voice_identity();
         test_multi_voice_output_and_partition_continuity();
         test_quarter_note_tempo_rate();

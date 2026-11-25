@@ -1413,13 +1413,13 @@
           <span>Tempo</span><output id="chorus-tempo-bpm-value" for="chorus-tempo-bpm">120 BPM</output>
           <input id="chorus-tempo-bpm" type="range" min="20" max="300" step="1" value="120" disabled>
         </label>
-        <label class="mix-control" for="chorus-delay-ms">
-          <span>Base delay</span><output id="chorus-delay-value" for="chorus-delay-ms">15.0 ms</output>
-          <input id="chorus-delay-ms" type="range" min="2" max="30" step="0.5" value="15">
+        <label class="mix-control" for="chorus-minimum-delay-ms">
+          <span>Minimum Delay</span><output id="chorus-minimum-delay-value" for="chorus-minimum-delay-ms">8.0 ms</output>
+          <input id="chorus-minimum-delay-ms" type="range" min="0.1" max="50" step="0.1" value="8">
         </label>
-        <label class="mix-control" for="chorus-depth-ms">
-          <span>Modulation depth</span><output id="chorus-depth-value" for="chorus-depth-ms">7.0 ms</output>
-          <input id="chorus-depth-ms" type="range" min="0" max="14" step="0.5" value="7">
+        <label class="mix-control" for="chorus-delay-range-ms">
+          <span>Delay Range</span><output id="chorus-delay-range-value" for="chorus-delay-range-ms">14.0 ms</output>
+          <input id="chorus-delay-range-ms" type="range" min="1" max="40" step="0.1" value="14">
         </label>
         <label class="mix-control" for="chorus-mix">
           <span>Chorus wet mix</span><output id="chorus-mix-value" for="chorus-mix">30%</output>
@@ -1430,7 +1430,7 @@
           <input id="chorus-number-of-voices" type="range" min="1" max="8" step="1" value="1">
         </label>
       </div>
-      <p class="hint">Project-authored controls: 1–8 voices defaults to 1; higher counts average additional phase-spread delay voices. Quarter-note tempo uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Rate synchronization changes LFO speed but does not phase-align it. Fractal’s separate LFO1 SYNC source is not implemented.</p>
+      <p class="hint">Project-authored controls: Minimum Delay 0.1–50 ms and Delay Range 1–40 ms (defaults 8/14 ms, preserving the previous 15±7 ms sweep); 1–8 voices defaults to 1, and higher counts average additional phase-spread delay voices. Quarter-note tempo uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Rate synchronization changes LFO speed but does not phase-align it. The sum of Minimum Delay and Delay Range can reach 90 ms. Fractal’s separate LFO1 SYNC source is not implemented; this DSP is not a hardware parity claim.</p>
       <div class="gain-controls" aria-label="Dimension Chorus controls">
         <h3>Dimension Chorus · project-authored DSP</h3>
         <label class="mix-control" for="dimension-chorus-version">

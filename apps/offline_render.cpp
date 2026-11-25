@@ -125,6 +125,7 @@ struct Options {
     bool auto_swell_delay_enabled = false;
     tabletfx::AutoSwellDelayParameters auto_swell_delay{};
     bool chorus_enabled = false;
+    bool chorus_delay_range_explicit = false;
     tabletfx::ChorusParameters chorus{};
     bool dimension_chorus_enabled = false;
     tabletfx::DimensionChorusParameters dimension_chorus{};
@@ -2789,6 +2790,16 @@ Options parse_options(int argc, char** argv, int first) {
             options.chorus.depth_ms = value;
             options.chorus_enabled = true;
         }
+        else if (key == "--chorus-minimum-delay-ms") {
+            options.chorus.minimum_delay_ms = value;
+            options.chorus_delay_range_explicit = true;
+            options.chorus_enabled = true;
+        }
+        else if (key == "--chorus-delay-range-ms") {
+            options.chorus.delay_range_ms = value;
+            options.chorus_delay_range_explicit = true;
+            options.chorus_enabled = true;
+        }
         else if (key == "--chorus-mix") {
             options.chorus.mix = value;
             options.chorus_enabled = true;
@@ -3993,6 +4004,11 @@ Options parse_options(int argc, char** argv, int first) {
     if (options.pitch_arpeggiator_enabled &&
         !options.pitch_arpeggiator_run_explicit) {
         options.pitch_arpeggiator.run = true;
+    }
+    if (options.chorus_delay_range_explicit) {
+        options.chorus.base_delay_ms = options.chorus.minimum_delay_ms +
+                                       options.chorus.delay_range_ms * 0.5F;
+        options.chorus.depth_ms = options.chorus.delay_range_ms * 0.5F;
     }
     return options;
 }

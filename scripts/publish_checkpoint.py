@@ -1349,6 +1349,26 @@ FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_CHORUS_DELAY_RANGE_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "research-state.json",
+    "apps/fractal_chorus_tempo_bench.cpp",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/chorus.hpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/chorus.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_chorus.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 VOLUME_PAN_CHECKPOINT_PATHS = (
     "apps/offline_render.cpp",
     "CMakeLists.txt",
@@ -3027,6 +3047,10 @@ CHECKPOINTS = {
     "fractal-chorus-voice-count": (
         FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS,
         "feat: add project-authored Chorus voice count",
+    ),
+    "fractal-chorus-delay-range": (
+        FRACTAL_CHORUS_DELAY_RANGE_CHECKPOINT_PATHS,
+        "feat: add Chorus minimum delay and range controls",
     ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),

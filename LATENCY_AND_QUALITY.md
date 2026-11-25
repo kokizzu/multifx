@@ -1,5 +1,27 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9-family Chorus Delay Time/Minimum Delay and Delay Range (2026-11-26)
+
+The November 2026 Fractal Audio Blocks Guide, printed pp. 25–26, documents Chorus Delay Time (shown as Minimum Delay on the Expert page) at 0.1–50 ms and Delay Range at 1–40 ms. It does not state defaults. The source is family-level; FM9 downloads list v12.0 for FM9 Original/Turbo, not Mark II Turbo by name. Exact applicability and installed firmware remain unconfirmed.
+
+TabletFX adds project-authored Minimum Delay/Delay Range controls at the existing Modulation Chorus ID 16, with 0.1–50 / 1–40 ms project bounds and 8/14 ms defaults. The previous 15 ms center / 7 ms depth maps to 8/14, preserving the one-voice default sample-for-sample. The fixed ring covers the maximum 90 ms tap and is preallocated; native effect state is 34,752 B at default and both timing endpoints. No fixed algorithmic latency or processing allocation is added. Old C ABI, CLI center/depth flags, and browser parameter-array values continue to map through the compatibility conversion. These are project controls and do not claim Fractal algorithm or sound parity.
+
+The dedicated make bench-fractal-chorus-tempo run used AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 3,000 warm-up and 20,000 measured callbacks). Percentages are callback time divided by the deadline:
+
+| Profile | p50 / p95 / p99 / p99.9 / max callback budget (%) | Native state |
+|---|---:|---:|
+| Free 0.8 Hz, 1 voice, 8/14 ms | 0.060 / 0.062 / 0.084 / 0.249 / 0.929 | 34,752 B |
+| Quarter-note 120 BPM, 1 voice, 8/14 ms | 0.059 / 0.061 / 0.090 / 0.362 / 2.554 | 34,752 B |
+| 1 voice, 8/14 ms | 0.060 / 0.061 / 0.092 / 0.320 / 2.551 | 34,752 B |
+| 2 voices, 8/14 ms | 0.099 / 0.114 / 0.153 / 0.680 / 5.784 | 34,752 B |
+| 4 voices, 8/14 ms | 0.171 / 0.174 / 0.288 / 1.617 / 2.333 | 34,752 B |
+| 8 voices, 8/14 ms | 0.305 / 0.308 / 0.502 / 1.817 / 2.815 | 34,752 B |
+| 1 voice, minimum endpoint 0.1/1 ms | 0.061 / 0.061 / 0.062 / 0.273 / 2.432 | 34,752 B |
+| 1 voice, maximum endpoint 50/40 ms | 0.061 / 0.061 / 0.095 / 0.365 / 3.230 | 34,752 B |
+
+The focused browser/WASM test played local prerecorded Guitar-TECHS DI at both endpoint settings; the full browser/native suite passed. Full make test (117/117 CTest), make web-test, make windows-cross-build, make diff-check, and the dedicated benchmark passed. These are isolated desktop measurements, not target-device guarantees. Human listening, physical-device behavior, installed firmware, and exact FM9 Mark II Turbo applicability remain open.
+
+
 ## Fractal FM9-family Chorus Number Of Voices (2026-11-26)
 
 The November 2026 Fractal Audio Blocks Guide (printed pp. 25–26) places `Number Of Voices` on the Expert page and says it increases delay-line count up to eight. It suggests two voices for vintage chorus and up to eight for a lush ensemble but does not state a numeric minimum or default. Above two voices automatically selects SINE; choosing a non-SINE LFO resets the count to two. The same pages document Delay Time/Minimum Delay 0.1–50 ms and Delay Range 1–40 ms as separate controls. The source is family-level; FM9 downloads list v12.0, released July 7, 2026, for FM9 Original/Turbo only. Exact applicability to Mark II Turbo and installed firmware remain unconfirmed.

@@ -1494,7 +1494,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "auto-swell-delay" && this.ready) {
       this.module._tf_chain_set_auto_swell_delay(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {
-      this.module._tf_chain_set_chorus(this.chain, ...message.value);
+      const [rateHz, centerDelayMs, modulationDepthMs, mix,
+        tempoSync, tempoBpm, numberOfVoices] = message.value;
+      this.module._tf_chain_set_chorus_min_range(
+        this.chain, rateHz, centerDelayMs - modulationDepthMs,
+        modulationDepthMs * 2, mix, tempoSync, tempoBpm, numberOfVoices,
+      );
     } else if (message.type === "dimension-chorus" && this.ready) {
       this.module._tf_chain_set_dimension_chorus(this.chain, ...message.value);
     } else if (message.type === "triple-double-chorus" && this.ready) {

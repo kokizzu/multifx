@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "f7035b45261283a3eb6d7c2a5b2bf1d85848272f",
+  "previous_checkpoint_commit": "946e8dc15e61d9e8d9a56bcb254b0b9161d5cbc0",
   "latest_audit": {
     "name": "Fender Tone Master Pro Tremolo Duty Cycle",
     "status": "Project-authored 5–95% Square-only Duty control added to the existing Modulation Tremolo with a sample-identical 50% default; full native/browser, Windows cross-build, benchmark, and diff checks pass; manual/device checks remain.",
@@ -30,9 +30,9 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Implement project-authored Chorus Delay Time/Minimum Delay and Delay Range as separate controls. The November 2026 Blocks Guide pp. 25–26 documents Delay Time/Minimum Delay at 0.1–50 ms and Delay Range at 1–40 ms. Do not map the existing project's base_delay_ms sweep center or depth_ms modulation depth to these controls. The voice-count feature is complete: project count 1–8/default 1; one voice preserves prior samples, and extra voices share the delay ring with phase-spread sine modulation and averaged wet output. The guide's Number Of Voices is on the Expert page and increases delay-line count up to eight, but gives no numeric minimum/default; above two voices it selects SINE and choosing non-SINE resets count to two. Family-level source; FM9 v12.0 lists Original/Turbo, not Mark II Turbo by name; exact applicability and installed firmware unknown.",
-    "qualification": "The Fractal Chorus voice-count checkpoint passed focused native/offline/browser, full native/browser suites, Windows cross-build, diff-check, and benchmark; human listening and exact Mark II Turbo applicability remain open. Continue with the separate Delay Time/Minimum Delay and Delay Range controls while preserving unrelated audit queues, manual/device checks, and existing model membership."
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Audit the common Digital Delay Trails On/Off control as a project-authored bypass tail drain in the existing Delay ID 21. The current live Effects manual common-parameter table documents Trails Off as muting delay repeats/reverb decays after bypass and Trails On as letting tails fade after bypass or a snapshot change; it publishes no default. Preserve unresolved applicability to Simple Delay. The live manual selector/header says v1.4 Rev D, the cover says Firmware 1.4, and the footer says Rev E / Firmware v1.4.1; separate hardware v1.4.2 release notes are dated 2026-10-27. Installed firmware is unknown.",
+    "qualification": "The Fractal Chorus timing checkpoint passed focused native/offline/browser, full native/browser suites, Windows cross-build, diff-check, and dedicated benchmark. Human listening, hardware verification, installed firmware, and exact FM9 Mark II Turbo applicability remain open. For Stadium Trails, treat the manual labels as inconsistent, keep Simple Delay control applicability unresolved, and do not claim Line 6 settings/DSP/sound parity."
   },
   "completed_checkpoints": [
     {
@@ -1031,33 +1031,16 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state is 12,472 B for all counts; browser effect state is 12,436 B; algorithmic latency is 0 samples. p50/p95/p99/p99.9/max callback budget percentages: 1 voice 0.059/0.076/0.109/0.303/0.615; 2 voices 0.117/0.169/0.198/1.044/105.721; 4 voices 0.174/0.177/0.178/0.422/0.745; 8 voices 0.248/0.310/0.492/0.746/2.252. The two-voice maximum is a host-scheduling spike, not steady DSP cost. Isolated desktop timing, not target-device performance."
       },
       "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. The separate Delay Time/Minimum Delay and Delay Range controls are the next Chorus feature; do not equate them with project base delay or depth. Do not claim Fractal settings, DSP, latency, or sound parity."
+    },
+    {
+      "name": "Fractal FM9-family Chorus Delay Time/Minimum Delay and Delay Range",
+      "date": "2026-11-26",
+      "picker_index": 16,
+      "category": "Modulation",
+      "status": "verified; project-authored Minimum Delay and Delay Range controls with legacy conversion, native/offline/browser tests, full suites, Windows build, diff-check, and callback benchmarks pass; manual/device checks remain"
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Tremolo LFO Clip",
-    "status": "Manufacturer-listed LFO Clip role added as a project-authored control to the existing categorized Tremolo; native, offline CLI, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 15,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, p. 34. Current firmware history checked through v1.8.87 dated 2026-11-23; v1.8.58 also documents a Step Tremolo crash fix. Installed device firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists LFO Clip and describes adjusting tremolo-signal clipping percentage but publishes no numeric range, default, curve, DSP, or latency. The project interprets this as symmetric bipolar LFO clipping and does not claim Fender settings or sound parity."
-    },
-    "documented_controls": "Tone Master Pro Tremolo guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its numeric range, default, curve, and DSP/latency are not published.",
-    "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored LFO Clip has range 0–100% and default 0%, which preserves existing output exactly. Nonzero values symmetrically clip the normalized bipolar LFO at a threshold interpolated from 1.0 to 0.5, then renormalize the wave to full range. No new picker row, buffer, or fixed latency is added.",
-    "verification": {
-      "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests covering bounds, default identity, positive/negative peak flattening, limits, and process-time allocation.",
-      "offline_cli": "The same target passed offline CLI rendering that compares zero and 100% clip on a sine tremolo using constant input; output differences confirm the CLI reaches the DSP.",
-      "browser": "make web-test-fender-tremolo-lfo-clip passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native chain comparison, and three HeadlessChrome 151 Play captures from local prerecorded stereo Guitar-TECHS DI. Modulation category and picker ID 15, 0–100% range, zero default, and audible changes at 0/50/100% were verified. Browser/WASM state 84 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
-      "benchmark": "make bench measured full clip at AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0743/0.0750/0.0765/0.5374/2.0974% of deadline. Native state 96 B; the unmodified profile measured 0.0645/0.0803/0.0806/0.5798/1.8045%, also 96 B. No fixed latency; process() allocates nothing. These are isolated desktop measurements, not target-device performance."
-    },
-    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender algorithm, curve, settings, DSP, or sound parity."
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Chorus Number Of Voices",
     "status": "Project-authored 1–8 voice count, default 1, added to the existing categorized Chorus. Focused native/offline/browser and full validation pass; manual/device checks remain.",
     "date": "2026-11-26",
@@ -1081,6 +1064,31 @@
       "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state 12,472 B for each count; algorithmic latency 0 samples. p50/p95/p99/p99.9/max callback budget percentages: 1 voice 0.059/0.076/0.109/0.303/0.615; 2 voices 0.117/0.169/0.198/1.044/105.721; 4 voices 0.174/0.177/0.178/0.422/0.745; 8 voices 0.248/0.310/0.492/0.746/2.252. The 105.721% two-voice maximum was a host-scheduling spike. Isolated desktop timing, not target-device performance."
     },
     "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Chorus Delay Time/Minimum Delay and Delay Range",
+    "status": "Project-authored Minimum Delay and Delay Range added to existing Modulation Chorus ID 16 with documented 0.1–50 ms / 1–40 ms bounds and 8/14 ms defaults; legacy center/depth paths remain compatible. Focused native/offline/browser and full checks pass; manual/device checks remain.",
+    "date": "2026-11-26",
+    "picker_index": 16,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "Cover dated November 2026; printed pp. 25–26. The FM9 downloads page checked 2026-11-26 lists v12.0 for FM9 Original/Turbo, not Mark II Turbo by name. The guide gives Delay Time/Minimum Delay and Delay Range bounds but no defaults; project defaults are independently chosen. Installed firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Project ranges/defaults and DSP are not Fractal settings or parity."
+    },
+    "documented_controls": "The November 2026 guide documents Chorus Delay Time, shown as Minimum Delay on the Expert page, at 0.1–50 ms and Delay Range at 1–40 ms (printed pp. 25–26); it states no defaults. It separately documents Number Of Voices up to eight, with no numeric minimum/default; more than two voices selects SINE and choosing non-SINE resets the count to two. Chorus Tempo sets Rate rhythmically; quarter-note at 120 BPM is 2 Hz and NONE restores manual Rate. LFO1 SYNC is separate.",
+    "project_controls": "Project-authored Minimum Delay 0.1–50 ms and Delay Range 1–40 ms are exposed at the existing Modulation Chorus picker ID 16, with defaults 8/14 ms. Those defaults map the former 15 ms base-delay center / 7 ms depth, preserving one-voice samples. Project voice count remains 1–8/default 1, and Free/quarter-note tempo remains with 0.8 Hz default, 0.05–8 Hz bounds, and project BPM 20–300/default 120. The old C ABI symbol and CLI center/depth flags are retained; the browser's existing [rate, center, depth, mix, sync, bpm, voices] array is converted to the new minimum/range WASM export. A preallocated ring supports the 90 ms maximum tap; native state is 34,752 B and browser/WASM state is 34,716 B at default and endpoint settings. No fixed latency or process-time allocation is added. These are project controls and DSP, not Fractal algorithm parity.",
+    "verification": {
+      "native": "Focused Chorus tests pass minimum-delay 0.1/50 ms and delay-range 1/40 ms bounds, 8/14 default conversion, legacy one-voice sample identity, sweep timing, block continuity, finite output, and zero process-time allocations. Full make test passes 11/11 fixture checks and 117/117 CTest cases.",
+      "offline_cli": "Offline CLI tests pass exact audio equality for legacy 15/7 and canonical 8/14 defaults, legacy 12/5 versus canonical 7/10, finite endpoint renders, and old CLI flag behavior.",
+      "browser": "HeadlessChrome 151 played local prerecorded Guitar-TECHS DI at 48 kHz stereo and passed the UI/WASM minimum/range endpoint checks at 0.1/1 and 50/40 ms. The full make web-test browser/native suite passed. Browser/WASM effect state was 34,716 B.",
+      "windows": "make windows-cross-build passed the Windows MinGW core, offline renderer, and Chorus benchmark.",
+      "diff_check": "make diff-check passed; no workflow paths changed.",
+      "benchmark": "make bench-fractal-chorus-tempo passed on AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state is 34,752 B across default and endpoint profiles; fixed algorithmic latency is 0 samples. p50/p95/p99/p99.9/max callback-budget percentages: Free 0.8 Hz default 8/14 ms 0.060/0.062/0.084/0.249/0.929; quarter-note/120 BPM 0.059/0.061/0.090/0.362/2.554; 1 voice 0.060/0.061/0.092/0.320/2.551; 2 voices 0.099/0.114/0.153/0.680/5.784; 4 voices 0.171/0.174/0.288/1.617/2.333; 8 voices 0.305/0.308/0.502/1.817/2.815; minimum endpoint 0.1/1 ms 0.061/0.061/0.062/0.273/2.432; maximum endpoint 50/40 ms 0.061/0.061/0.095/0.365/3.230. Processing allocates nothing. These are isolated desktop timings, not target-device guarantees."
+    },
+    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
   },
   "next_research": [
     {
@@ -1242,6 +1250,18 @@
       "status": "Official v5.0.0 guide documents per-effect Tails continuing delay/reverb decay after bypass. The Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails. Current downloads list v5.2.0; its update notes have no Eleven-Reverb-specific change. A project-authored default-off tails option on existing Room/Hall/Plate/Spring is a candidate; no implementation or Eleven algorithm parity is claimed.",
       "known_controls": "Per-effect Tails on/off behavior is documented at p.11 §4.1.3. The Eleven Reverb screen at p.22 §4.4.1 shows Decay, Tone, Pre-Delay, Mix, and Tails. Screen numbers are examples, not verified defaults or ranges.",
       "qualification": "The v5.2.0 guide was unreadable in the web reader; installed firmware is unknown. The v5.2.0 notes contain no Eleven-Reverb-specific change. Candidate scope is optional default-off tail spillover in the project's existing Room/Hall/Plate/Spring, not an Eleven Reverb model, documented project range, DSP, or sound parity."
+    },
+    {
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Digital Delay per-effect Trails On/Off after bypass",
+      "source": "Helix Stadium Owner's Manual, Effects > Common Effect Parameters > Trails; checked 2026-11-26. Live selector/header says v1.4 Rev D, cover says Firmware 1.4, footer says Rev E / Firmware v1.4.1. Separate hardware v1.4.2 release notes are dated 2026-10-27.",
+      "source_urls": [
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+      ],
+      "status": "Next candidate: audit an optional project-authored bypass tail drain for the existing Digital Delay ID 21. The common Effects table documents Trails Off as immediately muting delay repeats/reverb decays on bypass and Trails On as allowing them to fade after bypass or a snapshot change. No default is stated. Simple Delay-specific applicability is unresolved.",
+      "known_controls": "Two-state Trails Off/On behavior appears in the common Effects parameter table. Trails On preserves decaying delay/reverb tails through block bypass or snapshot changes; Off mutes them immediately. The table does not identify a default or enumerate Simple Delay availability.",
+      "qualification": "The public manual version labels conflict: selector/header v1.4 Rev D, cover Firmware 1.4, and footer Rev E / Firmware v1.4.1. Hardware firmware v1.4.2 notes are dated 2026-10-27; installed hardware firmware is unknown. Keep applicability to Simple Delay unresolved; do not infer a default or claim Line 6 settings/DSP/sound parity."
     }
   ],
   "constraints": [

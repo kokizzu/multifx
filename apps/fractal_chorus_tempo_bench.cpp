@@ -86,6 +86,8 @@ bool run_profile(std::string_view name, tabletfx::ChorusParameters parameters) {
               << " channels=" << kChannels
               << " number_of_voices="
               << static_cast<unsigned int>(parameters.number_of_voices)
+              << " minimum_delay_ms=" << parameters.minimum_delay_ms
+              << " delay_range_ms=" << parameters.delay_range_ms
               << " sample_rate_hz=" << static_cast<int>(kSampleRate)
               << " callback_budget_us=" << std::fixed << std::setprecision(3)
               << kCallbackBudgetUs
@@ -121,5 +123,13 @@ int main() {
         parameters.number_of_voices = voices;
         passed = run_profile("chorus_voice_count", parameters) && passed;
     }
+    tabletfx::ChorusParameters minimum_delay;
+    minimum_delay.minimum_delay_ms = 0.1F;
+    minimum_delay.delay_range_ms = 1.0F;
+    passed = run_profile("chorus_minimum_delay_range", minimum_delay) && passed;
+    tabletfx::ChorusParameters maximum_delay;
+    maximum_delay.minimum_delay_ms = 50.0F;
+    maximum_delay.delay_range_ms = 40.0F;
+    passed = run_profile("chorus_maximum_delay_range", maximum_delay) && passed;
     return passed ? 0 : 1;
 }

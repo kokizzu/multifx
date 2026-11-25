@@ -23,6 +23,7 @@ PUBLISH_CHECKPOINTS += fender-tremolo-lfo-clip
 PUBLISH_CHECKPOINTS += fender-tremolo-duty-cycle
 PUBLISH_CHECKPOINTS += fractal-source-correction
 PUBLISH_CHECKPOINTS += fractal-chorus-voice-count
+PUBLISH_CHECKPOINTS += fractal-chorus-delay-range
 
 .PHONY: test-fender-tremolo-duty-cycle web-test-fender-tremolo-duty-cycle
 test-fender-tremolo-duty-cycle:

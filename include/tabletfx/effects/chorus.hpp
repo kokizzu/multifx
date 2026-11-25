@@ -15,10 +15,14 @@ struct ChorusParameters {
     float tempo_bpm = 120.0F;
     // Project-authored 1–8 voice count; one preserves the legacy signal path.
     std::uint8_t number_of_voices = 1U;
+    // Deprecated center/depth inputs retained for older callers.
     float base_delay_ms = 15.0F;
     float depth_ms = 7.0F;
     float mix = 0.3F;
     float smoothing_ms = 10.0F;
+    // Project-authored controls using Fractal Audio's documented names/ranges.
+    float minimum_delay_ms = 8.0F;
+    float delay_range_ms = 14.0F;
 };
 
 // Low-cost sine-LFO modulated delay chorus. The wet path is interpolated
@@ -48,8 +52,12 @@ public:
 private:
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
-    static constexpr float kMaximumDelayMs = 30.0F;
-    static constexpr float kStorageDelayMs = 32.0F;
+    static constexpr float kMinimumDelayMs = 0.1F;
+    static constexpr float kMaximumMinimumDelayMs = 50.0F;
+    static constexpr float kMinimumDelayRangeMs = 1.0F;
+    static constexpr float kMaximumDelayRangeMs = 40.0F;
+    static constexpr float kMaximumDelayMs = 90.0F;
+    static constexpr float kStorageDelayMs = kMaximumDelayMs;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
 

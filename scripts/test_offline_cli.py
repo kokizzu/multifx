@@ -1238,6 +1238,68 @@ def check_chorus_voice_count(executable: Path) -> None:
             raise AssertionError("Chorus CLI accepted a missing voice count")
 
 
+def check_chorus_delay_range(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(
+        prefix="tabletfx-chorus-delay-range-cli-test-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "guitar-dry.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(name: str, parameters: list[str]) -> tuple[float, ...]:
+            output = root / f"{name}.wav"
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output),
+                 "--chorus-rate-hz", "0.8", "--chorus-mix", "0.7",
+                 *parameters],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError("Chorus delay-range options did not instantiate one processor")
+            data = output.read_bytes()
+            return struct.unpack("<" + "f" * frame_count,
+                                 data[44:44 + frame_count * 4])
+
+        legacy_default = render("legacy-default", [
+            "--chorus-delay-ms", "15", "--chorus-depth-ms", "7",
+        ])
+        canonical_default = render("canonical-default", [
+            "--chorus-minimum-delay-ms", "8", "--chorus-delay-range-ms", "14",
+        ])
+        if legacy_default != canonical_default:
+            raise AssertionError(
+                "Legacy 15/7 defaults did not preserve the 8/14 minimum/range samples")
+
+        legacy_custom = render("legacy-custom", [
+            "--chorus-delay-ms", "12", "--chorus-depth-ms", "5",
+        ])
+        canonical_custom = render("canonical-custom", [
+            "--chorus-minimum-delay-ms", "7", "--chorus-delay-range-ms", "10",
+        ])
+        if legacy_custom != canonical_custom:
+            raise AssertionError(
+                "Legacy center/depth CLI flags did not map to equivalent minimum/range")
+
+        minimum = render("minimum", [
+            "--chorus-minimum-delay-ms", "0.1", "--chorus-delay-range-ms", "1",
+        ])
+        maximum = render("maximum", [
+            "--chorus-minimum-delay-ms", "50", "--chorus-delay-range-ms", "40",
+        ])
+        if not all(math.isfinite(sample) for sample in (*minimum, *maximum)):
+            raise AssertionError("Chorus delay-range CLI emitted non-finite audio")
+        difference = math.sqrt(sum((a - b) ** 2 for a, b in zip(
+            minimum, maximum, strict=True)) / frame_count)
+        if difference < 0.001:
+            raise AssertionError("Chorus minimum/maximum range settings did not change output")
+
+
 def check_dimension_chorus(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [
@@ -3522,6 +3584,7 @@ def main() -> None:
     check_chorus(args.executable.resolve())
     check_chorus_tempo_sync(args.executable.resolve())
     check_chorus_voice_count(args.executable.resolve())
+    check_chorus_delay_range(args.executable.resolve())
     check_dimension_chorus(args.executable.resolve())
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())

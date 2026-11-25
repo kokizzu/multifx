@@ -243,6 +243,7 @@ def build_web() -> None:
         "_tf_chain_set_harmonic_tremolo",
         "_tf_chain_set_auto_swell_delay",
         "_tf_chain_set_chorus",
+        "_tf_chain_set_chorus_min_range",
         "_tf_chain_set_flanger",
         "_tf_chain_set_phaser",
         "_tf_chain_set_vibrato",
