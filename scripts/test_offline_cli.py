@@ -1181,6 +1181,63 @@ def check_chorus_tempo_sync(executable: Path) -> None:
                 raise AssertionError(f"Chorus tempo parser did not reject {arguments}")
 
 
+def check_chorus_voice_count(executable: Path) -> None:
+    sample_rate = 8000
+    frame_count = 8000
+    source_samples = [
+        round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+        for frame in range(frame_count)
+    ]
+    with tempfile.TemporaryDirectory(prefix="tabletfx-chorus-voices-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar-dry.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(path: Path, voice_arguments: list[str]) -> tuple[float, ...]:
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(path),
+                 "--chorus-delay-ms", "8", "--chorus-depth-ms", "6",
+                 "--chorus-mix", "0.7", *voice_arguments],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError("Chorus voice-count options did not instantiate one processor")
+            data = path.read_bytes()
+            return struct.unpack("<" + "f" * frame_count,
+                                 data[44:44 + frame_count * 4])
+
+        implicit_one = render(root / "implicit-one.wav", [])
+        explicit_one = render(root / "explicit-one.wav", ["--chorus-voices", "1"])
+        four_voices = render(root / "four-voices.wav", ["--chorus-voices", "4"])
+        if implicit_one != explicit_one:
+            raise AssertionError("Chorus voice-count default changed from one-voice output")
+
+        def rms_difference(left: tuple[float, ...], right: tuple[float, ...]) -> float:
+            squared = sum((a - b) * (a - b) for a, b in zip(left, right))
+            return math.sqrt(squared / len(left))
+
+        if rms_difference(explicit_one, four_voices) < 0.001:
+            raise AssertionError("Chorus four-voice CLI output did not differ from one voice")
+
+        for value in ("0", "9", "2.5"):
+            invalid = subprocess.run(
+                [str(executable), "render", str(source), str(root / "invalid.wav"),
+                 "--chorus-voices", value],
+                capture_output=True, text=True, check=False,
+            )
+            if (invalid.returncode == 0 or
+                    "Chorus voices must be an integer from 1 to 8" not in invalid.stderr):
+                raise AssertionError(f"Chorus CLI accepted invalid voice count {value}")
+
+        missing = subprocess.run(
+            [str(executable), "render", str(source), str(root / "missing.wav"),
+             "--chorus-voices"],
+            capture_output=True, text=True, check=False,
+        )
+        if missing.returncode == 0 or "Missing value for --chorus-voices" not in missing.stderr:
+            raise AssertionError("Chorus CLI accepted a missing voice count")
+
+
 def check_dimension_chorus(executable: Path) -> None:
     sample_rate = 8000
     source_samples = [
@@ -3464,6 +3521,7 @@ def main() -> None:
     check_tape_heads_delay(args.executable.resolve())
     check_chorus(args.executable.resolve())
     check_chorus_tempo_sync(args.executable.resolve())
+    check_chorus_voice_count(args.executable.resolve())
     check_dimension_chorus(args.executable.resolve())
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())

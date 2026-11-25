@@ -22,6 +22,7 @@ PUBLISH_CHECKPOINTS += fender-phaser-90-tap-division
 PUBLISH_CHECKPOINTS += fender-tremolo-lfo-clip
 PUBLISH_CHECKPOINTS += fender-tremolo-duty-cycle
 PUBLISH_CHECKPOINTS += fractal-source-correction
+PUBLISH_CHECKPOINTS += fractal-chorus-voice-count
 
 .PHONY: test-fender-tremolo-duty-cycle web-test-fender-tremolo-duty-cycle
 test-fender-tremolo-duty-cycle:
@@ -239,7 +240,7 @@ inspect-web-build-path:
 inspect-web-smoke-path:
 	$(PYTHON) scripts/web.py inspect-smoke-path
 PUBLISH_CHECKPOINTS += prime-reverb-tails
-.PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan publish-$(checkpoint))
+.PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "$(CHECKPOINT)"
@@ -250,6 +251,9 @@ publish-checkpoint:
 define publish-checkpoint-rules
 publish-$(1)-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "$(1)"
+
+stage-$(1):
+	$(PYTHON) scripts/publish_checkpoint.py stage --checkpoint "$(1)"
 
 publish-$(1):
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "$(1)"

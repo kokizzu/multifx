@@ -1425,8 +1425,12 @@
           <span>Chorus wet mix</span><output id="chorus-mix-value" for="chorus-mix">30%</output>
           <input id="chorus-mix" type="range" min="0" max="1" step="0.01" value="0.3">
         </label>
+        <label class="mix-control" for="chorus-number-of-voices">
+          <span>Number of voices · project-authored</span><output id="chorus-number-of-voices-value" for="chorus-number-of-voices">1</output>
+          <input id="chorus-number-of-voices" type="range" min="1" max="8" step="1" value="1">
+        </label>
       </div>
-      <p class="hint">Project-authored tempo control: Quarter note uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Rate synchronization changes LFO speed but does not phase-align it. Fractal’s separate LFO1 SYNC source is not implemented.</p>
+      <p class="hint">Project-authored controls: 1–8 voices defaults to 1; higher counts average additional phase-spread delay voices. Quarter-note tempo uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Rate synchronization changes LFO speed but does not phase-align it. Fractal’s separate LFO1 SYNC source is not implemented.</p>
       <div class="gain-controls" aria-label="Dimension Chorus controls">
         <h3>Dimension Chorus · project-authored DSP</h3>
         <label class="mix-control" for="dimension-chorus-version">

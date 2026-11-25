@@ -478,7 +478,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [0.5, 0.5, 0, 10]);
       this.configureRockBoxBoost(parameters.rockBoxBoost || [0, 0, 10]);
       this.configurePolySustain(parameters.polySustain || [0, 222, 2000, 1, 0, 0]);
-      const chorus = parameters.chorus || [0.8, 15, 7, 0.3, 0, 120];
+      const chorus = parameters.chorus || [0.8, 15, 7, 0.3, 0, 120, 1];
       module._tf_chain_set_chorus(this.chain, ...chorus);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
       module._tf_chain_set_dimension_chorus(this.chain, ...dimensionChorus);

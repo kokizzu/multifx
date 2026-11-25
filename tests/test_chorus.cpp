@@ -31,7 +31,7 @@ void test_defaults_bounds_and_memory() {
     require(parameters.rate_hz == 0.8F && parameters.base_delay_ms == 15.0F &&
                 parameters.depth_ms == 7.0F && parameters.mix == 0.3F &&
                 parameters.smoothing_ms == 10.0F && !parameters.tempo_sync &&
-                parameters.tempo_bpm == 120.0F &&
+                parameters.tempo_bpm == 120.0F && parameters.number_of_voices == 1U &&
                 chorus.effective_rate_hz() == 0.8F,
             "sane chorus defaults changed");
     require(chorus.memory_bytes() == sizeof(chorus) + 3076U * sizeof(float),
@@ -62,6 +62,110 @@ void test_defaults_bounds_and_memory() {
                 finite.depth_ms <= 7.0F && finite.mix == 0.3F &&
                 finite.smoothing_ms == 10.0F && finite.tempo_bpm == 120.0F,
             "non-finite chorus parameters did not use safe defaults");
+}
+
+void test_number_of_voices_bounds_and_one_voice_identity() {
+    tabletfx::ChorusParameters parameters;
+    parameters.base_delay_ms = 12.0F;
+    parameters.depth_ms = 5.0F;
+    parameters.mix = 0.75F;
+    parameters.smoothing_ms = 0.0F;
+
+    tabletfx::Chorus one_voice_default(48000.0F, 2, parameters);
+    parameters.number_of_voices = 1U;
+    tabletfx::Chorus one_voice_explicit(48000.0F, 2, parameters);
+    parameters.number_of_voices = 9U;
+    tabletfx::Chorus eight_voice(48000.0F, 2, parameters);
+    require(one_voice_default.parameters().number_of_voices == 1U &&
+                one_voice_explicit.parameters().number_of_voices == 1U &&
+                eight_voice.parameters().number_of_voices == 8U,
+            "voice count did not default to one or clamp to the 1–8 project range");
+    require(one_voice_default.memory_bytes() == eight_voice.memory_bytes(),
+            "voice count allocated additional delay storage");
+
+    parameters.number_of_voices = 0U;
+    one_voice_default.set_parameters(parameters);
+    require(one_voice_default.parameters().number_of_voices == 1U,
+            "voice count did not clamp zero to the project minimum of one");
+    parameters.number_of_voices = 255U;
+    one_voice_default.set_parameters(parameters);
+    require(one_voice_default.parameters().number_of_voices == 8U,
+            "voice count did not clamp above eight to the project maximum");
+
+    parameters.number_of_voices = 1U;
+    one_voice_default.set_parameters(parameters);
+    std::vector<float> source(8192U);
+    for (std::size_t frame = 0; frame < source.size() / 2U; ++frame) {
+        const float sample = 0.4F * static_cast<float>(std::sin(
+            2.0 * 3.14159265358979323846 * 220.0 *
+            static_cast<double>(frame) / 48000.0));
+        source[frame * 2U] = sample;
+        source[frame * 2U + 1U] = sample * -0.5F;
+    }
+    auto default_output = source;
+    auto explicit_output = source;
+    one_voice_default.process(default_output, 2);
+    one_voice_explicit.process(explicit_output, 2);
+    require(default_output == explicit_output,
+            "explicit one voice changed the legacy single-voice sample path");
+}
+
+void test_multi_voice_output_and_partition_continuity() {
+    tabletfx::ChorusParameters one_parameters;
+    one_parameters.rate_hz = 1.3F;
+    one_parameters.base_delay_ms = 11.0F;
+    one_parameters.depth_ms = 5.0F;
+    one_parameters.mix = 0.8F;
+    one_parameters.smoothing_ms = 0.0F;
+    tabletfx::ChorusParameters multi_parameters = one_parameters;
+    multi_parameters.number_of_voices = 4U;
+
+    std::vector<float> source(16000U);
+    for (std::size_t frame = 0; frame < source.size() / 2U; ++frame) {
+        const float sample = 0.35F * static_cast<float>(std::sin(
+            2.0 * 3.14159265358979323846 * 220.0 *
+            static_cast<double>(frame) / 48000.0));
+        source[frame * 2U] = sample;
+        source[frame * 2U + 1U] = sample * 0.7F;
+    }
+    auto single_output = source;
+    auto multi_whole_output = source;
+    tabletfx::Chorus single(48000.0F, 2, one_parameters);
+    tabletfx::Chorus multi_whole(48000.0F, 2, multi_parameters);
+    single.process(single_output, 2);
+    multi_whole.process(multi_whole_output, 2);
+    require(single_output != multi_whole_output,
+            "four chorus voices did not change the processed output");
+    require(std::all_of(multi_whole_output.begin(), multi_whole_output.end(),
+                        [](float sample) { return std::isfinite(sample); }),
+            "multi-voice chorus emitted a non-finite sample");
+
+    auto multi_partitioned_output = source;
+    tabletfx::Chorus multi_partitioned(48000.0F, 2, multi_parameters);
+    std::size_t offset = 0U;
+    for (const std::size_t block_frames : {1U, 17U, 128U, 257U, 64U, 511U}) {
+        const std::size_t remaining_frames =
+            multi_partitioned_output.size() / 2U - offset;
+        const std::size_t frames = std::min(block_frames, remaining_frames);
+        multi_partitioned.process(
+            std::span<float>(multi_partitioned_output.data() + offset * 2U,
+                             frames * 2U),
+            2);
+        offset += frames;
+        if (offset == multi_partitioned_output.size() / 2U) break;
+    }
+    if (offset < multi_partitioned_output.size() / 2U) {
+        multi_partitioned.process(
+            std::span<float>(multi_partitioned_output.data() + offset * 2U,
+                             multi_partitioned_output.size() - offset * 2U),
+            2);
+    }
+    require(multi_whole_output.size() == multi_partitioned_output.size(),
+            "multi-voice partitioned audio buffer size changed");
+    for (std::size_t i = 0; i < multi_whole_output.size(); ++i) {
+        require(std::abs(multi_whole_output[i] - multi_partitioned_output[i]) < 1.0e-6F,
+                "multi-voice output depends on callback partition boundaries");
+    }
 }
 
 void test_quarter_note_tempo_rate() {
@@ -271,6 +375,7 @@ void test_invalid_samples_and_zero_process_allocations() {
     tabletfx::ChorusParameters synced_parameters;
     synced_parameters.tempo_sync = true;
     synced_parameters.tempo_bpm = 120.0F;
+    synced_parameters.number_of_voices = 8U;
     tabletfx::Chorus stereo(48000.0F, 2, synced_parameters);
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
@@ -323,6 +428,8 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_number_of_voices_bounds_and_one_voice_identity();
+        test_multi_voice_output_and_partition_continuity();
         test_quarter_note_tempo_rate();
         test_integer_delay_and_mono_stereo_isolation();
         test_modulation_and_mix();

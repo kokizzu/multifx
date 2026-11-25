@@ -1330,6 +1330,25 @@ FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "research-state.json",
+    "apps/fractal_chorus_tempo_bench.cpp",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/chorus.hpp",
+    "scripts/test_offline_cli.py",
+    "src/effects/chorus.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_chorus.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 VOLUME_PAN_CHECKPOINT_PATHS = (
     "apps/offline_render.cpp",
     "CMakeLists.txt",
@@ -3005,6 +3024,10 @@ CHECKPOINTS = {
         FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS,
         "feat: add Chorus quarter-note tempo sync",
     ),
+    "fractal-chorus-voice-count": (
+        FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS,
+        "feat: add project-authored Chorus voice count",
+    ),
     "celestial-reverb": (CELESTIAL_REVERB_CHECKPOINT_PATHS,
                          "feat: add project-authored Celestial Reverb"),
     "cloud-reverb": (CLOUD_REVERB_CHECKPOINT_PATHS,
@@ -3325,14 +3348,46 @@ def publish(checkpoint: str) -> None:
     print(f"Published and verified commit {commit} on origin/main")
 
 
+def stage(checkpoint: str) -> None:
+    paths, deferred, branch, remote_url = inspect(checkpoint)
+    git("add", "--", *paths, capture=False)
+    staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
+    if staged_paths != set(paths):
+        raise SystemExit(
+            "Staged paths differ from the selected checkpoint; "
+            "review the index and stop before commit"
+        )
+    git("diff", "--cached", "--check")
+    print(f"Repository: {remote_url}")
+    print(f"Branch: {branch} (verified upstream default; local HEAD matches origin/main)")
+    print(f"Base commit: {git('rev-parse', 'HEAD').strip()}")
+    print("Checkpoint: " + checkpoint)
+    print("Commit message: " + CHECKPOINTS[checkpoint][1])
+    print("Exact staged paths:")
+    for path in paths:
+        print("  " + path)
+    stat = git("diff", "--cached", "--stat", "--", *paths)
+    print(stat.rstrip() or "No staged diff stat.")
+    print("Full staged patch:")
+    patch = git("diff", "--cached", "--", *paths)
+    print(patch, end="" if patch.endswith("\n") else "\n")
+    if deferred:
+        print("Preserved outside-checkpoint paths (not staged):")
+        for path in deferred:
+            print("  " + path)
+    print("Staged only; no commit or push was performed.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("plan", "publish"))
+    parser.add_argument("mode", choices=("plan", "stage", "publish"))
     parser.add_argument("--checkpoint", choices=tuple(CHECKPOINTS),
                         default=DEFAULT_CHECKPOINT)
     args = parser.parse_args()
     if args.mode == "plan":
         plan(args.checkpoint)
+    elif args.mode == "stage":
+        stage(args.checkpoint)
     else:
         publish(args.checkpoint)
 

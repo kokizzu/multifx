@@ -2767,6 +2767,16 @@ Options parse_options(int argc, char** argv, int first) {
             options.chorus.rate_hz = value;
             options.chorus_enabled = true;
         }
+        else if (key == "--chorus-voices") {
+            const float requested = value;
+            const float rounded = std::round(requested);
+            if (requested < 1.0F || requested > 8.0F ||
+                std::abs(requested - rounded) > 1.0e-6F) {
+                throw std::invalid_argument("Chorus voices must be an integer from 1 to 8");
+            }
+            options.chorus.number_of_voices = static_cast<std::uint8_t>(rounded);
+            options.chorus_enabled = true;
+        }
         else if (key == "--chorus-tempo-bpm") {
             options.chorus.tempo_bpm = value;
             options.chorus_enabled = true;
@@ -6038,7 +6048,7 @@ void print_usage() {
                    " [--auto-swell-delay-dry on|off] [--auto-swell-delay-spillover on|off]"
                    " [--chorus-rate-hz 0.05..8] [--chorus-tempo-sync on|off]"
                    " [--chorus-tempo-bpm 20..300 quarter-note] [--chorus-delay-ms ms]"
-                  " [--chorus-depth-ms ms] [--chorus-mix 0..1]"
+                   " [--chorus-depth-ms ms] [--chorus-mix 0..1] [--chorus-voices 1..8]"
                   " [--dimension-chorus] [--dimension-chorus-version C|D]"
                   " [--dimension-chorus-mode 1|2|3|4|1+2|1+3|1+4|2+3|2+4|3+4]"
                   " [--dimension-chorus-mix 0..1] [--dimension-chorus-level-db dB]"

@@ -84,6 +84,8 @@ bool run_profile(std::string_view name, tabletfx::ChorusParameters parameters) {
     std::cout << name << " callbacks=" << kMeasuredCallbacks
               << " block_frames=" << kBlockFrames
               << " channels=" << kChannels
+              << " number_of_voices="
+              << static_cast<unsigned int>(parameters.number_of_voices)
               << " sample_rate_hz=" << static_cast<int>(kSampleRate)
               << " callback_budget_us=" << std::fixed << std::setprecision(3)
               << kCallbackBudgetUs
@@ -111,8 +113,13 @@ int main() {
     tabletfx::ChorusParameters quarter_sync;
     quarter_sync.tempo_sync = true;
     quarter_sync.tempo_bpm = 120.0F;
-    return run_profile("chorus_free_0_8_hz", free_rate) &&
-                   run_profile("chorus_quarter_sync_120_bpm", quarter_sync)
-               ? 0
-               : 1;
+    bool passed = run_profile("chorus_free_0_8_hz", free_rate) &&
+                  run_profile("chorus_quarter_sync_120_bpm", quarter_sync);
+    for (const std::uint8_t voices :
+         std::array<std::uint8_t, 4>{1U, 2U, 4U, 8U}) {
+        tabletfx::ChorusParameters parameters;
+        parameters.number_of_voices = voices;
+        passed = run_profile("chorus_voice_count", parameters) && passed;
+    }
+    return passed ? 0 : 1;
 }

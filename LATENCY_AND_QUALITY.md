@@ -1,5 +1,22 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9-family Chorus Number Of Voices (2026-11-26)
+
+The November 2026 Fractal Audio Blocks Guide (printed pp. 25–26) places `Number Of Voices` on the Expert page and says it increases delay-line count up to eight. It suggests two voices for vintage chorus and up to eight for a lush ensemble but does not state a numeric minimum or default. Above two voices automatically selects SINE; choosing a non-SINE LFO resets the count to two. The same pages document Delay Time/Minimum Delay 0.1–50 ms and Delay Range 1–40 ms as separate controls. The source is family-level; FM9 downloads list v12.0, released July 7, 2026, for FM9 Original/Turbo only. Exact applicability to Mark II Turbo and installed firmware remain unconfirmed.
+
+TabletFX adds a project-authored 1–8 voice count, default 1, to the existing Modulation Chorus at ID 16. One voice is sample-identical to the old signal path. Additional voices share the existing delay ring with evenly spaced sine-phase offsets and averaged wet output. This is not Fractal DSP or algorithm parity. Native state is 12,472 B at each count; browser/WASM effect state is 12,436 B. No new ring storage, fixed algorithmic latency, or process-time allocation is added.
+
+The benchmark used AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms budget; 3,000 warm-up and 20,000 measured callbacks). Percentages are callback time divided by budget:
+
+| Voice count | p50 / p95 / p99 / p99.9 / max callback budget (%) | Native state |
+|---:|---:|---:|
+| 1 | 0.059 / 0.076 / 0.109 / 0.303 / 0.615 | 12,472 B |
+| 2 | 0.117 / 0.169 / 0.198 / 1.044 / 105.721 | 12,472 B |
+| 4 | 0.174 / 0.177 / 0.178 / 0.422 / 0.745 | 12,472 B |
+| 8 | 0.248 / 0.310 / 0.492 / 0.746 / 2.252 | 12,472 B |
+
+The two-voice maximum is a host scheduling spike; its p50–p99.9 profile is not evidence of steady DSP cost above budget. Focused local Guitar-TECHS DI Play captures at 1, 4, and 8 voices produced RMS differences of 0.03633 from one to four and 0.01165 from four to eight. Focused native/offline/browser checks, full `make test` (117/117 CTest), full `make web-test`, `make windows-cross-build`, `make diff-check`, and the Chorus benchmark passed. These isolated desktop timings do not establish target-device performance. Human listening, physical Fractal comparison, installed firmware, and exact Mark II Turbo applicability remain open.
+
 ## Fender Tone Master Pro Tremolo Duty Cycle (2026-11-26)
 
 The Model Guide v1.1.100 / Rev. A, printed p. 34, defines Duty Cycle as the percentage of time signal is on, but publishes no numeric bounds/default or interaction with Shape. TabletFX applies a project-authored 5–95% control, default 50%, only to Square Tremolo; at 50% it produces the exact pre-change `phase < 0.5` waveform. The control is separate from LFO Clip. It adds no fixed latency or processor buffer; native state is 128 B, focused browser/WASM effect state is 104 B, and processing allocates nothing.

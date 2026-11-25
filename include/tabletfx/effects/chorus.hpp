@@ -13,6 +13,8 @@ struct ChorusParameters {
     float rate_hz = 0.8F;
     bool tempo_sync = false;
     float tempo_bpm = 120.0F;
+    // Project-authored 1–8 voice count; one preserves the legacy signal path.
+    std::uint8_t number_of_voices = 1U;
     float base_delay_ms = 15.0F;
     float depth_ms = 7.0F;
     float mix = 0.3F;
@@ -75,6 +77,8 @@ private:
     std::size_t ramp_remaining_ = 0;
     float sine_increment_ = 0.0F;
     float cosine_increment_ = 1.0F;
+    float voice_step_sine_ = 0.0F;
+    float voice_step_cosine_ = 1.0F;
     float sine_phase_ = 0.0F;
     float cosine_phase_ = 1.0F;
     std::uint32_t normalization_counter_ = 0;
