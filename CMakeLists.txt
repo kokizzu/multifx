@@ -142,6 +142,10 @@ add_executable(tabletfx_feedback_generator_bench
     apps/feedback_generator_bench.cpp)
 target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_shuffling_looper_bench
+    apps/shuffling_looper_bench.cpp)
+target_link_libraries(tabletfx_shuffling_looper_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)

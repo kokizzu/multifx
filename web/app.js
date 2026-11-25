@@ -218,7 +218,7 @@ const DEFAULT_PARAMETERS = {
   enhancer: [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1],
   resonantDelay: [350, 0.35, 800, 2, 0.25],
   autoSwellDelay: [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0],
-  shufflingLooper: [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12],
+  shufflingLooper: [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12, 0, 120],
   tenTapDelay: [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   autoPan: [0.5, 0.75, 1, 0, 120, 5],
@@ -1136,12 +1136,22 @@ const shufflingLooperLowCut = document.querySelector("#shuffling-looper-low-cut-
 const shufflingLooperHighCut = document.querySelector("#shuffling-looper-high-cut-hz");
 const shufflingLooperInterval1 = document.querySelector("#shuffling-looper-interval-1");
 const shufflingLooperInterval2 = document.querySelector("#shuffling-looper-interval-2");
+const shufflingLooperQuantize = document.querySelector("#shuffling-looper-quantize");
+const shufflingLooperTempoBpm = document.querySelector("#shuffling-looper-tempo-bpm");
+const shufflingLooperCapacity = document.querySelector("#shuffling-looper-capacity");
+const shufflingLooperApplyCapacity = document.querySelector(
+  "#shuffling-looper-apply-capacity",
+);
+const shufflingLooperCapacityStatus = document.querySelector(
+  "#shuffling-looper-capacity-status",
+);
 const shufflingLooperControls = [
   shufflingLooperSlices, shufflingLooperSequenceLength, shufflingLooperShuffle,
   shufflingLooperPitchProbability, shufflingLooperReverseProbability,
   shufflingLooperRepeatProbability, shufflingLooperSmoothing,
   shufflingLooperSequenceDrift, shufflingLooperPlayback, shufflingLooperLowCut,
   shufflingLooperHighCut, shufflingLooperInterval1, shufflingLooperInterval2,
+  shufflingLooperQuantize, shufflingLooperTempoBpm,
 ];
 const tenTapDelayTapCount = document.querySelector("#ten-tap-delay-tap-count");
 const tenTapDelayTime = document.querySelector("#ten-tap-delay-time-ms");
@@ -2409,6 +2419,8 @@ function updateShufflingLooperOptions() {
     cutFrequency(shufflingLooperHighCut),
     Number(shufflingLooperInterval1.value),
     Number(shufflingLooperInterval2.value),
+    Number(shufflingLooperQuantize.value),
+    Number(shufflingLooperTempoBpm.value),
   ];
   DEFAULT_PARAMETERS.shufflingLooper = values;
   shufflingLooperSlices.parentElement.querySelector("output").value =
@@ -2429,6 +2441,8 @@ function updateShufflingLooperOptions() {
     `${values[11] > 0 ? "+" : ""}${values[11]} semitones`;
   shufflingLooperInterval2.parentElement.querySelector("output").value =
     `${values[12] > 0 ? "+" : ""}${values[12]} semitones`;
+  shufflingLooperTempoBpm.parentElement.querySelector("output").value =
+    `${values[14]} BPM`;
   if (workletNode) {
     workletNode.port.postMessage({ type: "shuffling-looper-options", value: values });
   }
@@ -3940,10 +3954,34 @@ function sendShufflingLooperCommand(command) {
   workletNode.port.postMessage({ type: "shuffling-looper-command", command });
 }
 
+function applyShufflingLooperCapacity() {
+  const requestedSeconds = Number(shufflingLooperCapacity.value);
+  if (!Number.isFinite(requestedSeconds) || requestedSeconds <= 0) {
+    shufflingLooperCapacityStatus.value = "Invalid capture capacity";
+    return;
+  }
+  if (!workletNode) {
+    shufflingLooperCapacityStatus.value =
+      "Start processed playback before applying a capacity";
+    return;
+  }
+  if (activeSource) {
+    shufflingLooperCapacityStatus.value =
+      "Stop playback before reallocating looper memory";
+    return;
+  }
+  shufflingLooperCapacityStatus.value =
+    `Allocating ${requestedSeconds} s capture capacity…`;
+  workletNode.port.postMessage({
+    type: "shuffling-looper-capacity",
+    seconds: requestedSeconds,
+  });
+}
+
 function scheduleShufflingLooperStatusPoll(state) {
   window.clearTimeout(shufflingLooperStatusTimeout);
   shufflingLooperStatusTimeout = 0;
-  if (state !== 1) return;
+  if (state !== 1 && state !== 3 && state !== 4) return;
   shufflingLooperStatusTimeout = window.setTimeout(() => {
     if (workletNode) {
       workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
@@ -3952,14 +3990,48 @@ function scheduleShufflingLooperStatusPoll(state) {
 }
 
 function renderShufflingLooperStatus(message) {
-  const labels = ["Stopped", "Recording", "Playing"];
+  const labels = ["Stopped", "Recording", "Playing", "Armed to record", "Stop armed"];
   const state = labels[message.state] || "Unknown";
   const frames = Number(message.frames) || 0;
   const sampleRate = Number(message.sampleRate) || 48000;
   const steps = Number(message.steps) || 0;
   const length = frames > 0 ? `${(frames / sampleRate).toFixed(2)} s` : "no loop";
   const accepted = message.accepted === false ? " · command unavailable" : "";
+  shufflingLooperStatus.dataset.frames = String(frames);
+  shufflingLooperStatus.dataset.state = String(message.state);
   shufflingLooperStatus.value = `${state} · ${length} · ${steps} steps${accepted}`;
+  const actualCapacity = Number(message.capacitySeconds);
+  const capacityBytes = Number(message.capacityBytes);
+  const capacityResult = Number(message.capacityStatus);
+  if (Number.isFinite(actualCapacity) && actualCapacity > 0) {
+    const explanations = [
+      "",
+      " · limited by mono/stereo duration",
+      " · limited by the instance or transition memory budget",
+      " · limited by duration and memory",
+      " · request rejected; previous capacity kept",
+      " · shrink rejected to preserve the recorded loop",
+      " · allocation failed; previous capacity kept",
+      " · request rejected; old and replacement buffers exceed the 16 MiB cap",
+    ];
+    const explanation = Number.isInteger(capacityResult)
+      ? (explanations[capacityResult] || "")
+      : "";
+    const bytesText = Number.isFinite(capacityBytes) && capacityBytes > 0
+      ? ` · ${bytesLabel(capacityBytes)}`
+      : "";
+    shufflingLooperCapacityStatus.value =
+      `${actualCapacity.toFixed(2)} s allocated${bytesText}${explanation}`;
+  }
+  if (Number.isFinite(Number(message.memoryBytes)) && Number(message.memoryBytes) > 0) {
+    chainMemoryBytes = Number(message.memoryBytes);
+    document.querySelector("#memory-use").textContent = bytesLabel(chainMemoryBytes);
+  }
+  if (Number.isFinite(Number(message.effectMemoryBytes)) &&
+      Number(message.effectMemoryBytes) > 0) {
+    effectMemory[65] = Number(message.effectMemoryBytes);
+    renderLoadRows(null);
+  }
   scheduleShufflingLooperStatusPoll(message.state);
 }
 
@@ -4246,6 +4318,7 @@ async function setupProcessor(testOptions = null) {
       renderLoadRows(null);
       updateLooperOptions();
        updateShufflingLooperOptions();
+       applyShufflingLooperCapacity();
        workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
        updateDeluxeLooperOptions();
        workletNode.port.postMessage({ type: "deluxe-looper-status-request" });
@@ -4711,6 +4784,7 @@ for (const control of shufflingLooperControls) {
   control.addEventListener("input", updateShufflingLooperOptions);
   control.addEventListener("change", updateShufflingLooperOptions);
 }
+shufflingLooperApplyCapacity.addEventListener("click", applyShufflingLooperCapacity);
 for (const control of tenTapDelayControls) {
   control.addEventListener("input", updateTenTapDelayOptions);
   control.addEventListener("change", updateTenTapDelayOptions);
@@ -8065,18 +8139,34 @@ async function waitForShufflingLooperStatus(predicate, description, timeoutMs = 
   return shufflingLooperStatus.value;
 }
 
+async function waitForShufflingLooperCapacity(predicate, description, timeoutMs = 4000) {
+  const started = performance.now();
+  while (!predicate(shufflingLooperCapacityStatus.value)) {
+    if (performance.now() - started > timeoutMs) {
+      throw new Error(`Timed out waiting for Shuffling Looper capacity ${description}: ${shufflingLooperCapacityStatus.value}`);
+    }
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "shuffling-looper-status-request" });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return shufflingLooperCapacityStatus.value;
+}
+
 async function runShufflingLooperBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = shufflingLooperControls.map((control) => control.value);
+  const previousCapacity = shufflingLooperCapacity.value;
   const testEnabled = previousEffectState.map((_, index) => index === 0 || index === 65);
   const parseStatus = (value) => {
-    const match = /^(Stopped|Recording|Playing) · (no loop|([\d.]+) s) · (\d+) steps/.exec(value);
+    const match = /^(Stopped|Recording|Playing|Armed to record|Stop armed) · (no loop|([\d.]+) s) · (\d+) steps/.exec(value);
     if (!match) return null;
     return {
       state: match[1],
       hasLoop: match[2] !== "no loop",
       seconds: Number(match[3] || 0),
       steps: Number(match[4]),
+      frames: Number(shufflingLooperStatus.dataset.frames) || 0,
     };
   };
   const waitForCommand = async (command, predicate, description) => {
@@ -8101,14 +8191,23 @@ async function runShufflingLooperBrowserSmokeTest(reference, captureView, captur
     await audioContext.resume();
     stopSource(false);
 
+    shufflingLooperCapacity.value = "10";
+    applyShufflingLooperCapacity();
+    const allocatedCapacity = await waitForShufflingLooperCapacity(
+      (value) => value.startsWith("10.00 s allocated"),
+      "10-second allocation",
+    );
+
     [shufflingLooperSlices.value, shufflingLooperSequenceLength.value,
       shufflingLooperShuffle.value, shufflingLooperPitchProbability.value,
       shufflingLooperReverseProbability.value, shufflingLooperRepeatProbability.value,
       shufflingLooperSmoothing.value, shufflingLooperSequenceDrift.value,
       shufflingLooperPlayback.value, shufflingLooperLowCut.value,
       shufflingLooperHighCut.value, shufflingLooperInterval1.value,
-      shufflingLooperInterval2.value] = [
+      shufflingLooperInterval2.value, shufflingLooperQuantize.value,
+      shufflingLooperTempoBpm.value] = [
       "4", "4", "0", "0", "0", "0", "0", "0", "100", "0", "0", "-12", "12",
+      "0", "120",
     ];
     updateShufflingLooperOptions();
 
@@ -8216,6 +8315,93 @@ async function runShufflingLooperBrowserSmokeTest(reference, captureView, captur
     );
     loopCleared = true;
 
+    shufflingLooperQuantize.value = "1";
+    shufflingLooperTempoBpm.value = "120";
+    updateShufflingLooperOptions();
+    workletNode.port.postMessage({ type: "reset" });
+
+    const quantizedFirstActiveFrame = decodedAudio.getChannelData(0)
+      .findIndex((sample) => Math.abs(sample) > 1e-4);
+    const quantizedRecordOffset = quantizedFirstActiveFrame >= 0
+      ? quantizedFirstActiveFrame / decodedAudio.sampleRate : 0;
+    const quantizedSource = audioContext.createBufferSource();
+    quantizedSource.buffer = decodedAudio;
+    quantizedSource.loop = true;
+    quantizedSource.connect(workletNode);
+    activeSource = quantizedSource;
+    playbackOffset = 0;
+    playbackStartedAt = audioContext.currentTime;
+    workletNode.port.postMessage({ type: "active", value: true });
+    quantizedSource.start(0, quantizedRecordOffset);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const armedStatus = await waitForCommand(
+      0,
+      (status) => status.state === "Armed to record",
+      "quantized record arm",
+    );
+    const quantizedRecordingStatus = await waitForShufflingLooperStatus(
+      (value) => parseStatus(value)?.state === "Recording",
+      "quantized beat-aligned recording start",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const stopArmedStatus = await waitForCommand(
+      1,
+      (status) => status.state === "Stop armed",
+      "quantized stop arm",
+    );
+    const quantizedPlayingStatus = await waitForShufflingLooperStatus(
+      (value) => parseStatus(value)?.state === "Playing",
+      "quantized beat-aligned recording end",
+    );
+    const quantizedPlaying = parseStatus(quantizedPlayingStatus);
+    const expectedBeatFrames = Math.round(audioContext.sampleRate * 60 / 120);
+    if (!quantizedPlaying || quantizedPlaying.frames !== expectedBeatFrames) {
+      throw new Error(
+        `Shuffling Looper beat capture was ${quantizedPlaying?.frames ?? 0} frames; expected ${expectedBeatFrames}.`,
+      );
+    }
+    stopSource(false);
+
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    workletNode.port.postMessage({ type: "capture-reset" });
+    const quantizedSilence = audioContext.createBuffer(
+      decodedAudio.numberOfChannels,
+      decodedAudio.length,
+      audioContext.sampleRate,
+    );
+    const quantizedSilenceSource = audioContext.createBufferSource();
+    quantizedSilenceSource.buffer = quantizedSilence;
+    quantizedSilenceSource.loop = true;
+    quantizedSilenceSource.connect(workletNode);
+    activeSource = quantizedSilenceSource;
+    playbackOffset = 0;
+    playbackStartedAt = audioContext.currentTime;
+    workletNode.port.postMessage({ type: "active", value: true });
+    quantizedSilenceSource.start();
+    await waitForCapture(captureView, reference.samples.length);
+    const quantizedOutput = new Float32Array(captureBuffer);
+    let quantizedOutputPeak = 0;
+    let quantizedActiveSamples = 0;
+    for (const sample of quantizedOutput) {
+      const magnitude = Math.abs(sample);
+      quantizedOutputPeak = Math.max(quantizedOutputPeak, magnitude);
+      if (magnitude > 1e-6) quantizedActiveSamples += 1;
+    }
+    if (quantizedOutputPeak < 1e-5 || quantizedActiveSamples < 32) {
+      throw new Error(
+        `Quantized Shuffling Looper produced no measurable guitar output: peak ${quantizedOutputPeak}, active samples ${quantizedActiveSamples}.`,
+      );
+    }
+    stopSource(false);
+    const quantizedClearedStatus = await waitForCommand(
+      5,
+      (status) => status.state === "Stopped" && !status.hasLoop && status.steps === 0,
+      "clear quantized loop",
+    );
+    loopCleared = true;
+
     return {
       recording: recordingStatus,
       recorded: capturedStatus,
@@ -8225,9 +8411,21 @@ async function runShufflingLooperBrowserSmokeTest(reference, captureView, captur
       randomized: randomizedStatus,
       stoppedAfterCapture: stoppedAfterPlayback,
       cleared: clearedStatus,
+      capacity: allocatedCapacity,
       silentInputPeak: 0,
       loopOutputPeak: outputPeak,
       activeOutputSamples,
+      quantized: {
+        armed: armedStatus,
+        recording: quantizedRecordingStatus,
+        stopArmed: stopArmedStatus,
+        playing: quantizedPlayingStatus,
+        expectedBeatFrames,
+        outputPeak: quantizedOutputPeak,
+        activeOutputSamples: quantizedActiveSamples,
+        cleared: quantizedClearedStatus,
+        controls: "project-authored; Off default; Beat only",
+      },
     };
   } finally {
     stopSource(false);
@@ -8239,6 +8437,8 @@ async function runShufflingLooperBrowserSmokeTest(reference, captureView, captur
       shufflingLooperControls.forEach((control, index) => {
         control.value = previousControls[index];
       });
+      shufflingLooperCapacity.value = previousCapacity;
+      applyShufflingLooperCapacity();
       updateShufflingLooperOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((checkbox, index) => {
@@ -14740,6 +14940,7 @@ async function runBrowserSelfTest() {
         [shufflingLooperHighCut, "0", "20000"],
         [shufflingLooperInterval1, "-12", "12"],
         [shufflingLooperInterval2, "-12", "12"],
+        [shufflingLooperTempoBpm, "40", "300"],
       ];
       const shufflingLooperHint = document.querySelector(
         '.effect-parameter-group[aria-label="Shuffling Looper controls"] .hint',
@@ -14747,9 +14948,10 @@ async function runBrowserSelfTest() {
       const shufflingLooperButtons = [...document.querySelectorAll(
         "[data-shuffling-looper-command]",
       )];
-      if (shufflingLooperDefaults.join(",") !== "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12" ||
+      if (shufflingLooperDefaults.join(",") !== "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12,0,120" ||
           shufflingLooperRanges.some(([control, minimum, maximum]) =>
             control.min !== minimum || control.max !== maximum) ||
+          [...shufflingLooperQuantize.options].map((option) => option.value).join(",") !== "0,1" ||
           !shufflingLooperHint.includes("manual selector identifies firmware v1.4.1 / Rev. E") ||
           !shufflingLooperHint.includes("looper page still displays a Rev D header") ||
           !shufflingLooperHint.includes("Numeric bounds/defaults") ||
@@ -14760,6 +14962,9 @@ async function runBrowserSelfTest() {
         throw new Error("Shuffling Looper project ranges, documented-source caveat, and transport commands must be explicit.");
       }
       const shufflingLooperControlSnapshot = shufflingLooperControls.map((control) => control.value);
+      const shufflingLooperCapacitySnapshot = shufflingLooperCapacity.value;
+      const shufflingLooperCapacityStatusSnapshot =
+        shufflingLooperCapacityStatus.value;
       const previousShufflingWorklet = workletNode;
       const shufflingLooperMessages = [];
       try {
@@ -14770,17 +14975,27 @@ async function runBrowserSelfTest() {
           shufflingLooperSmoothing.value, shufflingLooperSequenceDrift.value,
           shufflingLooperPlayback.value, shufflingLooperLowCut.value,
           shufflingLooperHighCut.value, shufflingLooperInterval1.value,
-          shufflingLooperInterval2.value] = [
+          shufflingLooperInterval2.value, shufflingLooperQuantize.value,
+          shufflingLooperTempoBpm.value] = [
           "12", "17", "40", "20", "30", "40", "50", "60", "75", "5", "12000", "-7", "5",
+          "1", "137",
         ];
         shufflingLooperInterval2.dispatchEvent(new Event("input", { bubbles: true }));
         const optionsMessage = shufflingLooperMessages.at(-1);
         if (optionsMessage?.type !== "shuffling-looper-options" ||
-            optionsMessage.value.join(",") !== "12,17,0.4,0.2,0.3,0.4,0.5,0.6,0.75,20,12000,-7,5" ||
+            optionsMessage.value.join(",") !== "12,17,0.4,0.2,0.3,0.4,0.5,0.6,0.75,20,12000,-7,5,1,137" ||
             shufflingLooperLowCut.value !== "20" ||
             shufflingLooperLowCut.parentElement.querySelector("output").value !== "20 Hz" ||
-            shufflingLooperInterval2.parentElement.querySelector("output").value !== "+5 semitones") {
-          throw new Error("Shuffling Looper controls must send all 13 bounded options in WASM API order.");
+            shufflingLooperInterval2.parentElement.querySelector("output").value !== "+5 semitones" ||
+            shufflingLooperTempoBpm.parentElement.querySelector("output").value !== "137 BPM") {
+          throw new Error("Shuffling Looper controls must send all 15 project options in WASM API order.");
+        }
+        shufflingLooperCapacity.value = "10";
+        shufflingLooperApplyCapacity.click();
+        const capacityMessage = shufflingLooperMessages.at(-1);
+        if (capacityMessage?.type !== "shuffling-looper-capacity" ||
+            capacityMessage.seconds !== 10) {
+          throw new Error("Shuffling Looper capacity choice must send its requested seconds to the WASM setup path.");
         }
         for (const button of shufflingLooperButtons) button.click();
         const commandIds = shufflingLooperMessages
@@ -14794,10 +15009,13 @@ async function runBrowserSelfTest() {
         shufflingLooperControls.forEach((control, index) => {
           control.value = shufflingLooperControlSnapshot[index];
         });
+        shufflingLooperCapacity.value = shufflingLooperCapacitySnapshot;
+        shufflingLooperCapacityStatus.value =
+          shufflingLooperCapacityStatusSnapshot;
         updateShufflingLooperOptions();
       }
       if (DEFAULT_PARAMETERS.shufflingLooper.join(",") !==
-          "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12") {
+          "8,8,0.5,0,0,0,0,0,0.7,0,0,-12,12,0,120") {
         throw new Error("Shuffling Looper self-test must restore its project-authored defaults.");
       }
     const tenTapDefaults = [...DEFAULT_PARAMETERS.tenTapDelay];

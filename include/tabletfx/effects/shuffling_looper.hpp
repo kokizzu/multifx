@@ -16,6 +16,19 @@ enum class ShufflingLooperState : std::uint8_t {
     Stopped,
     Recording,
     Playing,
+    WaitingToRecord,
+    WaitingToStop,
+};
+
+enum class ShufflingLooperCapacityStatus : std::uint8_t {
+    Applied,
+    ClampedByModelLimit,
+    ClampedByMemoryLimit,
+    ClampedByModelAndMemoryLimit,
+    RejectedInvalidRequest,
+    RejectedLoopWouldBeTruncated,
+    AllocationFailed,
+    RejectedTransitionMemoryLimit,
 };
 
 struct ShufflingLooperParameters {
@@ -34,6 +47,10 @@ struct ShufflingLooperParameters {
     float high_cut_hz = 0.0F;                 // 0 disables; otherwise [20, 20000]
     std::int8_t interval1_semitones = -12;    // [-12, 12]
     std::int8_t interval2_semitones = 12;     // [-12, 12]
+    // Project-authored beat quantization. XR1 documentation confirms beat
+    // alignment but does not publish subdivision choices or defaults.
+    bool quantize_recording = false;
+    float tempo_bpm = 120.0F;                 // [40, 300], project tempo input
 };
 
 /*
@@ -58,12 +75,15 @@ struct ShufflingLooperParameters {
  * changes; the live manual remains the cited control reference.
  *
  * Record replaces the previous loop (destructive). Playback adds the stored
- * loop to the live input and never changes the recorded samples. Storage has
- * a fixed four-second-at-48-kHz frame capacity, allocated once in the
- * constructor; process() performs no allocation. At other sample rates the
- * duration scales inversely. Loops live only in this object and are not
- * persisted. Calls that change transport or parameters must be serialized
- * with process() by the host.
+ * loop to the live input and never changes the recorded samples. Storage is
+ * four seconds at 48 kHz by default. configure_capacity_seconds() can request
+ * larger buffers up to 60 seconds mono or 30 seconds stereo, subject to the
+ * per-instance memory limit. Loop sample storage, including old and replacement
+ * buffers during a capacity change, is bounded to 16 MiB. Storage is allocated
+ * during construction or capacity configuration; process() never allocates.
+ * Loops live only in this object and are not persisted. Calls that change
+ * transport, parameters, or capacity must be serialized with process() by the
+ * host.
  *
  * The implementation uses a simple resampling pitch change per slice. It
  * does not preserve slice duration like a time-stretching pitch shifter.
@@ -73,7 +93,7 @@ struct ShufflingLooperParameters {
  */
 class ShufflingLooper final : public tabletfx::Effect {
 public:
-    static constexpr std::size_t kMaximumFrames = 4U * 48000U;
+    static constexpr std::size_t kDefaultCapacityFramesAt48k = 4U * 48000U;
     static constexpr std::size_t kMaximumSlices = 16U;
     static constexpr std::size_t kMaximumSequenceSteps = 32U;
     static constexpr std::uint16_t kMinimumChannels = 1U;
@@ -81,6 +101,17 @@ public:
     static constexpr float kDefaultSampleRate = 48000.0F;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 96000.0F;
+    static constexpr float kMinimumTempoBpm = 40.0F;
+    static constexpr float kMaximumTempoBpm = 300.0F;
+    static constexpr float kDefaultTempoBpm = 120.0F;
+    static constexpr float kDefaultCapacitySeconds = 4.0F;
+    static constexpr float kMaximumMonoCapacitySeconds = 60.0F;
+    static constexpr float kMaximumStereoCapacitySeconds = 30.0F;
+    static constexpr std::size_t kMaximumTransitionSampleStorageBytes =
+        16U * 1024U * 1024U;
+    static constexpr std::size_t kMaximumInstanceMemoryBytes = 24U * 1024U * 1024U;
+    static constexpr std::size_t kDefaultInstanceMemoryBytes =
+        kMaximumInstanceMemoryBytes;
     static constexpr float kMinimumCutHz = 20.0F;
     static constexpr float kMaximumCutHz = 20000.0F;
     static constexpr float kSampleCeiling = 16.0F;
@@ -88,7 +119,9 @@ public:
     explicit ShufflingLooper(
         float sample_rate = kDefaultSampleRate,
         std::uint16_t channels = 2U,
-        std::uint32_t seed = 0x6D2B79F5U);
+        std::uint32_t seed = 0x6D2B79F5U,
+        std::size_t instance_memory_limit_bytes =
+            kDefaultInstanceMemoryBytes);
 
     ShufflingLooper(const ShufflingLooper&) = delete;
     ShufflingLooper& operator=(const ShufflingLooper&) = delete;
@@ -102,6 +135,26 @@ public:
     [[nodiscard]] std::uint16_t channels() const noexcept { return channels_; }
     [[nodiscard]] ShufflingLooperState state() const noexcept { return state_; }
     [[nodiscard]] std::size_t loop_frames() const noexcept { return loop_frames_; }
+    [[nodiscard]] std::size_t capacity_frames() const noexcept {
+        return capacity_frames_;
+    }
+    [[nodiscard]] float capacity_seconds() const noexcept {
+        return static_cast<float>(capacity_frames_) / sample_rate_;
+    }
+    [[nodiscard]] float maximum_capacity_seconds() const noexcept {
+        return channels_ == 1U ? kMaximumMonoCapacitySeconds
+                               : kMaximumStereoCapacitySeconds;
+    }
+    [[nodiscard]] std::size_t capacity_storage_bytes() const noexcept {
+        return capacity_frames_ * static_cast<std::size_t>(channels_) *
+               sizeof(float);
+    }
+    [[nodiscard]] std::size_t instance_memory_limit_bytes() const noexcept {
+        return instance_memory_limit_bytes_;
+    }
+    [[nodiscard]] ShufflingLooperCapacityStatus capacity_status() const noexcept {
+        return capacity_status_;
+    }
     [[nodiscard]] std::size_t sequence_steps() const noexcept {
         return sequence_step_count_;
     }
@@ -132,6 +185,12 @@ public:
     // Parameter edits are bounded to project-authored ranges. If a loop is
     // present, its sequence is rebuilt and playback restarts at step zero.
     void configure(const ShufflingLooperParameters& parameters) noexcept;
+    // Changes the preallocated capture capacity outside process(). Requests
+    // above the channel-specific maximum or memory budget are clamped and
+    // reported. Invalid requests, allocations that fail, and requests that
+    // would truncate an existing loop are rejected without changing it.
+    [[nodiscard]] ShufflingLooperCapacityStatus configure_capacity_seconds(
+        float requested_seconds) noexcept;
     void set_seed(std::uint32_t seed) noexcept;
 
     // Host reset clears transient loop, sequence, transport, and filter state;
@@ -161,6 +220,9 @@ private:
     void rebuild_sequence(bool force_shuffle) noexcept;
     void set_sequence_step(std::size_t index, std::uint8_t slice) noexcept;
     void finish_recording() noexcept;
+    [[nodiscard]] std::size_t quantized_capacity_frames(
+        std::uint32_t tempo_milli_bpm) const noexcept;
+    void advance_beat_clock() noexcept;
     void advance_step() noexcept;
     [[nodiscard]] float read_slice_sample(const SequenceStep& step,
                                           std::size_t output_frame,
@@ -172,8 +234,19 @@ private:
     [[nodiscard]] std::size_t effective_slice_count() const noexcept;
 
     float sample_rate_ = kDefaultSampleRate;
+    std::uint64_t beat_phase_limit_units_ = 0U;
+    std::uint64_t beat_phase_units_ = 0U;
+    bool next_frame_is_beat_ = true;
+    bool quantized_capture_ = false;
+    std::uint32_t tempo_milli_bpm_ = 120000U;
+    std::uint32_t capture_tempo_milli_bpm_ = 120000U;
+    std::size_t quantized_capture_limit_frames_ = 0U;
     const std::uint16_t channels_;
     std::unique_ptr<float[]> samples_;
+    std::size_t capacity_frames_ = 0U;
+    const std::size_t instance_memory_limit_bytes_;
+    ShufflingLooperCapacityStatus capacity_status_ =
+        ShufflingLooperCapacityStatus::Applied;
     ShufflingLooperParameters parameters_{};
     ShufflingLooperState state_ = ShufflingLooperState::Stopped;
     std::array<SequenceStep, kMaximumSequenceSteps> sequence_{};

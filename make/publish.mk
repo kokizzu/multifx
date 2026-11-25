@@ -224,3 +224,7 @@ sync-primary-main-apply:
 .PHONY: bench-feedback-generator
 bench-feedback-generator:
 	$(PYTHON) scripts/run_cmake.py bench-feedback-generator
+
+.PHONY: bench-shuffling-looper
+bench-shuffling-looper:
+	$(PYTHON) scripts/run_cmake.py bench-shuffling-looper

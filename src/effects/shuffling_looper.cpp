@@ -3,30 +3,46 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <new>
 #include <numbers>
 
 namespace tabletfx::effects {
 
 ShufflingLooper::ShufflingLooper(const float sample_rate,
                                  const std::uint16_t channels,
-                                 const std::uint32_t seed)
+                                 const std::uint32_t seed,
+                                 const std::size_t instance_memory_limit_bytes)
     : sample_rate_(sample_rate >= kMinimumSampleRate &&
                            sample_rate <= kMaximumSampleRate &&
                            std::isfinite(sample_rate)
                        ? sample_rate
                        : kDefaultSampleRate),
       channels_(validate_channels(channels)),
-      samples_(std::make_unique<float[]>(kMaximumFrames * channels_)),
+      samples_(nullptr),
+      instance_memory_limit_bytes_(std::min(
+          instance_memory_limit_bytes, kMaximumInstanceMemoryBytes)),
       seed_(seed == 0U ? 1U : seed),
-      rng_state_(seed_) {}
+      rng_state_(seed_) {
+    beat_phase_limit_units_ = static_cast<std::uint64_t>(
+        std::llround(static_cast<double>(sample_rate_) * 60000.0));
+    const std::size_t minimum_bytes = sizeof(*this) +
+        static_cast<std::size_t>(channels_) * sizeof(float);
+    if (instance_memory_limit_bytes_ < minimum_bytes) {
+        throw std::invalid_argument(
+            "ShufflingLooper memory limit cannot hold one frame");
+    }
+    const auto status = configure_capacity_seconds(kDefaultCapacitySeconds);
+    if (status == ShufflingLooperCapacityStatus::AllocationFailed) {
+        throw std::bad_alloc();
+    }
+}
 
 std::string_view ShufflingLooper::id() const noexcept {
     return "shuffling-looper";
 }
 
 std::size_t ShufflingLooper::memory_bytes() const noexcept {
-    return sizeof(*this) + kMaximumFrames *
-                               static_cast<std::size_t>(channels_) * sizeof(float);
+    return sizeof(*this) + capacity_storage_bytes();
 }
 
 std::uint8_t ShufflingLooper::sequence_slice(const std::size_t step) const noexcept {
@@ -36,12 +52,24 @@ std::uint8_t ShufflingLooper::sequence_slice(const std::size_t step) const noexc
 
 bool ShufflingLooper::record() noexcept {
     if (state_ == ShufflingLooperState::Recording) return false;
+    const bool quantized = parameters_.quantize_recording;
+    const std::uint32_t requested_tempo_milli = static_cast<std::uint32_t>(
+        std::lround(static_cast<double>(parameters_.tempo_bpm) * 1000.0));
+    const std::size_t quantized_limit = quantized
+        ? quantized_capacity_frames(requested_tempo_milli)
+        : 0U;
+    if (quantized && quantized_limit < 2U) return false;
+
     // Destructive replacement: old samples become unreachable immediately.
     loop_frames_ = 0U;
     sequence_step_count_ = 0U;
     sequence_step_ = 0U;
     step_frame_ = 0U;
-    state_ = ShufflingLooperState::Recording;
+    quantized_capture_ = quantized;
+    capture_tempo_milli_bpm_ = requested_tempo_milli;
+    quantized_capture_limit_frames_ = quantized_limit;
+    state_ = quantized ? ShufflingLooperState::WaitingToRecord
+                       : ShufflingLooperState::Recording;
     lowpass_state_.fill(0.0F);
     highpass_input_.fill(0.0F);
     highpass_output_.fill(0.0F);
@@ -49,7 +77,21 @@ bool ShufflingLooper::record() noexcept {
 }
 
 bool ShufflingLooper::stop_recording() noexcept {
+    if (state_ == ShufflingLooperState::WaitingToRecord) {
+        state_ = ShufflingLooperState::Stopped;
+        loop_frames_ = 0U;
+        sequence_step_count_ = 0U;
+        sequence_step_ = 0U;
+        quantized_capture_ = false;
+        quantized_capture_limit_frames_ = 0U;
+        return false;
+    }
+    if (state_ == ShufflingLooperState::WaitingToStop) return false;
     if (state_ != ShufflingLooperState::Recording) return false;
+    if (quantized_capture_) {
+        state_ = ShufflingLooperState::WaitingToStop;
+        return true;
+    }
     finish_recording();
     return state_ == ShufflingLooperState::Playing;
 }
@@ -69,7 +111,16 @@ bool ShufflingLooper::play() noexcept {
 }
 
 void ShufflingLooper::stop() noexcept {
-    if (state_ != ShufflingLooperState::Recording) {
+    if (state_ == ShufflingLooperState::WaitingToRecord) {
+        state_ = ShufflingLooperState::Stopped;
+        loop_frames_ = 0U;
+        sequence_step_count_ = 0U;
+        sequence_step_ = 0U;
+        step_frame_ = 0U;
+        quantized_capture_ = false;
+        quantized_capture_limit_frames_ = 0U;
+    } else if (state_ != ShufflingLooperState::Recording &&
+               state_ != ShufflingLooperState::WaitingToStop) {
         state_ = ShufflingLooperState::Stopped;
     }
 }
@@ -83,6 +134,8 @@ bool ShufflingLooper::randomize_sequence() noexcept {
 bool ShufflingLooper::clear() noexcept {
     const bool had_loop = loop_frames_ != 0U;
     state_ = ShufflingLooperState::Stopped;
+    quantized_capture_ = false;
+    quantized_capture_limit_frames_ = 0U;
     loop_frames_ = 0U;
     sequence_step_count_ = 0U;
     sequence_step_ = 0U;
@@ -130,9 +183,125 @@ void ShufflingLooper::configure(
         sanitized.interval1_semitones, -12, 12);
     sanitized.interval2_semitones = std::clamp<std::int8_t>(
         sanitized.interval2_semitones, -12, 12);
+    sanitized.tempo_bpm = bounded(sanitized.tempo_bpm, parameters_.tempo_bpm,
+                                  kMinimumTempoBpm, kMaximumTempoBpm);
 
+    const bool quantization_was_enabled = parameters_.quantize_recording;
     parameters_ = sanitized;
+    tempo_milli_bpm_ = static_cast<std::uint32_t>(
+        std::lround(static_cast<double>(parameters_.tempo_bpm) * 1000.0));
+    if (parameters_.quantize_recording && !quantization_was_enabled &&
+        !quantized_capture_) {
+        beat_phase_units_ = 0U;
+        next_frame_is_beat_ = true;
+    }
     if (loop_frames_ != 0U) rebuild_sequence(false);
+}
+
+ShufflingLooperCapacityStatus ShufflingLooper::configure_capacity_seconds(
+    const float requested_seconds) noexcept {
+    if (!std::isfinite(requested_seconds) || !(requested_seconds > 0.0F)) {
+        capacity_status_ =
+            ShufflingLooperCapacityStatus::RejectedInvalidRequest;
+        return capacity_status_;
+    }
+
+    const double maximum_seconds =
+        static_cast<double>(maximum_capacity_seconds());
+    const bool model_clamped =
+        static_cast<double>(requested_seconds) > maximum_seconds;
+    const double bounded_seconds = std::min(
+        static_cast<double>(requested_seconds), maximum_seconds);
+    const double requested_frames = bounded_seconds *
+                                    static_cast<double>(sample_rate_);
+    const std::size_t model_maximum_frames = static_cast<std::size_t>(
+        std::llround(maximum_seconds * static_cast<double>(sample_rate_)));
+    std::size_t candidate_frames = std::clamp<std::size_t>(
+        static_cast<std::size_t>(std::llround(requested_frames)),
+        1U, model_maximum_frames);
+
+    const std::size_t storage_budget =
+        instance_memory_limit_bytes_ > sizeof(*this)
+            ? instance_memory_limit_bytes_ - sizeof(*this)
+            : 0U;
+    const std::size_t transition_storage_budget = std::min(
+        storage_budget, kMaximumTransitionSampleStorageBytes);
+    const std::size_t bytes_per_frame =
+        static_cast<std::size_t>(channels_) * sizeof(float);
+    const std::size_t previous_storage_bytes = capacity_storage_bytes();
+    bool memory_clamped = false;
+    bool transient_memory_rejected = false;
+    if (candidate_frames != capacity_frames_) {
+        if (candidate_frames > capacity_frames_) {
+            const std::size_t remaining_storage_budget =
+                transition_storage_budget > previous_storage_bytes
+                    ? transition_storage_budget - previous_storage_bytes
+                    : 0U;
+            const std::size_t memory_maximum_frames =
+                remaining_storage_budget / bytes_per_frame;
+            if (candidate_frames > memory_maximum_frames) {
+                memory_clamped = true;
+                candidate_frames = std::max(
+                    capacity_frames_, memory_maximum_frames);
+            }
+        } else {
+            const std::size_t replacement_storage_bytes =
+                candidate_frames * bytes_per_frame;
+            transient_memory_rejected =
+                previous_storage_bytes > transition_storage_budget ||
+                replacement_storage_bytes >
+                    transition_storage_budget - previous_storage_bytes;
+        }
+    }
+
+    if (candidate_frames == 0U) {
+        capacity_status_ = ShufflingLooperCapacityStatus::AllocationFailed;
+        return capacity_status_;
+    }
+    if (candidate_frames < loop_frames_) {
+        capacity_status_ =
+            ShufflingLooperCapacityStatus::RejectedLoopWouldBeTruncated;
+        return capacity_status_;
+    }
+    if (transient_memory_rejected) {
+        capacity_status_ =
+            ShufflingLooperCapacityStatus::RejectedTransitionMemoryLimit;
+        return capacity_status_;
+    }
+
+    ShufflingLooperCapacityStatus requested_status =
+        ShufflingLooperCapacityStatus::Applied;
+    if (model_clamped && memory_clamped) {
+        requested_status =
+            ShufflingLooperCapacityStatus::ClampedByModelAndMemoryLimit;
+    } else if (model_clamped) {
+        requested_status = ShufflingLooperCapacityStatus::ClampedByModelLimit;
+    } else if (memory_clamped) {
+        requested_status = ShufflingLooperCapacityStatus::ClampedByMemoryLimit;
+    }
+
+    if (candidate_frames == capacity_frames_) {
+        capacity_status_ = requested_status;
+        return capacity_status_;
+    }
+
+    const std::size_t sample_count =
+        candidate_frames * static_cast<std::size_t>(channels_);
+    std::unique_ptr<float[]> replacement(
+        new (std::nothrow) float[sample_count]);
+    if (!replacement) {
+        capacity_status_ = ShufflingLooperCapacityStatus::AllocationFailed;
+        return capacity_status_;
+    }
+    if (loop_frames_ != 0U) {
+        std::copy_n(samples_.get(),
+                    loop_frames_ * static_cast<std::size_t>(channels_),
+                    replacement.get());
+    }
+    samples_.swap(replacement);
+    capacity_frames_ = candidate_frames;
+    capacity_status_ = requested_status;
+    return capacity_status_;
 }
 
 void ShufflingLooper::set_seed(const std::uint32_t seed) noexcept {
@@ -143,6 +312,10 @@ void ShufflingLooper::set_seed(const std::uint32_t seed) noexcept {
 
 void ShufflingLooper::reset() noexcept {
     state_ = ShufflingLooperState::Stopped;
+    beat_phase_units_ = 0U;
+    next_frame_is_beat_ = true;
+    quantized_capture_ = false;
+    quantized_capture_limit_frames_ = 0U;
     loop_frames_ = 0U;
     sequence_step_count_ = 0U;
     sequence_step_ = 0U;
@@ -163,8 +336,23 @@ void ShufflingLooper::process(std::span<float> interleaved,
     const std::size_t frames = interleaved.size() / channels_;
     for (std::size_t frame = 0U; frame < frames; ++frame) {
         const std::size_t offset = frame * channels_;
-        if (state_ == ShufflingLooperState::Recording) {
-            if (loop_frames_ >= kMaximumFrames) {
+        if ((parameters_.quantize_recording || quantized_capture_) &&
+            next_frame_is_beat_) {
+            if (state_ == ShufflingLooperState::WaitingToRecord) {
+                state_ = ShufflingLooperState::Recording;
+            } else if (state_ == ShufflingLooperState::WaitingToStop) {
+                finish_recording();
+            }
+        }
+
+        bool recorded_this_frame = false;
+        if (state_ == ShufflingLooperState::Recording ||
+            state_ == ShufflingLooperState::WaitingToStop) {
+            if (loop_frames_ >= capacity_frames_) {
+                if (quantized_capture_ &&
+                    quantized_capture_limit_frames_ < loop_frames_) {
+                    loop_frames_ = quantized_capture_limit_frames_;
+                }
                 finish_recording();
             } else {
                 const std::size_t destination = loop_frames_ * channels_;
@@ -178,29 +366,34 @@ void ShufflingLooper::process(std::span<float> interleaved,
                         std::clamp(input, -kSampleCeiling, kSampleCeiling);
                 }
                 ++loop_frames_;
-                if (loop_frames_ == kMaximumFrames) finish_recording();
-                continue;
+                recorded_this_frame = true;
+                if (quantized_capture_ &&
+                    loop_frames_ >= quantized_capture_limit_frames_) {
+                    finish_recording();
+                } else if (loop_frames_ == capacity_frames_) {
+                    finish_recording();
+                }
             }
         }
 
-        if (state_ != ShufflingLooperState::Playing ||
-            sequence_step_count_ == 0U) {
-            continue;
+        if (!recorded_this_frame && state_ == ShufflingLooperState::Playing &&
+            sequence_step_count_ != 0U) {
+            const SequenceStep& step = sequence_[sequence_step_];
+            const float envelope = smoothing_gain(step, step_frame_);
+            for (std::size_t channel = 0U; channel < channels_; ++channel) {
+                const std::size_t index = offset + channel;
+                const float dry = std::isfinite(interleaved[index])
+                                      ? interleaved[index]
+                                      : 0.0F;
+                const float loop_sample = read_slice_sample(step, step_frame_, channel);
+                const float filtered = filter_playback(loop_sample, channel);
+                interleaved[index] = dry + filtered * parameters_.playback * envelope;
+            }
+            ++step_frame_;
+            if (step_frame_ >= step.output_frames) advance_step();
         }
 
-        const SequenceStep& step = sequence_[sequence_step_];
-        const float envelope = smoothing_gain(step, step_frame_);
-        for (std::size_t channel = 0U; channel < channels_; ++channel) {
-            const std::size_t index = offset + channel;
-            const float dry = std::isfinite(interleaved[index])
-                                  ? interleaved[index]
-                                  : 0.0F;
-            const float loop_sample = read_slice_sample(step, step_frame_, channel);
-            const float filtered = filter_playback(loop_sample, channel);
-            interleaved[index] = dry + filtered * parameters_.playback * envelope;
-        }
-        ++step_frame_;
-        if (step_frame_ >= step.output_frames) advance_step();
+        advance_beat_clock();
     }
 }
 
@@ -302,6 +495,8 @@ void ShufflingLooper::set_sequence_step(const std::size_t index,
 }
 
 void ShufflingLooper::finish_recording() noexcept {
+    quantized_capture_ = false;
+    quantized_capture_limit_frames_ = 0U;
     if (loop_frames_ < 2U) {
         state_ = ShufflingLooperState::Stopped;
         loop_frames_ = 0U;
@@ -313,6 +508,50 @@ void ShufflingLooper::finish_recording() noexcept {
     rebuild_sequence(false);
     state_ = sequence_step_count_ == 0U ? ShufflingLooperState::Stopped
                                         : ShufflingLooperState::Playing;
+}
+
+std::size_t ShufflingLooper::quantized_capacity_frames(
+    const std::uint32_t tempo_milli_bpm) const noexcept {
+    if (beat_phase_limit_units_ == 0U || tempo_milli_bpm == 0U ||
+        capacity_frames_ < 2U) {
+        return 0U;
+    }
+
+    std::uint64_t start_phase = beat_phase_units_;
+    if (!next_frame_is_beat_) {
+        const std::uint64_t remaining = beat_phase_limit_units_ - start_phase;
+        const std::uint64_t frames_to_edge =
+            (remaining + tempo_milli_bpm - 1U) / tempo_milli_bpm;
+        start_phase = start_phase + frames_to_edge * tempo_milli_bpm -
+                      beat_phase_limit_units_;
+    }
+
+    std::size_t accepted_frames = 0U;
+    // With a maximum 60-second loop and the project tempo bounds, no more than
+    // 300 beat intervals fit. This fixed loop has no allocation or unbounded work.
+    for (std::uint64_t beats = 1U; beats <= 300U; ++beats) {
+        const std::uint64_t numerator =
+            beats * beat_phase_limit_units_ - start_phase;
+        const std::uint64_t frames =
+            (numerator + tempo_milli_bpm - 1U) / tempo_milli_bpm;
+        if (frames > capacity_frames_) break;
+        accepted_frames = static_cast<std::size_t>(frames);
+    }
+    return accepted_frames;
+}
+
+void ShufflingLooper::advance_beat_clock() noexcept {
+    if (!parameters_.quantize_recording && !quantized_capture_) return;
+    const std::uint32_t tempo = quantized_capture_
+        ? capture_tempo_milli_bpm_ : tempo_milli_bpm_;
+    const std::uint64_t advanced = beat_phase_units_ + tempo;
+    if (advanced >= beat_phase_limit_units_) {
+        beat_phase_units_ = advanced - beat_phase_limit_units_;
+        next_frame_is_beat_ = true;
+    } else {
+        beat_phase_units_ = advanced;
+        next_frame_is_beat_ = false;
+    }
 }
 
 void ShufflingLooper::advance_step() noexcept {

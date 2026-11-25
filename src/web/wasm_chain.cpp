@@ -1161,7 +1161,8 @@ public:
         float repeat_probability, float smoothing, float sequence_drift,
         float playback, float low_cut_hz, float high_cut_hz,
         std::int32_t interval1_semitones,
-        std::int32_t interval2_semitones) noexcept {
+        std::int32_t interval2_semitones,
+        std::uint32_t quantize_recording, float tempo_bpm) noexcept {
         tabletfx::effects::ShufflingLooperParameters parameters;
         parameters.slices = static_cast<std::uint8_t>(
             std::clamp(slices, 2U, 16U));
@@ -1180,8 +1181,18 @@ public:
             std::clamp(interval1_semitones, -12, 12));
         parameters.interval2_semitones = static_cast<std::int8_t>(
             std::clamp(interval2_semitones, -12, 12));
+        parameters.quantize_recording = quantize_recording != 0U;
+        parameters.tempo_bpm = tempo_bpm;
         static_cast<tabletfx::effects::ShufflingLooper*>(
             effects_[65].effect.get())->configure(parameters);
+    }
+
+    [[nodiscard]] std::uint32_t configure_shuffling_looper_capacity(
+        const float requested_seconds) noexcept {
+        auto* looper = static_cast<tabletfx::effects::ShufflingLooper*>(
+            effects_[65].effect.get());
+        return static_cast<std::uint32_t>(
+            looper->configure_capacity_seconds(requested_seconds));
     }
 
     [[nodiscard]] std::uint32_t shuffling_looper_state() const noexcept {
@@ -1203,6 +1214,25 @@ public:
         return static_cast<std::uint32_t>(
             static_cast<const tabletfx::effects::ShufflingLooper*>(
                 effects_[65].effect.get())->sequence_steps());
+    }
+
+    [[nodiscard]] std::uint32_t shuffling_looper_capacity_status() const noexcept {
+        const auto* looper = static_cast<const tabletfx::effects::ShufflingLooper*>(
+            effects_[65].effect.get());
+        return static_cast<std::uint32_t>(looper->capacity_status());
+    }
+
+    [[nodiscard]] float shuffling_looper_capacity_seconds() const noexcept {
+        return static_cast<const tabletfx::effects::ShufflingLooper*>(
+            effects_[65].effect.get())->capacity_seconds();
+    }
+
+    [[nodiscard]] std::uint32_t shuffling_looper_capacity_bytes() const noexcept {
+        const std::size_t bytes = static_cast<const tabletfx::effects::ShufflingLooper*>(
+            effects_[65].effect.get())->capacity_storage_bytes();
+        return bytes > std::numeric_limits<std::uint32_t>::max()
+                   ? std::numeric_limits<std::uint32_t>::max()
+                   : static_cast<std::uint32_t>(bytes);
     }
 
     void configure_ten_tap_delay(
@@ -5094,14 +5124,25 @@ TABLETFX_WASM_EXPORT void tf_chain_set_shuffling_looper_options(
     float repeat_probability, float smoothing, float sequence_drift,
     float playback, float low_cut_hz, float high_cut_hz,
     std::int32_t interval1_semitones,
-    std::int32_t interval2_semitones) noexcept {
+    std::int32_t interval2_semitones,
+    std::uint32_t quantize_recording, float tempo_bpm) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_shuffling_looper(
             slices, sequence_length, shuffle, pitch_probability,
             reverse_probability, repeat_probability, smoothing,
             sequence_drift, playback, low_cut_hz, high_cut_hz,
-            interval1_semitones, interval2_semitones);
+            interval1_semitones, interval2_semitones,
+            quantize_recording, tempo_bpm);
     }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_set_shuffling_looper_capacity(
+    void* opaque, const float requested_seconds) noexcept {
+    return opaque == nullptr
+               ? static_cast<std::uint32_t>(
+                     tabletfx::effects::ShufflingLooperCapacityStatus::RejectedInvalidRequest)
+               : as_chain(opaque)->configure_shuffling_looper_capacity(
+                     requested_seconds);
 }
 
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_state(
@@ -5120,6 +5161,28 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_steps(
     void* opaque) noexcept {
     return opaque == nullptr ? 0U
                              : as_chain(opaque)->shuffling_looper_steps();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_capacity_status(
+    void* opaque) noexcept {
+    return opaque == nullptr
+               ? static_cast<std::uint32_t>(
+                     tabletfx::effects::ShufflingLooperCapacityStatus::RejectedInvalidRequest)
+               : as_chain(opaque)->shuffling_looper_capacity_status();
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_shuffling_looper_capacity_seconds(
+    void* opaque) noexcept {
+    return opaque == nullptr
+               ? 0.0F
+               : as_chain(opaque)->shuffling_looper_capacity_seconds();
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_shuffling_looper_capacity_bytes(
+    void* opaque) noexcept {
+    return opaque == nullptr
+               ? 0U
+               : as_chain(opaque)->shuffling_looper_capacity_bytes();
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_ten_tap_delay_options(

@@ -33,9 +33,9 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Extend the existing Shuffling Looper from its 4-second project cap with a user-selected, memory-bounded capacity. Preserve 4 seconds as the default; support up to the documented 60 seconds mono / 30 seconds stereo at 48 kHz only when the memory budget permits. Test native, local-guitar browser/WASM playback, Windows, CPU, and memory before publishing.",
-    "qualification": "The v1.4 Rev D Stadium manual lists Slices, SeqLength, Shuffle, Pitch, Reverse, Repeat, Smoothing, Seq Drift, Playback, Low Cut, High Cut, and Interval 1/2, plus 60-second mono / 30-second stereo full-speed capacity and no half-speed for this model. Existing control ranges/defaults are project-authored; do not claim Line 6 DSP, setting, or sound parity. Default allocation must remain small and process() allocation-free."
+    "next_device": "HeadRush Prime",
+    "next_feature": "Audit the current official v5.2 guide for Up Tune and Drop Tune controls, ranges, defaults, tracking mode, and firmware changes. v5.0.1 notes document Legacy and Refined modes but accessible current parameter detail is still unverified. Implement only a clearly labeled, project-authored gap that does not duplicate the existing Polyphonic Pitch Shifter.",
+    "qualification": "Stadium Shuffling Looper capacity and XR1-inspired beat alignment are implemented and automated native/browser/Windows checks plus CPU/memory measurements pass. XR1 FAQ confirms start/end alignment to a selected beat; project Beat mode is Off by default, uses a quarter-note grid and latches project tempo when armed. Subdivisions, XR1 defaults, and tempo-change policy remain unknown. No Stadium or XR1 DSP/settings/sound parity is claimed."
   },
   "completed_checkpoints": [
     {
@@ -726,6 +726,36 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
       },
       "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
+    },
+    {
+      "name": "Line 6 Helix Stadium Shuffling Looper capacity extension",
+      "status": "project implementation, automated native/browser/Windows checks, and CPU/memory measurements pass; manual listening and device checks remain",
+      "date": "2026-11-25",
+      "category": "Loop & performance",
+      "official_source": "https://manuals.line6.com/en/helix-stadium/live/looper-block; https://line6.com/helix-stadium-models/",
+      "verification": "make test: documentation validation, 11/11 fixture checks, 117/117 CTest; make web-build and make web-browser-test pass with local prerecorded Guitar-TECHS DI; make windows-cross-build passes. At maximum capacity, 60 s mono and 30 s stereo each use 11,521,440 B state, with transition peaks 12,288,000 B and 13,056,000 B; 5,000 callback benchmark misses: 0 in either mode.",
+      "remaining": "Human listening, live hardware timing, and footswitch mapping remain open. No Line 6 DSP, control-range, or sound parity is claimed."
+    },
+    {
+      "name": "XRecer XR1-inspired Shuffling Looper beat quantization",
+      "status": "project implementation, automated native/browser/Windows checks, and CPU/memory measurements pass; manual/device checks remain",
+      "date": "2026-11-25",
+      "category": "Loop & performance",
+      "official_source": {
+        "title": "XRecer XR1 official FAQ",
+        "revision": "Checked 2026-11-25; looper quantize firmware applicability is unspecified.",
+        "url": "https://www.xrecer.com/pages/faq",
+        "qualification": "FAQ confirms Quantize aligns recording start/end to a selected beat; subdivisions, defaults, tempo-change policy, and implementation details are not published."
+      },
+      "documented_controls": "Quantize and selected beat for record start/end alignment. The FAQ separately documents 40–300 BPM tap tempo and MIDI Clock sync, but not the looper-specific range or tempo behavior.",
+      "project_controls": "Off default or Beat on the existing Shuffling Looper; quarter-note grid, 40–300 BPM, 120 BPM default, tempo latched when armed. Live monitoring stays immediate; no fixed latency or process-time allocation.",
+      "verification": {
+        "native": "make test passed documentation validation, 11/11 fixture checks, and 117/117 CTest cases, including start/stop boundaries, shared stereo boundary, capacity handling, and allocation checks.",
+        "browser": "make web-build and make web-browser-test passed using the local prerecorded Guitar-TECHS DI; Beat and Off behavior, playback, and browser/native parity pass.",
+        "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz, 128-frame/2.667 ms callbacks, 1,000 warm-up and 5,000 measured per profile. Fixed state 1,488 B; max-profile state 11,521,488 B; sample storage 11,520,000 B; 16 MiB transition cap; 0/5,000 misses in all mono/stereo Off/Beat profiles. Per-percentiles are in LATENCY_AND_QUALITY.md; isolated desktop values are not device estimates."
+      },
+      "remaining": "Human listening, live-device timing, and physical footswitch mapping remain open. No XR1 settings, DSP, UI, latency, or sound parity is claimed."
     }
   ],
   "previous_checkpoint": {
@@ -756,43 +786,40 @@
     "remaining": "The existing tracker response bound is 21.333 ms at 48 kHz, above the provisional ≤20 ms target. Real-instrument response, human listening, target-device CPU/latency and physical Stadium behavior remain manual. Do not claim Stadium algorithm, control, firmware, DSP, tracking or sound parity."
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Enhancer mono-to-stereo routing and CPU verification",
-    "status": "existing categorized implementation re-audited; browser mono-to-stereo path and automated checks pass; native/live and manual checks remain",
+    "name": "XRecer XR1-inspired Shuffling Looper beat quantization",
+    "status": "project implementation, automated native/browser/Windows checks, and CPU/memory measurements pass; manual listening and device checks remain",
     "date": "2026-11-25",
-    "picker_index": 61,
-    "category": "Stereo & image",
+    "category": "Loop & performance",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
-      "revision": "November 2026 Blocks Guide p. 44, checked 2026-11-25; FM9 downloads list firmware v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
+      "title": "XRecer XR1 official FAQ",
+      "revision": "Checked 2026-11-25; FAQ does not specify XR1 firmware applicability for the looper quantize feature.",
       "urls": [
-        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-        "https://www.fractalaudio.com/fm9-downloads/"
+        "https://www.xrecer.com/pages/faq"
       ],
-      "qualification": "The guide is FM9-family evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified."
+      "qualification": "The FAQ says the looper Quantize setting aligns recording start and end to a selected beat. It does not publish subdivisions, default, tempo-change behavior, or algorithm details."
     },
-    "documented_controls": "Modern: Width, Depth, Low Cut, High Cut. Classic: Width as right-channel delay 0–20 ms, Phase Invert, Pan Left/Right, Balance. Stereoizer: Depth sets band count and Width sets spread. All three types have Level and Bypass on Config and no Mix page. The guide publishes no numeric bounds/defaults except Classic Width.",
-    "project_controls": "Project-authored Modern M/S side-band widening, Classic right wet-path delay (7 ms default, 0–20 ms), and all-pass-derived Stereoizer; independent project bounds/defaults and Mix. Standalone core mono in-place processing is sanitized pass-through; browser Modern duplicates mono input before building a stereo chain.",
+    "documented_controls": "XR1 FAQ documents Quantize and a selected beat for loop start/end alignment. It separately documents 40–300 BPM tap tempo and MIDI Clock sync, but does not state the loop-specific tempo range, beat subdivision options, defaults, or tempo-change behavior.",
+    "project_controls": "The project Shuffling Looper retains its 4-second default and memory-bounded selectable capacity. New project-authored Off/Beat quantize defaults Off; Beat aligns start and stop to a quarter-note grid at 40–300 BPM (120 default), with tempo latched when recording is armed. Live input monitoring stays immediate. No XR1 settings, DSP, UI, or sound parity is claimed.",
     "verification": {
-      "source_review": "Official Blocks Guide and FM9 downloads page checked 2026-11-25.",
-      "native": "make test passed documentation validation, 11/11 fixture-safety tests, and 117/117 CTest cases, including Enhancer mode, mono pass-through, reset, bounds, finite recovery, and allocation coverage.",
-      "browser": "make web-test passed with local prerecorded Guitar-TECHS DI; 79 optional processors; browser/native comparison maximum absolute error 1.686768271724759e-6 and RMS error 2.9085876089063937e-7. Mono Modern smoke: 12,000 frames, input 1 channel, output 2 channels, peak 0.299381852, mean L/R difference 0.057089917. WASM fixed memory 100,663,296 B; processor state 80,621,904 B plus 10,364 B tuner state.",
-      "windows": "make windows-cross-build passed for Windows MinGW core and offline renderer.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured blocks. State 4,016 B in all modes. Modern p50/p95/p99/p99.9/max 0.0424/0.0551/0.0578/0.2231/0.3683%; Classic 0.0338/0.0338/0.0540/0.2363/0.3038%; Stereoizer 0.0506/0.0510/0.0656/0.2093/0.3240%. Isolated desktop processor-call estimates, not device performance."
+      "native": "make test passed documentation validation, 11/11 fixture-safety checks, and 117/117 CTest cases, including quantized start/stop boundaries, shared stereo boundary, sub-beat capacity handling, transition memory, allocation-failure preservation, and no callback allocations.",
+      "browser": "make web-build and make web-browser-test passed with the local prerecorded Guitar-TECHS DI fixture; Off/Beat mode, armed capture states, playback, and browser/native output parity are covered.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz, 128-frame/2.667 ms callbacks; 1,000 warm-ups and 5,000 samples per profile. Fixed scheduler state 1,488 B; max-profile effect memory 11,521,488 B; sample storage 11,520,000 B; transition peaks 12,288,000 B mono / 13,056,000 B stereo. Mono Off p50/p95/p99/p99.9/max 0.0803/0.1298/0.1759/0.3945/1.5919%; Mono Beat 0.0836/0.1346/0.1455/0.4234/1.5240%; Stereo Off 0.1376/0.1391/0.2344/0.6402/2.0322%; Stereo Beat 0.1406/0.2276/0.2591/1.9227/2.4706%. All profiles 0/5,000 deadline misses. Isolated desktop measurements do not predict device performance."
     },
-    "remaining": "The in-place core mono processor does not expand channel layout; native/live host routing is unverified. Manual listening, Android/device timing, and physical FM9 comparison remain open. No Fractal DSP, settings, tracking, sound, or firmware parity is claimed."
+    "remaining": "Manual listening, live device timing, and physical footswitch mapping remain open. XR1 quantize subdivisions/defaults/tempo behavior and vendor DSP/latency remain unknown."
   },
   "next_research": [
     {
-      "device": "Line 6 Helix Stadium XL",
-      "feature": "Shuffling Looper capacity and bounded allocation",
-      "source": "Helix Stadium live manual v1.4 Rev D, checked 2026-11-25.",
+      "device": "HeadRush Prime",
+      "feature": "Current v5.2 Up Tune and Drop Tune parameter audit",
+      "source": "Official Prime v5.2 downloads listing and v5.0.1 update notes; current exact controls still need verification.",
       "source_urls": [
-        "https://manuals.line6.com/en/helix-stadium/live/looper-block",
-        "https://line6.com/helix-stadium-models/"
+        "https://www.headrushfx.com/downloads",
+        "https://cdn.inmusicbrands.com/Software/SGEE/501/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.1.pdf"
       ],
-      "status": "Existing TabletFX Shuffling Looper already exposes the documented model controls, but caps recordings at 4 seconds. Manual lists 60 seconds mono and 30 seconds stereo at full speed; half-speed is not available. The project capacity extension is next. Default must remain 4 seconds; larger capacities are explicit project choices and require a bounded memory estimate/acceptance check before allocation. The model is one looper per preset; loops are not stored with presets and clear on power-off.",
-      "known_controls": "Slices, SeqLength, Shuffle, Pitch, Reverse, Repeat, Smoothing, Seq Drift, Playback, Low Cut, High Cut, Interval 1 and Interval 2. The manual gives qualitative/probability roles and octave range for intervals but no numeric bounds/defaults for most controls.",
-      "qualification": "Do not copy unverified control ranges/defaults, internal DSP, processor percentage, or sound parity. The memory-per-capacity setting is project-authored."
+      "status": "Official v5.0.1 notes document Legacy and Refined Drop Tune modes and state that Refined improves tracking speed/tonal quality. Official v5.0 notes introduce Up Tune and improve Up/Drop Tune tracking. Current v5.2 guide is listed, but exact model controls, ranges/defaults, mix, polyphony, and measured latency remain unverified. Inspect current guide before deciding whether a nonduplicative project implementation is warranted.",
+      "known_controls": "Drop Tune exposes a Legacy/Refined mode in v5.0.1 notes. Up Tune is announced as a Pitch effect with up to +12 semitones in HeadRush's official video; precise v5.2 UI/control bounds are not established. Do not infer complete control tables or tracking quality.",
+      "qualification": "Existing TabletFX Polyphonic Pitch Shifter may already cover the broad transposition function. Implement only after reviewing existing code and checking the current Prime guide; no HeadRush DSP, sound, tracking, or setting parity is implied."
     },
     {
       "device": "Fender Tone Master Pro",

@@ -126,6 +126,17 @@ def bench_feedback_generator(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_shuffling_looper(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_shuffling_looper_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_shuffling_looper_bench"
+    )
+    run([str(executable)])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -144,7 +155,8 @@ def main() -> None:
         "action",
         choices=("configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
-                 "bench-feedback-generator", "windows-build"),
+                 "bench-feedback-generator", "bench-shuffling-looper",
+                 "windows-build"),
     )
     parser.add_argument("--test-filter", default="")
     parser.add_argument("--verbose", action="store_true")
@@ -179,6 +191,8 @@ def main() -> None:
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":
         bench_feedback_generator(cmake)
+    elif action == "bench-shuffling-looper":
+        bench_shuffling_looper(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 

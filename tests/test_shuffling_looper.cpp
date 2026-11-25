@@ -14,6 +14,7 @@
 #include <stdexcept>
 
 using tabletfx::effects::ShufflingLooper;
+using tabletfx::effects::ShufflingLooperCapacityStatus;
 using tabletfx::effects::ShufflingLooperParameters;
 using tabletfx::effects::ShufflingLooperState;
 
@@ -21,6 +22,7 @@ namespace {
 
 std::atomic<bool> count_allocations{false};
 std::atomic<std::size_t> allocation_count{0U};
+std::atomic<bool> fail_next_array_allocation{false};
 
 void require(const bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
@@ -43,6 +45,14 @@ void configure_ordered(ShufflingLooper& looper, const std::uint8_t slices,
     looper.configure(parameters);
 }
 
+void configure_quantized(ShufflingLooper& looper, const float tempo_bpm = 120.0F) {
+    ShufflingLooperParameters parameters = looper.parameters();
+    parameters.quantize_recording = true;
+    parameters.tempo_bpm = tempo_bpm;
+    parameters.playback = 0.0F;
+    looper.configure(parameters);
+}
+
 void record_samples(ShufflingLooper& looper, std::span<float> samples,
                     const std::uint16_t channels) {
     require(looper.record(), "record command should start a recording");
@@ -59,8 +69,11 @@ void test_identity_bounds_and_constructor_validation() {
     require(stereo.loop_frames() == 0U, "new looper should be empty");
     require(stereo.memory_bytes() <= 1'600'000U,
             "stereo storage must stay within the fixed memory budget");
-    require(ShufflingLooper::kMaximumFrames == 192'000U,
-            "fixed capacity should equal four seconds at 48 kHz");
+    require(stereo.capacity_frames() ==
+                ShufflingLooper::kDefaultCapacityFramesAt48k &&
+                stereo.capacity_seconds() == 4.0F &&
+                stereo.capacity_storage_bytes() == 1'536'000U,
+            "default capacity should remain four seconds at 48 kHz");
 
     ShufflingLooper invalid_rate(1000.0F, 1U);
     require(invalid_rate.sample_rate() == ShufflingLooper::kDefaultSampleRate,
@@ -73,6 +86,172 @@ void test_identity_bounds_and_constructor_validation() {
         rejected = true;
     }
     require(rejected, "unsupported channel count must be rejected");
+}
+
+void test_capacity_reaches_model_limits_and_respects_memory_budget() {
+    {
+        ShufflingLooper mono(48000.0F, 1U);
+        const std::size_t previous_storage_bytes = mono.capacity_storage_bytes();
+        const auto status = mono.configure_capacity_seconds(60.0F);
+        require(status == ShufflingLooperCapacityStatus::Applied,
+                "60-second mono request should fit the default memory budget");
+        require(mono.capacity_seconds() == 60.0F &&
+                    mono.capacity_frames() == 2'880'000U &&
+                    mono.capacity_storage_bytes() == 11'520'000U,
+                "mono maximum should provide 60 seconds at 48 kHz");
+        require(previous_storage_bytes + mono.capacity_storage_bytes() <=
+                    ShufflingLooper::kMaximumTransitionSampleStorageBytes,
+                "mono growth overlap must stay within the 16 MiB sample-storage cap");
+        require(mono.memory_bytes() <= mono.instance_memory_limit_bytes(),
+                "mono maximum must stay within its per-instance memory limit");
+    }
+
+    {
+        ShufflingLooper stereo(48000.0F, 2U);
+        const std::size_t previous_storage_bytes = stereo.capacity_storage_bytes();
+        const auto status = stereo.configure_capacity_seconds(60.0F);
+        require(status == ShufflingLooperCapacityStatus::ClampedByModelLimit,
+                "60-second stereo request should report the channel-specific clamp");
+        require(stereo.capacity_seconds() == 30.0F &&
+                    stereo.capacity_frames() == 1'440'000U &&
+                    stereo.capacity_storage_bytes() == 11'520'000U,
+                "stereo maximum should provide 30 seconds at 48 kHz");
+        require(previous_storage_bytes + stereo.capacity_storage_bytes() <=
+                    ShufflingLooper::kMaximumTransitionSampleStorageBytes,
+                "stereo growth overlap must stay within the 16 MiB sample-storage cap");
+        require(stereo.memory_bytes() <= stereo.instance_memory_limit_bytes(),
+                "stereo maximum must stay within its per-instance memory limit");
+    }
+
+    {
+        ShufflingLooper mono(96000.0F, 1U);
+        const std::size_t previous_storage_bytes = mono.capacity_storage_bytes();
+        require(mono.configure_capacity_seconds(60.0F) ==
+                    ShufflingLooperCapacityStatus::ClampedByMemoryLimit,
+                "96 kHz mono request should report the transient memory clamp");
+        require(mono.capacity_frames() ==
+                    (ShufflingLooper::kMaximumTransitionSampleStorageBytes -
+                     previous_storage_bytes) / sizeof(float) &&
+                    mono.capacity_storage_bytes() + previous_storage_bytes <=
+                        ShufflingLooper::kMaximumTransitionSampleStorageBytes &&
+                    mono.capacity_seconds() < 60.0F,
+                "96 kHz mono growth must clamp to the remaining transition budget");
+        require(mono.memory_bytes() <= mono.instance_memory_limit_bytes(),
+                "96 kHz mono storage must honor the instance limit");
+    }
+
+    {
+        ShufflingLooper stereo(96000.0F, 2U);
+        const std::size_t previous_storage_bytes = stereo.capacity_storage_bytes();
+        require(stereo.configure_capacity_seconds(60.0F) ==
+                    ShufflingLooperCapacityStatus::ClampedByModelAndMemoryLimit,
+                "96 kHz stereo request should report model and transient clamps");
+        require(stereo.capacity_frames() ==
+                    (ShufflingLooper::kMaximumTransitionSampleStorageBytes -
+                     previous_storage_bytes) / (2U * sizeof(float)) &&
+                    stereo.capacity_storage_bytes() + previous_storage_bytes <=
+                        ShufflingLooper::kMaximumTransitionSampleStorageBytes &&
+                    stereo.capacity_seconds() < 30.0F,
+                "96 kHz stereo growth must clamp to the remaining transition budget");
+        require(stereo.memory_bytes() <= stereo.instance_memory_limit_bytes(),
+                "96 kHz stereo storage must honor the instance limit");
+    }
+
+    {
+        ShufflingLooper constrained(48000.0F, 1U, 1U, 1'000'000U);
+        const auto status = constrained.configure_capacity_seconds(60.0F);
+        require(status == ShufflingLooperCapacityStatus::ClampedByMemoryLimit,
+                "a smaller instance budget should report the memory clamp");
+        require(constrained.capacity_storage_bytes() <= 1'000'000U - sizeof(constrained) &&
+                    constrained.capacity_seconds() < 60.0F,
+                "memory-limited capacity must stay within its byte budget");
+        require(constrained.memory_bytes() <= 1'000'000U,
+                "reported instance memory must stay within the supplied budget");
+    }
+}
+
+void test_capacity_transition_bound_rejects_oversized_shrinks() {
+    ShufflingLooper looper(96000.0F, 1U);
+    const std::size_t default_storage_bytes = looper.capacity_storage_bytes();
+    require(looper.configure_capacity_seconds(60.0F) ==
+                ShufflingLooperCapacityStatus::ClampedByMemoryLimit,
+            "96 kHz mono capacity should clamp to the transition budget");
+    const std::size_t clamped_storage_bytes = looper.capacity_storage_bytes();
+    require(default_storage_bytes + clamped_storage_bytes <=
+                ShufflingLooper::kMaximumTransitionSampleStorageBytes,
+            "accepted capacity change must keep old and replacement storage bounded");
+
+    const std::size_t clamped_frames = looper.capacity_frames();
+    require(looper.configure_capacity_seconds(20.0F) ==
+                ShufflingLooperCapacityStatus::RejectedTransitionMemoryLimit,
+            "a shrink whose old and replacement buffers exceed 16 MiB must be rejected");
+    require(looper.capacity_frames() == clamped_frames &&
+                looper.capacity_storage_bytes() == clamped_storage_bytes,
+            "rejected transition must leave the existing capacity intact");
+}
+
+void test_capacity_reconfiguration_preserves_loop_or_rejects_truncation() {
+    ShufflingLooper looper(48000.0F, 1U, 21U);
+    configure_ordered(looper, 2U, 2U);
+    require(looper.configure_capacity_seconds(8.0F) ==
+                ShufflingLooperCapacityStatus::Applied,
+            "capacity should grow while the looper is empty");
+    std::array<float, 8> source{0.1F, 0.2F, 0.3F, 0.4F,
+                                0.5F, 0.6F, 0.7F, 0.8F};
+    record_samples(looper, source, 1U);
+    const auto recorded_frames = looper.loop_frames();
+    const auto recorded_state = looper.state();
+
+    require(looper.configure_capacity_seconds(16.0F) ==
+                ShufflingLooperCapacityStatus::Applied,
+            "capacity growth should preserve a recorded loop");
+    require(looper.loop_frames() == recorded_frames &&
+                looper.state() == recorded_state,
+            "capacity growth must preserve loop and transport state");
+    require(looper.play(), "preserved loop should remain playable");
+    std::array<float, 8> output{};
+    looper.process(output, 1U);
+    require(output == source, "capacity growth must preserve recorded samples");
+
+    const auto state_before_reject = looper.state();
+    const auto frames_before_reject = looper.loop_frames();
+    const auto status = looper.configure_capacity_seconds(0.0001F);
+    require(status ==
+                ShufflingLooperCapacityStatus::RejectedLoopWouldBeTruncated,
+            "a shrink that would discard recorded samples must be rejected");
+    require(looper.state() == state_before_reject &&
+                looper.loop_frames() == frames_before_reject,
+            "rejected shrink must preserve loop and transport state");
+
+    require(looper.configure_capacity_seconds(
+                std::numeric_limits<float>::quiet_NaN()) ==
+                ShufflingLooperCapacityStatus::RejectedInvalidRequest,
+            "non-finite capacity requests must be rejected explicitly");
+}
+
+void test_capacity_allocation_failure_preserves_recorded_loop() {
+    ShufflingLooper looper(48000.0F, 1U, 31U);
+    configure_ordered(looper, 2U, 2U);
+    std::array<float, 4> source{0.1F, 0.2F, 0.3F, 0.4F};
+    record_samples(looper, source, 1U);
+    const std::size_t previous_capacity_frames = looper.capacity_frames();
+    const std::size_t previous_loop_frames = looper.loop_frames();
+
+    fail_next_array_allocation.store(true, std::memory_order_release);
+    const auto status = looper.configure_capacity_seconds(8.0F);
+    require(!fail_next_array_allocation.load(std::memory_order_acquire),
+            "capacity replacement should reach the injected allocation failure");
+    require(status == ShufflingLooperCapacityStatus::AllocationFailed,
+            "allocation failure should be reported without throwing");
+    require(looper.capacity_frames() == previous_capacity_frames &&
+                looper.loop_frames() == previous_loop_frames &&
+                looper.state() == ShufflingLooperState::Playing,
+            "allocation failure must preserve capacity, loop, and transport");
+
+    std::array<float, 4> output{};
+    looper.process(output, 1U);
+    require(output == source,
+            "recorded samples must remain playable after allocation failure");
 }
 
 void test_record_to_sequence_playback_and_stop_resume() {
@@ -291,9 +470,127 @@ void test_invalid_layout_and_samples() {
             }), "non-finite inputs should be sanitized before storage/playback");
 }
 
+void test_quantized_recording_waits_for_selected_beats_without_audio_latency() {
+    ShufflingLooper looper(48000.0F, 1U, 31U);
+    configure_ordered(looper, 4U, 4U);
+    configure_quantized(looper, 120.0F);
+
+    std::array<float, 1> phase_advance{0.125F};
+    looper.process(phase_advance, 1U);
+    require(phase_advance[0] == 0.125F,
+            "stopped audio should pass through while the beat clock advances");
+    require(looper.record(), "quantized record should arm");
+    require(looper.state() == ShufflingLooperState::WaitingToRecord &&
+                looper.loop_frames() == 0U,
+            "quantized record should wait for the next selected beat");
+
+    std::array<float, 23999> waiting{};
+    waiting.fill(0.125F);
+    looper.process(waiting, 1U);
+    require(looper.state() == ShufflingLooperState::WaitingToRecord &&
+                looper.loop_frames() == 0U,
+            "recording must remain armed until the exact next beat frame");
+    require(std::all_of(waiting.begin(), waiting.end(), [](const float sample) {
+                return sample == 0.125F;
+            }),
+            "waiting to record must not delay or alter the live audio path");
+
+    std::array<float, 1> first_capture_frame{0.25F};
+    looper.process(first_capture_frame, 1U);
+    require(looper.state() == ShufflingLooperState::Recording &&
+                looper.loop_frames() == 1U,
+            "recording should begin on the next beat frame");
+    require(first_capture_frame[0] == 0.25F,
+            "the first captured frame should remain audible immediately");
+
+    ShufflingLooperParameters changed_tempo = looper.parameters();
+    changed_tempo.tempo_bpm = 60.0F;
+    looper.configure(changed_tempo);
+    require(looper.stop_recording(), "quantized stop should arm at the next beat");
+    require(looper.state() == ShufflingLooperState::WaitingToStop,
+            "quantized stop should expose its pending state");
+
+    std::array<float, 23999> recording{};
+    recording.fill(0.25F);
+    looper.process(recording, 1U);
+    require(looper.state() == ShufflingLooperState::WaitingToStop &&
+                looper.loop_frames() == 24000U,
+            "capture should retain the tempo latched at record start");
+    require(std::all_of(recording.begin(), recording.end(), [](const float sample) {
+                return sample == 0.25F;
+            }),
+            "recording while stop is armed must remain zero-latency pass-through");
+
+    std::array<float, 1> stop_boundary{0.375F};
+    looper.process(stop_boundary, 1U);
+    require(looper.state() == ShufflingLooperState::Playing &&
+                looper.loop_frames() == 24000U,
+            "stop should finalize exactly at the next beat boundary");
+    require(stop_boundary[0] == 0.375F,
+            "the stop boundary must not add fixed audio-path latency");
+}
+
+void test_quantized_capture_uses_shared_stereo_beat_boundary() {
+    ShufflingLooper looper(48000.0F, 2U, 37U);
+    configure_ordered(looper, 4U, 4U);
+    configure_quantized(looper, 120.0F);
+    require(looper.record(), "stereo quantized record should arm");
+
+    std::array<float, 48000> one_beat{};
+    for (std::size_t frame = 0U; frame < one_beat.size() / 2U; ++frame) {
+        one_beat[frame * 2U] = 0.125F;
+        one_beat[frame * 2U + 1U] = -0.25F;
+    }
+    looper.process(one_beat, 2U);
+    require(looper.state() == ShufflingLooperState::Recording &&
+                looper.loop_frames() == 24000U,
+            "stereo capture should count complete interleaved frames");
+    require(looper.stop_recording(), "stereo stop should arm at the beat edge");
+    std::array<float, 2> boundary{0.0F, 0.0F};
+    looper.process(boundary, 2U);
+    require(looper.state() == ShufflingLooperState::Playing &&
+                looper.loop_frames() == 24000U,
+            "both stereo channels should finalize on the same beat boundary");
+    require(boundary[0] == 0.0F && boundary[1] == 0.0F,
+            "zero playback mix should leave both live stereo channels untouched");
+}
+
+void test_quantized_capture_rejects_subbeat_capacity_and_fits_buffer() {
+    ShufflingLooper too_short(48000.0F, 1U, 41U);
+    require(too_short.configure_capacity_seconds(0.49F) ==
+                ShufflingLooperCapacityStatus::Applied,
+            "short capacity fixture should configure");
+    configure_quantized(too_short, 120.0F);
+    require(!too_short.record() && too_short.loop_frames() == 0U &&
+                too_short.state() == ShufflingLooperState::Stopped,
+            "record must reject capacity that cannot hold one full beat");
+
+    ShufflingLooper one_beat(48000.0F, 1U, 43U);
+    require(one_beat.configure_capacity_seconds(0.51F) ==
+                ShufflingLooperCapacityStatus::Applied,
+            "one-beat capacity fixture should configure");
+    configure_quantized(one_beat, 120.0F);
+    require(one_beat.record(), "capacity holding one beat should arm");
+    std::array<float, 24000> beat{};
+    beat.fill(0.125F);
+    one_beat.process(beat, 1U);
+    require(one_beat.state() == ShufflingLooperState::Playing &&
+                one_beat.loop_frames() == beat.size() &&
+                one_beat.loop_frames() <= one_beat.capacity_frames(),
+            "quantized automatic completion must fit the existing buffer bound");
+}
+
 void test_process_does_not_allocate() {
     ShufflingLooper looper(48000.0F, 2U, 17U);
     configure_ordered(looper, 2U, 2U);
+    allocation_count.store(0U, std::memory_order_relaxed);
+    count_allocations.store(true, std::memory_order_release);
+    const auto capacity_status = looper.configure_capacity_seconds(8.0F);
+    count_allocations.store(false, std::memory_order_release);
+    require(capacity_status == ShufflingLooperCapacityStatus::Applied &&
+                allocation_count.load(std::memory_order_relaxed) > 0U,
+            "capacity storage should allocate during explicit configuration");
+
     std::array<float, 64> source{};
     source.fill(0.125F);
     record_samples(looper, source, 2U);
@@ -304,7 +601,21 @@ void test_process_does_not_allocate() {
     looper.process(output, 2U);
     count_allocations.store(false, std::memory_order_release);
     require(allocation_count.load(std::memory_order_relaxed) == 0U,
-            "process() must not allocate after construction");
+            "process() must not allocate after capacity configuration");
+}
+
+void test_quantized_process_does_not_allocate() {
+    ShufflingLooper looper(48000.0F, 1U, 47U);
+    configure_quantized(looper, 120.0F);
+    require(looper.record(), "quantized no-allocation test should arm");
+    std::array<float, 256> input{};
+    input.fill(0.125F);
+    allocation_count.store(0U, std::memory_order_relaxed);
+    count_allocations.store(true, std::memory_order_release);
+    looper.process(input, 1U);
+    count_allocations.store(false, std::memory_order_release);
+    require(allocation_count.load(std::memory_order_relaxed) == 0U,
+            "quantized process() must not allocate while waiting for a beat");
 }
 
 }  // namespace
@@ -318,6 +629,9 @@ void* operator new(const std::size_t size) {
 }
 
 void* operator new[](const std::size_t size) {
+    if (fail_next_array_allocation.exchange(false, std::memory_order_acq_rel)) {
+        throw std::bad_alloc();
+    }
     if (count_allocations.load(std::memory_order_relaxed)) {
         allocation_count.fetch_add(1U, std::memory_order_relaxed);
     }
@@ -333,6 +647,10 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_identity_bounds_and_constructor_validation();
+        test_capacity_reaches_model_limits_and_respects_memory_budget();
+        test_capacity_transition_bound_rejects_oversized_shrinks();
+        test_capacity_reconfiguration_preserves_loop_or_rejects_truncation();
+        test_capacity_allocation_failure_preserves_recorded_loop();
         test_record_to_sequence_playback_and_stop_resume();
         test_stereo_channels_and_dry_mix();
         test_replacement_is_destructive_but_playback_is_non_destructive();
@@ -340,7 +658,11 @@ int main() {
         test_controls_are_bounded_and_nonfinite_controls_fall_back();
         test_smoothing_filters_clear_and_reset();
         test_invalid_layout_and_samples();
+        test_quantized_recording_waits_for_selected_beats_without_audio_latency();
+        test_quantized_capture_uses_shared_stereo_beat_boundary();
+        test_quantized_capture_rejects_subbeat_capacity_and_fits_buffer();
         test_process_does_not_allocate();
+        test_quantized_process_does_not_allocate();
         std::fprintf(stdout, "All TabletFX shuffling looper tests passed.\n");
         return 0;
     } catch (const std::exception& error) {

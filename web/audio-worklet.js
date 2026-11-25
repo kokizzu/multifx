@@ -385,7 +385,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0];
       module._tf_chain_set_auto_swell_delay(this.chain, ...autoSwellDelay);
        const shufflingLooper = parameters.shufflingLooper ||
-         [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12];
+          [8, 8, 0.5, 0, 0, 0, 0, 0, 0.7, 0, 0, -12, 12, 0, 120];
        module._tf_chain_set_shuffling_looper_options(this.chain, ...shufflingLooper);
       const tenTapDelay = parameters.tenTapDelay ||
         [4, 220, 120, 0, 30, 0, 50, 100, 1, 100, 0, 20000, 0.25, 0, 0,
@@ -1326,6 +1326,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         state: this.module._tf_chain_shuffling_looper_state(this.chain),
         frames: this.module._tf_chain_shuffling_looper_frames(this.chain),
         steps: this.module._tf_chain_shuffling_looper_steps(this.chain),
+        capacityStatus: this.module._tf_chain_shuffling_looper_capacity_status(this.chain),
+        capacitySeconds: this.module._tf_chain_shuffling_looper_capacity_seconds(this.chain),
+        capacityBytes: this.module._tf_chain_shuffling_looper_capacity_bytes(this.chain),
+        effectMemoryBytes: this.module._tf_chain_effect_memory_bytes(this.chain, 65),
+        memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
         sampleRate: globalThis.sampleRate || 48000,
       });
     } else if (message.type === "shuffling-looper-status-request" && this.ready) {
@@ -1334,6 +1339,27 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         state: this.module._tf_chain_shuffling_looper_state(this.chain),
         frames: this.module._tf_chain_shuffling_looper_frames(this.chain),
         steps: this.module._tf_chain_shuffling_looper_steps(this.chain),
+        capacityStatus: this.module._tf_chain_shuffling_looper_capacity_status(this.chain),
+        capacitySeconds: this.module._tf_chain_shuffling_looper_capacity_seconds(this.chain),
+        capacityBytes: this.module._tf_chain_shuffling_looper_capacity_bytes(this.chain),
+        effectMemoryBytes: this.module._tf_chain_effect_memory_bytes(this.chain, 65),
+        memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+        sampleRate: globalThis.sampleRate || 48000,
+      });
+    } else if (message.type === "shuffling-looper-capacity" && this.ready) {
+      const capacityStatus = this.module._tf_chain_set_shuffling_looper_capacity(
+        this.chain, Number(message.seconds),
+      );
+      this.port.postMessage({
+        type: "shuffling-looper-status",
+        capacityStatus,
+        state: this.module._tf_chain_shuffling_looper_state(this.chain),
+        frames: this.module._tf_chain_shuffling_looper_frames(this.chain),
+        steps: this.module._tf_chain_shuffling_looper_steps(this.chain),
+        capacitySeconds: this.module._tf_chain_shuffling_looper_capacity_seconds(this.chain),
+        capacityBytes: this.module._tf_chain_shuffling_looper_capacity_bytes(this.chain),
+        effectMemoryBytes: this.module._tf_chain_effect_memory_bytes(this.chain, 65),
+        memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
         sampleRate: globalThis.sampleRate || 48000,
       });
     } else if (message.type === "shuffling-looper-options" && this.ready) {

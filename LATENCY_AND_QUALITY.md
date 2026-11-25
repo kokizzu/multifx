@@ -476,3 +476,29 @@ The project-authored Mix control reuses the existing `PolyPitchShifter` at Pitch
 `make test` passed 115/115 CTest cases and 11/11 fixture-safety checks. `make web-build`, the focused `make web-test-fender-pedal-shifter` local Guitar-TECHS DI Play test at 0/50/100% Mix, and `make windows-cross-build` passed. The 50% browser output matched the captured wet/dry mean to 1.51e−9 RMS error and 7.45e−9 maximum error. The full `make web-browser-test` passed after its page deadline was raised to 180 seconds; browser/native comparison across 78 optional stages reported 3.4009653e−6 maximum absolute error and 5.8804948e−7 RMS error.
 
 On AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms), 3,000 warm-up and 20,000 measured callbacks, full-wet CPU load was p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix was 10.597/13.989/17.349/21.551/35.216% of callback budget. Mix adds dry-ring reads/writes and output blending; these values measure the full processor, not the incremental Mix-only cost. They are desktop processor-call timings and do not predict Android/tablet performance. Nominal algorithm latency remains 256 frames / 5.333 ms at 48 kHz. Human listening and hardware/device checks remain open; Fender's measured latency, DSP, and sound parity are unknown.
+
+## Current checkpoint: Stadium Shuffling Looper capacity (2026-11-25)
+
+The existing categorized Shuffling Looper keeps a 4 s default and now supports user-selected capacity up to 60 s mono / 30 s stereo at 48 kHz. Maximum-capacity playback was benchmarked after recording a full-duration loop, with 16 slices, 32 sequence steps, active pitch/reverse/repeat/shuffle probabilities, smoothing, sequence drift, and low/high cuts. On an AMD Ryzen 9 5950X Release build, 48 kHz mono/stereo and 128-frame callbacks (2.667 ms deadline), 5,000 measured callbacks plus 1,000 warm-up callbacks yielded:
+
+| Capacity | Effect state | Sample storage | Transition peak (old + replacement) | p50 | p95 | p99 | p99.9 | Max | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 60 s mono | 11,521,440 B | 11,520,000 B | 12,288,000 B | 0.0881% | 0.1444% | 0.1519% | 0.3559% | 0.4920% | 0/5,000 |
+| 30 s stereo | 11,521,440 B | 11,520,000 B | 13,056,000 B | 0.1245% | 0.1256% | 0.2070% | 0.3836% | 0.4436% | 0/5,000 |
+
+The transition sample-storage cap is 16 MiB. `process()` performs no allocation and the looper adds no fixed dry-path latency. The UI keeps 4 s as its default, reports actual accepted/clamped capacity, rejects unsafe truncation/allocation requests, and only resizes after source playback is stopped. Native tests cover limits and transition peaks; browser/WASM playback tests use the local prerecorded guitar fixture; the Windows MinGW cross-build passes. These isolated Linux desktop timings do not predict target-device behavior. Human listening, hardware timing, and live-device checks remain open.
+
+## XRecer XR1-inspired Shuffling Looper beat scheduler (2026-11-25)
+
+The XR1 FAQ says its Quantize aligns recording start and end to a selected beat, but gives no subdivisions, default, tempo-change policy, or firmware-specific controls. TabletFX therefore adds a project-authored Off/Beat selector to the categorized Shuffling Looper. Beat mode uses quarter-note boundaries, a project tempo of 40–300 BPM (120 BPM default), and latches tempo when recording is armed. Waiting for the start/stop edge does not interrupt live input monitoring or add fixed audio-path latency. The scheduler uses constant-size state and allocates nothing from `process()`. At 120 BPM, one beat is 24,000 frames at 48 kHz; requested capture capacity must fit a whole beat within the existing accepted buffer.
+
+On an AMD Ryzen 9 5950X Release build at 48 kHz, 128-frame callbacks (2.667 ms), 1,000 warm-up and 5,000 measured callbacks per profile, the fixed scheduler state is 1,488 B. Maximum-profile effect memory is 11,521,488 B, including 11,520,000 B of sample storage; the old-plus-replacement transition peaks remain 12,288,000 B mono and 13,056,000 B stereo, below the 16 MiB transition cap.
+
+| Channel/profile | p50 | p95 | p99 | p99.9 | Max | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Mono, quantize Off | 0.0803% | 0.1298% | 0.1759% | 0.3945% | 1.5919% | 0/5,000 |
+| Mono, Beat | 0.0836% | 0.1346% | 0.1455% | 0.4234% | 1.5240% | 0/5,000 |
+| Stereo, quantize Off | 0.1376% | 0.1391% | 0.2344% | 0.6402% | 2.0322% | 0/5,000 |
+| Stereo, Beat | 0.1406% | 0.2276% | 0.2591% | 1.9227% | 2.4706% | 0/5,000 |
+
+`make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench-shuffling-looper` pass. Browser playback uses the repository's local prerecorded guitar DI. These isolated Linux processor-call timings do not predict Android/tablet load or XR1 performance. Manual listening, target-device timing, and physical footswitch checks remain open; no XR1 DSP/settings/sound parity is claimed.
