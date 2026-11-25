@@ -74,8 +74,6 @@ def changed_paths(remote: str) -> list[str]:
 
 
 def validate_overlay(remote: str, paths: list[str]) -> set[str]:
-    if "make/publish.mk" not in paths:
-        raise SystemExit("remote checkpoint does not include the expected publish makefile")
     published_make = git("show", f"{remote}:make/publish.mk").stdout
     local_make = (ROOT / "make/publish.mk").read_text(encoding="utf-8")
     overlay: set[str] = set()
