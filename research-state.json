@@ -4,35 +4,35 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "1baf52229dd5bdf99c26f44613a4a1a1f1d941fe",
+  "previous_checkpoint_commit": "db4d7470b0d11b3f5445661e5e07b5696785b4aa",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Flanger Tap Division",
-    "status": "Documented tempo-division role added as a project-authored option to the existing categorized Flanger; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+    "name": "Fender Tone Master Pro Phaser 90 Tap Division",
+    "status": "Documented tempo-division role added as a project-authored option to the existing categorized Phaser; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 17,
+    "picker_index": 18,
     "category": "Modulation",
     "official_source": {
       "title": "Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, p. 38. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
+      "revision": "Model Guide v1.1.100 / Rev. A, p. 40. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
       "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
       "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide names Tap Division and says effect speed follows a tempo subdivision but publishes no division list, numeric range/defaults, DSP, or latency. Current checked firmware notes do not mention Flanger; no Fender control, DSP, or sound parity is claimed."
+      "qualification": "The guide lists Speed and Tap Division; it says the subdivision controls effect speed, but does not publish divisions, numeric bounds/defaults, DSP, or latency. Checked firmware notes do not mention Phaser 90; no Fender control, DSP, or sound parity is claimed."
     },
-    "documented_controls": "Mono/Stereo Flanger: Rate, Depth, Resonance, Tap Division, and Manual; Stereo additionally has L/R Phase. Tap Division selects a subdivision of current tempo for effect speed. Available divisions and numeric bounds/defaults are not published.",
-    "project_controls": "Existing Modulation Flanger remains at picker ID 17; no effect slot is added. Free Hz remains the 0.25 Hz default. Project-authored Tap Division offers whole, dotted half, half, dotted quarter, quarter, quarter triplet, dotted eighth, eighth, eighth triplet, dotted sixteenth, sixteenth, sixteenth triplet, thirty-second, and sixty-fourth notes; tempo range 20–300 BPM (120 BPM default); calculated LFO rate is capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The wet path remains delayed and the dry path immediate.",
+    "documented_controls": "Phaser 90: Speed and Tap Division. Tap Division selects a tempo subdivision for effect speed. Division list and numeric bounds/defaults are not published.",
+    "project_controls": "Existing Modulation Phaser remains at picker ID 18; no effect slot is added. Free Hz remains the 0.5 Hz default. Project-authored Tap Division offers 14 named divisions, tempo 20–300 BPM (120 BPM default), with rate capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The dry path remains immediate.",
     "verification": {
-      "native": "make test-fender-flanger-tap-division passed focused native Flanger tests and offline CLI tests for tempo mapping, same-rate free/sync output, tempo changes, invalid division, and missing on/off value.",
-      "browser": "make web-test-fender-flanger-tap-division passed all 117/117 CTest cases and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. The Modulation picker ID 17, Free default, all 14 choices, 20–300 BPM UI and synced 2 Hz/1 Hz display were checked. Browser WASM effect state 4,796 B.",
+      "native": "make test-fender-phaser-90-tap-division passed focused Phaser tests and offline CLI checks for sync mapping, free/sync same-rate output, tempo changes, invalid division fallback, and missing-value guard.",
+      "browser": "make web-test-fender-phaser-90-tap-division passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native comparison, and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. Modulation picker ID 18, Free default, 14 divisions, 20–300 BPM, and synced 2 Hz/1 Hz display were checked. Browser/WASM effect state 276 B.",
       "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
-      "benchmark": "make bench measured the quarter-note/120 BPM sync profile on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of deadline. Native state 4,832 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
+      "benchmark": "make bench measured quarter-note/120 BPM sync on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0679/0.0990/0.1031/0.4144/1.5439% of deadline. Native state 288 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Firmware installed on any device is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
+    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Melofty Axom Max",
-    "next_feature": "Recheck the exact-model manual and V1.9.2 notes for a specifically named effect with a control table; implement only when model and controls can be tied to official evidence.",
-    "qualification": "This Tone Master Pro Flanger checkpoint is documented, automated, Windows-cross-built, benchmarked, committed, and pushed. Continue model-by-model; treat general release-note leads without named algorithms/parameter tables as unresolved. Keep the six-model comparison selected, not a fresh audit of the full catalog; preserve manual listening, hardware, firmware, and target-device qualifications."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Tremolo LFO Clip is listed in the exact Model Guide p. 34 with a brief clipping-percentage description, but no range/default/algorithm. Review the project Tremolo path and add only a conservative, clearly project-authored control with automated sound/parameter tests; keep the ambiguity explicit. Then continue the remaining Fender and other flagship families.",
+    "qualification": "The Phaser 90 Tap Division checkpoint is implemented, automated, Windows-cross-built, benchmarked, and ready to publish. Melofty Axom Max manual V1.7.4 plus app V1.9.2 notes did not identify a specific effect/control table safe to map; retain its unresolved notes and return if better model-specific documentation appears. Preserve the six-model comparison scope, manual listening, hardware, firmware, and target-device qualifications."
   },
   "completed_checkpoints": [
     {
@@ -896,32 +896,32 @@
         "benchmark": "make bench measured the quarter-note/120 BPM sync profile on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of deadline. Native state 4,832 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Firmware installed on any device is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
+    },
+    {
+      "name": "Fender Tone Master Pro Phaser 90 Tap Division",
+      "status": "Documented tempo-division role added as a project-authored option to the existing categorized Phaser; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+      "date": "2026-11-26",
+      "picker_index": 18,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, p. 40. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide lists Speed and Tap Division; it says the subdivision controls effect speed, but does not publish divisions, numeric bounds/defaults, DSP, or latency. Checked firmware notes do not mention Phaser 90; no Fender control, DSP, or sound parity is claimed."
+      },
+      "documented_controls": "Phaser 90: Speed and Tap Division. Tap Division selects a tempo subdivision for effect speed. Division list and numeric bounds/defaults are not published.",
+      "project_controls": "Existing Modulation Phaser remains at picker ID 18; no effect slot is added. Free Hz remains the 0.5 Hz default. Project-authored Tap Division offers 14 named divisions, tempo 20–300 BPM (120 BPM default), with rate capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The dry path remains immediate.",
+      "verification": {
+        "native": "make test-fender-phaser-90-tap-division passed focused Phaser tests and offline CLI checks for sync mapping, free/sync same-rate output, tempo changes, invalid division fallback, and missing-value guard.",
+        "browser": "make web-test-fender-phaser-90-tap-division passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native comparison, and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. Modulation picker ID 18, Free default, 14 divisions, 20–300 BPM, and synced 2 Hz/1 Hz display were checked. Browser/WASM effect state 276 B.",
+        "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+        "benchmark": "make bench measured quarter-note/120 BPM sync on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0679/0.0990/0.1031/0.4144/1.5439% of deadline. Native state 288 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Through-Zero Flanger modes",
-    "status": "Fractal Blocks Guide Off/Auto/Manual control roles mapped with project-authored defaults; native, focused browser/WASM Play, Windows cross-build, and callback benchmark pass; human/device checks remain",
-    "date": "2026-11-26",
-    "picker_index": 81,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "November 2026, printed pp. 48–50 and 111; FM9-family documentation. Applicability to Mark II Turbo and installed firmware are unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "downloads_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The Guide distinguishes Off (normal flanging), Auto (LFO through-zero sweep), and Manual (hand sweep); Dry Delay shifts the midpoint. Manual 0–10 is a position, not milliseconds. The FM9 downloads page names Original/Turbo, not Mark II Turbo separately; exact firmware applicability is unverified."
-    },
-    "documented_controls": "Fractal documents Off, Auto, and Manual modes; Dry Delay, Manual position, LFO rate/depth/waveform/phase, minimum and maximum delay times, feedback, and phase behavior. Published minimum/maximum times span 0.340–20 ms and feedback spans −100…+100%. The Guide does not specify the project’s selected numeric defaults or establish sound/DSP parity.",
-    "project_controls": "Existing Modulation picker row 81 retains its position and adds Off/Auto/Manual. Off is normal flanging with immediate dry and delayed wet paths; Auto sweeps through zero with a project-authored sine/triangle LFO and delayed dry; Manual uses a hand position with delayed dry. Project defaults: Manual, min 0.34 ms, max 8 ms, position 5/10, dry delay 0.5 ms, feedback 0, phase reverse Both, mix 0.5, 10 ms smoothing; Auto defaults to 0.25 Hz, depth 5/10, sine, L/R phase 180°. Bounds are project choices, not Fractal defaults. Two 20 ms delay vectors are allocated at construction; no process-time allocation.",
-    "verification": {
-      "native": "make test-fractal-tzf-auto passed focused native flanger tests and offline renderer CLI checks. make web-test-fractal-tzf-auto passed docs/audio-fixture prerequisites and all 117/117 CTest cases; focused tests cover mode behavior, bounds, waveform/phase, block invariance, and no process allocation.",
-      "browser": "HeadlessChrome 151, local prerecorded Guitar-TECHS DI, 48 kHz stereo/48,000 frames. Categorized Modulation picker ID 81 and Off/Auto/Manual controls exercised through WASM Play. Auto-vs-Manual RMS difference 0.0370054658; Auto-vs-Off 0.0314841598. Existing 70-stage chain comparison passed.",
-      "windows": "make windows-cross-build passed the Windows MinGW core library and offline renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Manual p50/p95/p99/p99.9/max 0.1219/0.1223/0.1766/0.4208/1.2222%; Auto sine/full-depth 0.2321/0.2880/0.3578/0.5813/0.9372% of callback deadline. Native state 15,664 B; maximum 20 ms delay at 48 kHz is 960 frames. Isolated desktop timing, not target-device or full-chain performance."
-    },
-    "remaining": "Human listening, target-device timing, and physical Fractal behavior remain manual. Installed firmware and exact Mark II Turbo applicability are unknown. LFO High Cut/Quantize/Bypass Reset/Auto Depth and other Fractal flanger types remain gaps. Do not claim Fractal settings, DSP, algorithm, or sound parity."
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Flanger Tap Division",
     "status": "Documented tempo-division role added as a project-authored option to the existing categorized Flanger; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
     "date": "2026-11-26",
@@ -943,6 +943,29 @@
       "benchmark": "make bench measured the quarter-note/120 BPM sync profile on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of deadline. Native state 4,832 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
     },
     "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Firmware installed on any device is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Phaser 90 Tap Division",
+    "status": "Documented tempo-division role added as a project-authored option to the existing categorized Phaser; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+    "date": "2026-11-26",
+    "picker_index": 18,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, p. 40. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists Speed and Tap Division; it says the subdivision controls effect speed, but does not publish divisions, numeric bounds/defaults, DSP, or latency. Checked firmware notes do not mention Phaser 90; no Fender control, DSP, or sound parity is claimed."
+    },
+    "documented_controls": "Phaser 90: Speed and Tap Division. Tap Division selects a tempo subdivision for effect speed. Division list and numeric bounds/defaults are not published.",
+    "project_controls": "Existing Modulation Phaser remains at picker ID 18; no effect slot is added. Free Hz remains the 0.5 Hz default. Project-authored Tap Division offers 14 named divisions, tempo 20–300 BPM (120 BPM default), with rate capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The dry path remains immediate.",
+    "verification": {
+      "native": "make test-fender-phaser-90-tap-division passed focused Phaser tests and offline CLI checks for sync mapping, free/sync same-rate output, tempo changes, invalid division fallback, and missing-value guard.",
+      "browser": "make web-test-fender-phaser-90-tap-division passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native comparison, and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. Modulation picker ID 18, Free default, 14 divisions, 20–300 BPM, and synced 2 Hz/1 Hz display were checked. Browser/WASM effect state 276 B.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+      "benchmark": "make bench measured quarter-note/120 BPM sync on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0679/0.0990/0.1031/0.4144/1.5439% of deadline. Native state 288 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
+    },
+    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
   },
   "next_research": [
     {
@@ -1063,6 +1086,18 @@
       "status": "The Stadium catalogue lists Mutant Filter as Mono/Stereo and first appearing in 1.0, modeled on Mu-Tron III. No exact Stadium parameter table, ranges/defaults, DSP or latency are published. The source pedal documents low/band/high mode, peak, gain, range, and sweep direction; those are not confirmed Line 6 controls.",
       "known_controls": "Potential project-authored related controls: filter mode, envelope sensitivity, sweep range/direction, peak/resonance. Do not claim these names/ranges as Stadium settings until the exact effect page/device is checked.",
       "qualification": "Use an existing envelope/filter path where possible to minimize memory and CPU; project mappings and defaults must be labeled as such. Manual listening/hardware checks remain open."
+    },
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Tremolo LFO Clip, Duty Cycle, and Tap Division control mapping",
+      "source": "Official Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 34; firmware history through v1.8.87 dated 2026-11-23.",
+      "source_urls": [
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates"
+      ],
+      "status": "The Model Guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip; it describes LFO Clip only as adjusting tremolo-signal clipping percentage. Existing project Tremolo supports rate, depth, sine/triangle/square, and tempo sync but lacks duty-cycle and clip controls. No manufacturer ranges/defaults or exact clip curve/behavior are documented; installed firmware is unknown.",
+      "known_controls": "Documented names and the brief Duty Cycle / LFO Clip descriptions only. Numeric ranges, defaults, exact waveform choices beyond the project’s own controls, curve, DSP, and latency are not specified.",
+      "qualification": "A project-authored bounded clipping control may be added with zero/default fast path, no buffer, allocation, or latency. Do not equate it to Fender behavior or claim Fender parity; test the full control/UI/native/WASM path and report CPU/memory."
     }
   ],
   "constraints": [

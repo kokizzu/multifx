@@ -299,7 +299,7 @@ const DEFAULT_PARAMETERS = {
     0, 350, 350, 4, 4],
   convolutionReverb: [0.25, 0],
   flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180, 0, 120, 4],
-  phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
+  phaser: [0.5, 250, 1600, 0.2, 4, 0.5, 0, 120, 4],
   vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
   opticalCompressor: [-24, 3, 6, 10, 80, 600, 10, 0],
@@ -1645,6 +1645,9 @@ const flangerDivisionBeats = [
 ];
 const phaserRate = document.querySelector("#phaser-rate-hz");
 const phaserRateValue = document.querySelector("#phaser-rate-value");
+const phaserTapDivision = document.querySelector("#phaser-tap-division");
+const phaserTempoBpm = document.querySelector("#phaser-tempo-bpm");
+const phaserTempoBpmValue = document.querySelector("#phaser-tempo-bpm-value");
 const phaserMinimum = document.querySelector("#phaser-min-hz");
 const phaserMinimumValue = document.querySelector("#phaser-min-value");
 const phaserMaximum = document.querySelector("#phaser-max-hz");
@@ -6711,21 +6714,35 @@ function updatePhaser() {
   if (minimumHz > maximumHz) [minimumHz, maximumHz] = [maximumHz, minimumHz];
   phaserMinimum.value = String(minimumHz);
   phaserMaximum.value = String(maximumHz);
+  const tempoSync = phaserTapDivision.value !== "free";
+  const division = tempoSync ? Number(phaserTapDivision.value) : 4;
+  const tempoBpm = Number(phaserTempoBpm.value);
+  const freeRateHz = Number(phaserRate.value);
+  const synchronizedRateHz = Math.min(
+    80,
+    Math.max(0.05, (tempoBpm / 60) / flangerDivisionBeats[division]),
+  );
+  phaserRate.disabled = tempoSync;
+  phaserTempoBpm.disabled = !tempoSync;
   const values = [
     Number(phaserRate.value), minimumHz, maximumHz,
     Number(phaserFeedback.value), Number(phaserStages.value), Number(phaserMix.value),
+    tempoSync ? 1 : 0, tempoBpm, division,
   ];
   DEFAULT_PARAMETERS.phaser = values;
-  phaserRateValue.value = `${Number(phaserRate.value).toFixed(2)} Hz`;
+  phaserRateValue.value = tempoSync
+    ? `${synchronizedRateHz.toFixed(2)} Hz · sync`
+    : `${freeRateHz.toFixed(2)} Hz`;
   phaserMinimumValue.value = `${minimumHz.toFixed(0)} Hz`;
   phaserMaximumValue.value = `${maximumHz.toFixed(0)} Hz`;
   phaserFeedbackValue.value = `${Number(phaserFeedback.value).toFixed(2)}`;
   phaserMixValue.value = `${Math.round(Number(phaserMix.value) * 100)}%`;
+  phaserTempoBpmValue.value = `${tempoBpm.toFixed(0)} BPM`;
   if (workletNode) workletNode.port.postMessage({ type: "phaser", value: values });
 }
 
 for (const control of [phaserRate, phaserMinimum, phaserMaximum,
-  phaserFeedback, phaserStages, phaserMix]) {
+  phaserFeedback, phaserStages, phaserMix, phaserTapDivision, phaserTempoBpm]) {
   control.addEventListener("input", updatePhaser);
   control.addEventListener("change", updatePhaser);
 }
@@ -12952,6 +12969,115 @@ async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureVie
   }
 }
 
+async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [phaserRate.value, phaserTapDivision.value,
+    phaserTempoBpm.value, phaserMinimum.value, phaserMaximum.value,
+    phaserFeedback.value, phaserStages.value, phaserMix.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Phaser Tap Division smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="18"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        phaserTapDivision.value !== "free" || phaserRate.disabled ||
+        phaserRate.value !== "0.5" || phaserTapDivision.options.length !== 15 ||
+        phaserTempoBpm.min !== "20" || phaserTempoBpm.max !== "300" ||
+        phaserTempoBpm.value !== "120" || !phaserTempoBpm.disabled ||
+        !(effectMemory[18] > 0)) {
+      throw new Error("Phaser Tap Division controls or unchanged free-rate default are invalid.");
+    }
+
+    phaserMinimum.value = "250";
+    phaserMaximum.value = "1600";
+    phaserFeedback.value = "0";
+    phaserStages.value = "4";
+    phaserMix.value = "1";
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 18;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (tapDivision, bpm, rateHz) => {
+      phaserRate.value = String(rateHz);
+      phaserTapDivision.value = tapDivision;
+      phaserTempoBpm.value = String(bpm);
+      updatePhaser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Phaser Tap Division playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Phaser output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error("Phaser Tap Division output is silent.");
+      return peak;
+    };
+
+    const freeRatePeak = await captureAt("free", 120, 0.5);
+    const quarterAt120Peak = await captureAt("4", 120, 0.5);
+    if (phaserRateValue.value !== "2.00 Hz · sync" || !phaserRate.disabled ||
+        phaserTempoBpm.disabled) {
+      throw new Error("Phaser 90 quarter-note sync at 120 BPM did not select 2 Hz.");
+    }
+    const quarterAt60Peak = await captureAt("4", 60, 0.5);
+    if (phaserRateValue.value !== "1.00 Hz · sync") {
+      throw new Error("Phaser 90 quarter-note sync did not follow the tempo change to 60 BPM.");
+    }
+    return {
+      category: "Modulation",
+      effectId: 18,
+      documentedRole: "Phaser 90 Tap Division synchronizes effect speed to current tempo",
+      projectChoices: 14,
+      projectTempoRangeBpm: [20, 300],
+      freeRateDefaultHz: 0.5,
+      quarterAt120Hz: 2,
+      quarterAt60Hz: 1,
+      playCaptures: 3,
+      peaks: [freeRatePeak, quarterAt120Peak, quarterAt60Peak],
+      effectMemoryBytes: effectMemory[18],
+    };
+  } finally {
+    stopSource(false);
+    [phaserRate.value, phaserTapDivision.value, phaserTempoBpm.value,
+      phaserMinimum.value, phaserMaximum.value, phaserFeedback.value,
+      phaserStages.value, phaserMix.value] = previousControls;
+    updatePhaser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -17048,7 +17174,7 @@ async function runBrowserSelfTest() {
         harmonicTremolo: [4.25, 0.8, 950, 1, 1, 96, 0.5, 0, 25],
         chorus: [0.8, 15, 7, 0.2],
          flanger: [0.25, 2, 1, 0.35, 1, 0.2, 180],
-        phaser: [0.5, 250, 1600, 0.15, 6, 0.2],
+        phaser: [0.5, 250, 1600, 0.15, 6, 0.2, 0, 120, 4],
         vibrato: [5, 0.35, 0.35],
         compressor: [-18, 3, 6, 8, 100, 0],
         opticalCompressor: [-24, 3, 6, 10, 80, 600, 10, 0],
@@ -17620,6 +17746,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Flanger Tap Division browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-phaser-90-tap-division") {
+          testResult.textContent = "Checking Phaser 90 Tap Division tempo sync with local guitar audio…";
+          const phaserTapDivisionSmoke = await runFenderPhaser90TapDivisionBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            phaserTapDivision: phaserTapDivisionSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Phaser Tap Division browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-tzf-auto") {

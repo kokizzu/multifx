@@ -21,6 +21,11 @@ void Phaser::set_parameters(PhaserParameters parameters) noexcept {
     const std::uint8_t previous_stages = parameters_.stages;
     const float maximum_frequency = sample_rate_ * 0.45F;
     parameters.rate_hz = bounded(parameters.rate_hz, 0.5F, 0.05F, 8.0F);
+    parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
+                                   kMinimumTempoBpm, kMaximumTempoBpm);
+    if (!valid_tap_division(parameters.tap_division)) {
+        parameters.tap_division = DelayDivision::quarter;
+    }
     parameters.minimum_hz = bounded(parameters.minimum_hz, 250.0F,
                                      kMinimumFrequencyHz, maximum_frequency);
     parameters.maximum_hz = bounded(parameters.maximum_hz, 1600.0F,
@@ -47,6 +52,56 @@ void Phaser::set_parameters(PhaserParameters parameters) noexcept {
     target_mix_ = parameters_.mix;
     prepare_lfo();
     retarget(false);
+}
+
+bool Phaser::valid_tap_division(DelayDivision division) noexcept {
+    switch (division) {
+    case DelayDivision::whole:
+    case DelayDivision::dotted_half:
+    case DelayDivision::half:
+    case DelayDivision::dotted_quarter:
+    case DelayDivision::quarter:
+    case DelayDivision::quarter_triplet:
+    case DelayDivision::dotted_eighth:
+    case DelayDivision::eighth:
+    case DelayDivision::eighth_triplet:
+    case DelayDivision::dotted_sixteenth:
+    case DelayDivision::sixteenth:
+    case DelayDivision::sixteenth_triplet:
+    case DelayDivision::thirty_second:
+    case DelayDivision::sixty_fourth:
+        return true;
+    default:
+        return false;
+    }
+}
+
+float Phaser::beats_for_tap_division(DelayDivision division) noexcept {
+    switch (division) {
+    case DelayDivision::whole: return 4.0F;
+    case DelayDivision::dotted_half: return 3.0F;
+    case DelayDivision::half: return 2.0F;
+    case DelayDivision::dotted_quarter: return 1.5F;
+    case DelayDivision::quarter: return 1.0F;
+    case DelayDivision::quarter_triplet: return 2.0F / 3.0F;
+    case DelayDivision::dotted_eighth: return 0.75F;
+    case DelayDivision::eighth: return 0.5F;
+    case DelayDivision::eighth_triplet: return 1.0F / 3.0F;
+    case DelayDivision::dotted_sixteenth: return 0.375F;
+    case DelayDivision::sixteenth: return 0.25F;
+    case DelayDivision::sixteenth_triplet: return 1.0F / 6.0F;
+    case DelayDivision::thirty_second: return 0.125F;
+    case DelayDivision::sixty_fourth: return 0.0625F;
+    default: return 1.0F;
+    }
+}
+
+float Phaser::effective_rate_hz() const noexcept {
+    if (!parameters_.tempo_sync) return parameters_.rate_hz;
+    const float rate_hz = (parameters_.tempo_bpm / 60.0F) /
+                          beats_for_tap_division(parameters_.tap_division);
+    return bounded(rate_hz, parameters_.rate_hz, 0.05F,
+                   kMaximumSynchronizedRateHz);
 }
 
 void Phaser::process(std::span<float> interleaved,
@@ -125,7 +180,7 @@ float Phaser::coefficient_for_frequency(float frequency_hz) const noexcept {
 }
 
 void Phaser::prepare_lfo() noexcept {
-    const float step = kTwoPi * parameters_.rate_hz / sample_rate_;
+    const float step = kTwoPi * effective_rate_hz() / sample_rate_;
     target_sine_increment_ = std::sin(step);
     target_cosine_increment_ = std::cos(step);
 }

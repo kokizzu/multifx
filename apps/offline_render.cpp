@@ -2454,6 +2454,25 @@ Options parse_options(int argc, char** argv, int first) {
             options.flanger_enabled = true;
             continue;
         }
+        if (key == "--phaser-tempo-sync") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --phaser-tempo-sync");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.phaser.tempo_sync = true;
+            else if (value == "off") options.phaser.tempo_sync = false;
+            else throw std::invalid_argument("Phaser tempo sync must be on or off");
+            options.phaser_enabled = true;
+            continue;
+        }
+        if (key == "--phaser-tap-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --phaser-tap-division");
+            }
+            options.phaser.tap_division = parse_delay_division(argv[++i]);
+            options.phaser_enabled = true;
+            continue;
+        }
         if (key == "--phaser-stages") {
             const std::string_view value(argv[++i]);
             if (value == "4") options.phaser.stages = 4;
@@ -2803,6 +2822,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--phaser-rate-hz") {
             options.phaser.rate_hz = value;
+            options.phaser_enabled = true;
+        }
+        else if (key == "--phaser-tempo-bpm") {
+            options.phaser.tempo_bpm = value;
             options.phaser_enabled = true;
         }
         else if (key == "--phaser-min-hz") {
@@ -5833,6 +5856,16 @@ void run_bench() {
         return std::make_unique<tabletfx::Phaser>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fender-phaser-90-tap-division-sync-project-authored", [=] {
+        tabletfx::PhaserParameters parameters;
+        parameters.rate_hz = 0.5F;
+        parameters.feedback = 0.15F;
+        parameters.tempo_sync = true;
+        parameters.tempo_bpm = 120.0F;
+        parameters.tap_division = tabletfx::DelayDivision::quarter;
+        return std::make_unique<tabletfx::Phaser>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("vibrato", [=] {
         tabletfx::VibratoParameters parameters;
         return std::make_unique<tabletfx::Vibrato>(
@@ -6025,7 +6058,8 @@ void print_usage() {
                    " [--manual-thru-zero-flanger-lfo-waveform sine|triangle]"
                    " [--manual-thru-zero-flanger-lfo-phase-degrees 0..360]"
                    " [--phaser-rate-hz Hz] [--phaser-min-hz Hz] [--phaser-max-hz Hz]"
-                   " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
+                  " [--phaser-tempo-sync on|off] [--phaser-tempo-bpm BPM] [--phaser-tap-division division]"
+                  " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
                    " [--vibrato-rate-hz 0.1..10] [--vibrato-depth-ms 0..1.5]"
                    " [--vibrato-mix 0..1]"
                     " [--overdrive-drive 0..0.5] [--overdrive-level-db -24..12]"

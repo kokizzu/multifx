@@ -2947,9 +2947,15 @@ public:
 
     void configure_phaser(float rate_hz, float minimum_hz, float maximum_hz,
                           float feedback, std::uint32_t stages,
-                          float mix) noexcept {
+                          float mix, std::uint32_t tempo_sync,
+                          float tempo_bpm,
+                          std::uint32_t tap_division) noexcept {
         tabletfx::PhaserParameters parameters;
         parameters.rate_hz = rate_hz;
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.tap_division =
+            static_cast<tabletfx::DelayDivision>(tap_division);
         parameters.minimum_hz = minimum_hz;
         parameters.maximum_hz = maximum_hz;
         parameters.feedback = feedback;
@@ -5015,10 +5021,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_flanger(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_phaser(
     void* opaque, float rate_hz, float minimum_hz, float maximum_hz,
-    float feedback, std::uint32_t stages, float mix) noexcept {
+    float feedback, std::uint32_t stages, float mix,
+    std::uint32_t tempo_sync, float tempo_bpm,
+    std::uint32_t tap_division) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_phaser(rate_hz, minimum_hz, maximum_hz,
-                                           feedback, stages, mix);
+                                           feedback, stages, mix, tempo_sync,
+                                           tempo_bpm, tap_division);
     }
 }
 

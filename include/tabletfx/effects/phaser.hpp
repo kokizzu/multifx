@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tabletfx/effects/delay_timing.hpp"
 #include "tabletfx/effect.hpp"
 
 #include <array>
@@ -10,6 +11,9 @@ namespace tabletfx {
 
 struct PhaserParameters {
     float rate_hz = 0.5F;
+    bool tempo_sync = false;
+    float tempo_bpm = 120.0F;
+    DelayDivision tap_division = DelayDivision::quarter;
     float minimum_hz = 250.0F;
     float maximum_hz = 1600.0F;
     float feedback = 0.2F;
@@ -31,6 +35,7 @@ public:
 
     void set_parameters(PhaserParameters parameters) noexcept;
     [[nodiscard]] PhaserParameters parameters() const noexcept { return parameters_; }
+    [[nodiscard]] float effective_rate_hz() const noexcept;
 
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
     void reset() noexcept override;
@@ -46,11 +51,16 @@ private:
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumFrequencyHz = 40.0F;
     static constexpr float kMaximumFeedback = 0.7F;
+    static constexpr float kMinimumTempoBpm = 20.0F;
+    static constexpr float kMaximumTempoBpm = 300.0F;
+    static constexpr float kMaximumSynchronizedRateHz = 80.0F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
 
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
+    [[nodiscard]] static bool valid_tap_division(DelayDivision division) noexcept;
+    [[nodiscard]] static float beats_for_tap_division(DelayDivision division) noexcept;
     [[nodiscard]] float coefficient_for_frequency(float frequency_hz) const noexcept;
     void prepare_lfo() noexcept;
     void retarget(bool immediate) noexcept;

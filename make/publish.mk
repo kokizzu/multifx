@@ -18,6 +18,7 @@ PUBLISH_CHECKPOINTS += fm9-formant-control-lfo
 PUBLISH_CHECKPOINTS += headrush-prime-drop-tune
 PUBLISH_CHECKPOINTS += fender-stereo-flanger-phase
 PUBLISH_CHECKPOINTS += fender-flanger-tap-division
+PUBLISH_CHECKPOINTS += fender-phaser-90-tap-division
 PUBLISH_CHECKPOINTS += fractal-tzf-auto
 
 .PHONY: test-fender-stereo-flanger-phase web-test-fender-stereo-flanger-phase
@@ -34,6 +35,14 @@ test-fender-flanger-tap-division:
 
 web-test-fender-flanger-tap-division: test web-build
 	$(PYTHON) scripts/web.py test-fender-flanger-tap-division
+
+.PHONY: test-fender-phaser-90-tap-division web-test-fender-phaser-90-tap-division
+test-fender-phaser-90-tap-division:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_phaser_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fender-phaser-90-tap-division: test web-build
+	$(PYTHON) scripts/web.py test-fender-phaser-90-tap-division
 
 .PHONY: test-fractal-tzf-auto web-test-fractal-tzf-auto
 test-fractal-tzf-auto:

@@ -43,7 +43,10 @@ void test_defaults_bounds_and_stage_choices() {
     tabletfx::Phaser phaser;
     const auto defaults = phaser.parameters();
     require(phaser.id() == "phaser", "phaser stable ID changed");
-    require(defaults.rate_hz == 0.5F && defaults.minimum_hz == 250.0F &&
+    require(defaults.rate_hz == 0.5F && !defaults.tempo_sync &&
+                defaults.tempo_bpm == 120.0F &&
+                defaults.tap_division == tabletfx::DelayDivision::quarter &&
+                defaults.minimum_hz == 250.0F &&
                 defaults.maximum_hz == 1600.0F && defaults.feedback == 0.2F &&
                 defaults.stages == 4 && defaults.mix == 0.5F &&
                 defaults.smoothing_ms == 10.0F,
@@ -89,6 +92,44 @@ void test_defaults_bounds_and_stage_choices() {
                 finite.maximum_hz == 1600.0F && finite.feedback == 0.2F &&
                 finite.mix == 0.5F && finite.smoothing_ms == 10.0F,
             "non-finite phaser parameters did not use safe defaults");
+}
+
+void test_tempo_sync_divisions() {
+    constexpr std::array<float, 14> expected_rates{
+        0.5F, 2.0F / 3.0F, 1.0F, 4.0F / 3.0F, 2.0F, 3.0F,
+        8.0F / 3.0F, 4.0F, 6.0F, 16.0F / 3.0F, 8.0F, 12.0F,
+        16.0F, 32.0F,
+    };
+    tabletfx::PhaserParameters parameters;
+    parameters.tempo_sync = true;
+    parameters.tempo_bpm = 120.0F;
+    tabletfx::Phaser phaser(48000.0F, 1, parameters);
+    for (std::size_t index = 0; index < expected_rates.size(); ++index) {
+        parameters.tap_division = static_cast<tabletfx::DelayDivision>(index);
+        phaser.set_parameters(parameters);
+        require(std::abs(phaser.effective_rate_hz() - expected_rates[index]) < 1.0e-5F,
+                "Phaser Tap Division does not map to the expected 120 BPM rate");
+    }
+
+    parameters.tempo_bpm = 300.0F;
+    parameters.tap_division = tabletfx::DelayDivision::sixty_fourth;
+    phaser.set_parameters(parameters);
+    require(phaser.effective_rate_hz() == 80.0F,
+            "Phaser tempo-synced LFO exceeded its project safety cap");
+
+    parameters.tempo_bpm = std::numeric_limits<float>::quiet_NaN();
+    parameters.tap_division = static_cast<tabletfx::DelayDivision>(255);
+    phaser.set_parameters(parameters);
+    require(phaser.parameters().tempo_bpm == 120.0F &&
+                phaser.parameters().tap_division == tabletfx::DelayDivision::quarter &&
+                phaser.effective_rate_hz() == 2.0F,
+            "Phaser tempo controls did not use safe invalid-value fallbacks");
+
+    parameters.tempo_sync = false;
+    parameters.rate_hz = 0.5F;
+    phaser.set_parameters(parameters);
+    require(phaser.effective_rate_hz() == 0.5F,
+            "Phaser free-rate mode changed when tempo sync is disabled");
 }
 
 void test_notch_and_selectable_stages() {
@@ -302,6 +343,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_stage_choices();
+        test_tempo_sync_divisions();
         test_notch_and_selectable_stages();
         test_dry_mix_stereo_and_modulation();
         test_smoothing_blocks_reset_and_feedback_stability();

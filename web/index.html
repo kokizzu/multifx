@@ -2402,10 +2402,36 @@
         </label>
       </div>
       <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 38</a> lists Rate, Depth, Resonance, Tap Division and Manual for Mono Flanger; Stereo also lists L/R Phase. Tap Division selects a subdivision of the current tempo for effect speed. The guide does not state the available divisions, numeric bounds, defaults or DSP. This project adds a free-rate/tempo-sync selector, project-selected divisions and 20–300 BPM range while preserving the existing free-rate default. The project exposes a right-channel offset of 0–360°, default 180°. These mappings, values and processing are project-authored, not Fender settings or sound parity. Fender's current listed firmware is v1.8.87 (23 Nov 2026); its notes do not mention a Flanger change, and installed firmware is unknown.</p>
+      <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 40</a> lists Speed and Tap Division for Phaser 90; Tap Division selects a subdivision of the current tempo for effect speed. The guide does not publish the available divisions, rate bounds/default, DSP or latency. This project adds a Free Hz / Tap Division selector with project-chosen subdivisions and 20–300 BPM (120 BPM default), while keeping the current 0.5 Hz free-rate default. These controls and the broader multi-stage Phaser are project-authored, not Fender settings or sound parity. Firmware notes through v1.8.87 (23 Nov 2026) do not mention Phaser; installed firmware is unknown.</p>
       <div class="gain-controls" aria-label="Phaser controls">
         <label class="mix-control" for="phaser-rate-hz">
           <span>Phaser rate</span><output id="phaser-rate-value" for="phaser-rate-hz">0.50 Hz</output>
           <input id="phaser-rate-hz" type="range" min="0.05" max="8" step="0.05" value="0.5">
+        </label>
+        <label class="mix-control" for="phaser-tap-division">
+          <span>Tap Division · project choices</span>
+          <select id="phaser-tap-division">
+            <option value="free" selected>Free rate</option>
+            <option value="0">Whole</option>
+            <option value="1">Dotted half</option>
+            <option value="2">Half</option>
+            <option value="3">Dotted quarter</option>
+            <option value="4">Quarter</option>
+            <option value="5">Quarter triplet</option>
+            <option value="6">Dotted eighth</option>
+            <option value="7">Eighth</option>
+            <option value="8">Eighth triplet</option>
+            <option value="9">Dotted sixteenth</option>
+            <option value="10">Sixteenth</option>
+            <option value="11">Sixteenth triplet</option>
+            <option value="12">Thirty-second</option>
+            <option value="13">Sixty-fourth</option>
+          </select>
+        </label>
+        <label class="mix-control" for="phaser-tempo-bpm">
+          <span>Tempo · project range 20–300 BPM</span>
+          <output id="phaser-tempo-bpm-value" for="phaser-tempo-bpm">120 BPM</output>
+          <input id="phaser-tempo-bpm" type="range" min="20" max="300" step="1" value="120" disabled>
         </label>
         <label class="mix-control" for="phaser-min-hz">
           <span>Sweep minimum</span><output id="phaser-min-value" for="phaser-min-hz">250 Hz</output>

@@ -727,6 +727,25 @@ FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/phaser.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/phaser.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_phaser.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2756,6 +2775,10 @@ CHECKPOINTS = {
     "fender-flanger-tap-division": (
         FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS,
         "feat: add Flanger Tap Division tempo sync",
+    ),
+    "fender-phaser-90-tap-division": (
+        FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS,
+        "feat: add Phaser 90 Tap Division tempo sync",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),

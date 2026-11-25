@@ -2242,6 +2242,58 @@ def check_phaser(executable: Path) -> None:
         if not 0.1 < samples[0] < 0.99:
             raise AssertionError(f"Phaser CLI did not apply the selected wet chain: {samples[0]}")
 
+        guitar_source = root / "guitar.wav"
+        frame_count = 48000
+        write_pcm16(
+            guitar_source, sample_rate,
+            [round(10000 * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate))
+             for frame in range(frame_count)],
+        )
+
+        def render_tempo(path: Path, *, sync: bool, bpm: int) -> tuple[float, ...]:
+            options = ["--phaser-rate-hz", "2" if not sync else "0.5",
+                       "--phaser-min-hz", "250", "--phaser-max-hz", "1600",
+                       "--phaser-feedback", "0", "--phaser-stages", "4",
+                       "--phaser-mix", "1", "--phaser-tempo-sync",
+                       "on" if sync else "off", "--phaser-tempo-bpm", str(bpm),
+                       "--phaser-tap-division", "quarter"]
+            subprocess.run([str(executable), "render", str(guitar_source), str(path),
+                            *options], capture_output=True, text=True, check=True)
+            data = path.read_bytes()
+            return struct.unpack("<" + "f" * frame_count,
+                                 data[44:44 + frame_count * 4])
+
+        free_two_hz = render_tempo(root / "phaser-free.wav", sync=False, bpm=120)
+        quarter_120 = render_tempo(root / "phaser-quarter-120.wav", sync=True, bpm=120)
+        quarter_60 = render_tempo(root / "phaser-quarter-60.wav", sync=True, bpm=60)
+        same_rate_error = max(abs(a - b) for a, b in
+                              zip(free_two_hz, quarter_120, strict=True))
+        tempo_change_rms = math.sqrt(sum(
+            (a - b) ** 2 for a, b in zip(quarter_60, quarter_120, strict=True)
+        ) / frame_count)
+        if same_rate_error > 1.0e-7 or tempo_change_rms < 1.0e-4:
+            raise AssertionError(
+                f"Phaser Tap Division mapping failed: same-rate max {same_rate_error}, "
+                f"tempo-change RMS {tempo_change_rms}"
+            )
+
+        missing_sync_value = subprocess.run(
+            [str(executable), "render", str(source), str(root / "missing-sync.wav"),
+             "--phaser-tempo-sync"], capture_output=True, text=True, check=False,
+        )
+        if (missing_sync_value.returncode == 0 or
+                "Missing value for --phaser-tempo-sync" not in missing_sync_value.stderr):
+            raise AssertionError("Phaser tempo-sync accepted a missing on/off value")
+
+        invalid_division = subprocess.run(
+            [str(executable), "render", str(source), str(root / "bad-division.wav"),
+             "--phaser-tap-division", "not-a-division"],
+            capture_output=True, text=True, check=False,
+        )
+        if (invalid_division.returncode == 0 or
+                "Unsupported delay division" not in invalid_division.stderr):
+            raise AssertionError("Phaser accepted an invalid Tap Division")
+
 
 def check_vibrato(executable: Path) -> None:
     sample_rate = 48000

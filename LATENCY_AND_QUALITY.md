@@ -566,3 +566,15 @@ The sync-specific benchmark profile uses quarter-note division at 120 BPM, 48 kH
 | Quarter-note sync, 120 BPM | 0.0533% | 0.0795% | 0.0829% | 0.4763% | 2.3255% | 4,832 B | 0 frames | 0/5,000 |
 
 `make test-fender-flanger-tap-division`, `make web-test-fender-flanger-tap-division`, `make windows-cross-build`, and `make bench` pass. Browser Play uses the local prerecorded stereo Guitar-TECHS DI. This isolated desktop processor-call timing does not predict Android/tablet load. Manual listening, physical Tone Master Pro comparison, and target-device timing remain open; no Fender DSP, settings, or sound parity is claimed.
+
+## Fender Tone Master Pro Phaser 90 Tap Division (2026-11-26)
+
+Tempo sync reuses the existing Phaser LFO and adds no effect stage, buffer, or fixed dry-path latency. BPM/division is converted to an LFO rate when parameters change, outside the audio callback. Native processor state remains 288 B (276 B for the browser/WASM effect state), and `process()` performs no heap allocation.
+
+The sync benchmark uses quarter-note division at 120 BPM, 48 kHz stereo, 128-frame callbacks, and a 2.667 ms callback deadline on AMD Ryzen 9 5950X Release. It runs 2,000 warm-up and 5,000 measured callbacks. Percentages show processor-call time as a share of one callback deadline:
+
+| Mode | p50 | p95 | p99 | p99.9 | Max | State | Fixed latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Quarter-note sync, 120 BPM | 0.0679% | 0.0990% | 0.1031% | 0.4144% | 1.5439% | 288 B | 0 frames | 0/5,000 |
+
+`make test-fender-phaser-90-tap-division`, `make web-test-fender-phaser-90-tap-division`, `make windows-cross-build`, and `make bench` pass. Browser Play uses the local prerecorded stereo Guitar-TECHS DI. These isolated desktop timings do not predict Android/tablet performance. Manual listening, physical Tone Master Pro comparison, and target-device timing remain open; no Fender DSP, settings, or sound parity is claimed.
