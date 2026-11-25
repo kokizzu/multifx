@@ -169,6 +169,9 @@ def build_web() -> None:
         "_tf_chain_set_pedal_detune",
         "_tf_chain_set_mutant_filter",
         "_tf_chain_set_fractal_chromatic_harmonizer",
+        "_tf_chain_set_fractal_diatonic",
+        "_tf_chain_set_fractal_diatonic_custom_scale",
+        "_tf_chain_set_fractal_diatonic_voice",
         "_tf_chain_set_fractal_three_voice_synth",
         "_tf_chain_set_enhancer",
         "_tf_chain_deluxe_looper_command",
@@ -310,6 +313,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "pedal_detune.cpp"),
         str(ROOT / "src" / "effects" / "mutant_filter.cpp"),
         str(ROOT / "src" / "effects" / "fractal_chromatic_harmonizer.cpp"),
+        str(ROOT / "src" / "effects" / "fractal_diatonic_harmonizer.cpp"),
         str(ROOT / "src" / "effects" / "grain_delay.cpp"),
         str(ROOT / "src" / "effects" / "pitch_feedback_delay.cpp"),
         str(ROOT / "src" / "effects" / "feedback_generator.cpp"),
@@ -746,6 +750,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fender_pedal_detune_only: bool = False,
                   fractal_diatonic_custom_scale_only: bool = False,
                   fractal_chromatic_harmonizer_only: bool = False,
+                  fractal_diatonic_harmonizer_only: bool = False,
                   fractal_resonator_input_gain_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
@@ -772,9 +777,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         long_convolution_ir_path = temp_dir / "convolution-ir-10s.wav"
         prerecorded_guitar_source = make_prerecorded_guitar_test_audio(input_path)
         if prerecorded_guitar_source is None:
-            if fractal_resonator_input_gain_only:
+            if fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only:
                 raise SystemExit(
-                    "Focused resonator Input Gain browser test requires the local prerecorded guitar DI fixture."
+                    "Focused effect browser test requires the local prerecorded guitar DI fixture."
                 )
             make_test_audio(input_path)
             print("Browser guitar input: generated deterministic fallback fixture")
@@ -1181,6 +1186,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
               "--fractal-bias-trem-balance", "0",
               "--fractal-bias-trem-bypass", "off",
               "--vibratone",
+             "--fractal-diatonic-harmonizer",
         ]
         run(renderer_command, cwd=ROOT)
         stereo_crossover_command = [
@@ -1264,6 +1270,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-diatonic-custom-scale"
         elif fractal_chromatic_harmonizer_only:
             url = base_url + "/web/index.html?selftest=fractal-chromatic-harmonizer"
+        elif fractal_diatonic_harmonizer_only:
+            url = base_url + "/web/index.html?selftest=fractal-diatonic-harmonizer"
         elif fractal_resonator_input_gain_only:
             url = base_url + "/web/index.html?selftest=fractal-resonator-input-gain"
         elif mutant_filter_only:
@@ -1589,6 +1597,7 @@ def main() -> None:
         "test-fender-pedal-detune",
         "test-fractal-diatonic-custom-scale",
         "test-fractal-chromatic-harmonizer",
+        "test-fractal-diatonic-harmonizer",
         "test-fractal-resonator-input-gain",
         "inspect-build-path", "inspect-smoke-path",
     ))
@@ -1629,6 +1638,8 @@ def main() -> None:
         browser_test(fractal_diatonic_custom_scale_only=True)
     elif action == "test-fractal-chromatic-harmonizer":
         browser_test(fractal_chromatic_harmonizer_only=True)
+    elif action == "test-fractal-diatonic-harmonizer":
+        browser_test(fractal_diatonic_harmonizer_only=True)
     elif action == "test-fractal-resonator-input-gain":
         browser_test(fractal_resonator_input_gain_only=True)
     elif action == "inspect-build-path":

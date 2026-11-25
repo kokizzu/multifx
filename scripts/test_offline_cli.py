@@ -1306,6 +1306,73 @@ def check_diatonic_harmonizer(executable: Path) -> None:
             raise AssertionError("Diatonic Harmonizer accepted an unknown scale")
 
 
+def check_fractal_diatonic_harmonizer(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = 24000
+    source_samples = []
+    for frame in range(frame_count):
+        time_seconds = frame / sample_rate
+        attack = min(1.0, frame / 180.0)
+        decay = math.exp(-time_seconds / 0.55)
+        fundamental_phase = 2.0 * math.pi * 220.0 * time_seconds
+        pick_transient = 0.15 * math.sin(
+            2.0 * math.pi * 3300.0 * time_seconds
+        ) * math.exp(-frame / 120.0)
+        guitar_like = (
+            0.50 * math.sin(fundamental_phase)
+            + 0.25 * math.sin(2.0 * fundamental_phase)
+            + 0.12 * math.sin(3.0 * fundamental_phase)
+            + 0.06 * math.sin(4.0 * fundamental_phase)
+            + pick_transient
+        )
+        source_samples.append(round(22000 * attack * decay * guitar_like))
+
+    with tempfile.TemporaryDirectory(
+        prefix="tabletfx-fractal-diatonic-harmonizer-cli-test-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "deterministic-guitar-pluck.wav"
+        dry_output = root / "dry.wav"
+        wet_output = root / "harmonized.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        dry_result = subprocess.run(
+            [str(executable), "render", str(source), str(dry_output)],
+            capture_output=True, text=True, check=True,
+        )
+        result = subprocess.run(
+            [str(executable), "render", str(source), str(wet_output),
+             "--fractal-diatonic-harmonizer"],
+            capture_output=True, text=True, check=True,
+        )
+        if "processors=0" not in dry_result.stdout:
+            raise AssertionError("Dry reference unexpectedly instantiated an effect")
+        if "processors=1" not in result.stdout:
+            raise AssertionError(
+                "Fractal Diatonic Harmonizer switch did not instantiate one processor"
+            )
+
+        dry = struct.unpack(
+            f"<{frame_count}f", dry_output.read_bytes()[44:44 + frame_count * 4]
+        )
+        rendered = struct.unpack(
+            f"<{frame_count}f", wet_output.read_bytes()[44:44 + frame_count * 4]
+        )
+        if not all(math.isfinite(value) for value in rendered):
+            raise AssertionError("Fractal Diatonic Harmonizer produced non-finite audio")
+        if max(map(abs, rendered)) < 0.01:
+            raise AssertionError("Fractal Diatonic Harmonizer produced silent audio")
+        difference_rms = math.sqrt(
+            sum((wet - dry_sample) ** 2
+                for wet, dry_sample in zip(rendered, dry, strict=True))
+            / frame_count
+        )
+        if difference_rms < 1.0e-3:
+            raise AssertionError(
+                "Fractal Diatonic Harmonizer defaults did not change the rendered guitar signal"
+            )
+
+
 def check_pitch_arpeggiator(executable: Path) -> None:
     sample_rate = 48000
     frame_count = 32768
@@ -3091,6 +3158,7 @@ def main() -> None:
     check_triple_double_chorus(args.executable.resolve())
     check_four_band_resonator(args.executable.resolve())
     check_diatonic_harmonizer(args.executable.resolve())
+    check_fractal_diatonic_harmonizer(args.executable.resolve())
     check_pitch_arpeggiator(args.executable.resolve())
     check_mono_guitar_synth(args.executable.resolve())
     check_note_generator(args.executable.resolve())
@@ -3119,7 +3187,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/vibrato/pitch shifting, Diatonic Harmonizer, Fractal Diatonic Harmonizer defaults, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

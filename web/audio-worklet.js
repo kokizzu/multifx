@@ -36,6 +36,7 @@ EFFECTS.push("mutant-filter");
 EFFECTS.push("fractal-chromatic-harmonizer");
 EFFECTS.push("xr1-global-eq");
 EFFECTS.push("stadium-seven-band-peq");
+EFFECTS.push("fractal-diatonic-harmonizer");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -517,6 +518,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           -5, 0, 0.20, 0.65, 0, 0,
         ],
       );
+      this.configureFractalDiatonicHarmonizer(parameters.fractalDiatonicHarmonizer || {
+        voiceCount: 2, key: 0, scale: 0, mix: 0.5, glideMs: 0, learn: false,
+        customScaleCount: 7, customScaleNotes: [0, 2, 4, 5, 7, 9, 11, 0],
+        voices: [
+          { harmonySteps: 2, detuneCents: 0, level: 0.4, pan: -0.3, delayMs: 0, feedback: 0 },
+          { harmonySteps: 4, detuneCents: 0, level: 0.4, pan: 0.3, delayMs: 0, feedback: 0 },
+          { harmonySteps: 0, detuneCents: 0, level: 0, pan: -0.7, delayMs: 0, feedback: 0 },
+          { harmonySteps: 0, detuneCents: 0, level: 0, pan: 0.7, delayMs: 0, feedback: 0 },
+        ],
+      });
       this.configureFractalThreeVoiceSynth(parameters.fractalThreeVoiceSynth ||
         [3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
           3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -1121,6 +1132,34 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureFractalDiatonicHarmonizer(parameters) {
+    if (!this.module || !this.chain || !parameters || !Array.isArray(parameters.voices) ||
+        parameters.voices.length !== 4) {
+      return;
+    }
+    const notes = Array.isArray(parameters.customScaleNotes)
+      ? parameters.customScaleNotes.slice(0, 8) : [0, 2, 4, 5, 7, 9, 11, 0];
+    while (notes.length < 8) notes.push(0);
+    const boundedNotes = notes.map((note) => Number(note) | 0);
+    this.module._tf_chain_set_fractal_diatonic(
+      this.chain, Number(parameters.voiceCount ?? 2), Number(parameters.key ?? 0),
+      Number(parameters.scale ?? 0), Number(parameters.mix ?? 0.5),
+      Number(parameters.glideMs ?? 0), parameters.learn ? 1 : 0,
+    );
+    this.module._tf_chain_set_fractal_diatonic_custom_scale(
+      this.chain, Number(parameters.customScaleCount ?? 7), ...boundedNotes,
+    );
+    parameters.voices.forEach((voice, index) => {
+      const item = voice || {};
+      this.module._tf_chain_set_fractal_diatonic_voice(
+        this.chain, index, Number(item.harmonySteps ?? 0),
+        Number(item.detuneCents ?? 0), Number(item.level ?? 0),
+        Number(item.pan ?? 0), Number(item.delayMs ?? 0),
+        Number(item.feedback ?? 0),
+      );
+    });
+  }
+
   configureFractalThreeVoiceSynth(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
       return;
@@ -1189,7 +1228,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         if (!accepted) {
           this.enabled[index] = false;
           this.port.postMessage({ type: "enable-error", index });
-        } else if (index === EFFECTS.indexOf("fractal-chromatic-harmonizer")) {
+        } else if (index === EFFECTS.indexOf("fractal-chromatic-harmonizer") ||
+                   index === EFFECTS.indexOf("fractal-diatonic-harmonizer")) {
           const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
             this.chain, index,
           );
@@ -1454,6 +1494,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureMutantFilter(message.value);
     } else if (message.type === "fractal-chromatic-harmonizer" && this.ready) {
       this.configureFractalChromaticHarmonizer(message.value);
+    } else if (message.type === "fractal-diatonic-harmonizer" && this.ready) {
+      this.configureFractalDiatonicHarmonizer(message.value);
     } else if (message.type === "fractal-three-voice-synth" && this.ready) {
       this.configureFractalThreeVoiceSynth(message.value);
     } else if (message.type === "enhancer" && this.ready) {

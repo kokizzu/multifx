@@ -2511,6 +2511,35 @@ FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+FRACTAL_DIATONIC_HARMONIZER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "GOAL.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "apps/fractal_diatonic_harmonizer_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/fractal_diatonic_harmonizer.hpp",
+    "src/effects/fractal_diatonic_harmonizer.cpp",
+    "src/effects/fractal_chromatic_harmonizer.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_fractal_chromatic_harmonizer.cpp",
+    "tests/test_fractal_diatonic_harmonizer.cpp",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "scripts/test_offline_cli.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "web/style.css",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
+
 LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS = (
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
@@ -2825,6 +2854,10 @@ CHECKPOINTS = {
     "fractal-chromatic-harmonizer": (
         FRACTAL_CHROMATIC_HARMONIZER_CHECKPOINT_PATHS,
         "feat: add project-authored four-voice chromatic harmonizer",
+    ),
+    "fractal-diatonic-harmonizer": (
+        FRACTAL_DIATONIC_HARMONIZER_CHECKPOINT_PATHS,
+        "feat: add project-authored diatonic harmonizer",
     ),
     "line6-stadium-3osc-research": (
         LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS,

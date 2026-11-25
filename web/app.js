@@ -116,6 +116,7 @@ const EFFECT_NAMES = [
   "Fractal Chromatic · project-authored four-voice pitch",
   "Global EQ · project-authored XR1-inspired five-band in-chain EQ",
   "7-Band Parametric EQ · project-authored Helix Stadium-inspired",
+  "Fractal Diatonic Harmony · project-authored monophonic multi-voice pitch",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -198,6 +199,16 @@ const DEFAULT_PARAMETERS = {
     12, 0, 0.20, 0.20, 0, 0,
     -5, 0, 0.20, 0.65, 0, 0,
   ],
+  fractalDiatonicHarmonizer: {
+    voiceCount: 2, key: 0, scale: 0, mix: 0.5, glideMs: 0, learn: false,
+    customScaleCount: 7, customScaleNotes: [0, 2, 4, 5, 7, 9, 11, 0],
+    voices: [
+      { harmonySteps: 2, detuneCents: 0, level: 0.4, pan: -0.3, delayMs: 0, feedback: 0 },
+      { harmonySteps: 4, detuneCents: 0, level: 0.4, pan: 0.3, delayMs: 0, feedback: 0 },
+      { harmonySteps: 0, detuneCents: 0, level: 0, pan: -0.7, delayMs: 0, feedback: 0 },
+      { harmonySteps: 0, detuneCents: 0, level: 0, pan: 0.7, delayMs: 0, feedback: 0 },
+    ],
+  },
   fractalThreeVoiceSynth: [
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
@@ -405,6 +416,30 @@ const fractalChromaticHarmonizerControlsContainer = document.querySelector(
   "#fractal-chromatic-harmonizer-controls",
 );
 const fractalChromaticHarmonizerControls = [];
+const fractalDiatonicHarmonizerControlsContainer = document.querySelector(
+  "#fractal-diatonic-voice-controls",
+);
+const fractalDiatonicGlobalControls = [
+  document.querySelector("#fractal-diatonic-voice-count"),
+  document.querySelector("#fractal-diatonic-key"),
+  document.querySelector("#fractal-diatonic-scale"),
+  document.querySelector("#fractal-diatonic-mix"),
+  document.querySelector("#fractal-diatonic-glide-ms"),
+  document.querySelector("#fractal-diatonic-learn"),
+];
+const fractalDiatonicCustomScaleGroup = document.querySelector(
+  "#fractal-diatonic-custom-scale-controls",
+);
+const fractalDiatonicCustomScaleCount = document.querySelector(
+  "#fractal-diatonic-custom-count",
+);
+const fractalDiatonicCustomScaleNotes = [
+  ...document.querySelectorAll("[data-fractal-diatonic-custom-note]"),
+];
+const fractalDiatonicCustomScaleNoteGroups = fractalDiatonicCustomScaleNotes.map(
+  (control) => control.closest("[data-fractal-diatonic-custom-note-wrap]"),
+);
+const fractalDiatonicHarmonizerControls = [];
 const diatonicHarmonizerControls = [
   document.querySelector("#diatonic-harmonizer-mix"),
   document.querySelector("#diatonic-harmonizer-interval"),
@@ -5179,6 +5214,139 @@ for (const control of fractalChromaticHarmonizerControls) {
   control.addEventListener("change", updateFractalChromaticHarmonizer);
 }
 updateFractalChromaticHarmonizer();
+
+const fractalDiatonicVoiceDefaults = [
+  { harmonySteps: 2, detuneCents: 0, level: 40, pan: -30, delayMs: 0, feedback: 0 },
+  { harmonySteps: 4, detuneCents: 0, level: 40, pan: 30, delayMs: 0, feedback: 0 },
+  { harmonySteps: 0, detuneCents: 0, level: 0, pan: -70, delayMs: 0, feedback: 0 },
+  { harmonySteps: 0, detuneCents: 0, level: 0, pan: 70, delayMs: 0, feedback: 0 },
+];
+const fractalDiatonicVoiceParameters = [
+  { key: "harmonySteps", name: "Harmony offset", min: -24, max: 24, step: 1,
+    format: (value) => value === 0 ? "Unison" : `${value > 0 ? "+" : ""}${value} scale steps` },
+  { key: "detuneCents", name: "Detune", min: -50, max: 50, step: 1,
+    format: (value) => `${value > 0 ? "+" : ""}${Math.round(value)} cents` },
+  { key: "level", name: "Voice level", min: 0, max: 100, step: 1,
+    format: (value) => `${Math.round(value)}%` },
+  { key: "pan", name: "Pan", min: -100, max: 100, step: 1,
+    format: (value) => value === 0 ? "Center" : `${Math.round(Math.abs(value))}% ${value < 0 ? "left" : "right"}` },
+  { key: "delayMs", name: "Delay", min: 0, max: 2000, step: 1,
+    format: (value) => `${Math.round(value)} ms` },
+  { key: "feedback", name: "Feedback", min: 0, max: 90, step: 1,
+    format: (value) => `${Math.round(value)}%` },
+];
+for (let voice = 0; voice < fractalDiatonicVoiceDefaults.length; voice += 1) {
+  const group = document.createElement("div");
+  group.className = "gain-controls fractal-chromatic-voice";
+  group.setAttribute("aria-label", `Diatonic Harmony voice ${voice + 1}`);
+  group.hidden = voice >= 2;
+  const heading = document.createElement("h4");
+  heading.textContent = `Voice ${voice + 1}`;
+  group.append(heading);
+  for (const definition of fractalDiatonicVoiceParameters) {
+    const control = document.createElement("input");
+    const id = `fractal-diatonic-voice-${voice + 1}-${definition.key}`;
+    control.id = id;
+    control.type = "range";
+    control.min = String(definition.min);
+    control.max = String(definition.max);
+    control.step = String(definition.step);
+    control.value = String(fractalDiatonicVoiceDefaults[voice][definition.key]);
+    const label = document.createElement("label");
+    label.className = "mix-control";
+    label.htmlFor = id;
+    const title = document.createElement("span");
+    title.textContent = definition.name;
+    const output = document.createElement("output");
+    output.htmlFor = id;
+    output.value = definition.format(Number(control.value));
+    label.append(title, output, control);
+    group.append(label);
+    fractalDiatonicHarmonizerControls.push(control);
+  }
+  fractalDiatonicHarmonizerControlsContainer.append(group);
+}
+
+function updateFractalDiatonicCustomScaleBounds() {
+  const count = Number(fractalDiatonicCustomScaleCount.value);
+  let previous = -1;
+  fractalDiatonicCustomScaleNotes.forEach((control, index) => {
+    fractalDiatonicCustomScaleNoteGroups[index].hidden = index >= count;
+    if (index >= count) {
+      control.min = "0";
+      control.max = "11";
+      let inactiveOutput = control.parentElement.querySelector("output");
+      if (!inactiveOutput) {
+        inactiveOutput = document.createElement("output");
+        inactiveOutput.htmlFor = control.id;
+        control.before(inactiveOutput);
+      }
+      inactiveOutput.value = `${control.value} semitones`;
+      return;
+    }
+    const minimum = index === 0 ? 0 : previous + 1;
+    const maximum = 11 - (count - 1 - index);
+    control.min = String(minimum);
+    control.max = String(maximum);
+    if (Number(control.value) < minimum) control.value = String(minimum);
+    if (Number(control.value) > maximum) control.value = String(maximum);
+    previous = Number(control.value);
+    let output = control.parentElement.querySelector("output");
+    if (!output) {
+      output = document.createElement("output");
+      output.htmlFor = control.id;
+      control.before(output);
+    }
+    output.value = `${control.value} semitones`;
+  });
+}
+
+function updateFractalDiatonicHarmonizer() {
+  updateFractalDiatonicCustomScaleBounds();
+  const voiceCount = Number(fractalDiatonicGlobalControls[0].value);
+  const scale = Number(fractalDiatonicGlobalControls[2].value);
+  fractalDiatonicHarmonizerControlsContainer.querySelectorAll(".gain-controls").forEach(
+    (group, index) => { group.hidden = index >= voiceCount; },
+  );
+  fractalDiatonicCustomScaleGroup.hidden = scale !== 13;
+  const values = {
+    voiceCount,
+    key: Number(fractalDiatonicGlobalControls[1].value),
+    scale,
+    mix: Number(fractalDiatonicGlobalControls[3].value) / 100,
+    glideMs: Number(fractalDiatonicGlobalControls[4].value),
+    learn: fractalDiatonicGlobalControls[5].checked,
+    customScaleCount: Number(fractalDiatonicCustomScaleCount.value),
+    customScaleNotes: fractalDiatonicCustomScaleNotes.map((control) => Number(control.value)),
+    voices: fractalDiatonicVoiceDefaults.map((_, voice) => {
+      const controls = fractalDiatonicHarmonizerControls.slice(voice * 6, voice * 6 + 6);
+      const raw = controls.map((control) => Number(control.value));
+      controls.forEach((control, parameter) => {
+        const output = control.parentElement.querySelector("output");
+        if (output) output.value = fractalDiatonicVoiceParameters[parameter].format(raw[parameter]);
+      });
+      return {
+        harmonySteps: raw[0], detuneCents: raw[1], level: raw[2] / 100,
+        pan: raw[3] / 100, delayMs: raw[4], feedback: raw[5] / 100,
+      };
+    }),
+  };
+  DEFAULT_PARAMETERS.fractalDiatonicHarmonizer = values;
+  fractalDiatonicGlobalControls[3].parentElement.querySelector("output").value =
+    `${Math.round(values.mix * 100)}% harmony`;
+  fractalDiatonicGlobalControls[4].parentElement.querySelector("output").value =
+    `${Math.round(values.glideMs)} ms`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "fractal-diatonic-harmonizer", value: values });
+  }
+}
+
+for (const control of [...fractalDiatonicGlobalControls, fractalDiatonicCustomScaleCount,
+  ...fractalDiatonicCustomScaleNotes, ...fractalDiatonicHarmonizerControls]) {
+  control.addEventListener("input", updateFractalDiatonicHarmonizer);
+  control.addEventListener("change", updateFractalDiatonicHarmonizer);
+}
+updateFractalDiatonicHarmonizer();
 
 cleanBoost.addEventListener("input", () => {
   const value = Number(cleanBoost.value);
@@ -10798,7 +10966,7 @@ async function runDoubleTakeBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || doubleTakeControls.length !== 6 ||
-        effectMemory.length !== 115 || !(effectMemory[102] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[102] > 0) ||
         DEFAULT_PARAMETERS.doubleTake.join(",") !== "3,0.65,0.55,0.75,0.45,0") {
       throw new Error("Double Take is missing its categorized Modulation row or six controls.");
     }
@@ -10914,7 +11082,7 @@ async function runXR1GlobalEQBrowserSmokeTest(reference, captureView, captureBuf
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || xr1GlobalEQControls.length !== 5 ||
-        effectMemory.length !== 115 || !(effectMemory[113] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[113] > 0) ||
         DEFAULT_PARAMETERS.xr1GlobalEq.length !== 31 ||
         DEFAULT_PARAMETERS.xr1GlobalEq[14] !== 12 ||
         DEFAULT_PARAMETERS.xr1GlobalEq[15] !== 750) {
@@ -11026,7 +11194,7 @@ async function runEQ5GraphicBrowserSmokeTest(reference, captureView, captureBuff
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || eq5GraphicControls.length !== 6 ||
-        effectMemory.length !== 115 || !(effectMemory[103] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[103] > 0) ||
         DEFAULT_PARAMETERS.eq5Graphic.join(",") !== "3,-3,6,-3,3,0") {
       throw new Error("EQ5 Graphic is missing its categorized Equalizer row or six controls.");
     }
@@ -11140,7 +11308,7 @@ async function runStadiumSevenBandPeqBrowserSmokeTest(reference, captureView, ca
     if (row?.dataset.category !== "eq" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Equalizer" ||
         !checkbox || stadiumSevenBandPeqControls.length !== 7 ||
-        effectMemory.length !== 115 || !(effectMemory[114] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[114] > 0) ||
         DEFAULT_PARAMETERS.stadiumSevenBandPeq.length !== 42 ||
         DEFAULT_PARAMETERS.stadiumSevenBandPeq[2] !== 80 ||
         DEFAULT_PARAMETERS.stadiumSevenBandPeq[5] !== 24 ||
@@ -11258,7 +11426,7 @@ async function runOpticalTremoloBrowserSmokeTest(reference, captureView, capture
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || opticalTremoloControls.length !== 18 ||
-        effectMemory.length !== 115 || !(effectMemory[104] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[104] > 0) ||
         opticalTremoloControls[3].disabled ||
         DEFAULT_PARAMETERS.opticalTremolo.join(",") !==
           "1,5.2,0.65,4,0,120,1,35,58,18,10,0,-36,25,0.75,-1,0,0") {
@@ -11371,7 +11539,7 @@ async function runFractalBiasTremBrowserSmokeTest(reference, captureView, captur
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || fractalBiasTremControls.length !== 14 ||
-        effectMemory.length !== 115 || !(effectMemory[105] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[105] > 0) ||
         DEFAULT_PARAMETERS.fractalBiasTrem.join(",") !==
           "3.7,0.75,1,0,120,1,0,-36,0,0.7,1,0,0,0") {
       throw new Error("Bias Trem is missing its Modulation row or project control mapping.");
@@ -11483,7 +11651,7 @@ async function runVibratoneBrowserSmokeTest(reference, captureView, captureBuffe
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !checkbox || vibratoneControls.length !== 9 ||
-        effectMemory.length !== 115 || !(effectMemory[106] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[106] > 0) ||
         DEFAULT_PARAMETERS.vibratone.join(",") !== "0.3,0.35,3,7.4,1.1,0,450,0.7,1") {
       throw new Error("Vibratone is missing its Modulation row or project control mapping.");
     }
@@ -11591,7 +11759,7 @@ async function runUniVerseVibeBrowserSmokeTest(reference, captureView, captureBu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Uni-Verse Vibe") ||
         !checkbox || uniVerseVibeControls.length !== 8 ||
-        effectMemory.length !== 115 || !(effectMemory[107] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[107] > 0) ||
         DEFAULT_PARAMETERS.uniVerseVibe.join(",") !== "4.2,0.82,1.1,0,4,120,1,1") {
       throw new Error("Uni-Verse Vibe is missing its Modulation row or project control mapping.");
     }
@@ -11690,7 +11858,7 @@ async function runFourOscGeneratorBrowserSmokeTest(reference, captureView, captu
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Synth" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("4 OSC Generator") ||
         !checkbox || checkbox.checked || fourOscGeneratorControls.length !== 17 ||
-        effectMemory.length !== 115 || !(effectMemory[108] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[108] > 0) ||
         DEFAULT_PARAMETERS.fourOscGenerator.join(",") !==
           "0,48,0,0.15,0,55,0,0.15,0,60,0,0.15,0,64,0,0.15,0.35") {
       throw new Error("4 OSC Generator is missing its categorized row, safe defaults, or controls.");
@@ -11789,7 +11957,7 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
         !checkbox || pitchSemitones.min !== "-24" ||
-        pitchSemitones.max !== "24" || effectMemory.length !== 115 ||
+        pitchSemitones.max !== "24" || effectMemory.length !== EFFECT_NAMES.length ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Polyphonic pitch control mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -11902,7 +12070,7 @@ async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, c
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !checkbox || pitchMix.min !== "0" || pitchMix.max !== "100" ||
-        pitchMix.value !== "100" || effectMemory.length !== 115 ||
+        pitchMix.value !== "100" || effectMemory.length !== EFFECT_NAMES.length ||
         !(effectMemory[22] > 0)) {
       throw new Error(`Virtual Capo Mix UI mismatch: category=${row?.dataset.category}, ` +
         `tag=${row?.querySelector(".effect-category-tag")?.textContent.trim()}, ` +
@@ -12059,7 +12227,7 @@ async function runFenderPedalShifterBrowserSmokeTest(reference, captureView, cap
         !checkbox || pitchMode.querySelector('option[value="pedal-shifter"]') === null ||
         pitchExpressionTarget.min !== "-24" || pitchExpressionTarget.max !== "24" ||
         pitchExpressionPosition.min !== "0" || pitchExpressionPosition.max !== "100" ||
-        effectMemory.length !== 115 || !(effectMemory[22] > 0)) {
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[22] > 0)) {
       throw new Error("Pedal Shifter controls are missing or incorrectly categorized.");
     }
 
@@ -12342,7 +12510,7 @@ async function runFractalDiatonicCustomScaleBrowserSmokeTest(reference, captureV
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmonizer") ||
-        !checkbox || !customOption || effectMemory.length !== 115 ||
+        !checkbox || !customOption || effectMemory.length !== EFFECT_NAMES.length ||
         !(effectMemory[effectIndex] > 0) || diatonicCustomScaleNotes.length !== 8) {
       throw new Error("Diatonic custom scale is missing its categorized picker row or controls.");
     }
@@ -12472,7 +12640,7 @@ async function runPolyDetuneBrowserSmokeTest(reference, captureView, captureBuff
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Poly Detune") ||
         !checkbox || checkbox.checked || polyDetuneControls.length !== 6 ||
-        effectMemory.length !== 115 || !(effectMemory[109] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[109] > 0) ||
         DEFAULT_PARAMETERS.polyDetune.join(",") !== "2,0.25,0.75,0.75,0.25,0") {
       throw new Error("Poly Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -12577,7 +12745,7 @@ async function runFenderPedalDetuneBrowserSmokeTest(reference, captureView, capt
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.startsWith("Pedal Detune") ||
         !checkbox || checkbox.checked || pedalDetuneControls.length !== 2 ||
-        effectMemory.length !== 115 || !(effectMemory[110] > 0) ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[110] > 0) ||
         DEFAULT_PARAMETERS.pedalDetune.join(",") !== "0,0.5") {
       throw new Error("Pedal Detune is missing its categorized row, safe defaults, or controls.");
     }
@@ -12718,7 +12886,7 @@ async function runFractalChromaticHarmonizerBrowserSmokeTest(reference, captureV
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
         !row.querySelector(".effect-name")?.textContent.includes("Fractal Chromatic") ||
         !checkbox || checkbox.checked || fractalChromaticHarmonizerControls.length !== 24 ||
-        effectMemory.length !== 115 || effectMemory[effectIndex] !== 0) {
+        effectMemory.length !== EFFECT_NAMES.length || effectMemory[effectIndex] !== 0) {
       throw new Error("Fractal Chromatic picker, disabled default, 24 controls, or lazy memory state is incorrect.");
     }
     const expectedBounds = [
@@ -12823,6 +12991,174 @@ async function runFractalChromaticHarmonizerBrowserSmokeTest(reference, captureV
         control.value = previousControls[index];
       });
       updateFractalChromaticHarmonizer();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runFractalDiatonicHarmonizerBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const controls = [
+    ...fractalDiatonicGlobalControls,
+    fractalDiatonicCustomScaleCount,
+    ...fractalDiatonicCustomScaleNotes,
+    ...fractalDiatonicHarmonizerControls,
+  ];
+  const previousControls = controls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousCategory = effectCategoryFilter.value;
+  const postedMessages = [];
+  const portPrototype = MessagePort.prototype;
+  const originalPost = portPrototype.postMessage;
+  portPrototype.postMessage = function(message, ...transfer) {
+    if (message?.type === "fractal-diatonic-harmonizer" ||
+        (message?.type === "enable" && message.index === 115)) {
+      postedMessages.push(message);
+    }
+    return originalPost.call(this, message, ...transfer);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Fractal Diatonic smoke requires the local guitar fixture.");
+    }
+    const effectIndex = 115;
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const defaults = DEFAULT_PARAMETERS.fractalDiatonicHarmonizer;
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Diatonic Harmony") ||
+        !checkbox || checkbox.checked || fractalDiatonicGlobalControls.length !== 6 ||
+        fractalDiatonicHarmonizerControls.length !== 24 ||
+        fractalDiatonicCustomScaleNotes.length !== 8 ||
+        effectMemory.length !== EFFECT_NAMES.length || effectMemory[effectIndex] !== 0 ||
+        defaults.voiceCount !== 2 || defaults.voices[0].harmonySteps !== 2 ||
+        defaults.voices[1].harmonySteps !== 4 || defaults.voices[2].level !== 0 ||
+        defaults.voices[3].level !== 0) {
+      throw new Error(`Fractal Diatonic smoke invariant failed: row=${row?.dataset.category ?? "missing"}/${row?.querySelector(".effect-category-tag")?.textContent.trim() ?? "missing"}; name=${row?.querySelector(".effect-name")?.textContent ?? "missing"}; checked=${checkbox?.checked ?? "missing"}; controls=${fractalDiatonicGlobalControls.length}/${fractalDiatonicHarmonizerControls.length}/${fractalDiatonicCustomScaleNotes.length}; memory=${effectMemory.length}/${EFFECT_NAMES.length}/${effectMemory[effectIndex]}; defaults=${defaults.voiceCount}/${defaults.voices[0]?.harmonySteps}/${defaults.voices[1]?.harmonySteps}/${defaults.voices[2]?.level}/${defaults.voices[3]?.level}.`);
+    }
+    const expectedBounds = [
+      ["-24", "24"], ["-50", "50"], ["0", "100"],
+      ["-100", "100"], ["0", "2000"], ["0", "90"],
+    ];
+    for (let voice = 0; voice < 4; voice += 1) {
+      for (let parameter = 0; parameter < 6; parameter += 1) {
+        const control = fractalDiatonicHarmonizerControls[voice * 6 + parameter];
+        const [minimum, maximum] = expectedBounds[parameter];
+        if (control.min !== minimum || control.max !== maximum) {
+          throw new Error(`Diatonic Harmony voice ${voice + 1} parameter ${parameter + 1} bounds are incorrect.`);
+        }
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      const enabled = index === 0;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const capture = async () => {
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, reference.samples.length);
+    };
+
+    checkbox.click();
+    if (!checkbox.checked) throw new Error("Diatonic Harmony picker row did not enable from its click handler.");
+    const dual = await capture();
+    if (!(effectMemory[effectIndex] > 500_000 && effectMemory[effectIndex] < 2_500_000)) {
+      throw new Error(`Diatonic Harmony memory was not reported in its expected fixed-delay-off range: ${effectMemory[effectIndex]} bytes.`);
+    }
+
+    fractalDiatonicGlobalControls[0].value = "4";
+    fractalDiatonicGlobalControls[2].value = "13";
+    fractalDiatonicCustomScaleCount.value = "5";
+    fractalDiatonicCustomScaleNotes[0].value = "0";
+    fractalDiatonicCustomScaleNotes[1].value = "3";
+    fractalDiatonicCustomScaleNotes[2].value = "6";
+    fractalDiatonicCustomScaleNotes[3].value = "7";
+    fractalDiatonicCustomScaleNotes[4].value = "10";
+    fractalDiatonicHarmonizerControls[12 + 2].value = "30";
+    updateFractalDiatonicHarmonizer();
+    if (fractalDiatonicCustomScaleGroup.hidden ||
+        fractalDiatonicCustomScaleNoteGroups.slice(0, 5).some((group) => group.hidden) ||
+        fractalDiatonicCustomScaleNoteGroups.slice(5).some((group) => !group.hidden)) {
+      throw new Error("Diatonic Harmony custom scale count did not reveal the five active note controls.");
+    }
+    const quad = await capture();
+    let changedSquares = 0;
+    let guitarDifferenceSquares = 0;
+    let peak = 0;
+    for (let index = 0; index < Math.min(dual.length, quad.length); index += 1) {
+      const delta = dual[index] - quad[index];
+      changedSquares += delta * delta;
+      const frame = Math.floor(index / reference.channels);
+      const channel = index % reference.channels;
+      const source = decodedAudio.getChannelData(
+        Math.min(channel, decodedAudio.numberOfChannels - 1),
+      )[frame];
+      const difference = quad[index] - source;
+      guitarDifferenceSquares += difference * difference;
+      peak = Math.max(peak, Math.abs(quad[index]));
+    }
+    const sampleCount = Math.max(1, Math.min(dual.length, quad.length));
+    const settingsDifferenceRms = Math.sqrt(changedSquares / sampleCount);
+    const guitarDifferenceRms = Math.sqrt(guitarDifferenceSquares / sampleCount);
+    const finalConfig = postedMessages.filter((message) =>
+      message.type === "fractal-diatonic-harmonizer").at(-1)?.value;
+    if (peak < 1e-5 || guitarDifferenceRms < 1e-3 || settingsDifferenceRms < 1e-3 ||
+        finalConfig?.voiceCount !== 4 || finalConfig?.scale !== 13 ||
+        finalConfig?.customScaleCount !== 5 || finalConfig?.customScaleNotes?.length !== 8 ||
+        finalConfig?.voices?.[2]?.level !== 0.3 ||
+        !postedMessages.some((message) => message.type === "enable" &&
+          message.index === effectIndex && message.value === true)) {
+      throw new Error(`Diatonic Harmony settings or local guitar Play failed: output=${peak}, guitarDiff=${guitarDifferenceRms}, modeDiff=${settingsDifferenceRms}.`);
+    }
+    return {
+      category: "Pitch",
+      effectIndex,
+      dualVoices: defaults.voiceCount,
+      quadVoices: finalConfig.voiceCount,
+      playCaptures: 2,
+      effectMemoryBytes: effectMemory[effectIndex],
+      guitarDifferenceRms,
+      voiceAndScaleDifferenceRms: settingsDifferenceRms,
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    portPrototype.postMessage = originalPost;
+    if (workletNode) {
+      controls.forEach((control, index) => {
+        if (control.type === "checkbox") {
+          control.checked = previousControls[index];
+        } else {
+          control.value = previousControls[index];
+        }
+      });
+      updateFractalDiatonicHarmonizer();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
         box.checked = previousEffectState[index];
@@ -13909,8 +14245,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 115 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 115 || effectRows.length !== 115 ||
+    const expectedEffectIds = Array.from({ length: 116 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 116 || effectRows.length !== 116 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -14046,7 +14382,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-               throw new Error(`The effect picker must list 115 ordered, categorized effects (IDs 0–114), including the XR1-inspired Global EQ and Stadium-inspired seven-band PEQ; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[114]}, row114=${effectRows[114]?.dataset.category}/${effectRows[114]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[114]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+               throw new Error(`The effect picker must list 116 ordered, categorized effects (IDs 0–115), including Fractal Diatonic Harmony; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[115]}, row115=${effectRows[115]?.dataset.category}/${effectRows[115]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[115]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -15299,7 +15635,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const pitchIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (pitchIds.join(",") !== "22,50,51,74,99,101,110,112" || effectCount.value !== `8 of ${effectRows.length}` ||
+    if (pitchIds.join(",") !== "22,50,51,74,99,101,110,112,115" || effectCount.value !== `9 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Pitch category must list the polyphonic shifter, harmonizer, pitch sequencers, and Chromatic Pitch Delay.");
     }
@@ -15723,9 +16059,9 @@ async function runBrowserSelfTest() {
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
       .filter((index) => index >= 0);
-     if (parityEnabled.length !== 115 || activeProcessorIndices.length !== 78 ||
-            activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 106) {
-             throw new Error("The all-effect chain must contain 78 optional processors between input trim and output utilities.");
+     if (parityEnabled.length !== EFFECT_NAMES.length || activeProcessorIndices.length !== 79 ||
+             activeProcessorIndices[0] !== 1 || activeProcessorIndices.at(-1) !== 115) {
+              throw new Error("The all-effect chain must contain 79 optional processors between input trim and output utilities.");
     }
     // The free-running oscillator has an independent phase clock; exercise it
     // with a frequency check below instead of phase-sensitive native parity.
@@ -15737,8 +16073,13 @@ async function runBrowserSelfTest() {
      parityEnabled[69] = false;
     // The project-authored Dual-Engine Distortion has no offline CLI reference stage.
     parityEnabled[70] = false;
+    const initialEnabled = parityEnabled.slice();
+    if (new URLSearchParams(location.search).get("selftest") ===
+        "fractal-diatonic-harmonizer") {
+      initialEnabled[115] = false;
+    }
     const testOptions = {
-      enabled: parityEnabled,
+      enabled: initialEnabled,
       inputMuted: false,
       globalBypass: false,
       panicMuted: false,
@@ -16422,6 +16763,24 @@ async function runBrowserSelfTest() {
         testResult.dataset.status = "passed";
         testResult.textContent = JSON.stringify(focusedReport);
         document.title = "PASS · TabletFX Fractal Chromatic browser test";
+        return;
+      }
+      if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-harmonizer") {
+        testResult.textContent = "Checking Fractal Diatonic dual/quad browser Play with local guitar audio…";
+        const harmonizerSmoke = await runFractalDiatonicHarmonizerBrowserSmokeTest(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          fractalDiatonicHarmonizer: harmonizerSmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Fractal Diatonic browser test";
         return;
       }
       if (new URLSearchParams(location.search).get("selftest") === "volume-pan") {

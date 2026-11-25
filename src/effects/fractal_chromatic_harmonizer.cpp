@@ -218,9 +218,21 @@ struct FractalChromaticHarmonizer::Impl {
             }
         }
 
+        std::array<bool, kMaximumVoices> voice_active{};
+        bool any_active_voice = false;
+        for (std::uint8_t voice_index = 0; voice_index < voices; ++voice_index) {
+            const auto& voice = voice_state[voice_index];
+            voice_active[voice_index] = voice.parameters.level > 0.0F ||
+                                        voice.delay_samples > 0U;
+            any_active_voice = any_active_voice || voice_active[voice_index];
+        }
+
         for (std::size_t offset = 0;
              offset + kAnalysisSamples < kProcessorBufferSamples;
              offset += kAnalysisHop) {
+            if (!any_active_voice) {
+                break;
+            }
             for (std::uint16_t channel = 0; channel < analysis_channels; ++channel) {
                 const auto& input = input_buffer[channel];
                 for (std::size_t sample = 0; sample < kAnalysisSamples; ++sample) {
@@ -233,6 +245,9 @@ struct FractalChromaticHarmonizer::Impl {
             }
 
             for (std::uint8_t voice_index = 0; voice_index < voices; ++voice_index) {
+                if (!voice_active[voice_index]) {
+                    continue;
+                }
                 auto& voice = voice_state[voice_index];
                 const std::uint16_t source_channel =
                     input_mode == FractalChromaticHarmonizer::InputMode::StereoRoute
@@ -260,6 +275,9 @@ struct FractalChromaticHarmonizer::Impl {
             float left_mix = 0.0F;
             float right_mix = 0.0F;
             for (std::uint8_t voice_index = 0; voice_index < voices; ++voice_index) {
+                if (!voice_active[voice_index]) {
+                    continue;
+                }
                 auto& voice = voice_state[voice_index];
                 const auto output_frame = kAnalysisSamples - kProcessFrames + frame;
                 const float sample = delayed_sample(
@@ -294,6 +312,10 @@ struct FractalChromaticHarmonizer::Impl {
         for (std::uint8_t voice_index = 0; voice_index < voices; ++voice_index) {
             auto& voice = voice_state[voice_index];
             auto& output = voice.overlap_output;
+            if (!voice_active[voice_index]) {
+                output.fill(0.0);
+                continue;
+            }
             std::copy(output.begin() + static_cast<std::ptrdiff_t>(kProcessFrames),
                       output.end(), output.begin());
             std::fill(output.begin() + static_cast<std::ptrdiff_t>(kAnalysisSamples),
@@ -412,6 +434,7 @@ bool FractalChromaticHarmonizer::set_voice_parameters(
 
     auto& voice = impl_->voice_state[voice_index];
     const VoiceParameters old = voice.parameters;
+    const std::size_t old_delay_samples = voice.delay_samples;
     const float delay_ms = std::clamp(parameters.delay_ms, 0.0F, kMaximumDelayMs);
     const std::size_t delay_samples = static_cast<std::size_t>(std::llround(
         static_cast<double>(delay_ms) * sample_rate_ / 1000.0));
@@ -440,6 +463,13 @@ bool FractalChromaticHarmonizer::set_voice_parameters(
     if (old.shift_semitones != voice.parameters.shift_semitones ||
         old.detune_cents != voice.parameters.detune_cents) {
         impl_->set_factor(voice);
+    }
+    const bool was_active = old.level > 0.0F || old_delay_samples > 0U;
+    const bool is_active = voice.parameters.level > 0.0F ||
+                           voice.delay_samples > 0U;
+    if (was_active != is_active) {
+        voice.core->reset();
+        voice.overlap_output.fill(0.0);
     }
     return true;
 }

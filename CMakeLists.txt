@@ -57,6 +57,7 @@ add_library(tabletfx_core
     src/effects/peak_limiter.cpp
     src/effects/poly_pitch_shifter.cpp
     src/effects/fractal_chromatic_harmonizer.cpp
+    src/effects/fractal_diatonic_harmonizer.cpp
     src/effects/chromatic_pitch_delay.cpp
     src/effects/tremolo.cpp
     src/effects/harmonic_tremolo.cpp
@@ -132,6 +133,10 @@ target_link_libraries(tabletfx_xr1_global_eq_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_fender_virtual_capo_mix_bench
     apps/fender_virtual_capo_mix_bench.cpp)
 target_link_libraries(tabletfx_fender_virtual_capo_mix_bench PRIVATE tabletfx_core)
+
+add_executable(tabletfx_fractal_diatonic_harmonizer_bench
+    apps/fractal_diatonic_harmonizer_bench.cpp)
+target_link_libraries(tabletfx_fractal_diatonic_harmonizer_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -370,6 +375,12 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_fractal_chromatic_harmonizer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_fractal_chromatic_harmonizer_tests
         COMMAND tabletfx_fractal_chromatic_harmonizer_tests)
+
+    add_executable(tabletfx_fractal_diatonic_harmonizer_tests
+        tests/test_fractal_diatonic_harmonizer.cpp)
+    target_link_libraries(tabletfx_fractal_diatonic_harmonizer_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_fractal_diatonic_harmonizer_tests
+        COMMAND tabletfx_fractal_diatonic_harmonizer_tests)
 
     add_executable(tabletfx_chromatic_pitch_delay_tests tests/test_chromatic_pitch_delay.cpp)
     target_link_libraries(tabletfx_chromatic_pitch_delay_tests PRIVATE tabletfx_core)

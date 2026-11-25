@@ -4,33 +4,38 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "60cad900f07e479b303c80a5056f660a48c3102e",
+  "previous_checkpoint_commit": "838e0f6a9fe2de59108264fcb1b2868103732ef6",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium XL 3 OSC Synth source audit",
-    "status": "model identity verified; exact controls and input tracking remain undocumented; no model-specific code added",
+    "name": "Fractal FM9-family Dual/Quad Diatonic Harmony project effect",
+    "status": "implementation and automated checks pass; first-note response target and manual/device checks remain",
     "date": "2026-11-25",
-    "picker_index": null,
-    "category": "Pitch/Synth",
-    "official_source": "The live Line 6 model catalogue lists 3 OSC Synth as Stereo, Line 6 Original, first appearing in v1.0. It separately lists 3 Note Generator and 4 OSC Generator; only those generators are explicitly said to produce sound without an instrument. The current Effects manual is v1.4 Rev D / v1.3 Rev B - v1.2 and says it does not document every effect's individual parameters, directing users to inspect Home > Edit on the device. Stadium 1.4 release notes report only that 3 OSC Synth's FltPreset parameter could lock to value 4; no range or behavior is given. Hardware v1.4.2 was released 2026-10-27 and Native 1.4.1 on 2026-10-29; installed hardware firmware is unknown.",
-    "source_urls": [
-      "https://line6.com/helix-stadium-models/",
-      "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "https://manuals.line6.com/en/helix-stadium/live/input-output-and-mix-blocks",
-      "https://kb.line6.com/helix-stadium-1-4-release-notes"
-    ],
-    "documented_controls": "Only the parameter name FltPreset appears in the 1.4 release notes, as part of a bug description. The manual does not provide a 3 OSC Synth control table. Its input requirement, tracked note polyphony, control ranges/defaults, DSP cost, and latency are unknown. The catalogue's no-instrument footnote applies to 3 Note Generator and 4 OSC Generator, not 3 OSC Synth.",
-    "project_controls": "No Stadium-specific processor or parameter mapping was added. Existing project-authored three-voice tracked synth and free-running note generators are separate effects and do not claim Line 6 algorithm, tracking, parameter, DSP, or sound parity.",
-    "verification": {
-      "official_source_review": "Checked 2026-11-25: current Line 6 Stadium model list, v1.4 live manual, and Stadium 1.4 release notes. The model-specific parameter page was not available in the manual.",
-      "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
+    "picker_index": 115,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026; printed pp. 76, 80 and 86. Current FM9 downloads page checked 2026-11-25: firmware v12.0 lists FM9 Original and FM9 Turbo, not FM9 Mark II Turbo by name; installed device firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide names Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4), and explicitly classifies them as intelligent monophonic shifting. Exact firmware applicability to Mark II Turbo remains a family-level inference."
     },
-    "remaining": "Obtain an exact 3 OSC Synth parameter screen/manual source or inspect the Stadium app/device to establish controls and input tracking. Do not mark synthesis implementation complete from this source audit alone."
+    "documented_controls": "Key, Scale, Learn, Harmony 1–4 and Glide Time; per-voice Harmony shift up to ±25 scale degrees, detune ±50 cents, Level, Pan, Delay 0–2,000 ms. Only Quad Diatonic Delay has feedback after the shifter. Harmony is scale-degree targeting (1=unison; 0 unavailable), not semitones. The Custom Scale supports 4–8 notes with at least a half-step between successive notes; Tonic is a display aid and Key changes sounding transposition. Common Pitch mix controls include Mix, Level, Balance, Bypass, Bypass Mode, Input Gain, Kill Dry and Global Mix. Numeric ranges/defaults for most parameters, tracking accuracy, latency and DSP cost are not published.",
+    "project_controls": "Project-authored default-off Pitch effect at ID115: Dual, C major, project-indexed +2/+4 scale steps, 0 detune, 40% levels, pans −30%/+30%, no delay/feedback, 50% Mix. Exposes Dual/Quad, Key, Scale, Learn, Mix, Glide, custom 4–8 note scale, and four independent voice controls for scale-step interval, detune, level, pan, delay and feedback. Project interval 0 means unison, unlike Fractal Harmony 1. One YIN-like monophonic tracker (approximately 55–1,100 Hz) drives generated voices; no input chord tracking. Ranges, defaults, detector, routing and DSP are project-authored and are not Fractal parity.",
+    "verification": {
+      "official_source_review": "Checked 2026-11-25. Current November 2026 Blocks Guide pp. 76, 80 and 86 plus live FM9 downloads applicability; firmware v12.0 lists Original/Turbo only.",
+      "native": "make test passed documentation validation, 11/11 fixture-safety checks and 117/117 CTest cases, including offline-renderer coverage. Native memory: 728,984 B without delay, 1,496,992 B with two 2-second delay lines, and 2,265,000 B with four. Process path allocates no heap memory.",
+      "focused_browser": "Focused local prerecorded Guitar-TECHS DI Play verifies Pitch category, picker ID115, Dual/Quad mode, voice setting updates and captured output. After enabling with delays off, effect memory is 724,036 B; guitarDifferenceRms 0.0593070, settingsDifferenceRms 0.00578656, peak 0.120349.",
+      "full_browser": "make web-test passed full browser/WASM plus native comparison with local Guitar-TECHS DI: 79 optional processors, max absolute error 1.686768271724759e-6, RMS error 2.9085876089063937e-7. Full chain reported 81,115,396 B processor state plus 10,364 B tuner state in 100,663,296 B fixed WASM memory; these are full-chain totals.",
+      "windows": "make windows-cross-build passed Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured per profile. Dual 220Hz no-delay 12.768/16.511/18.991/22.640/34.109%, Dual low-E 14.382/18.588/21.365/26.137/32.306%, Quad 220Hz 22.099/28.010/31.360/39.018/63.458%, Quad low-E 24.088/30.562/34.355/41.665/63.661%; two/four 2-second delay profiles: Dual 220Hz 12.465/15.746/17.827/22.602/30.293%, Quad 220Hz 21.349/27.051/30.699/38.103/49.026%, Dual low-E 14.448/18.711/21.929/29.585/46.133%, Quad low-E 23.088/29.862/34.084/41.589/110.787%. One callback miss in the last 5,000-profile run. Percent values are p50/p95/p99/p99.9/max of this isolated processor, not Android or full-chain performance.",
+      "response": "Conservative tracker+shifter bound is 21.333 ms around 220 Hz and 29.333 ms at low E. On existing prerecorded EGFxSet guitar takes the first accepted estimate was 1,408/2,688/1,536 samples (34.667/61.333/37.333 ms), with 84/84, 74/74, and 83/83 reference notes matched and p95/max cent errors 29.922/39.656, 26.665/31.780, and 33.033/46.646 respectively. These do not establish listening quality or live latency."
+    },
+    "remaining": "The provisional ≤20ms response objective is not met; optimize detector responsiveness while preserving note stability and reporting low-E misses. Manual audio/listening, Android device timing, real instrument response, and physical FM9 validation remain open. FM9 Mark II Turbo firmware applicability and installed firmware are unknown. Do not claim Fractal tracking, DSP, settings, firmware or sound parity."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fractal FM9 Mk II Turbo",
-    "next_feature": "Independent two/four-voice diatonic harmonizer controls and low-cost shared pitch tracking",
-    "qualification": "The November 2026 Blocks Guide documents separate Dual/Quad Diatonic pitch modes and user scales; the project has only one monophonic tracked Diatonic voice, while its four-voice chromatic effect does not track notes. Preserve the single-note tracker limitation, benchmark added CPU/memory, and keep FM9 Mark II Turbo firmware applicability qualified."
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Extend the existing project feedback-generator toward Stadium Feedbacker control coverage",
+    "qualification": "Stadium-specific control tables and numeric settings remain unpublished. Older Helix software-family Feedbacker controls are source concepts only; do not imply Stadium parity. Keep the stage project-authored, low-memory, allocation-free and monophonic, and benchmark each mode for CPU/memory. Mono model listing describes channel format, not input-note polyphony."
   },
   "completed_checkpoints": [
     {
@@ -642,33 +647,35 @@
         "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
       },
       "remaining": "Exact control settings and whether ordinary pickups drive the synth require an exact-model parameter view or device/app inspection."
+    },
+    {
+      "name": "Fractal FM9-family Dual/Quad Diatonic Harmony project effect",
+      "status": "implementation and automated checks pass; first-note response target and manual/device checks remain",
+      "picker_index": 115,
+      "category": "Pitch",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide",
+        "revision": "November 2026; printed pp. 76, 80 and 86. Current FM9 downloads page checked 2026-11-25: firmware v12.0 lists FM9 Original and FM9 Turbo, not FM9 Mark II Turbo by name; installed device firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The guide names Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4), and explicitly classifies them as intelligent monophonic shifting. Exact firmware applicability to Mark II Turbo remains a family-level inference."
+      },
+      "documented_controls": "Key, Scale, Learn, Harmony 1–4 and Glide Time; per-voice Harmony shift up to ±25 scale degrees, detune ±50 cents, Level, Pan, Delay 0–2,000 ms. Only Quad Diatonic Delay has feedback after the shifter. Harmony is scale-degree targeting (1=unison; 0 unavailable), not semitones. The Custom Scale supports 4–8 notes with at least a half-step between successive notes; Tonic is a display aid and Key changes sounding transposition. Common Pitch mix controls include Mix, Level, Balance, Bypass, Bypass Mode, Input Gain, Kill Dry and Global Mix. Numeric ranges/defaults for most parameters, tracking accuracy, latency and DSP cost are not published.",
+      "project_controls": "Project-authored default-off Pitch effect at ID115: Dual, C major, project-indexed +2/+4 scale steps, 0 detune, 40% levels, pans −30%/+30%, no delay/feedback, 50% Mix. Exposes Dual/Quad, Key, Scale, Learn, Mix, Glide, custom 4–8 note scale, and four independent voice controls for scale-step interval, detune, level, pan, delay and feedback. Project interval 0 means unison, unlike Fractal Harmony 1. One YIN-like monophonic tracker (approximately 55–1,100 Hz) drives generated voices; no input chord tracking. Ranges, defaults, detector, routing and DSP are project-authored and are not Fractal parity.",
+      "verification": {
+        "official_source_review": "Checked 2026-11-25. Current November 2026 Blocks Guide pp. 76, 80 and 86 plus live FM9 downloads applicability; firmware v12.0 lists Original/Turbo only.",
+        "native": "make test passed documentation validation, 11/11 fixture-safety checks and 117/117 CTest cases, including offline-renderer coverage. Native memory: 728,984 B without delay, 1,496,992 B with two 2-second delay lines, and 2,265,000 B with four. Process path allocates no heap memory.",
+        "focused_browser": "Focused local prerecorded Guitar-TECHS DI Play verifies Pitch category, picker ID115, Dual/Quad mode, voice setting updates and captured output. After enabling with delays off, effect memory is 724,036 B; guitarDifferenceRms 0.0593070, settingsDifferenceRms 0.00578656, peak 0.120349.",
+        "full_browser": "make web-test passed full browser/WASM plus native comparison with local Guitar-TECHS DI: 79 optional processors, max absolute error 1.686768271724759e-6, RMS error 2.9085876089063937e-7. Full chain reported 81,115,396 B processor state plus 10,364 B tuner state in 100,663,296 B fixed WASM memory; these are full-chain totals.",
+        "windows": "make windows-cross-build passed Windows MinGW core and offline renderer.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured per profile. Dual 220Hz no-delay 12.768/16.511/18.991/22.640/34.109%, Dual low-E 14.382/18.588/21.365/26.137/32.306%, Quad 220Hz 22.099/28.010/31.360/39.018/63.458%, Quad low-E 24.088/30.562/34.355/41.665/63.661%; two/four 2-second delay profiles: Dual 220Hz 12.465/15.746/17.827/22.602/30.293%, Quad 220Hz 21.349/27.051/30.699/38.103/49.026%, Dual low-E 14.448/18.711/21.929/29.585/46.133%, Quad low-E 23.088/29.862/34.084/41.589/110.787%. One callback miss in the last 5,000-profile run. Percent values are p50/p95/p99/p99.9/max of this isolated processor, not Android or full-chain performance.",
+        "response": "Conservative tracker+shifter bound is 21.333 ms around 220 Hz and 29.333 ms at low E. On existing prerecorded EGFxSet guitar takes the first accepted estimate was 1,408/2,688/1,536 samples (34.667/61.333/37.333 ms), with 84/84, 74/74, and 83/83 reference notes matched and p95/max cent errors 29.922/39.656, 26.665/31.780, and 33.033/46.646 respectively. These do not establish listening quality or live latency."
+      },
+      "remaining": "The provisional ≤20ms response objective is not met; optimize detector responsiveness while preserving note stability and reporting low-E misses. Manual audio/listening, Android device timing, real instrument response, and physical FM9 validation remain open. FM9 Mark II Turbo firmware applicability and installed firmware are unknown. Do not claim Fractal tracking, DSP, settings, firmware or sound parity.",
+      "picker_rows": 116
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Virtual Capo Mix control",
-    "status": "verified",
-    "picker_index": 22,
-    "category": "Pitch",
-    "official_source": {
-      "title": "Fender Tone Master Pro firmware history and Virtual Capo feature article",
-      "revision": "Firmware v1.8.85 dated 2026-11-18 introduced the rebuilt Virtual Capo; current official history lists v1.8.87 dated 2026-11-23. Checked 2026-11-25; installed device firmware unknown.",
-      "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "article_url": "https://www.fender.com/articles/parts-and-accessories/unlock-new-effects-with-tone-master-pro-update",
-      "qualification": "Fender documents Mix as blending shifted and original signals. Its 1.8.85 notes describe the rebuilt polyphonic algorithm, ±12-semitone range, unity gain, unchanged CPU use, flat frequency response, and low latency. The 1.8.87 note fixes a public-beta semitone error at +1 through +OCT. Neither source publishes Mix bounds/defaults or measured latency/CPU."
-    },
-    "documented_controls": "Virtual Capo has a Mix control that blends shifted and original signals. Firmware v1.8.85 describes the rebuilt polyphonic algorithm over ±12 semitones and removes Resolution and Tracking; v1.8.87 corrects a beta semitone error. Numeric Mix bounds/defaults and measured performance are not provided.",
-    "project_controls": "Project-authored 0–100% Mix in the existing Pitch picker row ID 22, default 100% shifted; 0% returns the original signal after a shared 256-frame dry-history alignment. At 48 kHz this adds no delay beyond the existing nominal 5.333 ms shifter latency. The stereo ring is 2,048 B; reported object-aligned native state rises 2,064 B to 496,080 B. No second processor or process-time allocation is added.",
-    "verification": {
-      "native_ctest": "make test passed 115/115 CTest cases and 11/11 fixture-safety checks.",
-      "focused_browser": "make web-test-fender-pedal-shifter passed local prerecorded Guitar-TECHS DI Play at 48 kHz stereo for 0%, 50%, and 100% Mix. Midpoint blend error was 1.51e-9 RMS and 7.45e-9 maximum.",
-      "full_browser": "make web-browser-test passed after raising the page deadline to 180 seconds. Browser/native comparison across 78 optional stages reported 3.4009653e-6 maximum absolute error and 5.8804948e-7 RMS error.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "isolated_benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: 100% Mix p50/p95/p99/p99.9/max 10.339/13.341/16.002/19.865/38.989%; 50% Mix 10.597/13.989/17.349/21.551/35.216% of callback budget. State 496,080 B stereo; latency 256 frames / 5.333 ms. Desktop timing is not target-device performance.",
-      "notes": "Native tests, WASM build, focused local-guitar browser Play, full browser/native comparison, Windows cross-build, and isolated benchmark pass. Human listening, Tone Master Pro hardware behavior, and target-device load remain open. Vendor Mix bounds/defaults, measured device latency, and DSP/settings/sound parity are unknown."
-    },
-    "picker_rows": 114
-  },
-  "current_checkpoint": {
     "name": "Line 6 Helix Stadium XL 3 OSC Synth source audit",
     "status": "research complete; exact controls and input tracking remain undocumented; no model-specific code added",
     "picker_index": null,
@@ -691,6 +698,32 @@
       "automated_docs": "make test-docs passed: 333 source requirements and 346 tracked rows; the validator parsed research-state.json. make diff-check passed with no workflow files included."
     },
     "remaining": "Obtain an exact 3 OSC Synth parameter screen/manual source or inspect the Stadium app/device to establish controls and input tracking. Do not mark synthesis implementation complete from this source audit alone."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Dual/Quad Diatonic Harmony project effect",
+    "status": "implementation and automated checks pass; first-note response target and manual/device checks remain",
+    "date": "2026-11-25",
+    "picker_index": 115,
+    "category": "Pitch",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026; printed pp. 76, 80 and 86. Current FM9 downloads page checked 2026-11-25: firmware v12.0 lists FM9 Original and FM9 Turbo, not FM9 Mark II Turbo by name; installed device firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide names Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4), and explicitly classifies them as intelligent monophonic shifting. Exact firmware applicability to Mark II Turbo remains a family-level inference."
+    },
+    "documented_controls": "Key, Scale, Learn, Harmony 1–4 and Glide Time; per-voice Harmony shift up to ±25 scale degrees, detune ±50 cents, Level, Pan, Delay 0–2,000 ms. Only Quad Diatonic Delay has feedback after the shifter. Harmony is scale-degree targeting (1=unison; 0 unavailable), not semitones. The Custom Scale supports 4–8 notes with at least a half-step between successive notes; Tonic is a display aid and Key changes sounding transposition. Common Pitch mix controls include Mix, Level, Balance, Bypass, Bypass Mode, Input Gain, Kill Dry and Global Mix. Numeric ranges/defaults for most parameters, tracking accuracy, latency and DSP cost are not published.",
+    "project_controls": "Project-authored default-off Pitch effect at ID115: Dual, C major, project-indexed +2/+4 scale steps, 0 detune, 40% levels, pans −30%/+30%, no delay/feedback, 50% Mix. Exposes Dual/Quad, Key, Scale, Learn, Mix, Glide, custom 4–8 note scale, and four independent voice controls for scale-step interval, detune, level, pan, delay and feedback. Project interval 0 means unison, unlike Fractal Harmony 1. One YIN-like monophonic tracker (approximately 55–1,100 Hz) drives generated voices; no input chord tracking. Ranges, defaults, detector, routing and DSP are project-authored and are not Fractal parity.",
+    "verification": {
+      "official_source_review": "Checked 2026-11-25. Current November 2026 Blocks Guide pp. 76, 80 and 86 plus live FM9 downloads applicability; firmware v12.0 lists Original/Turbo only.",
+      "native": "make test passed documentation validation, 11/11 fixture-safety checks and 117/117 CTest cases, including offline-renderer coverage. Native memory: 728,984 B without delay, 1,496,992 B with two 2-second delay lines, and 2,265,000 B with four. Process path allocates no heap memory.",
+      "focused_browser": "Focused local prerecorded Guitar-TECHS DI Play verifies Pitch category, picker ID115, Dual/Quad mode, voice setting updates and captured output. After enabling with delays off, effect memory is 724,036 B; guitarDifferenceRms 0.0593070, settingsDifferenceRms 0.00578656, peak 0.120349.",
+      "full_browser": "make web-test passed full browser/WASM plus native comparison with local Guitar-TECHS DI: 79 optional processors, max absolute error 1.686768271724759e-6, RMS error 2.9085876089063937e-7. Full chain reported 81,115,396 B processor state plus 10,364 B tuner state in 100,663,296 B fixed WASM memory; these are full-chain totals.",
+      "windows": "make windows-cross-build passed Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame/2.667 ms callbacks, 2,000 warm-up and 5,000 measured per profile. Dual 220Hz no-delay 12.768/16.511/18.991/22.640/34.109%, Dual low-E 14.382/18.588/21.365/26.137/32.306%, Quad 220Hz 22.099/28.010/31.360/39.018/63.458%, Quad low-E 24.088/30.562/34.355/41.665/63.661%; two/four 2-second delay profiles: Dual 220Hz 12.465/15.746/17.827/22.602/30.293%, Quad 220Hz 21.349/27.051/30.699/38.103/49.026%, Dual low-E 14.448/18.711/21.929/29.585/46.133%, Quad low-E 23.088/29.862/34.084/41.589/110.787%. One callback miss in the last 5,000-profile run. Percent values are p50/p95/p99/p99.9/max of this isolated processor, not Android or full-chain performance.",
+      "response": "Conservative tracker+shifter bound is 21.333 ms around 220 Hz and 29.333 ms at low E. On existing prerecorded EGFxSet guitar takes the first accepted estimate was 1,408/2,688/1,536 samples (34.667/61.333/37.333 ms), with 84/84, 74/74, and 83/83 reference notes matched and p95/max cent errors 29.922/39.656, 26.665/31.780, and 33.033/46.646 respectively. These do not establish listening quality or live latency."
+    },
+    "remaining": "The provisional ≤20ms response objective is not met; optimize detector responsiveness while preserving note stability and reporting low-E misses. Manual audio/listening, Android device timing, real instrument response, and physical FM9 validation remain open. FM9 Mark II Turbo firmware applicability and installed firmware are unknown. Do not claim Fractal tracking, DSP, settings, firmware or sound parity."
   },
   "next_research": [
     {

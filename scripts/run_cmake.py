@@ -73,13 +73,16 @@ def build(cmake: str) -> None:
     run([cmake, "--build", str(BUILD_DIR), "--parallel", str(min(4, os.cpu_count() or 1))])
 
 
-def test(cmake: str, ctest: str, test_filter: str = "") -> None:
+def test(cmake: str, ctest: str, test_filter: str = "",
+         verbose: bool = False) -> None:
     build(cmake)
     command = [ctest, "--test-dir", str(BUILD_DIR), "-C", "Release",
                "--output-on-failure"]
     test_filter = test_filter.strip()
     if test_filter:
         command.extend(["-R", test_filter])
+    if verbose:
+        command.append("-V")
     run(command)
 
 
@@ -101,6 +104,17 @@ def build_windows(cmake: str) -> None:
          str(min(4, os.cpu_count() or 1))])
 
 
+def bench_fractal_diatonic_harmonizer(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fractal_diatonic_harmonizer_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fractal_diatonic_harmonizer_bench"
+    )
+    run([str(executable)])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -115,8 +129,13 @@ def cpu_name() -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("configure", "build", "test", "bench", "windows-build"))
+    parser.add_argument(
+        "action",
+        choices=("configure", "build", "test", "bench",
+                 "bench-fractal-diatonic-harmonizer", "windows-build"),
+    )
     parser.add_argument("--test-filter", default="")
+    parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
     action = args.action
     cmake = find_cmake()
@@ -126,7 +145,7 @@ def main() -> None:
     elif action == "build":
         build(cmake)
     elif action == "test":
-        test(cmake, ctest or "ctest", args.test_filter)
+        test(cmake, ctest or "ctest", args.test_filter, args.verbose)
     elif action == "bench":
         build(cmake)
         print(f"CPU: {cpu_name()}")
@@ -144,6 +163,8 @@ def main() -> None:
             else "tabletfx_fender_virtual_capo_mix_bench"
         )
         run([str(pitch_mix_benchmark)])
+    elif action == "bench-fractal-diatonic-harmonizer":
+        bench_fractal_diatonic_harmonizer(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 

@@ -134,6 +134,7 @@ struct Options {
     tabletfx::FourBandResonatorParameters four_band_resonator{};
     bool diatonic_harmonizer_enabled = false;
     tabletfx::effects::DiatonicHarmonizerConfig diatonic_harmonizer{};
+    bool fractal_diatonic_harmonizer_enabled = false;
     bool pitch_arpeggiator_enabled = false;
     bool pitch_arpeggiator_run_explicit = false;
     tabletfx::effects::PitchArpeggiatorParameters pitch_arpeggiator{};
@@ -807,6 +808,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         if (key == "--diatonic-harmonizer") {
             options.diatonic_harmonizer_enabled = true;
+            continue;
+        }
+        if (key == "--fractal-diatonic-harmonizer") {
+            options.fractal_diatonic_harmonizer_enabled = true;
             continue;
         }
         if (key == "--pitch-arpeggiator") {
@@ -4269,6 +4274,11 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
         effects.push_back(std::make_unique<tabletfx::Vibratone>(
             static_cast<float>(sample_rate), channels, options.vibratone));
     }
+    if (options.fractal_diatonic_harmonizer_enabled) {
+        effects.push_back(
+            std::make_unique<tabletfx::effects::FractalDiatonicHarmonizer>(
+                static_cast<float>(sample_rate), channels));
+    }
     if (std::abs(options.output_gain_db) > 0.0001F) {
         effects.push_back(std::make_unique<tabletfx::Gain>(
             options.output_gain_db, static_cast<float>(sample_rate)));
@@ -5760,6 +5770,7 @@ void print_usage() {
                     " [--diatonic-harmonizer-feedback 0..0.85]"
                     " [--diatonic-harmonizer-tap-division free|half|quarter|dotted-quarter|quarter-triplet|eighth|dotted-eighth|eighth-triplet|sixteenth]"
                     " [--diatonic-harmonizer-tempo-bpm BPM]"
+                    " [--fractal-diatonic-harmonizer (project-authored monophonic tracker; dual-voice defaults)]"
                   " [--pitch-arpeggiator] [--pitch-arpeggiator-run on|off]"
                   " [--pitch-arpeggiator-mix 0..1] [--pitch-arpeggiator-output-level 0..2]"
                   " [--pitch-arpeggiator-trigger-threshold-dbfs -90..0]"

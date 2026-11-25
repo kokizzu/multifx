@@ -1,5 +1,26 @@
 # Latency, quality, and DSP-load protocol
 
+## Fractal FM9-family Dual/Quad Diatonic Harmony (2026-11-25)
+
+The November 2026 Blocks Guide (printed pp. 76 and 80) describes Dual Diatonic (2 voices), Quad Diatonic (4), and Quad Diatonic Delay (4) as intelligent monophonic shifters. TabletFX's project-authored Pitch effect at index 115 uses a single-note YIN-like tracker to drive two or four generated voices; the voice count does not mean chord tracking. Its STFT shifter adds 256 frames / 5.333 ms fixed audio latency at 48 kHz. Conservative tracker-plus-shifter control-response bounds are 21.333 ms for 220 Hz and 29.333 ms for low E (82.407 Hz), already above the provisional ≤20 ms target before host, browser, device and output buffering. On the existing prerecorded EGFxSet guitar DI, the tested takes accepted notes after 1,408 / 2,688 / 1,536 samples (34.667 / 61.333 / 37.333 ms); matched note counts and cent errors are tracker test results, not a sound-quality or latency claim. The measured response gate is therefore **not met**.
+
+The processor uses 728,984 B native stereo state without voice delays; two 2-second delay lines raise it to 1,496,992 B, and four raise it to 2,265,000 B. The browser creates the processor only when enabled; its focused no-delay smoke reports 724,036 B after enable. Processing itself has no heap allocation. A full browser/native comparison with local prerecorded Guitar-TECHS DI passed for 79 optional processors (maximum absolute error 1.6867683e−6; RMS error 2.9085876e−7). The browser reports 81,115,396 B processor state plus 10,364 B tuner state within 100,663,296 B fixed WASM memory for that full chain. These full-chain totals are not the incremental memory cost of this effect.
+
+An isolated Release benchmark on an AMD Ryzen 9 5950X at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks per profile) measured the following project processor callback load. Inputs are synthetic steady 220 Hz and 82.407 Hz tones; these timings are not Android/device or complete-chain results.
+
+| Profile | Native memory | Response bound | p50 / p95 / p99 / p99.9 / max callback use | Deadline misses |
+|---|---:|---:|---:|---:|
+| Dual, 220 Hz, no delay | 728,984 B | 21.333 ms | 12.768 / 16.511 / 18.991 / 22.640 / 34.109% | 0/5,000 |
+| Dual, low E, no delay | 728,984 B | 29.333 ms | 14.382 / 18.588 / 21.365 / 26.137 / 32.306% | 0/5,000 |
+| Quad, 220 Hz, no delay | 728,984 B | 21.333 ms | 22.099 / 28.010 / 31.360 / 39.018 / 63.458% | 0/5,000 |
+| Quad, low E, no delay | 728,984 B | 29.333 ms | 24.088 / 30.562 / 34.355 / 41.665 / 63.661% | 0/5,000 |
+| Dual, 220 Hz, two 2-second delays | 1,496,992 B | 21.333 ms | 12.465 / 15.746 / 17.827 / 22.602 / 30.293% | 0/5,000 |
+| Quad, 220 Hz, four 2-second delays | 2,265,000 B | 21.333 ms | 21.349 / 27.051 / 30.699 / 38.103 / 49.026% | 0/5,000 |
+| Dual, low E, two 2-second delays | 1,496,992 B | 29.333 ms | 14.448 / 18.711 / 21.929 / 29.585 / 46.133% | 0/5,000 |
+| Quad, low E, four 2-second delays | 2,265,000 B | 29.333 ms | 23.088 / 29.862 / 34.084 / 41.589 / 110.787% | 1/5,000 |
+
+CPU columns are percent of one 2.667 ms callback deadline. The Quad/low-E/four-delay profile had a single deadline overrun; its maximum is not hidden by its percentile values. `make test`, full `make web-test`, and `make windows-cross-build` pass. Human listening, real playing, Android device measurements, and physical FM9 validation remain open. This project implementation makes no Fractal DSP/settings/sound parity claim. The November 2026 guide is FM9-family evidence; firmware v12.0 lists FM9 Original/Turbo but not Mark II Turbo by name, and installed firmware is unknown.
+
 ## Line 6 Helix Stadium XL seven-band Parametric EQ-inspired project effect (2026-11-25)
 
 The project-authored Equalizer row at picker ID 114 uses seven independently configured second-order filter sections with fixed per-channel state. Coefficients are prepared when controls change, outside audio processing. It owns **944 B**, adds **zero fixed algorithmic latency**, and allocates nothing during `process()`. The worst-case benchmark enables one low cut and six high cuts at the project's maximum 36 dB/oct slope.

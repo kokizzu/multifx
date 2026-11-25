@@ -409,6 +409,56 @@ void test_process_is_allocation_free_and_finite() {
             "process or parameter updates allocated after construction");
 }
 
+void test_zero_level_voices_skip_and_reactivate_cleanly() {
+    Harmonizer dual(kSampleRate, 1, 2);
+    Harmonizer quad(kSampleRate, 1, 4);
+    Voice active{};
+    active.shift_semitones = 7.0F;
+    active.level = 0.5F;
+    require(dual.set_voice_parameters(0, active) &&
+                quad.set_voice_parameters(0, active),
+            "active voice setup failed");
+
+    constexpr double duration = 1.0;
+    const auto dual_only = render_mono(dual, 220.0, duration);
+    const auto quad_with_inactive = render_mono(quad, 220.0, duration);
+    require(dual_only.size() == quad_with_inactive.size(),
+            "two- and four-voice render lengths differ");
+    const double upper_frequency = 220.0 * std::exp2(7.0 / 12.0);
+    const double dual_upper = amplitude_near(dual_only, upper_frequency);
+    const double quad_upper = amplitude_near(quad_with_inactive, upper_frequency);
+    require(dual_upper > 0.04 && quad_upper > 0.04 &&
+                std::abs(dual_upper - quad_upper) < 0.02,
+            "silent quad voices changed the active two-voice pitch result");
+
+    Voice reactivated{};
+    reactivated.shift_semitones = -5.0F;
+    reactivated.level = 0.5F;
+    require(quad.set_voice_parameters(3, reactivated),
+            "quad voice activation was rejected");
+    quad.reset();
+    const auto with_reactivated_voice = render_mono(quad, 220.0, duration);
+    const double lower_frequency = 220.0 * std::exp2(-5.0 / 12.0);
+    const double reactivated_lower = amplitude_near(
+        with_reactivated_voice, lower_frequency);
+    require(reactivated_lower > 0.025,
+            "a previously skipped voice did not produce its shifted output");
+
+    reactivated.level = 0.0F;
+    require(quad.set_voice_parameters(3, reactivated),
+            "quad voice deactivation was rejected");
+    quad.reset();
+    const auto quad_after_deactivation = render_mono(quad, 220.0, duration);
+    const double deactivated_lower = amplitude_near(
+        quad_after_deactivation, lower_frequency);
+    std::cout << "Reactivated voice amplitude: " << reactivated_lower
+              << "; after deactivation: " << deactivated_lower << '\n';
+    require(reactivated_lower > deactivated_lower * 1.5,
+            "reactivated voice did not contribute distinctly to its target pitch");
+    require(amplitude_near(quad_after_deactivation, upper_frequency) > 0.04,
+            "deactivating one voice disrupted the remaining active voice");
+}
+
 void test_reset_matches_fresh_instance_and_latency_is_bounded() {
     Harmonizer reused(kSampleRate, 1, 2);
     Harmonizer fresh(kSampleRate, 1, 2);
@@ -480,6 +530,7 @@ int main() {
         test_mono_stereo_pan_and_mismatched_channel_safety();
         test_stereo_route_uses_one_input_per_voice_pair();
         test_process_is_allocation_free_and_finite();
+        test_zero_level_voices_skip_and_reactivate_cleanly();
         test_reset_matches_fresh_instance_and_latency_is_bounded();
         std::cout << "All Fractal chromatic harmonizer tests passed\n";
         return 0;

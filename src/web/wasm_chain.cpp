@@ -28,6 +28,7 @@
 #include "tabletfx/effects/pedal_detune.hpp"
 #include "tabletfx/effects/mutant_filter.hpp"
 #include "tabletfx/effects/fractal_chromatic_harmonizer.hpp"
+#include "tabletfx/effects/fractal_diatonic_harmonizer.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/rotary_speaker.hpp"
@@ -434,7 +435,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 21; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 22; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
@@ -547,6 +548,14 @@ public:
         if (index == 114U) {
             stadium_seven_band_peq_enabled_ = enabled;
             if (!enabled) stadium_seven_band_peq_.reset();
+            return true;
+        }
+        if (index == 115U) {
+            if (enabled && !ensure_fractal_diatonic_harmonizer()) return false;
+            fractal_diatonic_harmonizer_enabled_ = enabled;
+            if (fractal_diatonic_harmonizer_) {
+                fractal_diatonic_harmonizer_->set_enabled(enabled);
+            }
             return true;
         }
         if (index >= effects_.size()) {
@@ -781,6 +790,14 @@ public:
             }
             return;
         }
+        if (index == 115U) {
+            if (fractal_diatonic_harmonizer_enabled_ &&
+                fractal_diatonic_harmonizer_) {
+                fractal_diatonic_harmonizer_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -863,6 +880,9 @@ public:
         mutant_filter_.reset();
         if (fractal_chromatic_harmonizer_) {
             fractal_chromatic_harmonizer_->reset();
+        }
+        if (fractal_diatonic_harmonizer_) {
+            fractal_diatonic_harmonizer_->reset();
         }
         signal_controls_.reset();
         tuner_.reset();
@@ -2363,6 +2383,68 @@ public:
         apply_fractal_chromatic_harmonizer_parameters();
     }
 
+    void configure_fractal_diatonic(int voice_count, int key, int scale,
+                                    float mix, float glide_ms,
+                                    int learn) noexcept {
+        auto& config = fractal_diatonic_harmonizer_config_;
+        config.voice_count = static_cast<std::uint8_t>(
+            std::clamp(voice_count, 1, 4));
+        config.key = std::clamp(key, 0, 11);
+        config.scale = static_cast<tabletfx::effects::DiatonicScale>(
+            std::clamp(scale, 0, 13));
+        config.mix = mix;
+        config.glide_ms = glide_ms;
+        config.learn = learn != 0;
+        if (fractal_diatonic_harmonizer_) {
+            fractal_diatonic_harmonizer_->configure(config);
+            config = fractal_diatonic_harmonizer_->config();
+        }
+    }
+
+    void configure_fractal_diatonic_custom_scale(
+        int note_count, int n0, int n1, int n2, int n3, int n4, int n5,
+        int n6, int n7) noexcept {
+        const std::array<std::uint8_t, 8> notes{
+            static_cast<std::uint8_t>(std::clamp(n0, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n1, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n2, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n3, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n4, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n5, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n6, 0, 255)),
+            static_cast<std::uint8_t>(std::clamp(n7, 0, 255)),
+        };
+        auto& config = fractal_diatonic_harmonizer_config_;
+        config.custom_scale_note_count = static_cast<std::uint8_t>(
+            std::clamp(note_count, 0, 255));
+        config.custom_scale_notes = notes;
+        if (fractal_diatonic_harmonizer_) {
+            fractal_diatonic_harmonizer_->configure(config);
+            config = fractal_diatonic_harmonizer_->config();
+        }
+    }
+
+    void configure_fractal_diatonic_voice(
+        int voice, int harmony_steps, float detune_cents, float level,
+        float pan, float delay_ms, float feedback) noexcept {
+        if (voice < 0 || voice >= 4) return;
+        tabletfx::effects::FractalDiatonicVoiceParameters parameters;
+        parameters.harmony_steps = harmony_steps;
+        parameters.detune_cents = detune_cents;
+        parameters.level = level;
+        parameters.pan = pan;
+        parameters.delay_ms = delay_ms;
+        parameters.feedback = feedback;
+        fractal_diatonic_harmonizer_config_.voices[
+            static_cast<std::size_t>(voice)] = parameters;
+        if (fractal_diatonic_harmonizer_ &&
+            fractal_diatonic_harmonizer_->set_voice_parameters(
+                static_cast<std::uint8_t>(voice), parameters)) {
+            fractal_diatonic_harmonizer_config_ =
+                fractal_diatonic_harmonizer_->config();
+        }
+    }
+
     [[nodiscard]] bool ensure_fractal_chromatic_harmonizer() noexcept {
         if (fractal_chromatic_harmonizer_) return true;
         try {
@@ -2374,6 +2456,22 @@ public:
             return false;
         }
         apply_fractal_chromatic_harmonizer_parameters();
+        return true;
+    }
+
+    [[nodiscard]] bool ensure_fractal_diatonic_harmonizer() noexcept {
+        if (fractal_diatonic_harmonizer_) return true;
+        try {
+            fractal_diatonic_harmonizer_ =
+                std::make_unique<tabletfx::effects::FractalDiatonicHarmonizer>(
+                    static_cast<float>(sample_rate_), channels_);
+        } catch (...) {
+            return false;
+        }
+        fractal_diatonic_harmonizer_->configure(
+            fractal_diatonic_harmonizer_config_);
+        fractal_diatonic_harmonizer_config_ =
+            fractal_diatonic_harmonizer_->config();
         return true;
     }
 
@@ -3508,6 +3606,9 @@ public:
         if (fractal_chromatic_harmonizer_) {
             bytes += fractal_chromatic_harmonizer_->memory_bytes();
         }
+        if (fractal_diatonic_harmonizer_) {
+            bytes += fractal_diatonic_harmonizer_->memory_bytes();
+        }
         for (const EffectEntry& entry : effects_) {
             bytes += entry.effect->memory_bytes();
         }
@@ -3624,6 +3725,13 @@ public:
             return static_cast<std::uint32_t>(
                 stadium_seven_band_peq_.memory_bytes());
         }
+        if (index == 115U) {
+            if (!fractal_diatonic_harmonizer_) return 0;
+            const std::size_t bytes = fractal_diatonic_harmonizer_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3669,6 +3777,10 @@ private:
     tabletfx::MutantFilter mutant_filter_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
+    std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
+        fractal_diatonic_harmonizer_;
+    tabletfx::effects::FractalDiatonicHarmonizerConfig
+        fractal_diatonic_harmonizer_config_{};
     std::array<float, 24> fractal_chromatic_harmonizer_parameters_{};
     bool fractal_chromatic_harmonizer_parameters_valid_ = false;
     bool output_gain_enabled_ = true;
@@ -3691,6 +3803,7 @@ private:
     bool pedal_detune_enabled_ = false;
     bool mutant_filter_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
+    bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
     bool stadium_seven_band_peq_enabled_ = false;
 };
@@ -4502,6 +4615,34 @@ TABLETFX_WASM_EXPORT void tf_chain_set_fractal_chromatic_harmonizer(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_fractal_chromatic_harmonizer(values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_diatonic(
+    void* opaque, int voice_count, int key, int scale, float mix,
+    float glide_ms, int learn) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_diatonic(
+            voice_count, key, scale, mix, glide_ms, learn);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_diatonic_custom_scale(
+    void* opaque, int note_count, int n0, int n1, int n2, int n3,
+    int n4, int n5, int n6, int n7) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_diatonic_custom_scale(
+            note_count, n0, n1, n2, n3, n4, n5, n6, n7);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_diatonic_voice(
+    void* opaque, int voice, int harmony_steps, float detune_cents,
+    float level, float pan, float delay_ms, float feedback) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_diatonic_voice(
+            voice, harmony_steps, detune_cents, level, pan, delay_ms,
+            feedback);
     }
 }
 

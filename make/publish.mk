@@ -40,6 +40,7 @@ PUBLISH_CHECKPOINTS += fractal-touch-wah-mix
 PUBLISH_CHECKPOINTS += flagship-control-routing
 PUBLISH_CHECKPOINTS += stadium-mutant-filter
 PUBLISH_CHECKPOINTS += fractal-chromatic-harmonizer
+PUBLISH_CHECKPOINTS += fractal-diatonic-harmonizer
 PUBLISH_CHECKPOINTS += line6-stadium-3osc-research
 PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 PUBLISH_CHECKPOINTS += stadium-seven-band-peq
@@ -201,3 +202,13 @@ test-fractal-chromatic-harmonizer:
 
 web-test-fractal-chromatic-harmonizer: web-build
 	$(PYTHON) scripts/web.py test-fractal-chromatic-harmonizer
+
+.PHONY: test-fractal-diatonic-harmonizer web-test-fractal-diatonic-harmonizer bench-fractal-diatonic-harmonizer
+test-fractal-diatonic-harmonizer:
+	$(PYTHON) scripts/run_cmake.py test --verbose --test-filter "tabletfx_fractal_(diatonic|chromatic)_harmonizer_tests"
+
+web-test-fractal-diatonic-harmonizer: web-build
+	$(PYTHON) scripts/web.py test-fractal-diatonic-harmonizer
+
+bench-fractal-diatonic-harmonizer:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-diatonic-harmonizer
