@@ -29,7 +29,9 @@ void test_defaults_bounds_and_memory() {
     require(defaults.rate_hz == 0.25F && defaults.base_delay_ms == 2.0F &&
                 defaults.depth_ms == 1.0F && defaults.feedback == 0.35F &&
                 defaults.feedback_polarity == tabletfx::FlangerFeedbackPolarity::Positive &&
-                defaults.mix == 0.35F && defaults.smoothing_ms == 10.0F,
+                defaults.mix == 0.35F &&
+                defaults.right_channel_phase_degrees == 180.0F &&
+                defaults.smoothing_ms == 10.0F,
             "sane flanger defaults changed");
     require(flanger.memory_bytes() == sizeof(flanger) + 1156U * sizeof(float),
             "stereo flanger storage estimate is inaccurate at 48 kHz");
@@ -41,13 +43,16 @@ void test_defaults_bounds_and_memory() {
     parameters.feedback = 2.0F;
     parameters.feedback_polarity = static_cast<tabletfx::FlangerFeedbackPolarity>(99);
     parameters.mix = -1.0F;
+    parameters.right_channel_phase_degrees = 720.0F;
     parameters.smoothing_ms = 2000.0F;
     flanger.set_parameters(parameters);
     const auto bounds = flanger.parameters();
     require(bounds.rate_hz == 8.0F && bounds.base_delay_ms == 10.0F &&
                 bounds.depth_ms == 2.0F && bounds.feedback == 0.9F &&
                 bounds.feedback_polarity == tabletfx::FlangerFeedbackPolarity::Positive &&
-                bounds.mix == 0.0F && bounds.smoothing_ms == 1000.0F,
+                bounds.mix == 0.0F &&
+                bounds.right_channel_phase_degrees == 360.0F &&
+                bounds.smoothing_ms == 1000.0F,
             "flanger bounds or invalid polarity fallback changed");
 
     parameters = {};
@@ -56,13 +61,60 @@ void test_defaults_bounds_and_memory() {
     parameters.depth_ms = std::numeric_limits<float>::quiet_NaN();
     parameters.feedback = std::numeric_limits<float>::infinity();
     parameters.mix = std::numeric_limits<float>::quiet_NaN();
+    parameters.right_channel_phase_degrees =
+        std::numeric_limits<float>::quiet_NaN();
     parameters.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
     flanger.set_parameters(parameters);
     const auto finite = flanger.parameters();
     require(finite.rate_hz == 0.25F && finite.base_delay_ms == 2.0F &&
                 finite.depth_ms == 1.0F && finite.feedback == 0.35F &&
-                finite.mix == 0.35F && finite.smoothing_ms == 10.0F,
+                finite.mix == 0.35F &&
+                finite.right_channel_phase_degrees == 180.0F &&
+                finite.smoothing_ms == 10.0F,
             "non-finite flanger parameters did not use safe defaults");
+}
+
+void test_stereo_phase_relationship() {
+    tabletfx::FlangerParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.base_delay_ms = 2.0F;
+    parameters.depth_ms = 1.0F;
+    parameters.feedback = 0.0F;
+    parameters.mix = 1.0F;
+    parameters.smoothing_ms = 0.0F;
+
+    std::vector<float> input(8192U * 2U);
+    for (std::size_t frame = 0; frame < input.size() / 2U; ++frame) {
+        const float sample = 0.4F * std::sin(
+            2.0F * 3.14159265358979323846F * 440.0F *
+            static_cast<float>(frame) / 48000.0F);
+        input[frame * 2U] = sample;
+        input[frame * 2U + 1U] = sample;
+    }
+
+    auto in_phase_output = input;
+    parameters.right_channel_phase_degrees = 0.0F;
+    tabletfx::Flanger in_phase(48000.0F, 2, parameters);
+    in_phase.process(in_phase_output, 2);
+    for (std::size_t frame = 0; frame < in_phase_output.size() / 2U; ++frame) {
+        require(std::abs(in_phase_output[frame * 2U] -
+                         in_phase_output[frame * 2U + 1U]) < 1.0e-7F,
+                "zero L/R phase did not produce matching stereo modulation");
+    }
+
+    auto opposite_phase_output = input;
+    parameters.right_channel_phase_degrees = 180.0F;
+    tabletfx::Flanger opposite_phase(48000.0F, 2, parameters);
+    opposite_phase.process(opposite_phase_output, 2);
+    double difference_energy = 0.0;
+    for (std::size_t frame = 0; frame < opposite_phase_output.size() / 2U; ++frame) {
+        const double difference = opposite_phase_output[frame * 2U] -
+                                  opposite_phase_output[frame * 2U + 1U];
+        difference_energy += difference * difference;
+    }
+    require(std::sqrt(difference_energy /
+                      static_cast<double>(opposite_phase_output.size() / 2U)) > 0.005,
+            "default opposite-phase modulation did not separate stereo channels");
 }
 
 void test_delay_feedback_and_polarity() {
@@ -182,6 +234,7 @@ void test_smoothing_block_invariance_and_reset() {
     changed.feedback = 0.7F;
     changed.feedback_polarity = tabletfx::FlangerFeedbackPolarity::Negative;
     changed.mix = 0.8F;
+    changed.right_channel_phase_degrees = 45.0F;
     whole.set_parameters(changed);
     chunks.set_parameters(changed);
     std::array<float, 128> change_a{};
@@ -260,6 +313,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_stereo_phase_relationship();
         test_delay_feedback_and_polarity();
         test_stereo_isolation_mix_and_modulation();
         test_smoothing_block_invariance_and_reset();

@@ -827,6 +827,30 @@
         "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,667 us callback, 2,000 warm-up/5,000 measured. −12/full-wet p50/p95/p99/p99.9/max 10.1545/13.2390/16.0808/19.6764/34.8081% of deadline; native state 496,080 B; 256-frame/5.333 ms algorithmic latency. Isolated desktop processor measurement, not target-device or complete-chain performance."
       },
       "remaining": "No per-preset/scene persistence. Manual guitar listening, target-device timing, physical device behavior, exact v5.2 control table, Up Tune controls, and Prime algorithm parity remain unresolved."
+    },
+    {
+      "name": "Fender Tone Master Pro Stereo Flanger L/R Phase",
+      "status": "project-authored L/R phase control implemented in existing Modulation Flanger; native/CLI/browser/Windows checks and CPU/memory/latency measurement pass; manual/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 17,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 38. Firmware history checked through v1.8.87 dated 2026-11-23; installed device version is unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide lists L/R Phase on Stereo Flanger and describes left/right flanging. It does not specify numeric range/default or DSP. Current firmware notes mention no Flanger change. These facts do not establish Fender algorithm or sound parity."
+      },
+      "documented_controls": "Stereo Flanger controls include Rate, Depth, Resonance, Tap Division, Manual, and L/R Phase. The guide states L/R Phase adjusts left/right flanging but publishes no numeric bounds/defaults. The current release history through v1.8.87 contains no later Flanger-specific change.",
+      "project_controls": "Existing Modulation Flanger now has a right-channel LFO phase offset control with project-authored 0–360° bounds and 180° default, preserving its previous opposing left/right LFO movement. Phase transitions follow the existing 10 ms parameter ramp. No new effect row, audio buffer, or fixed latency; current main Flanger controls remain project-authored. Tap Division and Manual are not implemented as part of this checkpoint.",
+      "verification": {
+        "native": "make web-test-fender-stereo-flanger-phase prerequisite passed make test: documentation validation (333 source requirements/346 tracked rows), 11/11 audio-fixture safety checks, and 117/117 CTest tests. Flanger tests cover phase bounds/fallback, same/opposed channel behavior, smoothed retarget block invariance, reset, and zero process allocations.",
+        "browser": "HeadlessChrome 151, local prerecorded Guitar-TECHS stereo DI, 48 kHz/48,000 frames. Focused Modulation picker test verified phase slider 0–360° step 1/default 180°, recorded two Play captures at 0°/180°; output RMS difference 0.0609240211, 47,809 samples changed. Browser effect state 4,784 B.",
+        "cli": "Offline stereo-render regression compares 0° and 180° phase output and passes the output-difference threshold; existing impulse test still verifies feedback polarity and timing.",
+        "windows": "make windows-cross-build passed the Windows MinGW core library and offline renderer build.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline, 2,000 warm-up/5,000 measured). p50/p95/p99/p99.9/max 0.0533/0.0536/0.0536/0.2595/0.7339% of deadline; native state 4,816 B; zero fixed dry-path latency. Isolated desktop timing, not target-device performance."
+      },
+      "remaining": "Manual guitar listening and physical Tone Master Pro behavior remain open. Tap Division and Manual are not added by this control-only checkpoint. Do not claim Fender numeric settings, DSP, algorithm, or sound parity."
     }
   ],
   "previous_checkpoint": {

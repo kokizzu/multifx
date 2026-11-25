@@ -2741,6 +2741,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.flanger.mix = value;
             options.flanger_enabled = true;
         }
+        else if (key == "--flanger-right-phase-degrees") {
+            options.flanger.right_channel_phase_degrees = value;
+            options.flanger_enabled = true;
+        }
         else if (key == "--phaser-rate-hz") {
             options.phaser.rate_hz = value;
             options.phaser_enabled = true;

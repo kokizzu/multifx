@@ -741,6 +741,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  volume_pedal_only: bool = False,
                  formant_control_lfo_only: bool = False,
                  headrush_drop_tune_only: bool = False,
+                 fender_stereo_flanger_phase_only: bool = False,
                  stereo_panner_only: bool = False,
                  mutant_filter_only: bool = False,
                  step_tremolo_only: bool = False,
@@ -783,7 +784,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         if prerecorded_guitar_source is None:
             if (fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only
                     or stereo_panner_only or formant_control_lfo_only
-                    or headrush_drop_tune_only):
+                    or headrush_drop_tune_only or fender_stereo_flanger_phase_only):
                 raise SystemExit(
                     "Focused effect browser test requires the local prerecorded guitar DI fixture."
                 )
@@ -843,7 +844,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "--chorus-depth-ms", "7", "--chorus-mix", "0.2",
             "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "2",
             "--flanger-depth-ms", "1", "--flanger-feedback", "0.35",
-            "--flanger-feedback-polarity", "negative", "--flanger-mix", "0.2",
+             "--flanger-feedback-polarity", "negative", "--flanger-mix", "0.2",
+             "--flanger-right-phase-degrees", "180",
             "--phaser-rate-hz", "0.5", "--phaser-min-hz", "250",
             "--phaser-max-hz", "1600", "--phaser-feedback", "0.15",
             "--phaser-stages", "6", "--phaser-mix", "0.2",
@@ -1279,6 +1281,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-poly-pitch-range"
         elif headrush_drop_tune_only:
             url = base_url + "/web/index.html?selftest=headrush-drop-tune"
+        elif fender_stereo_flanger_phase_only:
+            url = base_url + "/web/index.html?selftest=fender-stereo-flanger-phase"
         elif fender_pedal_shifter_only:
             url = base_url + "/web/index.html?selftest=fender-pedal-shifter"
         elif fender_pedal_detune_only:
@@ -1618,6 +1622,7 @@ def main() -> None:
         "test-volume-pan", "test-volume-pedal", "test-stereo-filter", "test-stereo-panner",
         "test-formant-control-lfo",
         "test-headrush-drop-tune",
+        "test-fender-stereo-flanger-phase",
         "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
@@ -1648,6 +1653,8 @@ def main() -> None:
         browser_test(formant_control_lfo_only=True)
     elif action == "test-headrush-drop-tune":
         browser_test(headrush_drop_tune_only=True)
+    elif action == "test-fender-stereo-flanger-phase":
+        browser_test(fender_stereo_flanger_phase_only=True)
     elif action == "test-volume-pan":
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":

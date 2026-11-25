@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Stereo Flanger L/R Phase (2026-11-26)
+
+Fender's Model Guide v1.1.100 / Rev. A, printed p. 38, lists L/R Phase on Stereo Flanger and describes its left/right phasing role, but publishes no numeric range/default. TabletFX adds a project-authored 0–360° right-channel LFO offset, default 180° to preserve the existing opposing modulation. It follows the Flanger's 10 ms parameter ramp, adds no delay buffer or fixed latency, and keeps process() allocation-free. Native stereo state is 4,816 B; the focused WebAssembly effect reports 4,784 B at 48 kHz. The browser full chain continues to pass native/WASM comparison.
+
+The isolated Flanger benchmark on AMD Ryzen 9 5950X Release at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured blocks) reports p50/p95/p99/p99.9/max callback use of 0.0533/0.0536/0.0536/0.2595/0.7339%. These are processor-call timings, not a complete-chain or target-device guarantee. HeadlessChrome 151 Play with local stereo prerecorded Guitar-TECHS DI captured 48,000 frames at 0° and 180°: output difference RMS 0.060924, 47,809 samples changed, no extra stage or buffer. Native, CLI, browser/WASM, and Windows MinGW checks pass. Manual listening and device behavior remain open; these values are project measurements, not Fender performance claims.
+
 ## HeadRush Prime Drop Tune project workflow (2026-11-26)
 
 The project-authored Drop Tune selector reuses the existing Pitch picker ID 22 `PolyPitchShifter`: whole-note downward offsets −1…−12, Mix locked to 100%, and no extra processor instance or DSP allocation. It shifts the entire signal uniformly; it does not model string-specific tunings or Prime's Legacy/Refined algorithms. At 48 kHz stereo the existing shifter has 256 samples / 5.333 ms algorithmic latency. Its measured native state is 496,080 B and focused browser effect state is 491,472 B; Drop Tune adds no state beyond that one shifter. The full wet output retains the shifter latency.

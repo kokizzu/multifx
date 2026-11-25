@@ -45,9 +45,24 @@ void Flanger::set_parameters(FlangerParameters parameters) noexcept {
         break;
     }
     parameters.mix = bounded(parameters.mix, 0.35F, 0.0F, 1.0F);
+    parameters.right_channel_phase_degrees = bounded(
+        parameters.right_channel_phase_degrees, 180.0F, 0.0F, 360.0F);
     parameters.smoothing_ms = bounded(parameters.smoothing_ms, 10.0F, 0.0F,
                                       1000.0F);
     parameters_ = parameters;
+    if (parameters_.right_channel_phase_degrees == 180.0F) {
+        target_right_phase_sine_ = 0.0F;
+        target_right_phase_cosine_ = -1.0F;
+    } else if (parameters_.right_channel_phase_degrees == 0.0F ||
+               parameters_.right_channel_phase_degrees == 360.0F) {
+        target_right_phase_sine_ = 0.0F;
+        target_right_phase_cosine_ = 1.0F;
+    } else {
+        const float phase_radians = parameters_.right_channel_phase_degrees *
+                                    (kPi / 180.0F);
+        target_right_phase_sine_ = std::sin(phase_radians);
+        target_right_phase_cosine_ = std::cos(phase_radians);
+    }
     target_base_delay_ms_ = parameters_.base_delay_ms;
     target_depth_ms_ = parameters_.depth_ms;
     const float polarity = parameters_.feedback_polarity == FlangerFeedbackPolarity::Negative
@@ -73,21 +88,35 @@ void Flanger::process(std::span<float> interleaved,
             current_depth_ms_ += depth_step_;
             current_feedback_ += feedback_step_;
             current_mix_ += mix_step_;
+            const float old_right_phase_sine = right_phase_sine_;
+            right_phase_sine_ = old_right_phase_sine * right_phase_cosine_step_ +
+                                right_phase_cosine_ * right_phase_sine_step_;
+            right_phase_cosine_ = right_phase_cosine_ * right_phase_cosine_step_ -
+                                  old_right_phase_sine * right_phase_sine_step_;
             --ramp_remaining_;
             if (ramp_remaining_ == 0) {
                 current_base_delay_ms_ = target_base_delay_ms_;
                 current_depth_ms_ = target_depth_ms_;
                 current_feedback_ = target_feedback_;
                 current_mix_ = target_mix_;
+                right_phase_sine_ = target_right_phase_sine_;
+                right_phase_cosine_ = target_right_phase_cosine_;
                 base_delay_step_ = 0.0F;
                 depth_step_ = 0.0F;
                 feedback_step_ = 0.0F;
                 mix_step_ = 0.0F;
+                right_phase_sine_step_ = 0.0F;
+                right_phase_cosine_step_ = 1.0F;
             }
         }
 
         const float base_delay = current_base_delay_ms_ * samples_per_ms;
         const float modulation_depth = current_depth_ms_ * samples_per_ms;
+        float right_modulation = sine_phase_;
+        if (channels_ > 1) {
+            right_modulation = sine_phase_ * right_phase_cosine_ +
+                               cosine_phase_ * right_phase_sine_;
+        }
         const std::size_t write_offset = write_frame_ * channels_;
         const std::size_t input_offset = frame * channels_;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
@@ -95,7 +124,7 @@ void Flanger::process(std::span<float> interleaved,
             const float input = std::isfinite(interleaved[index])
                                     ? interleaved[index]
                                     : 0.0F;
-            const float modulation = channel == 0 ? sine_phase_ : -sine_phase_;
+            const float modulation = channel == 0 ? sine_phase_ : right_modulation;
             const float delay = std::clamp(base_delay + modulation_depth * modulation,
                                            1.0F,
                                            static_cast<float>(capacity_frames_ - 2));
@@ -154,10 +183,14 @@ void Flanger::retarget(bool immediate) noexcept {
         current_depth_ms_ = target_depth_ms_;
         current_feedback_ = target_feedback_;
         current_mix_ = target_mix_;
+        right_phase_sine_ = target_right_phase_sine_;
+        right_phase_cosine_ = target_right_phase_cosine_;
         base_delay_step_ = 0.0F;
         depth_step_ = 0.0F;
         feedback_step_ = 0.0F;
         mix_step_ = 0.0F;
+        right_phase_sine_step_ = 0.0F;
+        right_phase_cosine_step_ = 1.0F;
         ramp_remaining_ = 0;
         return;
     }
@@ -173,6 +206,15 @@ void Flanger::retarget(bool immediate) noexcept {
     depth_step_ = (target_depth_ms_ - current_depth_ms_) / denominator;
     feedback_step_ = (target_feedback_ - current_feedback_) / denominator;
     mix_step_ = (target_mix_ - current_mix_) / denominator;
+    const float phase_cross =
+        target_right_phase_sine_ * right_phase_cosine_ -
+        target_right_phase_cosine_ * right_phase_sine_;
+    const float phase_dot =
+        target_right_phase_cosine_ * right_phase_cosine_ +
+        target_right_phase_sine_ * right_phase_sine_;
+    const float phase_step = std::atan2(phase_cross, phase_dot) / denominator;
+    right_phase_sine_step_ = std::sin(phase_step);
+    right_phase_cosine_step_ = std::cos(phase_step);
 }
 
 void Flanger::advance_modulator() noexcept {

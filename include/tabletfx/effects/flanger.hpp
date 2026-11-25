@@ -21,6 +21,7 @@ struct FlangerParameters {
     float feedback = 0.35F;
     FlangerFeedbackPolarity feedback_polarity = FlangerFeedbackPolarity::Positive;
     float mix = 0.35F;
+    float right_channel_phase_degrees = 180.0F;
     float smoothing_ms = 10.0F;
 };
 
@@ -68,6 +69,12 @@ private:
     float current_depth_ms_ = 1.0F;
     float current_feedback_ = 0.35F;
     float current_mix_ = 0.35F;
+    float right_phase_sine_ = 0.0F;
+    float right_phase_cosine_ = -1.0F;
+    float target_right_phase_sine_ = 0.0F;
+    float target_right_phase_cosine_ = -1.0F;
+    float right_phase_sine_step_ = 0.0F;
+    float right_phase_cosine_step_ = 1.0F;
     float target_base_delay_ms_ = 2.0F;
     float target_depth_ms_ = 1.0F;
     float target_feedback_ = 0.35F;

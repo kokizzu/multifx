@@ -298,7 +298,7 @@ const DEFAULT_PARAMETERS = {
   tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
     0, 350, 350, 4, 4],
   convolutionReverb: [0.25, 0],
-  flanger: [0.25, 2, 1, 0.35, 0, 0.35],
+  flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
@@ -1628,6 +1628,8 @@ const flangerDepthValue = document.querySelector("#flanger-depth-value");
 const flangerFeedback = document.querySelector("#flanger-feedback");
 const flangerFeedbackValue = document.querySelector("#flanger-feedback-value");
 const flangerPolarity = document.querySelector("#flanger-feedback-polarity");
+const flangerRightPhase = document.querySelector("#flanger-right-phase-degrees");
+const flangerRightPhaseValue = document.querySelector("#flanger-right-phase-value");
 const flangerMix = document.querySelector("#flanger-mix");
 const flangerMixValue = document.querySelector("#flanger-mix-value");
 const phaserRate = document.querySelector("#phaser-rate-hz");
@@ -6644,21 +6646,24 @@ function updateFlanger() {
   flangerDepth.max = String(maximumDepthMs);
   flangerDepth.value = String(Math.min(Number(flangerDepth.value), maximumDepthMs));
   const polarity = flangerPolarity.value === "negative" ? 1 : 0;
+  const rightPhaseDegrees = Number(flangerRightPhase.value);
   const values = [
     Number(flangerRate.value), delayMs, Number(flangerDepth.value),
     Number(flangerFeedback.value), polarity, Number(flangerMix.value),
+    rightPhaseDegrees,
   ];
   DEFAULT_PARAMETERS.flanger = values;
   flangerRateValue.value = `${Number(flangerRate.value).toFixed(2)} Hz`;
   flangerDelayValue.value = `${delayMs.toFixed(2)} ms`;
   flangerDepthValue.value = `${Number(flangerDepth.value).toFixed(2)} ms`;
   flangerFeedbackValue.value = `${Math.round(Number(flangerFeedback.value) * 100)}%`;
+  flangerRightPhaseValue.value = `${rightPhaseDegrees}°`;
   flangerMixValue.value = `${Math.round(Number(flangerMix.value) * 100)}%`;
   if (workletNode) workletNode.port.postMessage({ type: "flanger", value: values });
 }
 
 for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
-  flangerPolarity, flangerMix]) {
+  flangerPolarity, flangerRightPhase, flangerMix]) {
   control.addEventListener("input", updateFlanger);
   control.addEventListener("change", updateFlanger);
 }
@@ -12672,6 +12677,114 @@ async function runHeadRushDropTuneBrowserSmokeTest(reference, captureView, captu
   }
 }
 
+async function runFenderStereoFlangerPhaseBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [flangerRate.value, flangerDelay.value, flangerDepth.value,
+    flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value, flangerMix.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Stereo Flanger phase smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="17"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !flangerRightPhase || flangerRightPhase.min !== "0" ||
+        flangerRightPhase.max !== "360" || flangerRightPhase.step !== "1" ||
+        flangerRightPhase.value !== "180" || !(effectMemory[17] > 0)) {
+      throw new Error("Stereo Flanger phase control is not categorized or project-bounded.");
+    }
+
+    [flangerRate.value, flangerDelay.value, flangerDepth.value,
+      flangerFeedback.value, flangerPolarity.value, flangerMix.value] =
+      ["1", "4", "2", "0", "positive", "1"];
+    flangerRightPhase.value = "0";
+    updateFlanger();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 17;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (phaseDegrees) => {
+      flangerRightPhase.value = String(phaseDegrees);
+      flangerRightPhase.dispatchEvent(new Event("input", { bubbles: true }));
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting Flanger playback at ${phaseDegrees} degrees.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Flanger output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error(`Flanger output at ${phaseDegrees} degrees is silent.`);
+      return { output, peak };
+    };
+
+    const inPhase = await captureAt(0);
+    const oppositePhase = await captureAt(180);
+    let squares = 0;
+    let changedSamples = 0;
+    for (let i = 0; i < inPhase.output.length; i += 1) {
+      const delta = oppositePhase.output[i] - inPhase.output[i];
+      squares += delta * delta;
+      if (Math.abs(delta) > 1e-6) changedSamples += 1;
+    }
+    const differenceRms = Math.sqrt(squares / inPhase.output.length);
+    if (differenceRms < 1e-5 || changedSamples < 32) {
+      throw new Error("L/R phase changes did not alter stereo Flanger Play output.");
+    }
+    return {
+      category: "Modulation",
+      effectId: 17,
+      control: "right-channel LFO phase offset",
+      projectRangeDegrees: [0, 360],
+      projectDefaultDegrees: 180,
+      playCaptures: 2,
+      inPhasePeak: inPhase.peak,
+      oppositePhasePeak: oppositePhase.peak,
+      differenceRms,
+      changedSamples,
+      effectMemoryBytes: effectMemory[17],
+    };
+  } finally {
+    stopSource(false);
+    [flangerRate.value, flangerDelay.value, flangerDepth.value,
+      flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value,
+      flangerMix.value] = previousControls;
+    updateFlanger();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -16759,7 +16872,7 @@ async function runBrowserSelfTest() {
         tremolo: [4, 0.2, 0, 0, 120, 1],
         harmonicTremolo: [4.25, 0.8, 950, 1, 1, 96, 0.5, 0, 25],
         chorus: [0.8, 15, 7, 0.2],
-        flanger: [0.25, 2, 1, 0.35, 1, 0.2],
+         flanger: [0.25, 2, 1, 0.35, 1, 0.2, 180],
         phaser: [0.5, 250, 1600, 0.15, 6, 0.2],
         vibrato: [5, 0.35, 0.35],
         compressor: [-18, 3, 6, 8, 100, 0],
@@ -17022,6 +17135,7 @@ async function runBrowserSelfTest() {
     flangerDepth.value = "1";
     flangerFeedback.value = "0.35";
     flangerPolarity.value = "negative";
+     flangerRightPhase.value = "180";
     flangerMix.value = "0.2";
     phaserRate.value = "0.5";
     phaserMinimum.value = "250";
@@ -17295,6 +17409,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Drop Tune browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-stereo-flanger-phase") {
+          testResult.textContent = "Checking Fender Stereo Flanger L/R phase control with local guitar audio…";
+          const stereoFlangerPhaseSmoke = await runFenderStereoFlangerPhaseBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            stereoFlangerPhase: stereoFlangerPhaseSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Stereo Flanger phase browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fender-pedal-shifter") {

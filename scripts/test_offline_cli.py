@@ -1773,7 +1773,8 @@ def check_flanger(executable: Path) -> None:
             [str(executable), "render", str(source), str(output),
              "--flanger-rate-hz", "0.25", "--flanger-delay-ms", "8",
              "--flanger-depth-ms", "0", "--flanger-feedback", "0.5",
-             "--flanger-feedback-polarity", "negative", "--flanger-mix", "1"],
+             "--flanger-feedback-polarity", "negative", "--flanger-mix", "1",
+             "--flanger-right-phase-degrees", "180"],
             capture_output=True, text=True, check=True,
         )
         if "processors=1" not in result.stdout:
@@ -1784,6 +1785,37 @@ def check_flanger(executable: Path) -> None:
         if abs(samples[64] - expected) > 1.0e-6 or abs(samples[128] + expected * 0.5) > 1.0e-6:
             raise AssertionError(
                 f"Flanger CLI should render negative feedback at frames 64/128; got {samples[64]}/{samples[128]}"
+            )
+
+        stereo_source = root / "stereo-guitar.wav"
+        phase_zero_output = root / "phase-zero.wav"
+        phase_opposite_output = root / "phase-opposite.wav"
+        stereo_samples = [
+            round(12000 * math.sin(2.0 * math.pi * 220.0 * frame / sample_rate))
+            for frame in range(4000) for _ in range(2)
+        ]
+        write_pcm16_channels(stereo_source, sample_rate, 2, stereo_samples)
+
+        def render_phase(output_path: Path, phase_degrees: int) -> tuple[float, ...]:
+            subprocess.run(
+                [str(executable), "render", str(stereo_source), str(output_path),
+                 "--flanger-rate-hz", "1", "--flanger-delay-ms", "4",
+                 "--flanger-depth-ms", "2", "--flanger-feedback", "0",
+                 "--flanger-mix", "1", "--flanger-right-phase-degrees",
+                 str(phase_degrees)],
+                capture_output=True, text=True, check=True,
+            )
+            payload = output_path.read_bytes()[44:]
+            return struct.unpack("<" + "f" * (len(payload) // 4), payload)
+
+        phase_zero = render_phase(phase_zero_output, 0)
+        phase_opposite = render_phase(phase_opposite_output, 180)
+        difference_rms = math.sqrt(sum(
+            (left - right) ** 2 for left, right in zip(phase_zero, phase_opposite, strict=True)
+        ) / len(phase_zero))
+        if difference_rms < 1e-4:
+            raise AssertionError(
+                f"Flanger right-channel phase option did not change stereo output: RMS {difference_rms}"
             )
 
 
