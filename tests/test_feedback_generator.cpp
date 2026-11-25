@@ -111,6 +111,13 @@ void test_unison_generates_a_stable_mono_tracked_tone() {
     auto parameters = clean_parameters();
     parameters.type = FeedbackGeneratorType::Unison;
     FeedbackGenerator effect(kSampleRate, 1U, parameters);
+    const std::size_t response_samples =
+        effect.pitch_response_latency_samples();
+    assert(response_samples > 0U);
+    const float expected_response_ms =
+        static_cast<float>(response_samples) * 1000.0F / kSampleRate;
+    assert(std::abs(effect.pitch_response_latency_ms() - expected_response_ms) <
+           1.0e-4F);
     effect.process(audio, 1U);
     require_finite(audio);
     const double level = amplitude_near(audio, 220.0, 6000U, 4000U);
@@ -150,6 +157,43 @@ void test_octave_modes_shift_generated_feedback() {
         up, 220.0, analysis_start, analysis_length);
     assert(down_level > down_unison * 1.5);
     assert(up_level > up_unison * 1.5);
+}
+
+void test_upper_fixed_intervals_generate_the_selected_pitch() {
+    using namespace tabletfx::effects;
+    struct IntervalCase {
+        FeedbackGeneratorType type;
+        int semitones;
+    };
+    constexpr std::array<IntervalCase, 5U> cases{{
+        {FeedbackGeneratorType::OctaveAndFifth, 19},
+        {FeedbackGeneratorType::TwoOctaves, 24},
+        {FeedbackGeneratorType::TwoOctavesAndThird, 28},
+        {FeedbackGeneratorType::TwoOctavesAndFifth, 31},
+        {FeedbackGeneratorType::TwoOctavesAndSeventh, 35},
+    }};
+    constexpr std::size_t frames = 36000U;
+    constexpr std::size_t analysis_start = 18000U;
+    constexpr std::size_t analysis_length = 16000U;
+
+    for (const auto& interval : cases) {
+        std::vector<float> audio(frames, 0.0F);
+        fill_sine(audio, 220.0, 0.25);
+        auto parameters = clean_parameters();
+        parameters.type = interval.type;
+        FeedbackGenerator effect(kSampleRate, 1U, parameters);
+        effect.process(audio, 1U);
+        require_finite(audio);
+
+        const double selected_hz = 220.0 * std::exp2(
+            static_cast<double>(interval.semitones) / 12.0);
+        const double selected_level = amplitude_near(
+            audio, selected_hz, analysis_start, analysis_length);
+        const double unison_level = amplitude_near(
+            audio, 220.0, analysis_start, analysis_length);
+        assert(selected_level > 0.08);
+        assert(selected_level > unison_level * 4.0);
+    }
 }
 
 void test_dry_kill_silence_and_safety_ceiling() {
@@ -229,6 +273,7 @@ int main() {
     test_defaults_bounds_and_invalid_formats();
     test_unison_generates_a_stable_mono_tracked_tone();
     test_octave_modes_shift_generated_feedback();
+    test_upper_fixed_intervals_generate_the_selected_pitch();
     test_dry_kill_silence_and_safety_ceiling();
     test_stereo_tracking_and_channel_mismatch_guard();
     test_reset_clears_tracker_and_pitch_state();

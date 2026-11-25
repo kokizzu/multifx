@@ -41,6 +41,7 @@ PUBLISH_CHECKPOINTS += flagship-control-routing
 PUBLISH_CHECKPOINTS += stadium-mutant-filter
 PUBLISH_CHECKPOINTS += fractal-chromatic-harmonizer
 PUBLISH_CHECKPOINTS += fractal-diatonic-harmonizer
+PUBLISH_CHECKPOINTS += feedback-generator-modes
 PUBLISH_CHECKPOINTS += line6-stadium-3osc-research
 PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 PUBLISH_CHECKPOINTS += stadium-seven-band-peq
@@ -219,3 +220,7 @@ sync-primary-main-plan:
 
 sync-primary-main-apply:
 	$(PYTHON) scripts/sync_published_main.py apply
+
+.PHONY: bench-feedback-generator
+bench-feedback-generator:
+	$(PYTHON) scripts/run_cmake.py bench-feedback-generator

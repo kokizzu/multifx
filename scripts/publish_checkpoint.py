@@ -940,6 +940,24 @@ FEEDBACK_GENERATOR_CHECKPOINT_PATHS = (
     "RESEARCH.md",
     "scripts/publish_checkpoint.py",
 )
+FEEDBACK_GENERATOR_MODES_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/feedback_generator_bench.cpp",
+    "include/tabletfx/effects/feedback_generator.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "src/effects/feedback_generator.cpp",
+    "tests/test_feedback_generator.cpp",
+    "web/app.js",
+    "web/index.html",
+)
 SHIMMER_REVERB_CHECKPOINT_PATHS = (
     "Makefile",
     "CMakeLists.txt",
@@ -2619,6 +2637,10 @@ CHECKPOINTS = {
                              "feat: add project-authored pitch feedback delay"),
     "feedback-generator": (FEEDBACK_GENERATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored feedback generator"),
+    "feedback-generator-modes": (
+        FEEDBACK_GENERATOR_MODES_CHECKPOINT_PATHS,
+        "feat: extend project feedback generator intervals",
+    ),
     "shimmer-reverb": (SHIMMER_REVERB_CHECKPOINT_PATHS,
                        "feat: add project-authored shimmer reverb"),
     "convolution-reverb": (CONVOLUTION_REVERB_CHECKPOINT_PATHS,
@@ -2945,6 +2967,13 @@ def plan(checkpoint: str) -> list[str]:
     git("diff", "--cached", "--check", "--", *paths)
     print(f"Repository: {remote_url}")
     print(f"Branch: {branch} (verified upstream default; local HEAD matches origin/main)")
+    base_commit = git("rev-parse", "HEAD").strip()
+    base_tree = git("rev-parse", "HEAD^{tree}").strip()
+    print(f"Base commit: {base_commit}")
+    print(f"Base tree: {base_tree}")
+    print("Base file modes:")
+    for entry in git("ls-tree", "-r", "HEAD", "--", *paths).splitlines():
+        print("  " + entry)
     print("Checkpoint: " + checkpoint)
     print("Commit message: " + CHECKPOINTS[checkpoint][1])
     print("Exact changed paths:")

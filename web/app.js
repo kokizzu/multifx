@@ -6353,7 +6353,11 @@ updateChromaticPitchDelay();
 function updateFeedbackGenerator() {
   const values = feedbackGeneratorControls.map((control) => Number(control.value));
   DEFAULT_PARAMETERS.feedbackGenerator = values;
-  const typeNames = ["Octave down", "Unison", "Octave up"];
+  const typeNames = [
+    "Octave down", "Unison", "Octave up", "Octave + fifth",
+    "Two octaves", "Two octaves + third", "Two octaves + fifth",
+    "Two octaves + seventh",
+  ];
   feedbackGeneratorControls[0].parentElement.querySelector("output").value =
     typeNames[values[0]] || "Unison";
   feedbackGeneratorControls[1].parentElement.querySelector("output").value =
@@ -15912,6 +15916,18 @@ async function runBrowserSelfTest() {
     });
     updatePitchFeedbackDelay();
     const defaultFeedbackGenerator = [...DEFAULT_PARAMETERS.feedbackGenerator];
+    const feedbackTypeNames = [...feedbackGeneratorControls[0].options]
+      .map((option) => option.textContent.trim());
+    if (feedbackTypeNames.join("|") !==
+        "Octave down|Unison|Octave up|Octave + fifth|Two octaves|Two octaves + third|Two octaves + fifth|Two octaves + seventh") {
+      throw new Error("Feedback Generator picker must expose its eight categorized pitch modes.");
+    }
+    feedbackGeneratorControls[0].value = "7";
+    feedbackGeneratorControls[0].dispatchEvent(new Event("input", { bubbles: true }));
+    if (feedbackGeneratorControls[0].parentElement.querySelector("output").value !==
+        "Two octaves + seventh") {
+      throw new Error("Feedback Generator mode names must match the selected project interval.");
+    }
     feedbackGeneratorControls[0].value = "2";
     feedbackGeneratorControls[1].value = "0.65";
     feedbackGeneratorControls[2].value = "25";

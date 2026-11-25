@@ -138,6 +138,10 @@ add_executable(tabletfx_fractal_diatonic_harmonizer_bench
     apps/fractal_diatonic_harmonizer_bench.cpp)
 target_link_libraries(tabletfx_fractal_diatonic_harmonizer_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_feedback_generator_bench
+    apps/feedback_generator_bench.cpp)
+target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)

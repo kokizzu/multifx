@@ -2,7 +2,6 @@
 
 #include "tabletfx/effect.hpp"
 #include "tabletfx/effects/mono_guitar_synth.hpp"
-#include "tabletfx/effects/poly_pitch_shifter.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -15,7 +14,16 @@ enum class FeedbackGeneratorType : std::uint8_t {
     OctaveDown,
     Unison,
     OctaveUp,
+    OctaveAndFifth,
+    TwoOctaves,
+    TwoOctavesAndThird,
+    TwoOctavesAndFifth,
+    TwoOctavesAndSeventh,
 };
+
+// These are project-authored single-oscillator interval choices. The names
+// describe the selected interval; they do not represent stacked voices or
+// Line 6's proprietary Feedbacker mode behavior.
 
 enum class FeedbackGeneratorDryKill : std::uint8_t {
     Off,
@@ -36,14 +44,16 @@ struct FeedbackGeneratorParameters {
 
 /*
  * Project-authored, mono-tracked feedback-tone generator. It detects one
- * fundamental with the existing MonoGuitarSynth tracker, generates a sine
- * tone, and optionally shifts that tone by one octave down or up. This is a
- * bounded synthesized sustain effect, not physical speaker feedback and not
- * a polyphonic chord/reference detector. The tracker covers approximately
+ * fundamental with the existing MonoGuitarSynth tracker and generates a sine
+ * tone at a selected project-authored fixed interval from −12 to +35
+ * semitones. Each mode generates one oscillator only. This is a bounded
+ * synthesized sustain effect, not physical speaker feedback and not a
+ * polyphonic chord/reference detector. The tracker covers approximately
  * 55–1,100 Hz and can miss or octave-misread chords, distorted input, noisy
  * attacks, and fast note changes. Its 1,024-sample analysis frame is about
- * 21.3 ms at 48 kHz. The optional pitch-shift path adds the pinned shifter's
- * buffered latency and transient texture.
+ * 21.3 ms at 48 kHz. The generated oscillator adds no pitch-shifter latency;
+ * pitch can only respond after the tracker provides an estimate. Pitch is
+ * smoothed with a fixed 8 ms one-pole glide.
  *
  * Control bounds/defaults, sine generation, and output limiting are project
  * choices. The effect intentionally omits changing/random harmonic modes,
@@ -64,6 +74,14 @@ public:
     [[nodiscard]] const FeedbackGeneratorParameters& parameters() const noexcept {
         return parameters_;
     }
+    // Detector-control response estimate; the generated oscillator itself
+    // adds no block or pitch-shifter delay.
+    [[nodiscard]] std::size_t pitch_response_latency_samples() const noexcept {
+        return synth_.pitch_response_latency_samples();
+    }
+    [[nodiscard]] float pitch_response_latency_ms() const noexcept {
+        return synth_.pitch_response_latency_ms();
+    }
 
     void configure(const FeedbackGeneratorParameters& parameters) noexcept;
     void reset() noexcept override;
@@ -75,6 +93,7 @@ private:
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 96000.0F;
     static constexpr float kSafetyCeiling = 1.0F;
+    static constexpr float kPitchGlideMs = 8.0F;
 
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
@@ -82,14 +101,20 @@ private:
     [[nodiscard]] static bool valid_dry_kill(
         FeedbackGeneratorDryKill dry_kill) noexcept;
     [[nodiscard]] static float finite_input(float sample) noexcept;
-    [[nodiscard]] float pitch_for_type() const noexcept;
+    [[nodiscard]] float interval_for_type() const noexcept;
+    [[nodiscard]] float pitch_glide_coefficient() const noexcept;
+    [[nodiscard]] float oscillator_sample(float frequency_hz) noexcept;
 
+    float sample_rate_;
     std::uint16_t channels_;
     MonoGuitarSynth synth_;
-    tabletfx::PolyPitchShifter pitch_shifter_;
     FeedbackGeneratorParameters parameters_{};
+    float pitch_interval_semitones_ = 0.0F;
+    float pitch_glide_coefficient_ = 0.0F;
+    float current_frequency_hz_ = 0.0F;
+    float target_frequency_hz_ = 0.0F;
+    double phase_ = 0.0;
     std::vector<float> dry_buffer_;
-    std::vector<float> generated_buffer_;
 };
 
 }  // namespace tabletfx::effects

@@ -115,6 +115,17 @@ def bench_fractal_diatonic_harmonizer(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_feedback_generator(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_feedback_generator_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_feedback_generator_bench"
+    )
+    run([str(executable)])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -132,7 +143,8 @@ def main() -> None:
     parser.add_argument(
         "action",
         choices=("configure", "build", "test", "bench",
-                 "bench-fractal-diatonic-harmonizer", "windows-build"),
+                 "bench-fractal-diatonic-harmonizer",
+                 "bench-feedback-generator", "windows-build"),
     )
     parser.add_argument("--test-filter", default="")
     parser.add_argument("--verbose", action="store_true")
@@ -165,6 +177,8 @@ def main() -> None:
         run([str(pitch_mix_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
+    elif action == "bench-feedback-generator":
+        bench_feedback_generator(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 
