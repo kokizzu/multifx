@@ -2924,9 +2924,15 @@ public:
 
     void configure_flanger(float rate_hz, float base_delay_ms, float depth_ms,
                            float feedback, std::uint32_t feedback_polarity,
-                           float mix, float right_channel_phase_degrees) noexcept {
+                           float mix, float right_channel_phase_degrees,
+                           std::uint32_t tempo_sync, float tempo_bpm,
+                           std::uint32_t tap_division) noexcept {
         tabletfx::FlangerParameters parameters;
         parameters.rate_hz = rate_hz;
+        parameters.tempo_sync = tempo_sync != 0U;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.tap_division =
+            static_cast<tabletfx::DelayDivision>(tap_division);
         parameters.base_delay_ms = base_delay_ms;
         parameters.depth_ms = depth_ms;
         parameters.feedback = feedback;
@@ -4997,11 +5003,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_vibratone(
 TABLETFX_WASM_EXPORT void tf_chain_set_flanger(
     void* opaque, float rate_hz, float base_delay_ms, float depth_ms,
     float feedback, std::uint32_t feedback_polarity, float mix,
-    float right_channel_phase_degrees) noexcept {
+    float right_channel_phase_degrees, std::uint32_t tempo_sync,
+    float tempo_bpm, std::uint32_t tap_division) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_flanger(rate_hz, base_delay_ms, depth_ms,
                                             feedback, feedback_polarity, mix,
-                                            right_channel_phase_degrees);
+                                            right_channel_phase_degrees,
+                                            tempo_sync, tempo_bpm, tap_division);
     }
 }
 

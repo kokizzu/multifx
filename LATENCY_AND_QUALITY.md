@@ -554,3 +554,15 @@ At 48 kHz stereo the current native processor owns 15,664 B, including two fixed
 On AMD Ryzen 9 5950X Release with 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured callbacks), Manual mode measured p50/p95/p99/p99.9/max callback use of 0.1219/0.1223/0.1766/0.4208/1.2222%. Auto sine at 1 Hz and full depth measured 0.2321/0.2880/0.3578/0.5813/0.9372%. The Auto path adds 0.1102 percentage points at p50 and 0.1812 points at p99 versus Manual. This is isolated desktop processor timing, not a complete chain, Windows/Android device, or live-route guarantee.
 
 The focused HeadlessChrome 151 browser/WASM Play test used local prerecorded Guitar-TECHS direct-input guitar, 48 kHz stereo and 48,000 frames. The effect remains in Modulation at index 81 with no extra stage. Auto vs Manual output RMS difference was 0.0370055 and Auto vs Off was 0.0314842; Auto peak was 0.165524, with 95,795 samples above 1e−6. `make web-test-fractal-tzf-auto` and `make windows-cross-build` pass, including all 117 CTest cases and the existing browser/native chain comparison. Listening, hardware behavior, firmware-specific comparison, and target-device timing remain manual.
+
+## Fender Tone Master Pro Flanger Tap Division (2026-11-26)
+
+Tempo sync extends the existing Flanger stage and does not add an effect slot, audio buffer, or fixed dry-path latency. The rate from BPM/division is calculated when parameters change, outside `process()`; the callback retains the existing flanger modulation path and performs no heap allocation. Native state is 4,832 B; browser/WASM effect state is 4,796 B.
+
+The sync-specific benchmark profile uses quarter-note division at 120 BPM, 48 kHz stereo, 128-frame callbacks, and a 2.667 ms callback deadline on an AMD Ryzen 9 5950X Release build. It runs 2,000 warm-up and 5,000 measured callbacks. Percentages show elapsed processor-call time as a share of one callback deadline:
+
+| Mode | p50 | p95 | p99 | p99.9 | Max | State | Fixed latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Quarter-note sync, 120 BPM | 0.0533% | 0.0795% | 0.0829% | 0.4763% | 2.3255% | 4,832 B | 0 frames | 0/5,000 |
+
+`make test-fender-flanger-tap-division`, `make web-test-fender-flanger-tap-division`, `make windows-cross-build`, and `make bench` pass. Browser Play uses the local prerecorded stereo Guitar-TECHS DI. This isolated desktop processor-call timing does not predict Android/tablet load. Manual listening, physical Tone Master Pro comparison, and target-device timing remain open; no Fender DSP, settings, or sound parity is claimed.

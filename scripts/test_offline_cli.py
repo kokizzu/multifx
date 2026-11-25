@@ -1818,6 +1818,53 @@ def check_flanger(executable: Path) -> None:
                 f"Flanger right-channel phase option did not change stereo output: RMS {difference_rms}"
             )
 
+        def render_tempo(output_path: Path, *, sync: bool, bpm: int,
+                         division: str = "quarter") -> tuple[float, ...]:
+            subprocess.run(
+                [str(executable), "render", str(stereo_source), str(output_path),
+                 "--flanger-rate-hz", "2" if not sync else "0.25",
+                 "--flanger-tempo-sync", "on" if sync else "off",
+                 "--flanger-tempo-bpm", str(bpm),
+                 "--flanger-tap-division", division,
+                 "--flanger-delay-ms", "4", "--flanger-depth-ms", "2",
+                 "--flanger-feedback", "0", "--flanger-mix", "1"],
+                capture_output=True, text=True, check=True,
+            )
+            payload = output_path.read_bytes()[44:]
+            return struct.unpack("<" + "f" * (len(payload) // 4), payload)
+
+        free_two_hz = render_tempo(root / "free-two-hz.wav", sync=False, bpm=120)
+        quarter_120 = render_tempo(root / "quarter-120.wav", sync=True, bpm=120)
+        quarter_60 = render_tempo(root / "quarter-60.wav", sync=True, bpm=60)
+        matching_error = max(abs(a - b) for a, b in
+                             zip(free_two_hz, quarter_120, strict=True))
+        tempo_change_rms = math.sqrt(sum(
+            (a - b) ** 2 for a, b in zip(quarter_60, quarter_120, strict=True)
+        ) / len(quarter_120))
+        if matching_error > 1e-7 or tempo_change_rms < 1e-4:
+            raise AssertionError(
+                f"Flanger Tap Division tempo sync is inconsistent: same-rate max {matching_error}, "
+                f"tempo-change RMS {tempo_change_rms}"
+            )
+
+        missing_sync_value = subprocess.run(
+            [str(executable), "render", str(stereo_source), str(root / "missing-sync-value.wav"),
+             "--flanger-tempo-sync"],
+            capture_output=True, text=True, check=False,
+        )
+        if (missing_sync_value.returncode == 0 or
+                "Missing value for --flanger-tempo-sync" not in missing_sync_value.stderr):
+            raise AssertionError("Flanger tempo-sync accepted a missing on/off value")
+
+        invalid_division = subprocess.run(
+            [str(executable), "render", str(stereo_source), str(root / "bad-division.wav"),
+             "--flanger-tap-division", "not-a-division"],
+            capture_output=True, text=True, check=False,
+        )
+        if (invalid_division.returncode == 0 or
+                "Unsupported delay division" not in invalid_division.stderr):
+            raise AssertionError("Flanger accepted an invalid Tap Division")
+
 
 def check_manual_thru_zero_flanger(executable: Path) -> None:
     sample_rate = 8000

@@ -74,6 +74,39 @@ void test_defaults_bounds_and_memory() {
             "non-finite flanger parameters did not use safe defaults");
 }
 
+void test_tempo_sync_divisions() {
+    constexpr std::array<float, 14> expected_rates{
+        0.5F, 2.0F / 3.0F, 1.0F, 4.0F / 3.0F, 2.0F, 3.0F,
+        8.0F / 3.0F, 4.0F, 6.0F, 16.0F / 3.0F, 8.0F, 12.0F,
+        16.0F, 32.0F};
+    for (std::size_t index = 0; index < expected_rates.size(); ++index) {
+        tabletfx::FlangerParameters parameters;
+        parameters.tempo_sync = true;
+        parameters.tempo_bpm = 120.0F;
+        parameters.tap_division = static_cast<tabletfx::DelayDivision>(index);
+        tabletfx::Flanger flanger(48000.0F, 1, parameters);
+        require(std::abs(flanger.effective_rate_hz() - expected_rates[index]) < 1.0e-5F,
+                "tempo-synced Flanger division has the wrong rate");
+    }
+
+    tabletfx::FlangerParameters free_rate;
+    free_rate.rate_hz = 0.75F;
+    free_rate.tempo_bpm = 240.0F;
+    free_rate.tap_division = tabletfx::DelayDivision::sixteenth;
+    tabletfx::Flanger unsynced(48000.0F, 1, free_rate);
+    require(std::abs(unsynced.effective_rate_hz() - 0.75F) < 1.0e-6F,
+            "free Flanger rate changed when tempo sync is disabled");
+
+    free_rate.tempo_sync = true;
+    free_rate.tempo_bpm = std::numeric_limits<float>::quiet_NaN();
+    free_rate.tap_division = static_cast<tabletfx::DelayDivision>(255);
+    tabletfx::Flanger invalid(48000.0F, 1, free_rate);
+    require(invalid.parameters().tempo_bpm == 120.0F &&
+                invalid.parameters().tap_division == tabletfx::DelayDivision::quarter &&
+                std::abs(invalid.effective_rate_hz() - 2.0F) < 1.0e-6F,
+            "invalid Flanger tempo controls did not use safe defaults");
+}
+
 void test_stereo_phase_relationship() {
     tabletfx::FlangerParameters parameters;
     parameters.rate_hz = 1.0F;
@@ -313,6 +346,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_tempo_sync_divisions();
         test_stereo_phase_relationship();
         test_delay_feedback_and_polarity();
         test_stereo_isolation_mix_and_modulation();

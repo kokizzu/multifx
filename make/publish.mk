@@ -17,6 +17,7 @@ PUBLISH_CHECKPOINTS += fender-volume-pedal-mute
 PUBLISH_CHECKPOINTS += fm9-formant-control-lfo
 PUBLISH_CHECKPOINTS += headrush-prime-drop-tune
 PUBLISH_CHECKPOINTS += fender-stereo-flanger-phase
+PUBLISH_CHECKPOINTS += fender-flanger-tap-division
 PUBLISH_CHECKPOINTS += fractal-tzf-auto
 
 .PHONY: test-fender-stereo-flanger-phase web-test-fender-stereo-flanger-phase
@@ -25,6 +26,14 @@ test-fender-stereo-flanger-phase:
 
 web-test-fender-stereo-flanger-phase: test web-build
 	$(PYTHON) scripts/web.py test-fender-stereo-flanger-phase
+
+.PHONY: test-fender-flanger-tap-division web-test-fender-flanger-tap-division
+test-fender-flanger-tap-division:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_flanger_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fender-flanger-tap-division: test web-build
+	$(PYTHON) scripts/web.py test-fender-flanger-tap-division
 
 .PHONY: test-fractal-tzf-auto web-test-fractal-tzf-auto
 test-fractal-tzf-auto:

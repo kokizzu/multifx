@@ -2435,6 +2435,25 @@ Options parse_options(int argc, char** argv, int first) {
             options.flanger_enabled = true;
             continue;
         }
+        if (key == "--flanger-tempo-sync") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --flanger-tempo-sync");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.flanger.tempo_sync = true;
+            else if (value == "off") options.flanger.tempo_sync = false;
+            else throw std::invalid_argument("Flanger tempo sync must be on or off");
+            options.flanger_enabled = true;
+            continue;
+        }
+        if (key == "--flanger-tap-division") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --flanger-tap-division");
+            }
+            options.flanger.tap_division = parse_delay_division(argv[++i]);
+            options.flanger_enabled = true;
+            continue;
+        }
         if (key == "--phaser-stages") {
             const std::string_view value(argv[++i]);
             if (value == "4") options.phaser.stages = 4;
@@ -2756,6 +2775,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--flanger-rate-hz") {
             options.flanger.rate_hz = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-tempo-bpm") {
+            options.flanger.tempo_bpm = value;
             options.flanger_enabled = true;
         }
         else if (key == "--flanger-delay-ms") {
@@ -5788,6 +5811,19 @@ void run_bench() {
         parameters.depth_ms = 1.0F;
         parameters.feedback = 0.35F;
         parameters.mix = 0.35F;
+        return std::make_unique<tabletfx::Flanger>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("flanger-tap-division-sync-project-authored", [=] {
+        tabletfx::FlangerParameters parameters;
+        parameters.rate_hz = 0.25F;
+        parameters.base_delay_ms = 2.0F;
+        parameters.depth_ms = 1.0F;
+        parameters.feedback = 0.35F;
+        parameters.mix = 0.35F;
+        parameters.tempo_sync = true;
+        parameters.tempo_bpm = 120.0F;
+        parameters.tap_division = tabletfx::DelayDivision::quarter;
         return std::make_unique<tabletfx::Flanger>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);

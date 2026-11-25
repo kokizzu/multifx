@@ -298,7 +298,7 @@ const DEFAULT_PARAMETERS = {
   tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
     0, 350, 350, 4, 4],
   convolutionReverb: [0.25, 0],
-  flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180],
+  flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180, 0, 120, 4],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5],
   vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
@@ -1637,6 +1637,12 @@ const flangerRightPhase = document.querySelector("#flanger-right-phase-degrees")
 const flangerRightPhaseValue = document.querySelector("#flanger-right-phase-value");
 const flangerMix = document.querySelector("#flanger-mix");
 const flangerMixValue = document.querySelector("#flanger-mix-value");
+const flangerTapDivision = document.querySelector("#flanger-tap-division");
+const flangerTempoBpm = document.querySelector("#flanger-tempo-bpm");
+const flangerTempoBpmValue = document.querySelector("#flanger-tempo-bpm-value");
+const flangerDivisionBeats = [
+  4, 3, 2, 1.5, 1, 2 / 3, 0.75, 0.5, 1 / 3, 0.375, 0.25, 1 / 6, 0.125, 0.0625,
+];
 const phaserRate = document.querySelector("#phaser-rate-hz");
 const phaserRateValue = document.querySelector("#phaser-rate-value");
 const phaserMinimum = document.querySelector("#phaser-min-hz");
@@ -6664,23 +6670,37 @@ function updateFlanger() {
   flangerDepth.value = String(Math.min(Number(flangerDepth.value), maximumDepthMs));
   const polarity = flangerPolarity.value === "negative" ? 1 : 0;
   const rightPhaseDegrees = Number(flangerRightPhase.value);
+  const tempoSync = flangerTapDivision.value !== "free";
+  const division = tempoSync ? Number(flangerTapDivision.value) : 4;
+  const tempoBpm = Number(flangerTempoBpm.value);
+  const freeRateHz = Number(flangerRate.value);
+  const synchronizedRateHz = Math.min(
+    80,
+    Math.max(0.05, (tempoBpm / 60) / flangerDivisionBeats[division]),
+  );
+  flangerRate.disabled = tempoSync;
+  flangerTempoBpm.disabled = !tempoSync;
   const values = [
-    Number(flangerRate.value), delayMs, Number(flangerDepth.value),
+    freeRateHz, delayMs, Number(flangerDepth.value),
     Number(flangerFeedback.value), polarity, Number(flangerMix.value),
-    rightPhaseDegrees,
+    rightPhaseDegrees, tempoSync ? 1 : 0, tempoBpm, division,
   ];
   DEFAULT_PARAMETERS.flanger = values;
-  flangerRateValue.value = `${Number(flangerRate.value).toFixed(2)} Hz`;
+  flangerRateValue.value = tempoSync
+    ? `${synchronizedRateHz.toFixed(2)} Hz · sync`
+    : `${freeRateHz.toFixed(2)} Hz`;
   flangerDelayValue.value = `${delayMs.toFixed(2)} ms`;
   flangerDepthValue.value = `${Number(flangerDepth.value).toFixed(2)} ms`;
   flangerFeedbackValue.value = `${Math.round(Number(flangerFeedback.value) * 100)}%`;
   flangerRightPhaseValue.value = `${rightPhaseDegrees}°`;
   flangerMixValue.value = `${Math.round(Number(flangerMix.value) * 100)}%`;
+  flangerTempoBpmValue.value = `${tempoBpm} BPM`;
   if (workletNode) workletNode.port.postMessage({ type: "flanger", value: values });
 }
 
 for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
-  flangerPolarity, flangerRightPhase, flangerMix]) {
+  flangerPolarity, flangerRightPhase, flangerMix, flangerTapDivision,
+  flangerTempoBpm]) {
   control.addEventListener("input", updateFlanger);
   control.addEventListener("change", updateFlanger);
 }
@@ -12822,6 +12842,116 @@ async function runFenderStereoFlangerPhaseBrowserSmokeTest(reference, captureVie
   }
 }
 
+async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [flangerRate.value, flangerDelay.value, flangerDepth.value,
+    flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value, flangerMix.value,
+    flangerTapDivision.value, flangerTempoBpm.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Flanger Tap Division smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="17"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        flangerTapDivision.value !== "free" || !flangerRate || flangerRate.disabled ||
+        flangerRate.value !== "0.25" ||
+        flangerTapDivision.options.length !== 15 ||
+        flangerTempoBpm.min !== "20" || flangerTempoBpm.max !== "300" ||
+        flangerTempoBpm.value !== "120" || !flangerTempoBpm.disabled ||
+        !(effectMemory[17] > 0)) {
+      throw new Error("Flanger tempo-sync controls or unchanged free-rate defaults are invalid.");
+    }
+
+    [flangerDelay.value, flangerDepth.value, flangerFeedback.value,
+      flangerPolarity.value, flangerRightPhase.value, flangerMix.value] =
+      ["4", "2", "0", "positive", "180", "1"];
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 17;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (tapDivision, bpm, rateHz) => {
+      flangerRate.value = String(rateHz);
+      flangerTapDivision.value = tapDivision;
+      flangerTempoBpm.value = String(bpm);
+      updateFlanger();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Flanger tempo-sync playback.")),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Flanger output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error("Flanger tempo-sync output is silent.");
+      return { output, peak };
+    };
+
+    const freeTwoHz = await captureAt("free", 120, 2);
+    const quarterAt120 = await captureAt("4", 120, 0.25);
+    if (!flangerRate.disabled || !flangerTempoBpm || flangerTempoBpm.disabled ||
+        flangerRateValue.value !== "2.00 Hz · sync") {
+      throw new Error("Quarter-note sync at 120 BPM did not select a 2 Hz LFO rate.");
+    }
+    const quarterAt60 = await captureAt("4", 60, 0.25);
+    if (flangerRateValue.value !== "1.00 Hz · sync") {
+      throw new Error("Quarter-note sync did not follow a tempo change to 60 BPM.");
+    }
+
+    return {
+      category: "Modulation",
+      effectId: 17,
+      documentedRole: "Tap Division synchronizes effect speed to current tempo",
+      projectChoices: 14,
+      projectTempoRangeBpm: [20, 300],
+      freeRateDefaultHz: 0.25,
+      quarterAt120Hz: 2,
+      quarterAt60Hz: 1,
+      playCaptures: 3,
+      peaks: [freeTwoHz.peak, quarterAt120.peak, quarterAt60.peak],
+      effectMemoryBytes: effectMemory[17],
+    };
+  } finally {
+    stopSource(false);
+    [flangerRate.value, flangerDelay.value, flangerDepth.value,
+      flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value,
+      flangerMix.value, flangerTapDivision.value, flangerTempoBpm.value] = previousControls;
+    updateFlanger();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -17472,6 +17602,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Stereo Flanger phase browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-flanger-tap-division") {
+          testResult.textContent = "Checking Flanger Tap Division tempo sync with local guitar audio…";
+          const flangerTapDivisionSmoke = await runFenderFlangerTapDivisionBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            flangerTapDivision: flangerTapDivisionSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Flanger Tap Division browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-tzf-auto") {

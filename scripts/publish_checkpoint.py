@@ -708,6 +708,25 @@ FENDER_STEREO_FLANGER_PHASE_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/flanger.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/flanger.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_flanger.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2733,6 +2752,10 @@ CHECKPOINTS = {
     "fender-stereo-flanger-phase": (
         FENDER_STEREO_FLANGER_PHASE_CHECKPOINT_PATHS,
         "feat: add project-authored stereo Flanger phase control",
+    ),
+    "fender-flanger-tap-division": (
+        FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS,
+        "feat: add Flanger Tap Division tempo sync",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),

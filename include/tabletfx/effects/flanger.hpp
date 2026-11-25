@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tabletfx/effect.hpp"
+#include "tabletfx/effects/delay_timing.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,9 @@ enum class FlangerFeedbackPolarity : std::uint8_t {
 
 struct FlangerParameters {
     float rate_hz = 0.25F;
+    bool tempo_sync = false;
+    float tempo_bpm = 120.0F;
+    DelayDivision tap_division = DelayDivision::quarter;
     float base_delay_ms = 2.0F;
     float depth_ms = 1.0F;
     float feedback = 0.35F;
@@ -39,6 +43,7 @@ public:
 
     void set_parameters(FlangerParameters parameters) noexcept;
     [[nodiscard]] FlangerParameters parameters() const noexcept { return parameters_; }
+    [[nodiscard]] float effective_rate_hz() const noexcept;
     [[nodiscard]] float current_feedback() const noexcept { return current_feedback_; }
 
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
@@ -47,14 +52,19 @@ public:
 private:
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
+    static constexpr float kMinimumTempoBpm = 20.0F;
+    static constexpr float kMaximumTempoBpm = 300.0F;
     static constexpr float kMinimumDelayMs = 0.5F;
     static constexpr float kMaximumDelayMs = 10.0F;
     static constexpr float kStorageDelayMs = 12.0F;
+    static constexpr float kMaximumSynchronizedRateHz = 80.0F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
 
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
+    [[nodiscard]] static bool valid_tap_division(DelayDivision division) noexcept;
+    [[nodiscard]] static float beats_for_tap_division(DelayDivision division) noexcept;
     void prepare_rate() noexcept;
     void retarget(bool immediate) noexcept;
     void advance_modulator() noexcept;
