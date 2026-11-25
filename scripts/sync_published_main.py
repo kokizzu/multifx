@@ -73,17 +73,27 @@ def changed_paths(remote: str) -> list[str]:
     return paths
 
 
-def validate_overlay(remote: str, paths: list[str]) -> None:
+def validate_overlay(remote: str, paths: list[str]) -> set[str]:
     if "make/publish.mk" not in paths:
         raise SystemExit("remote checkpoint does not include the expected publish makefile")
     published_make = git("show", f"{remote}:make/publish.mk").stdout
     local_make = (ROOT / "make/publish.mk").read_text(encoding="utf-8")
-    if local_make != published_make + SYNC_MAKE_BLOCK:
+    overlay: set[str] = set()
+    if local_make == published_make:
+        pass
+    elif local_make == published_make + SYNC_MAKE_BLOCK:
+        overlay.add("make/publish.mk")
+    else:
         raise SystemExit("make/publish.mk has extra or conflicting edits; preserving checkout")
-    if git("ls-tree", remote, "--", "scripts/sync_published_main.py").stdout:
-        raise SystemExit("sync helper path already exists in fetched main; review manually")
-    if not (ROOT / "scripts/sync_published_main.py").is_file():
+    local_helper = ROOT / "scripts/sync_published_main.py"
+    if not local_helper.is_file():
         raise SystemExit("sync helper file is missing")
+    if git("ls-tree", remote, "--", "scripts/sync_published_main.py").stdout:
+        published_helper = git("show", f"{remote}:scripts/sync_published_main.py").stdout
+        if local_helper.read_text(encoding="utf-8") != published_helper:
+            raise SystemExit("sync helper differs from fetched main; preserving checkout")
+    else:
+        overlay.add("scripts/sync_published_main.py")
 
     other_paths = [path for path in paths if path != "make/publish.mk"]
     if other_paths:
@@ -97,6 +107,7 @@ def validate_overlay(remote: str, paths: list[str]) -> None:
                     git("diff", "--name-only", remote, "--", *other_paths).stdout.splitlines()
                 )
             )
+    return overlay
 
 
 def staged_paths() -> set[str]:
@@ -121,7 +132,7 @@ def report(remote: str, paths: list[str]) -> None:
         print("Preserved outside paths:")
         for path in deferred:
             print("  " + path)
-    print("The plan stages only the fetched main paths and the reviewed sync helper.")
+    print("The plan stages only fetched main paths and the verified helper overlay.")
 
 
 def synchronize() -> None:
@@ -130,7 +141,7 @@ def synchronize() -> None:
     paths = changed_paths(remote)
     if not paths:
         raise SystemExit("local main already matches fetched main")
-    validate_overlay(remote, paths)
+    overlay = validate_overlay(remote, paths)
 
     unexpected = sorted(staged_paths() - set(paths) - OVERLAY_PATHS)
     if unexpected:
@@ -150,12 +161,12 @@ def synchronize() -> None:
     # The fetched checkpoint bytes are already present locally. Stage only
     # those exact paths plus this reviewed helper, then prove the only delta
     # from fetched main is the helper overlay before moving refs/heads/main.
-    git("add", "--", *paths, "make/publish.mk", "scripts/sync_published_main.py")
+    git("add", "--", *paths, *sorted(overlay))
     staged_diff = set(git("diff", "--cached", "--name-only", remote).stdout.splitlines())
-    if staged_diff != OVERLAY_PATHS:
+    if staged_diff != overlay:
         raise SystemExit(
             "staged index differs from fetched main outside the helper overlay: "
-            + ", ".join(sorted(staged_diff ^ OVERLAY_PATHS))
+            + ", ".join(sorted(staged_diff ^ overlay))
         )
 
     git(
