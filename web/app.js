@@ -985,6 +985,7 @@ const outputGain = document.querySelector("#output-gain-db");
 const outputGainValue = document.querySelector("#output-gain-value");
 const pitchMode = document.querySelector("#pitch-mode");
 const pitchSemitones = document.querySelector("#pitch-semitones");
+const pitchSemitonesLabel = document.querySelector("#pitch-semitones-label");
 const pitchSemitonesValue = document.querySelector("#pitch-semitones-value");
 const pitchMix = document.querySelector("#pitch-mix");
 const pitchMixValue = document.querySelector("#pitch-mix-value");
@@ -5062,8 +5063,33 @@ pitchMix.addEventListener("input", () => {
 
 function updatePitchExpressionPosition() {
   const enabled = pitchMode.value === "pedal-shifter";
+  const dropTune = pitchMode.value === "drop-tune";
   const targetSemitones = Number(pitchExpressionTarget.value);
   const position = Number(pitchExpressionPosition.value) / 100;
+
+  if (dropTune) {
+    pitchSemitones.min = "-12";
+    pitchSemitones.max = "0";
+    pitchSemitones.step = "1";
+    let semitones = Number(pitchSemitones.value);
+    if (!Number.isInteger(semitones) || semitones >= 0) semitones = -1;
+    semitones = Math.max(-12, Math.min(-1, semitones));
+    pitchSemitones.value = String(semitones);
+    pitchSemitonesLabel.textContent = "Drop by semitones · project workflow";
+    pitchSemitonesValue.value = `${semitones.toFixed(1)} semitones`;
+    pitchMix.value = "100";
+    pitchMix.disabled = true;
+    pitchMixValue.value = "100% shifted / 0% original";
+    DEFAULT_PARAMETERS.pitchSemitones = semitones;
+    DEFAULT_PARAMETERS.pitchMix = 1;
+  } else {
+    pitchSemitones.min = "-24";
+    pitchSemitones.max = "24";
+    pitchSemitones.step = "0.5";
+    pitchSemitonesLabel.textContent = "Pitch transpose";
+    pitchMix.disabled = false;
+  }
+
   pitchSemitones.disabled = enabled;
   pitchExpressionTarget.disabled = !enabled;
   pitchExpressionPosition.disabled = !enabled;
@@ -5076,6 +5102,7 @@ function updatePitchExpressionPosition() {
       type: "pitch-expression-position", targetSemitones, position,
     });
   } else {
+    if (dropTune) workletNode.port.postMessage({ type: "pitch-mix", value: 1 });
     workletNode.port.postMessage({
       type: "pitch-semitones", value: Number(pitchSemitones.value),
     });
@@ -12438,7 +12465,7 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
     const checkbox = row?.querySelector("[data-effect]");
     if (row?.dataset.category !== "pitch" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
-        !row.querySelector(".effect-name")?.textContent.includes("Polyphonic pitch shifter") ||
+        !row.querySelector(".effect-name")?.textContent.includes("Poly Pitch") ||
         !checkbox || pitchSemitones.min !== "-24" ||
         pitchSemitones.max !== "24" || effectMemory.length !== EFFECT_NAMES.length ||
         !(effectMemory[22] > 0)) {
@@ -12518,6 +12545,120 @@ async function runFractalPolyPitchRangeBrowserSmokeTest(reference, captureView, 
       workletNode.port.postMessage({ type: "active", value: false });
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+async function runHeadRushDropTuneBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousPitch = pitchSemitones.value;
+  const previousMix = pitchMix.value;
+  const previousMode = pitchMode.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Drop Tune smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "pitch";
+    updateEffectBrowser();
+
+    const row = document.querySelector('[data-effect="22"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    pitchMode.value = "drop-tune";
+    pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+    if (row?.dataset.category !== "pitch" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Pitch" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Drop Tune") ||
+        !checkbox || pitchSemitones.min !== "-12" || pitchSemitones.max !== "0" ||
+        pitchSemitones.step !== "1" || pitchMix.value !== "100" || !pitchMix.disabled ||
+        !(effectMemory[22] > 0)) {
+      throw new Error("Drop Tune controls are not categorized, bounded, and wet-only.");
+    }
+
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 22;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    const captureAt = async (semitones) => {
+      pitchSemitones.value = String(semitones);
+      pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error(`Timed out starting Drop Tune at ${semitones} semitones.`)),
+          5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Drop Tune output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error(`Drop Tune at ${semitones} semitones is silent.`);
+      return { output, peak };
+    };
+
+    const minusOne = await captureAt(-1);
+    const minusTwelve = await captureAt(-12);
+    let squares = 0;
+    let changedSamples = 0;
+    for (let i = 0; i < minusOne.output.length; i += 1) {
+      const delta = minusTwelve.output[i] - minusOne.output[i];
+      squares += delta * delta;
+      if (Math.abs(delta) > 1e-6) changedSamples += 1;
+    }
+    const differenceRms = Math.sqrt(squares / minusOne.output.length);
+    if (differenceRms < 1e-5 || changedSamples < 32) {
+      throw new Error("The −1 and −12 semitone Drop Tune outputs are not distinct.");
+    }
+    return {
+      category: "Pitch",
+      effectId: 22,
+      workflow: "project-authored, shared Poly Pitch shifter",
+      downwardRangeSemitones: [-12, -1],
+      projectMixPercent: Number(pitchMix.value),
+      playCaptures: 2,
+      minusOnePeak: minusOne.peak,
+      minusTwelvePeak: minusTwelve.peak,
+      differenceRms,
+      changedSamples,
+      effectMemoryBytes: effectMemory[22],
+      extraShifterInstances: 0,
+    };
+  } finally {
+    stopSource(false);
+    pitchMode.value = previousMode;
+    pitchMode.dispatchEvent(new Event("change", { bubbles: true }));
+    pitchSemitones.value = previousPitch;
+    pitchSemitones.dispatchEvent(new Event("input", { bubbles: true }));
+    pitchMix.value = previousMix;
+    pitchMix.dispatchEvent(new Event("input", { bubbles: true }));
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
         box.checked = previousEffectState[index];
         workletNode.port.postMessage({
           type: "enable", index, value: previousEffectState[index],
@@ -17136,6 +17277,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX poly-pitch range browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "headrush-drop-tune") {
+          testResult.textContent = "Checking the HeadRush-informed Drop Tune workflow with local guitar audio…";
+          const dropTuneSmoke = await runHeadRushDropTuneBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            dropTune: dropTuneSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Drop Tune browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fender-pedal-shifter") {

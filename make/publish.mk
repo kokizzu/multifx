@@ -15,6 +15,7 @@ PUBLISH_CHECKPOINTS += fender-virtual-capo-mix
 PUBLISH_CHECKPOINTS += fender-studio-delay-pan
 PUBLISH_CHECKPOINTS += fender-volume-pedal-mute
 PUBLISH_CHECKPOINTS += fm9-formant-control-lfo
+PUBLISH_CHECKPOINTS += headrush-prime-drop-tune
 
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
@@ -249,3 +250,7 @@ test-formant-filter:
 
 web-test-formant-control-lfo: test web-build
 	$(PYTHON) scripts/web.py test-formant-control-lfo
+
+.PHONY: web-test-headrush-drop-tune
+web-test-headrush-drop-tune: test web-build
+	$(PYTHON) scripts/web.py test-headrush-drop-tune

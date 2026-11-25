@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## HeadRush Prime Drop Tune project workflow (2026-11-26)
+
+The project-authored Drop Tune selector reuses the existing Pitch picker ID 22 `PolyPitchShifter`: whole-note downward offsets −1…−12, Mix locked to 100%, and no extra processor instance or DSP allocation. It shifts the entire signal uniformly; it does not model string-specific tunings or Prime's Legacy/Refined algorithms. At 48 kHz stereo the existing shifter has 256 samples / 5.333 ms algorithmic latency. Its measured native state is 496,080 B and focused browser effect state is 491,472 B; Drop Tune adds no state beyond that one shifter. The full wet output retains the shifter latency.
+
+On AMD Ryzen 9 5950X Release at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured blocks), the dedicated −12-semitone/full-wet profile used 10.1545/13.2390/16.0808/19.6764/34.8081% at p50/p95/p99/p99.9/max. This is isolated processor-call timing, not a complete-chain or target-device estimate. The focused HeadlessChrome 151 Play smoke used a local prerecorded guitar DI (48,000 stereo frames), checked integer −1…−12 bounds and locked wet mix, and compared two captures: measured browser state 491,472 B, zero extra shifter instances, and difference RMS 0.0594638 between −1 and −12 output. `make test`, the focused browser test, and the Windows MinGW core/offline-renderer build pass. These measurements describe TabletFX, not HeadRush performance. Manual guitar listening, target-device timing, and per-preset/scene persistence remain open.
+
 ## Fractal FM9-family Formant Control LFO (2026-11-26)
 
 The existing project-authored Formant Filter (Filters & wah, picker ID 43) now has a default-off LFO source for its three-vowel Control morph. The project choices are Sine/Triangle/Square, 0.05–8 Hz with 0.5 Hz default, and a 0–100% Control range with 0/100% endpoints. Control coefficients update every 32 frames and retain the existing 10 ms smoothing. The processor adds no audio buffer or fixed latency; its fixed native state is 680 B (the focused browser reports 664 B), and native tests verify no process allocation.

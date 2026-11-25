@@ -32,8 +32,8 @@
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "HeadRush Prime",
-    "next_feature": "Audit exact-model official v5.2 Up Tune and Drop Tune controls. If control tables remain unavailable, preserve the unknowns and move on without inventing values; then continue the remaining model-specific effect gaps. Fractal Formant Control LFO is now automated-tested and documented.",
-    "qualification": "The latest Formant checkpoint passed native, focused local-guitar browser/WASM, Windows MinGW, and CPU/memory/latency checks. The selected comparison is not a fresh full-catalogue audit. Expression assignment, human listening, physical-device behavior, and target-device timing remain open."
+    "next_feature": "Continue remaining Prime model-specific effect gaps (including Up Tune) using exact v5.2 manufacturer documentation; then select the strongest documented gap among Melofty AXOM MAX, Fender Tone Master Pro, Helix Stadium XL, Fractal FM9 Mk II Turbo, and XRecer XR1. Implement and publish one independently testable categorized checkpoint at a time.",
+    "qualification": "Prime Drop Tune now passes focused local-guitar browser/WASM Play, native suite, Windows MinGW build, and Ryzen desktop callback/memory/latency measurement. Per-preset/scene persistence, manufacturer control-table unknowns, human listening, physical-device behavior, and target-device timing remain open; the selected comparison is not a fresh full-catalogue audit."
   },
   "completed_checkpoints": [
     {
@@ -801,6 +801,32 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Active LFO p50/p95/p99/p99.9/max 0.1613/0.2318/0.2985/0.6079/1.3935% of callback deadline; manual 0.1125/0.1721/0.1946/0.5880/1.6020%. Native state 680 B, zero fixed latency, no audio buffer. Isolated desktop timing, not a target-device guarantee."
       },
       "remaining": "Human listening, physical expression behavior, and target-device timing remain manual. Firmware applicability to Mark II Turbo and installed firmware remain unknown. This is a project-authored control role, not Fractal settings, routing, DSP, or sound parity."
+    },
+    {
+      "name": "HeadRush Prime Drop Tune project workflow",
+      "status": "partial project-authored workflow; native/browser/Windows checks and CPU/memory/latency measurement pass; persistence and manual/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 22,
+      "category": "Pitch",
+      "official_source": {
+        "title": "HeadRush Prime product page and firmware/update materials",
+        "revision": "Prime v5.0.0/v5.0.1 behavior documented in official release notes; current downloads page lists v5.2 and its guide, but exact model control table was not readable. Installed firmware is unknown.",
+        "url": "https://www.headrushfx.com/products/prime/",
+        "release_notes_v5_0": "https://cdn.inmusicbrands.com/Software/SGEE/5/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.0.pdf",
+        "release_notes_v5_0_1": "https://cdn.inmusicbrands.com/Software/SGEE/501/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.1.pdf",
+        "downloads_url": "https://www.headrushfx.com/downloads",
+        "video_url": "https://www.youtube.com/watch?v=uHdfP6vwLb8",
+        "qualification": "v5.0 adds Up Tune and improves Drop Tune tracking/intervals. The official v5.0 video reports the −12 semitone lower limit and reduced latency but no figure. v5.0.1 documents Legacy/Refined; Refined uses v5.0 algorithm and is described as faster/better sounding. This does not establish polyphony, full ranges, defaults, mix, or DSP."
+      },
+      "documented_controls": "Drop Tune Mode Legacy/Refined (v5.0.1); a −12 semitone lower limit and latency improvement are stated in official v5.0 video without a numerical latency. Up Tune is listed in Pitch FX and introduced in v5.0.0. Exact controls, full range, defaults, mix, polyphony, and per-effect DSP/latency remain unknown.",
+      "project_controls": "Existing categorized Pitch ID 22 now exposes a Drop Tune workflow using project-authored integer offsets −1…−12 semitones, forces Mix to 100%, and reuses one existing PolyPitchShifter. Whole-signal uniform transposition; no extra processor or state. It does not emulate string-specific tunings or HeadRush algorithms. Per-preset/scene persistence is not implemented.",
+      "verification": {
+        "native": "make web-test-headrush-drop-tune prerequisite passed make test: documentation validation, 11/11 fixture checks, and 117/117 CTest tests; existing shifter tests cover bounds, stereo, latency, allocation, and reset.",
+        "browser": "make web-test-headrush-drop-tune passed in HeadlessChrome 151 with local prerecorded guitar DI, 48 kHz stereo/48,000 frames. Pitch category/ID 22, −1…−12 integer bounds, locked 100% wet, two Play captures; effect state 491,472 B; zero extra shifter instances; output difference RMS 0.0594638.",
+        "windows": "make windows-cross-build passed MinGW core and offline renderer build.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,667 us callback, 2,000 warm-up/5,000 measured. −12/full-wet p50/p95/p99/p99.9/max 10.1545/13.2390/16.0808/19.6764/34.8081% of deadline; native state 496,080 B; 256-frame/5.333 ms algorithmic latency. Isolated desktop processor measurement, not target-device or complete-chain performance."
+      },
+      "remaining": "No per-preset/scene persistence. Manual guitar listening, target-device timing, physical device behavior, exact v5.2 control table, Up Tune controls, and Prime algorithm parity remain unresolved."
     }
   ],
   "previous_checkpoint": {
@@ -853,15 +879,19 @@
   "next_research": [
     {
       "device": "HeadRush Prime",
-      "feature": "Current v5.2 Up Tune and Drop Tune parameter audit",
-      "source": "Official Prime v5.2 downloads listing and v5.0.1 update notes; current exact controls still need verification.",
+      "feature": "Up Tune and remaining Prime effect gaps after Drop Tune workflow",
+      "source": "Official HeadRush Prime product page and firmware notes through v5.2; Up/Drop Tune changes in v5.0.0 and v5.0.1.",
       "source_urls": [
+        "https://www.headrushfx.com/products/prime/",
         "https://www.headrushfx.com/downloads",
-        "https://cdn.inmusicbrands.com/Software/SGEE/501/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.1.pdf"
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/501/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.1.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "https://www.youtube.com/watch?v=uHdfP6vwLb8"
       ],
-      "status": "Official v5.0.1 notes document Legacy and Refined Drop Tune modes and state that Refined improves tracking speed/tonal quality. Official v5.0 notes introduce Up Tune and improve Up/Drop Tune tracking. Current v5.2 guide is listed, but exact model controls, ranges/defaults, mix, polyphony, and measured latency remain unverified. Inspect current guide before deciding whether a nonduplicative project implementation is warranted.",
-      "known_controls": "Drop Tune exposes a Legacy/Refined mode in v5.0.1 notes. Up Tune is announced as a Pitch effect with up to +12 semitones in HeadRush's official video; precise v5.2 UI/control bounds are not established. Do not infer complete control tables or tracking quality.",
-      "qualification": "Existing TabletFX Polyphonic Pitch Shifter may already cover the broad transposition function. Implement only after reviewing existing code and checking the current Prime guide; no HeadRush DSP, sound, tracking, or setting parity is implied."
+      "status": "Drop Tune now has a partial project-authored workflow in the existing Pitch ID 22 shifter; focused browser Play, native suite, Windows cross-build, and desktop benchmark pass. Official v5.0.1 documents Legacy/Refined; v5.0 video identifies a −12-semitone lower limit. Exact current controls/defaults, mix, polyphony, algorithm latency, DSP, and v5.2-specific behavior remain unknown. Up Tune has no verified control table; no separate Up Tune implementation is warranted while generic transposition covers the broad function.",
+      "known_controls": "Drop Tune: v5.0.1 Mode Legacy/Refined; official v5.0 video reports a −12-semitone lower range and reduced latency without a numeric value. Up Tune: presence in Pitch FX and introduction in v5.0.0 verified; exact range/controls/defaults/polyphony unknown. Exact full Drop Tune bounds/defaults/mix/polyphony unknown.",
+      "qualification": "Project Drop Tune is uniform whole-signal transposition at −1…−12 semitones, full wet, reusing one existing shifter. It is not string-specific tuning or a recreation of Prime algorithms. Preset/scene persistence is not implemented. Keep manufacturer unknowns and manual/device checks open."
     },
     {
       "device": "Fender Tone Master Pro",

@@ -676,6 +676,19 @@ FORMANT_CONTROL_LFO_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+HEADRUSH_PRIME_DROP_TUNE_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2674,6 +2687,10 @@ CHECKPOINTS = {
     "fm9-formant-control-lfo": (
         FORMANT_CONTROL_LFO_CHECKPOINT_PATHS,
         "feat: add project-authored Formant Control LFO",
+    ),
+    "headrush-prime-drop-tune": (
+        HEADRUSH_PRIME_DROP_TUNE_CHECKPOINT_PATHS,
+        "feat: add project-authored Drop Tune workflow",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),
