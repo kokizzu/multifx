@@ -1,5 +1,19 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Tremolo Duty Cycle (2026-11-26)
+
+The Model Guide v1.1.100 / Rev. A, printed p. 34, defines Duty Cycle as the percentage of time signal is on, but publishes no numeric bounds/default or interaction with Shape. TabletFX applies a project-authored 5–95% control, default 50%, only to Square Tremolo; at 50% it produces the exact pre-change `phase < 0.5` waveform. The control is separate from LFO Clip. It adds no fixed latency or processor buffer; native state is 128 B, focused browser/WASM effect state is 104 B, and processing allocates nothing.
+
+`make bench-fender-tremolo-duty-cycle` measured AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame blocks (2.667 ms callback deadline; 3,000 warm-up and 20,000 measured callbacks). Percentages are p50/p95/p99/p99.9/max of callback duration divided by deadline.
+
+| Profile | CPU time p50/p95/p99/p99.9/max (µs) | Callback budget p50/p95/p99/p99.9/max (%) | State | Fixed latency / allocations |
+|---|---:|---:|---:|---:|
+| Square, 50% | 0.450 / 0.740 / 0.870 / 1.110 / 12.960 | 0.017 / 0.028 / 0.033 / 0.042 / 0.486 | 128 B | 0 samples / 0 |
+| Square, 20% | 0.400 / 0.460 / 0.470 / 0.960 / 9.550 | 0.015 / 0.017 / 0.018 / 0.036 / 0.358 | 128 B | 0 samples / 0 |
+| Sine control | 1.620 / 1.660 / 1.720 / 8.780 / 23.391 | 0.061 / 0.062 / 0.065 / 0.329 / 0.877 | 128 B | 0 samples / 0 |
+
+Focused HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI verified Square mode at 50% and 20%, with RMS output difference 0.03231. These are isolated desktop callback timings, not full-chain or target-device guarantees. Human listening and installed-device behavior remain open.
+
 ## HeadRush Prime Reverb Tails on bypass (2026-11-26)
 
 The Prime User Guide v5.0.0 documents per-effect reverb/delay tails continuing after bypass (printed p. 11 §4.1.3). TabletFX adds project-authored, default-off `Tails on bypass` to its existing Room, Hall, Plate, and Spring Reverbs. When enabled, the reverb network advances with zero new excitation and adds only stored wet tail over the unchanged dry path. It reuses existing delay state, adds no fixed latency or delay storage, and allocates nothing during processing. The v5.0.0 Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails, but the pictured values are examples rather than ranges/defaults. The v5.2.0 guide could not be read in this pass; installed firmware is unknown. No Eleven algorithm, DSP, or settings parity is claimed.

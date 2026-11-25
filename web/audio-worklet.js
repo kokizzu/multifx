@@ -376,7 +376,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_high_gain_distortion(this.chain, ...highGainDistortion);
       const roundFuzz = parameters.roundFuzz || [0.55, -6, 0.85];
       module._tf_chain_set_round_fuzz(this.chain, ...roundFuzz);
-      const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1, 0];
+      const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1, 0, 50];
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const harmonicTremolo = parameters.harmonicTremolo ||
         [3, 0.65, 700, 0, 0, 120, 1, 1, 10];

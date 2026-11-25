@@ -150,6 +150,9 @@ target_link_libraries(tabletfx_stereo_panner_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_fractal_chorus_tempo_bench
     apps/fractal_chorus_tempo_bench.cpp)
 target_link_libraries(tabletfx_fractal_chorus_tempo_bench PRIVATE tabletfx_core)
+add_executable(tabletfx_fender_tremolo_duty_cycle_bench
+    apps/fender_tremolo_duty_cycle_bench.cpp)
+target_link_libraries(tabletfx_fender_tremolo_duty_cycle_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)

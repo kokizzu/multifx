@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Fender Tone Master Pro Tremolo Duty Cycle (2026-11-26)
+
+- [x] Checked the exact Model Guide v1.1.100 / Rev. A, printed p. 34: Duty Cycle is the percentage of time signal is on, separately listed from Shape and LFO Clip. The guide gives no range/default or Shape interaction. Firmware history lists v1.8.87 (2026-11-23) and no Tremolo change; installed firmware is unknown.
+- [x] Added a project-authored 5–95% Duty control, default 50%, to the existing Modulation Tremolo (picker ID 15). It acts only in Square mode and is distinct from LFO Clip. At 50%, native output is sample-for-sample identical to the pre-change `phase < 0.5` behavior. Other waveforms remain unchanged; no new stage, buffer, or fixed latency is added.
+- [x] Focused Tremolo CTest and offline CLI tests pass; the CLI checks same-frame output at 50% and 20%. Focused browser/WASM Play on local prerecorded stereo Guitar-TECHS DI verifies the 5–95% UI range and audible 20% change (RMS difference 0.03231); browser effect state is 104 B. `make windows-cross-build` passes.
+- [x] `make bench` on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (20,000 measured after 3,000 warm-up) reports 128 B native state, zero fixed latency, zero process allocations. Square 50% p50/p95/p99/p99.9/max is 0.017/0.028/0.033/0.042/0.486% of the 2.667 ms callback deadline; Square 20% is 0.015/0.017/0.018/0.036/0.358%; Sine control is 0.061/0.062/0.065/0.329/0.877%. These are isolated desktop measurements, not device guarantees. See [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
+- [x] Final `make test` passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests. Final full `make web-test` passes the browser/native guitar-DI comparison and browser/effect smoke checks; `make diff-check` passes with no workflow changes.
+- [ ] Human listening, physical Tone Master Pro behavior, and target-device timing remain manual. Exact Fender duty bounds/default, waveform interaction, DSP, and sound parity remain unverified.
+
 ## HeadRush Prime per-effect Reverb Tails (2026-11-26)
 
 - [x] Checked the exact Prime User Guide v5.0.0: printed p. 11 §4.1.3 documents per-effect Reverb/Delay tails continuing after bypass; p. 22 §4.4.1 shows Eleven Reverb Decay, Tone, Pre-Delay, Mix, and Tails. Screen values are examples, not ranges/defaults. HeadRush lists v5.2.0 as current; its guide was not readable in this pass and its v5.2.0 notes contain no Eleven Reverb-specific change. Installed firmware is unknown.

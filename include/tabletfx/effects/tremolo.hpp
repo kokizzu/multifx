@@ -19,6 +19,8 @@ struct TremoloParameters {
     float depth = 0.5F;
     // Project-authored symmetric LFO hard-clip amount; 0 preserves the source wave.
     float lfo_clip_percent = 0.0F;
+    // Project-authored square-wave on-time. It is ignored by other waveforms.
+    float duty_cycle_percent = 50.0F;
     TremoloWaveform waveform = TremoloWaveform::Sine;
     bool tempo_sync = false;
     float tempo_bpm = 120.0F;
@@ -51,6 +53,7 @@ public:
     void set_rate_hz(float rate_hz) noexcept;
     void set_depth(float depth) noexcept;
     void set_lfo_clip_percent(float clip_percent) noexcept;
+    void set_duty_cycle_percent(float duty_cycle_percent) noexcept;
     void set_depth_smoothing_ms(float smoothing_ms) noexcept;
     void set_waveform(TremoloWaveform waveform) noexcept;
     void set_tempo_sync(bool enabled, float bpm,
@@ -63,6 +66,9 @@ public:
         return effective_rate_hz_;
     }
     [[nodiscard]] float current_depth() const noexcept { return current_depth_; }
+    [[nodiscard]] float current_duty_cycle_percent() const noexcept {
+        return current_duty_cycle_percent_;
+    }
 
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
@@ -73,6 +79,8 @@ private:
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumRateHz = 0.05F;
     static constexpr float kMaximumRateHz = 20.0F;
+    static constexpr float kMinimumDutyCyclePercent = 5.0F;
+    static constexpr float kMaximumDutyCyclePercent = 95.0F;
     static constexpr float kMinimumBpm = 30.0F;
     static constexpr float kMaximumBpm = 300.0F;
     static constexpr float kMinimumBeatsPerCycle = 0.0625F;
@@ -89,6 +97,10 @@ private:
     float target_depth_ = 0.5F;
     float depth_ramp_step_ = 0.0F;
     std::size_t depth_ramp_remaining_ = 0;
+    float current_duty_cycle_percent_ = 50.0F;
+    float target_duty_cycle_percent_ = 50.0F;
+    float duty_cycle_ramp_step_ = 0.0F;
+    std::size_t duty_cycle_ramp_remaining_ = 0;
     float phase_increment_ = 0.0F;
     float sine_increment_ = 0.0F;
     float cosine_increment_ = 1.0F;

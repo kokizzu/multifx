@@ -765,6 +765,28 @@ FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/fender_tremolo_duty_cycle_bench.cpp",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/tremolo.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/tremolo.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_tremolo.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2859,6 +2881,10 @@ CHECKPOINTS = {
     "fender-tremolo-lfo-clip": (
         FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS,
         "feat: add project-authored Tremolo LFO Clip",
+    ),
+    "fender-tremolo-duty-cycle": (
+        FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS,
+        "feat: add project-authored Tremolo Duty Cycle",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),

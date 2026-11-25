@@ -4,36 +4,58 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "65e0bbc1a470bee2607d23372b14f737c74fef23",
+  "previous_checkpoint_commit": "5c41ad5cae7b5aec29d137ed45c6c9ce64b776f1",
   "latest_audit": {
-    "name": "HeadRush Prime Reverb Tails on bypass",
-    "status": "Project-authored default-off bypass-tail control added to existing Room, Hall, Plate, and Spring Reverbs; native, browser/WASM, Windows cross-build, benchmark, and documentation checks pass; manual/device checks remain.",
+    "name": "Fender Tone Master Pro Tremolo Duty Cycle",
+    "status": "Project-authored 5–95% Square-only Duty control added to the existing Modulation Tremolo with a sample-identical 50% default; full native/browser, Windows cross-build, benchmark, and diff checks pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "category": "Reverb",
+    "picker_index": 15,
+    "category": "Modulation",
     "official_source": {
-      "title": "HeadRush Prime User Guide",
-      "revision": "v5.0.0, printed p. 11 §4.1.3 and p. 22 §4.4.1. Official downloads page checked 2026-11-26 lists v5.2.0; the v5.2 guide was not readable in this pass. Installed firmware is unknown.",
-      "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
-      "firmware_url": "https://www.headrushfx.com/downloads",
-      "qualification": "The v5.0 guide documents generic per-effect Reverb/Delay tails after bypass. Eleven Reverb screen values are examples, not ranges/defaults. The v5.2 notes do not mention Eleven Reverb; continuity and installed firmware remain unknown. No Eleven algorithm, HeadRush DSP/settings, or sound parity is claimed."
+      "title": "Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 34. Firmware history checked through v1.8.87 dated 2026-11-23; no Tremolo change listed. Installed firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide defines Duty Cycle as percentage of time signal is on, but publishes no numeric range/default or interaction with Shape. The project implementation is Square-only with project-selected bounds. No Fender waveform curve, settings, DSP, or sound parity is claimed."
     },
-    "documented_controls": "Prime v5.0.0 p. 11 §4.1.3 documents per-effect Reverb/Delay tails continuing after bypass. The p. 22 §4.4.1 Eleven Reverb screen lists Decay, Tone, Pre-Delay, Mix, and Tails; pictured values are examples only.",
-    "project_controls": "Project-authored `Tails on bypass`, default off, is available for existing Room, Hall, Plate, and Spring Reverb controls in the Reverb category. Off preserves immediate clearing. On preserves dry input and drains stored wet output with zero new excitation. Existing networks/storage are reused; no additional delay buffer, fixed latency, or process-time allocation is added. This is not an Eleven Reverb algorithm.",
+    "documented_controls": "The Tremolo page lists Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. Duty Cycle is the percentage of time the signal is on. Numeric range/default and interaction with Shape are not specified.",
+    "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored Duty Cycle is bounded 5–95%, default 50%, and is applied only in Square mode, separate from LFO Clip. At 50% output is sample-for-sample identical to the prior fixed `phase < 0.5` behavior. No new processor stage, buffer, fixed latency, or processing allocation is added.",
     "verification": {
-      "native": "make test passed documentation/fixture checks and 117/117 CTest tests, including per-reverb default-off clearing, enabled tail drain, dry continuity, zero excitation, block partitioning, re-enable/toggle safety, and no allocation.",
-      "browser": "make web-browser-test passed. Browser/WASM control serialization was checked for Room, Hall, Plate, and Spring; local prerecorded guitar-DI Play captured Room wet tail after bypass. The final full make web-test rerun also passed the browser/native comparison and existing browser checks.",
-      "windows": "make windows-cross-build passed for the modified DSP and offline renderer. The target is compile-only with BUILD_TESTING=OFF; Windows test execution was not performed.",
-      "benchmark": "make bench passed on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms callback). For Room/Hall/Plate/Spring, tail-drain p50/p95/p99/p99.9/max callback use was 0.1414/0.1433/0.2359/0.4223/1.2390%, 0.3083/0.3863/0.5753/0.7613/2.1417%, 0.8659/0.9038/1.1828/1.7749/5.3259%, and 0.9698/1.4269/1.6122/1.7817/3.0856% respectively. Owned state matched active state at 115,696 B, 193,764 B, 147,496 B, and 51,700 B. These isolated desktop processor timings do not guarantee full-chain or target-device performance."
+      "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests and the full offline CLI suite; exact 50% Square render matches the pre-change threshold sample-for-sample, and same-frame CLI output at 50%/20% was 0.5/0.0. Final `make test` passed 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests.",
+      "browser": "make web-test-fender-tremolo-duty-cycle passed; local prerecorded Guitar-TECHS stereo DI Play at Square 50% and 20% produced RMS difference 0.03231. The UI exposed 5–95% only for Square; effect state 104 B. Final full `make web-test` passed the browser/native guitar-DI comparison and browser/effect smoke checks.",
+      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
+      "benchmark": "make bench-fender-tremolo-duty-cycle passed on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms callback; 3,000 warm-up/20,000 measured). Native state 128 B, fixed latency 0 samples, process allocations 0. Square 50% p50/p95/p99/p99.9/max callback use 0.017/0.028/0.033/0.042/0.486%; Square 20% 0.015/0.017/0.018/0.036/0.358%; Sine control 0.061/0.062/0.065/0.329/0.877%. These isolated desktop timings are not device guarantees."
     },
-    "remaining": "Human listening, physical Prime comparison, and target-device timing remain open. Exact v5.2 control continuity, installed firmware, numeric bounds/defaults, Eleven Reverb algorithm/DSP, and sound parity remain unverified."
+    "remaining": "Human listening, physical Tone Master Pro behavior, target-device timing, installed firmware, manufacturer duty bounds/defaults, Shape interactions, Fender DSP, and sound parity remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Add a project-authored Duty Cycle control to the existing Modulation Tremolo, limited initially to Square waveform so undocumented interactions with other shapes are not inferred. Preserve the symmetric default with 50%; choose and label project-only bounds. Exact guide Model Guide v1.1.100 / Rev. A p.34 defines Duty Cycle as percentage of time signal is on but publishes no range/default or Shape interaction. Firmware v1.8.87 (2026-11-23) lists no Tremolo change; installed firmware unknown. Keep it distinct from LFO Clip.",
-    "qualification": "Prime Reverb Tails is implemented and verified, but v5.2 guide readability and installed firmware remain unknown. Continue remaining flagship effects while preserving unrelated audit queues and manual/device checks."
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Audit and implement project-authored Chorus Number Of Voices against the November 2026 Blocks Guide pp. 25–26. The guide suggests 2 voices and up to 8 but publishes no explicit lower bound/default; current Chorus has one delayed voice per channel. Keep project default at one voice to preserve output, share existing delay ring if feasible, and measure CPU. Do not call the Fractal control `Delay Range`: the guide names Delay Time as minimum delay (0.01–50 ms), while the project base_delay_ms is a sweep center; treat that as a separate future control. The guide is family-level; v12.0 lists FM9 Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
+    "qualification": "Fender Duty Cycle is fully automated-tested, Windows-cross-built, benchmarked, diff-checked, and published when this checkpoint completes; manufacturer bounds/defaults and Shape interaction remain unknown. Continue remaining flagship effects while preserving unrelated audit queues and manual/device checks."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fender Tone Master Pro Tremolo Duty Cycle",
+      "status": "verified; full native/browser tests, Windows cross-build, and benchmark pass; manual/device checks remain",
+      "picker_index": 15,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide",
+        "revision": "v1.1.100 / Rev. A, printed p. 34; firmware v1.8.87 dated 2026-11-23 lists no Tremolo change; installed firmware unknown",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "qualification": "Duty Cycle is the percentage of time signal is on. No numeric range/default or Shape interaction is specified. No Fender waveform, DSP, or sound parity is claimed."
+      },
+      "documented_controls": "Tremolo controls include Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. Duty Cycle is described as percentage of time the signal is on.",
+      "project_controls": "Project-authored 5–95% Duty control, default 50%, on the existing Modulation Tremolo ID 15. Applied only in Square mode, separate from LFO Clip; 50% remains sample-identical to the prior threshold implementation.",
+      "verification": {
+        "native_cli": "make test-fender-tremolo-lfo-clip passed Tremolo CTest and offline CLI suite. Exact old/new 50% Square render equality passed; CLI sample at frame 12,000 is 0.5 at 50% and 0.0 at 20%. Final `make test` passed docs/fixture checks and 117/117 CTests.",
+        "browser": "Focused local guitar-DI Play passed at 20%/50% Square duty; RMS difference 0.03231, browser effect state 104 B. Full `make web-test` passed browser/native comparison and browser/effect checks.",
+        "windows": "make windows-cross-build passed.",
+        "benchmark": "Native state 128 B, zero fixed latency, zero allocations. On Ryzen 9 5950X Release at 48 kHz stereo/128 frames, p50/p95/p99/p99.9/max callback budget use: Square 50% 0.017/0.028/0.033/0.042/0.486%; Square 20% 0.015/0.017/0.018/0.036/0.358%; Sine 0.061/0.062/0.065/0.329/0.877%."
+      },
+      "remaining": "Manual listening, hardware behavior, target-device timing, installed firmware, and vendor range/curve details remain open."
+    },
     {
       "name": "HeadRush Prime Reverb Tails on bypass",
       "status": "verified; automated tests/builds and benchmark pass; manual/device checks remain",

@@ -1348,7 +1348,7 @@
         </label>
         <output id="tuner-reading" class="tuner-reading" aria-live="polite">Play guitar audio to detect a note.</output>
       </div>
-      <p class="hint">The Fender Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 34, lists LFO Clip and describes it as adjusting the tremolo signal's clipping percentage; it does not publish a numeric range, default, or clipping curve. This project-authored control maps 0–100% to symmetric hard clipping of the normalized bipolar LFO, with the threshold moving from 100% to 50% of its peak and the clipped wave normalized back to full range. Zero preserves the existing waveform. This is an explicit project interpretation, not a claim about Fender's internal behavior or sound.</p>
+      <p class="hint">The Fender Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 34, lists LFO Clip and describes it as adjusting the tremolo signal's clipping percentage; it does not publish a numeric range, default, or clipping curve. This project-authored control maps 0–100% to symmetric hard clipping of the normalized bipolar LFO, with the threshold moving from 100% to 50% of its peak and the clipped wave normalized back to full range. Zero preserves the existing waveform. The same guide lists Duty Cycle as the percentage of time the signal is on, but gives no bounds, default, or interaction with Shape. TabletFX exposes a separate project-authored 5–95% Duty control, default 50%, on Square waveform only; other shapes ignore it. These are independent project mappings, not claims about Fender's internal behavior or sound.</p>
       <div class="gain-controls">
         <label class="mix-control" for="tremolo-rate-hz">
           <span>Tremolo rate</span><output id="tremolo-rate-value" for="tremolo-rate-hz">5.00 Hz</output>
@@ -1378,6 +1378,11 @@
           <span>LFO Clip · project-authored</span>
           <output id="tremolo-lfo-clip-value" for="tremolo-lfo-clip-percent">0%</output>
           <input id="tremolo-lfo-clip-percent" type="range" min="0" max="100" step="1" value="0">
+        </label>
+        <label class="mix-control" for="tremolo-duty-percent">
+          <span>Duty Cycle · project range 5–95% · Square only</span>
+          <output id="tremolo-duty-value" for="tremolo-duty-percent">50%</output>
+          <input id="tremolo-duty-percent" type="range" min="5" max="95" step="1" value="50" disabled>
         </label>
       </div>
       <div class="effect-parameter-group" aria-label="Harmonic Tremolo controls">

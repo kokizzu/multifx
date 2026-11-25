@@ -2380,6 +2380,40 @@ def check_tremolo_lfo_clip(executable: Path) -> None:
             )
 
 
+def check_tremolo_duty_cycle(executable: Path) -> None:
+    sample_rate = 48000
+    frame_count = sample_rate
+    source_samples = [16384] * frame_count
+    with tempfile.TemporaryDirectory(prefix="tabletfx-tremolo-duty-test-") as directory:
+        root = Path(directory)
+        source = root / "constant.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(duty_percent: int) -> tuple[float, ...]:
+            output = root / f"duty-{duty_percent}.wav"
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(output),
+                 "--tremolo-rate-hz", "1", "--tremolo-depth", "1",
+                 "--tremolo-waveform", "square", "--tremolo-sync", "off",
+                 "--tremolo-duty-cycle-percent", str(duty_percent)],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError("Tremolo Duty Cycle CLI did not instantiate one processor")
+            data = output.read_bytes()
+            return struct.unpack("<" + "f" * frame_count,
+                                 data[44:44 + frame_count * 4])
+
+        neutral = render(50)
+        skewed = render(20)
+        if (abs(neutral[12000] - 0.5) > 1e-5 or
+                abs(skewed[12000]) > 1e-5):
+            raise AssertionError(
+                "Square Duty Cycle should match the expected same-frame on/off values; "
+                f"neutral[12000]={neutral[12000]} skewed[12000]={skewed[12000]} "
+            )
+
+
 def check_vibrato(executable: Path) -> None:
     sample_rate = 48000
     source_samples = [32767] + [0] * 1023
@@ -3451,6 +3485,7 @@ def main() -> None:
     check_manual_thru_zero_flanger(args.executable.resolve())
     check_phaser(args.executable.resolve())
     check_tremolo_lfo_clip(args.executable.resolve())
+    check_tremolo_duty_cycle(args.executable.resolve())
     check_vibrato(args.executable.resolve())
     check_compressor(args.executable.resolve())
     check_new_effect_modules(args.executable.resolve())
@@ -3464,7 +3499,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
-    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/Tremolo LFO Clip/vibrato/pitch shifting, Diatonic Harmonizer, Fractal Diatonic Harmonizer defaults, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
+    print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/Tremolo LFO Clip/Duty Cycle/vibrato/pitch shifting, Diatonic Harmonizer, Fractal Diatonic Harmonizer defaults, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 
 if __name__ == "__main__":

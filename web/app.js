@@ -174,7 +174,7 @@ const DEFAULT_PARAMETERS = {
   limiter: [-1, 80],
   wah: [0.5, 350, 2200, 4, 0],
   envelopeWah: [0.5, 350, 2200, 4, 0, 5, 80, 5, 0],
-  tremolo: [5, 0.5, 0, 0, 120, 1, 0],
+  tremolo: [5, 0.5, 0, 0, 120, 1, 0, 50],
   harmonicTremolo: [3, 0.65, 700, 0, 0, 120, 1, 1, 10],
   chorus: [0.8, 15, 7, 0.3, 0, 120],
   dimensionChorus: [0, 0, 0.5, 0],
@@ -1109,6 +1109,8 @@ const tremoloBpmValue = document.querySelector("#tremolo-tempo-value");
 const tremoloDivision = document.querySelector("#tremolo-beats-per-cycle");
 const tremoloLfoClip = document.querySelector("#tremolo-lfo-clip-percent");
 const tremoloLfoClipValue = document.querySelector("#tremolo-lfo-clip-value");
+const tremoloDuty = document.querySelector("#tremolo-duty-percent");
+const tremoloDutyValue = document.querySelector("#tremolo-duty-value");
 const harmonicTremoloRate = document.querySelector("#harmonic-tremolo-rate-hz");
 const harmonicTremoloDepth = document.querySelector("#harmonic-tremolo-depth");
 const harmonicTremoloCrossover = document.querySelector("#harmonic-tremolo-crossover-hz");
@@ -5856,17 +5858,20 @@ function updateTremolo() {
     Number(tremoloBpm.value),
     Number(tremoloDivision.value),
     Number(tremoloLfoClip.value),
+    Number(tremoloDuty.value),
   ];
   DEFAULT_PARAMETERS.tremolo = values;
   tremoloRateValue.value = `${Number(tremoloRate.value).toFixed(2)} Hz`;
   tremoloDepthValue.value = `${Math.round(Number(tremoloDepth.value) * 100)}%`;
   tremoloBpmValue.value = `${tremoloBpm.value} BPM`;
   tremoloLfoClipValue.value = `${Number(tremoloLfoClip.value).toFixed(0)}%`;
+  tremoloDutyValue.value = `${Number(tremoloDuty.value).toFixed(0)}%`;
+  tremoloDuty.disabled = waveform !== 2;
   if (workletNode) workletNode.port.postMessage({ type: "tremolo", value: values });
 }
 
 for (const control of [tremoloRate, tremoloDepth, tremoloWaveform,
-  tremoloSync, tremoloBpm, tremoloDivision, tremoloLfoClip]) {
+  tremoloSync, tremoloBpm, tremoloDivision, tremoloLfoClip, tremoloDuty]) {
   control.addEventListener("input", updateTremolo);
   control.addEventListener("change", updateTremolo);
 }
@@ -13385,7 +13390,7 @@ async function runFenderTremoloLfoClipBrowserSmokeTest(reference, captureView, c
   const previousCategory = effectCategoryFilter.value;
   const previousControls = [tremoloRate.value, tremoloDepth.value,
     tremoloWaveform.value, tremoloSync.value, tremoloBpm.value,
-    tremoloDivision.value, tremoloLfoClip.value];
+    tremoloDivision.value, tremoloLfoClip.value, tremoloDuty.value];
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext ||
@@ -13470,7 +13475,117 @@ async function runFenderTremoloLfoClipBrowserSmokeTest(reference, captureView, c
     stopSource(false);
     [tremoloRate.value, tremoloDepth.value, tremoloWaveform.value,
       tremoloSync.value, tremoloBpm.value, tremoloDivision.value,
-      tremoloLfoClip.value] = previousControls;
+      tremoloLfoClip.value, tremoloDuty.value] = previousControls;
+    updateTremolo();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
+async function runFenderTremoloDutyCycleBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [tremoloRate.value, tremoloDepth.value,
+    tremoloWaveform.value, tremoloSync.value, tremoloBpm.value,
+    tremoloDivision.value, tremoloLfoClip.value, tremoloDuty.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Tremolo Duty Cycle smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="15"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        tremoloDuty.min !== "5" || tremoloDuty.max !== "95" ||
+        tremoloDuty.step !== "1" || tremoloDuty.value !== "50" ||
+        !tremoloDuty.disabled || !(effectMemory[15] > 0)) {
+      throw new Error("Tremolo Duty Cycle project bounds, default, or category is invalid.");
+    }
+
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 15;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    tremoloRate.value = "1";
+    tremoloDepth.value = "1";
+    tremoloWaveform.value = "square";
+    tremoloSync.value = "off";
+    tremoloBpm.value = "120";
+    tremoloDivision.value = "1";
+    tremoloLfoClip.value = "0";
+
+    const captureAt = async (dutyPercent) => {
+      tremoloDuty.value = String(dutyPercent);
+      updateTremolo();
+      if (tremoloDuty.disabled) {
+        throw new Error("Tremolo Duty Cycle should be enabled for Square waveform.");
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Tremolo Duty Cycle playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) throw new Error(`Tremolo output is not finite at ${i}.`);
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error("Tremolo Duty Cycle output is silent.");
+      return output;
+    };
+
+    const neutral = await captureAt(50);
+    const skewed = await captureAt(20);
+    const rmsDifference = Math.sqrt(neutral.reduce(
+      (sum, sample, index) => sum + (sample - skewed[index]) ** 2, 0,
+    ) / neutral.length);
+    if (rmsDifference < 1e-5 || tremoloDutyValue.value !== "20%") {
+      throw new Error("Square Duty Cycle control did not change the captured guitar output.");
+    }
+    tremoloWaveform.value = "sine";
+    updateTremolo();
+    if (!tremoloDuty.disabled) {
+      throw new Error("Tremolo Duty Cycle must be disabled outside Square waveform.");
+    }
+    return {
+      category: "Modulation",
+      effectId: 15,
+      projectDutyRangePercent: [5, 95],
+      neutralDefaultPercent: 50,
+      activeWaveform: "Square",
+      playCaptures: 2,
+      neutralVs20PercentDifferenceRms: rmsDifference,
+      effectMemoryBytes: effectMemory[15],
+    };
+  } finally {
+    stopSource(false);
+    [tremoloRate.value, tremoloDepth.value, tremoloWaveform.value,
+      tremoloSync.value, tremoloBpm.value, tremoloDivision.value,
+      tremoloLfoClip.value, tremoloDuty.value] = previousControls;
     updateTremolo();
     [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
       box.checked = previousEffectState[index];
@@ -17577,7 +17692,7 @@ async function runBrowserSelfTest() {
         limiter: [-1, 80],
         wah: [0.62, 350, 2200, 4, 0],
         envelopeWah: [0.8, 350, 2200, 4, 0, 5, 80, 5, 0],
-        tremolo: [4, 0.2, 0, 0, 120, 1, 0],
+        tremolo: [4, 0.2, 0, 0, 120, 1, 0, 50],
         harmonicTremolo: [4.25, 0.8, 950, 1, 1, 96, 0.5, 0, 25],
         chorus: [0.8, 15, 7, 0.2, 0, 120],
          flanger: [0.25, 2, 1, 0.35, 1, 0.2, 180],
@@ -18209,6 +18324,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Tremolo LFO Clip browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-tremolo-duty-cycle") {
+          testResult.textContent = "Checking project-authored Square Duty Cycle with local guitar audio…";
+          const tremoloDutySmoke = await runFenderTremoloDutyCycleBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            tremoloDutyCycle: tremoloDutySmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Tremolo Duty Cycle browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-tzf-auto") {

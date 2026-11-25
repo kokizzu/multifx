@@ -30,6 +30,7 @@ void test_defaults_bounds_and_memory() {
     require(tremolo.id() == "tremolo", "tremolo stable ID changed");
     require(parameters.rate_hz == 5.0F && parameters.depth == 0.5F &&
                 parameters.lfo_clip_percent == 0.0F &&
+                parameters.duty_cycle_percent == 50.0F &&
                 parameters.waveform == tabletfx::TremoloWaveform::Sine &&
                 !parameters.tempo_sync && parameters.depth_smoothing_ms == 10.0F &&
                 tremolo.effective_rate_hz() == 5.0F,
@@ -74,6 +75,15 @@ void test_defaults_bounds_and_memory() {
     tremolo.set_lfo_clip_percent(std::numeric_limits<float>::quiet_NaN());
     require(tremolo.parameters().lfo_clip_percent == 100.0F,
             "non-finite LFO clip amount changed the last valid setting");
+    tremolo.set_duty_cycle_percent(0.0F);
+    require(tremolo.parameters().duty_cycle_percent == 5.0F,
+            "square duty cycle lower bound was not enforced");
+    tremolo.set_duty_cycle_percent(100.0F);
+    require(tremolo.parameters().duty_cycle_percent == 95.0F,
+            "square duty cycle upper bound was not enforced");
+    tremolo.set_duty_cycle_percent(std::numeric_limits<float>::quiet_NaN());
+    require(tremolo.parameters().duty_cycle_percent == 95.0F,
+            "non-finite square duty cycle changed the last valid setting");
     tremolo.set_depth_smoothing_ms(-1.0F);
     require(tremolo.parameters().depth_smoothing_ms == 0.0F,
             "negative depth smoothing was not bounded to immediate response");
@@ -152,6 +162,58 @@ void test_waveforms_and_depth_endpoints() {
     const auto original = unchanged;
     dry.process(unchanged, 2);
     require(unchanged == original, "zero tremolo depth changed the signal");
+}
+
+void test_square_duty_cycle_and_other_waveforms_unaffected() {
+    tabletfx::TremoloParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.depth = 1.0F;
+    parameters.waveform = tabletfx::TremoloWaveform::Square;
+    parameters.depth_smoothing_ms = 0.0F;
+
+    std::vector<float> neutral(8000, 1.0F);
+    tabletfx::Tremolo default_square(8000.0F, parameters);
+    default_square.process(neutral, 1);
+    std::vector<float> old_fixed_threshold(8000, 1.0F);
+    float old_phase = 0.0F;
+    const float old_phase_increment = 1.0F / 8000.0F;
+    for (float& sample : old_fixed_threshold) {
+        sample *= old_phase < 0.5F ? 1.0F : 0.0F;
+        old_phase += old_phase_increment;
+        if (old_phase >= 1.0F) old_phase -= 1.0F;
+    }
+    require(neutral == old_fixed_threshold,
+            "50% Square duty changed the exact pre-change fixed-threshold output");
+    require(neutral[100] == 1.0F && neutral[3900] == 1.0F &&
+                neutral[4100] == 0.0F && neutral[7900] == 0.0F,
+            "50% duty did not preserve the existing symmetric square waveform");
+
+    parameters.duty_cycle_percent = 20.0F;
+    std::vector<float> skewed(8000, 1.0F);
+    tabletfx::Tremolo skewed_square(8000.0F, parameters);
+    skewed_square.process(skewed, 1);
+    const auto on_samples = static_cast<std::size_t>(
+        std::count(skewed.begin(), skewed.end(), 1.0F));
+    require(on_samples >= 1598U && on_samples <= 1602U &&
+                skewed[1000] == 1.0F && skewed[3000] == 0.0F &&
+                skewed_square.parameters().duty_cycle_percent == 20.0F,
+            "20% square duty did not set the expected on-time proportion");
+
+    for (const auto waveform : {tabletfx::TremoloWaveform::Sine,
+                                tabletfx::TremoloWaveform::Triangle}) {
+        parameters.waveform = waveform;
+        parameters.duty_cycle_percent = 50.0F;
+        tabletfx::Tremolo unchanged(8000.0F, parameters);
+        parameters.duty_cycle_percent = 95.0F;
+        tabletfx::Tremolo different_duty(8000.0F, parameters);
+        std::vector<float> unchanged_audio(8000, 0.8F);
+        std::vector<float> different_duty_audio = unchanged_audio;
+        unchanged.process(unchanged_audio, 1);
+        different_duty.set_duty_cycle_percent(95.0F);
+        different_duty.process(different_duty_audio, 1);
+        require(unchanged_audio == different_duty_audio,
+                "square duty setting changed a non-square tremolo waveform");
+    }
 }
 
 void test_tempo_sync_conversion_and_bounds() {
@@ -289,6 +351,41 @@ void test_depth_ramp_is_monotonic_retargetable_and_block_invariant() {
             "zero-duration depth smoothing should apply immediately");
 }
 
+void test_duty_cycle_ramp_is_smoothed_and_block_invariant() {
+    tabletfx::TremoloParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.depth = 1.0F;
+    parameters.waveform = tabletfx::TremoloWaveform::Square;
+    parameters.depth_smoothing_ms = 10.0F;
+    tabletfx::Tremolo whole(48000.0F, parameters);
+    tabletfx::Tremolo chunked(48000.0F, parameters);
+    std::array<float, 12000> pre_roll{};
+    whole.process(pre_roll, 1);
+    chunked.process(pre_roll, 1);
+    whole.set_duty_cycle_percent(5.0F);
+    chunked.set_duty_cycle_percent(5.0F);
+    require(whole.current_duty_cycle_percent() == 50.0F,
+            "duty-cycle control jumped instead of starting its smoothing ramp");
+
+    std::vector<float> whole_audio(480, 1.0F);
+    std::vector<float> chunked_audio = whole_audio;
+    whole.process(whole_audio, 1);
+    const std::array<std::size_t, 5> block_sizes{1, 127, 53, 211, 88};
+    std::size_t offset = 0;
+    std::size_t block = 0;
+    while (offset < chunked_audio.size()) {
+        const std::size_t frames = std::min(block_sizes[block % block_sizes.size()],
+                                            chunked_audio.size() - offset);
+        chunked.process(std::span<float>(chunked_audio).subspan(offset, frames), 1);
+        offset += frames;
+        ++block;
+    }
+    require(whole_audio == chunked_audio &&
+                whole.current_duty_cycle_percent() == 5.0F &&
+                whole_audio.front() == 1.0F && whole_audio.back() == 0.0F,
+            "duty-cycle ramp changed with block partitioning or missed its target");
+}
+
 void test_invalid_samples_and_zero_process_allocations() {
     tabletfx::Tremolo tremolo;
     std::array<float, 5> invalid{
@@ -310,6 +407,9 @@ void test_invalid_samples_and_zero_process_allocations() {
 
     std::array<float, 512> block{};
     block.fill(0.5F);
+    tremolo.set_waveform(tabletfx::TremoloWaveform::Square);
+    tremolo.set_depth_smoothing_ms(0.0F);
+    tremolo.set_duty_cycle_percent(37.0F);
     tremolo.reset();
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
@@ -349,10 +449,12 @@ int main() {
     try {
         test_defaults_bounds_and_memory();
         test_waveforms_and_depth_endpoints();
+        test_square_duty_cycle_and_other_waveforms_unaffected();
         test_lfo_clip_shape_and_default_identity();
         test_tempo_sync_conversion_and_bounds();
         test_variable_blocks_phase_continuity_and_stereo_link();
         test_depth_ramp_is_monotonic_retargetable_and_block_invariant();
+        test_duty_cycle_ramp_is_smoothed_and_block_invariant();
         test_invalid_samples_and_zero_process_allocations();
         std::cout << "All TabletFX tremolo tests passed.\n";
         return 0;

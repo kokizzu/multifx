@@ -20,6 +20,22 @@ PUBLISH_CHECKPOINTS += fender-stereo-flanger-phase
 PUBLISH_CHECKPOINTS += fender-flanger-tap-division
 PUBLISH_CHECKPOINTS += fender-phaser-90-tap-division
 PUBLISH_CHECKPOINTS += fender-tremolo-lfo-clip
+PUBLISH_CHECKPOINTS += fender-tremolo-duty-cycle
+
+.PHONY: test-fender-tremolo-duty-cycle web-test-fender-tremolo-duty-cycle
+test-fender-tremolo-duty-cycle:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_tremolo_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fender-tremolo-duty-cycle: test-fender-tremolo-duty-cycle web-build
+	$(PYTHON) scripts/web.py test-fender-tremolo-duty-cycle
+
+.PHONY: bench-fender-tremolo-duty-cycle
+bench-fender-tremolo-duty-cycle:
+	$(PYTHON) scripts/run_cmake.py bench-fender-tremolo-duty-cycle
+
+
+
 PUBLISH_CHECKPOINTS += fractal-tzf-auto
 
 .PHONY: test-fender-stereo-flanger-phase web-test-fender-stereo-flanger-phase

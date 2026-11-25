@@ -37,6 +37,9 @@ void Tremolo::configure(float sample_rate,
     parameters.depth = bounded(parameters.depth, 0.5F, 0.0F, 1.0F);
     parameters.lfo_clip_percent = bounded(parameters.lfo_clip_percent, 0.0F,
                                           0.0F, 100.0F);
+    parameters.duty_cycle_percent = bounded(
+        parameters.duty_cycle_percent, 50.0F,
+        kMinimumDutyCyclePercent, kMaximumDutyCyclePercent);
     parameters.waveform = sanitize_waveform(parameters.waveform);
     parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
                                    kMinimumBpm, kMaximumBpm);
@@ -50,6 +53,10 @@ void Tremolo::configure(float sample_rate,
     target_depth_ = parameters_.depth;
     depth_ramp_step_ = 0.0F;
     depth_ramp_remaining_ = 0;
+    current_duty_cycle_percent_ = parameters_.duty_cycle_percent;
+    target_duty_cycle_percent_ = parameters_.duty_cycle_percent;
+    duty_cycle_ramp_step_ = 0.0F;
+    duty_cycle_ramp_remaining_ = 0;
     prepare_oscillator();
     reset();
 }
@@ -84,6 +91,28 @@ void Tremolo::set_lfo_clip_percent(float clip_percent) noexcept {
     parameters_.lfo_clip_percent = bounded(clip_percent,
                                           parameters_.lfo_clip_percent,
                                           0.0F, 100.0F);
+}
+
+void Tremolo::set_duty_cycle_percent(float duty_cycle_percent) noexcept {
+    parameters_.duty_cycle_percent = bounded(
+        duty_cycle_percent, parameters_.duty_cycle_percent,
+        kMinimumDutyCyclePercent, kMaximumDutyCyclePercent);
+    target_duty_cycle_percent_ = parameters_.duty_cycle_percent;
+    const double requested_frames = static_cast<double>(sample_rate_) *
+                                    static_cast<double>(parameters_.depth_smoothing_ms) /
+                                    1000.0;
+    const std::size_t ramp_frames = static_cast<std::size_t>(
+        std::llround(requested_frames));
+    if (ramp_frames == 0) {
+        current_duty_cycle_percent_ = target_duty_cycle_percent_;
+        duty_cycle_ramp_step_ = 0.0F;
+        duty_cycle_ramp_remaining_ = 0;
+        return;
+    }
+    duty_cycle_ramp_step_ =
+        (target_duty_cycle_percent_ - current_duty_cycle_percent_) /
+        static_cast<float>(ramp_frames);
+    duty_cycle_ramp_remaining_ = ramp_frames;
 }
 
 void Tremolo::set_depth_smoothing_ms(float smoothing_ms) noexcept {
@@ -135,13 +164,23 @@ void Tremolo::process(std::span<float> interleaved,
                 depth_ramp_step_ = 0.0F;
             }
         }
+        if (duty_cycle_ramp_remaining_ > 0) {
+            current_duty_cycle_percent_ += duty_cycle_ramp_step_;
+            --duty_cycle_ramp_remaining_;
+            if (duty_cycle_ramp_remaining_ == 0) {
+                current_duty_cycle_percent_ = target_duty_cycle_percent_;
+                duty_cycle_ramp_step_ = 0.0F;
+            }
+        }
         float waveform_value = sine_phase_;
         if (parameters_.waveform == TremoloWaveform::Triangle) {
             waveform_value = phase_ < 0.5F
                                  ? -1.0F + 4.0F * phase_
                                  : 3.0F - 4.0F * phase_;
         } else if (parameters_.waveform == TremoloWaveform::Square) {
-            waveform_value = phase_ < 0.5F ? 1.0F : -1.0F;
+            waveform_value = phase_ < current_duty_cycle_percent_ / 100.0F
+                                 ? 1.0F
+                                 : -1.0F;
         }
         if (lfo_clip_enabled) {
             waveform_value = std::clamp(waveform_value, -lfo_clip_threshold,
@@ -192,6 +231,9 @@ void Tremolo::reset() noexcept {
     current_depth_ = target_depth_;
     depth_ramp_step_ = 0.0F;
     depth_ramp_remaining_ = 0;
+    current_duty_cycle_percent_ = target_duty_cycle_percent_;
+    duty_cycle_ramp_step_ = 0.0F;
+    duty_cycle_ramp_remaining_ = 0;
 }
 
 float Tremolo::bounded(float value, float fallback,

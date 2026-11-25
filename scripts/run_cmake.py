@@ -148,6 +148,17 @@ def bench_fractal_chorus_tempo(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_fender_tremolo_duty_cycle(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fender_tremolo_duty_cycle_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fender_tremolo_duty_cycle_bench"
+    )
+    run([str(executable)])
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         return os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "unknown")
@@ -167,7 +178,7 @@ def main() -> None:
         choices=("configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
                   "bench-feedback-generator", "bench-shuffling-looper",
-                  "bench-fractal-chorus-tempo",
+                   "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
                  "windows-build"),
     )
     parser.add_argument("--test-filter", default="")
@@ -213,6 +224,8 @@ def main() -> None:
         bench_shuffling_looper(cmake)
     elif action == "bench-fractal-chorus-tempo":
         bench_fractal_chorus_tempo(cmake)
+    elif action == "bench-fender-tremolo-duty-cycle":
+        bench_fender_tremolo_duty_cycle(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 

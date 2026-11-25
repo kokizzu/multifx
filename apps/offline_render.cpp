@@ -2703,6 +2703,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.tremolo.lfo_clip_percent = value;
             options.tremolo_enabled = true;
         }
+        else if (key == "--tremolo-duty-cycle-percent") {
+            options.tremolo.duty_cycle_percent = value;
+            options.tremolo_enabled = true;
+        }
         else if (key == "--harmonic-tremolo-rate-hz") {
             options.harmonic_tremolo.rate_hz = value;
             options.harmonic_tremolo_enabled = true;
@@ -5996,6 +6000,7 @@ void print_usage() {
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
                  " [--tremolo-lfo-clip-percent 0..100]"
+                 " [--tremolo-duty-cycle-percent 5..95; square only]"
                   " [--optical-tremolo] [--optical-tremolo-variant optical-1|optical-2|neon]"
                   " [--optical-tremolo-rate-hz Hz] [--optical-tremolo-depth 0..1]"
                   " [--optical-tremolo-lfo sine|triangle|square|saw-up|saw-down|random|logarithmic|exponential|trapezoid|astable]"
