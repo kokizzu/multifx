@@ -1889,6 +1889,34 @@ def check_manual_thru_zero_flanger(executable: Path) -> None:
                 f"got {cancelled[32]}/{reinforced[32]}"
             )
 
+        auto = render("auto", [
+            *shared_options,
+            "--manual-thru-zero-flanger-mode", "auto",
+            "--manual-thru-zero-flanger-lfo-rate-hz", "0.05",
+            "--manual-thru-zero-flanger-lfo-depth", "10",
+            "--manual-thru-zero-flanger-lfo-waveform", "triangle",
+            "--manual-thru-zero-flanger-lfo-phase-degrees", "0",
+            "--manual-thru-zero-flanger-phase-reverse", "both",
+        ])
+        if abs(auto[16] + expected * 0.5) > 0.005 or \
+                abs(auto[32] - expected * 0.5) > 1.0e-6:
+            raise AssertionError(
+                "Auto through-zero CLI should sweep wet before the delayed dry tap; "
+                f"got {auto[16]}/{auto[32]}"
+            )
+
+        normal = render("normal", [
+            *shared_options,
+            "--manual-thru-zero-flanger-mode", "off",
+            "--manual-thru-zero-flanger-phase-reverse", "both",
+        ])
+        if abs(normal[0] - expected * 0.5) > 1.0e-6 or \
+                abs(normal[16]) > 1.0e-6:
+            raise AssertionError(
+                "Off through-zero CLI should keep the dry path immediate; "
+                f"got {normal[0]}/{normal[16]}"
+            )
+
         invalid_phase = subprocess.run(
             [str(executable), "render", str(source), str(root / "invalid.wav"),
              "--manual-thru-zero-flanger-phase-reverse", "diagonal"],
@@ -1898,6 +1926,14 @@ def check_manual_thru_zero_flanger(executable: Path) -> None:
             raise AssertionError(
                 "Manual through-zero CLI accepted an invalid phase-reverse mode"
             )
+
+        invalid_mode = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid-mode.wav"),
+             "--manual-thru-zero-flanger-mode", "adaptive"],
+            capture_output=True, text=True, check=False,
+        )
+        if invalid_mode.returncode == 0 or "mode must be off, auto, or manual" not in invalid_mode.stderr:
+            raise AssertionError("Manual through-zero CLI accepted an invalid mode")
 
 
 def check_delay_time_modes(executable: Path) -> None:

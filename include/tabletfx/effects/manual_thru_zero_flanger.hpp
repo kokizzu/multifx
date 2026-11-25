@@ -24,6 +24,17 @@ enum class FlangerPhaseReverse : std::uint8_t {
     Both,
 };
 
+enum class ThruZeroMode : std::uint8_t {
+    Off,
+    Auto,
+    Manual,
+};
+
+enum class ThruZeroLfoWaveform : std::uint8_t {
+    Sine,
+    Triangle,
+};
+
 struct ManualThruZeroFlangerParameters {
     // Delay endpoints follow the documented FM9-family extrema (0.340–20 ms).
     // The exact Manual TZF seeds are not published; defaults and the 0.010 ms
@@ -31,9 +42,8 @@ struct ManualThruZeroFlangerParameters {
     // model uses these exact values.
     float minimum_time_ms = 0.34F;
     float maximum_time_ms = 8.0F;
-    // Manual is the documented 0–10 control; it moves the wet delay between
-    // minimum_time_ms and maximum_time_ms. This implementation is manual-only;
-    // it does not add the vendor's LFO/Auto operating mode.
+    // Manual is a documented 0–10 position control (not milliseconds); it
+    // moves the wet delay between minimum_time_ms and maximum_time_ms.
     float manual = 5.0F;
     // Vendor documentation says Dry Delay moves the cancellation point, but
     // does not give a range here. This project uses a normalized 0–1 position
@@ -45,21 +55,27 @@ struct ManualThruZeroFlangerParameters {
     // Project-authored per-channel selector for the documented Phase Reverse
     // capability; exact control labels and mode combinations are not asserted.
     FlangerPhaseReverse phase_reverse = FlangerPhaseReverse::Both;
+    ThruZeroMode mode = ThruZeroMode::Manual;
+    // Auto/Off LFO controls use project-authored bounds and mapping because the
+    // FM9-family guide does not publish numeric ranges/defaults for them.
+    float lfo_rate_hz = 0.25F;
+    float lfo_depth = 5.0F;
+    ThruZeroLfoWaveform lfo_waveform = ThruZeroLfoWaveform::Sine;
+    float lfo_phase_degrees = 180.0F;
     // These are project-authored linear wet/dry and smoothing controls; their
     // ranges are not presented as Fractal parameter ranges.
     float mix = 0.5F;
     float smoothing_ms = 10.0F;
 };
 
-// Project-authored manual through-zero flanger. Separate wet and dry delay
-// lines create a movable cancellation point; Manual sweeps the wet delay
-// across the configured span. Each path adds its current tap delay (0.340–20
-// ms). In this project's law, the taps meet when Manual/10 equals
-// dry_delay_position; this location and the surrounding controls are not
-// presented as Fractal's exact mapping. maximum_path_latency_frames() reports
-// the configured upper bound for graph budgeting. The processor does not
-// compensate other graph paths, and its delay changes with the controls.
-// Construction allocates delay storage; process() is allocation-free.
+// Project-authored Off/Auto/Manual through-zero flanger. Auto sweeps the wet
+// delay with an LFO; Manual controls its position by hand. Dry Delay moves the
+// cancellation point. The LFO mapping, numeric bounds/defaults, and DSP are
+// project choices, not Fractal settings or sound parity. Off uses an immediate
+// dry path; Auto/Manual delay both paths by their selected taps (0.340–20 ms).
+// maximum_path_latency_frames() reports the configured upper bound for graph
+// budgeting. The processor does not compensate other graph paths. Construction
+// allocates delay storage; process() is allocation-free.
 class ManualThruZeroFlanger final : public Effect {
 public:
     explicit ManualThruZeroFlanger(
@@ -99,6 +115,8 @@ private:
                                    std::size_t write_frame,
                                    std::uint16_t channel,
                                    float delay_frames) const noexcept;
+    [[nodiscard]] static float lfo_value(ThruZeroLfoWaveform waveform,
+                                         float phase_cycles) noexcept;
     void retarget(bool immediate) noexcept;
     void advance_ramps() noexcept;
 
@@ -115,19 +133,35 @@ private:
     float current_manual_ = 5.0F;
     float current_dry_delay_position_ = 0.5F;
     float current_feedback_percent_ = 0.0F;
+    float current_lfo_rate_hz_ = 0.25F;
+    float current_lfo_depth_ = 5.0F;
+    float current_lfo_phase_degrees_ = 180.0F;
+    float current_thru_zero_mix_ = 1.0F;
+    float current_lfo_mix_ = 0.0F;
     float current_mix_ = 0.5F;
     float target_minimum_time_ms_ = 0.34F;
     float target_maximum_time_ms_ = 8.0F;
     float target_manual_ = 5.0F;
     float target_dry_delay_position_ = 0.5F;
     float target_feedback_percent_ = 0.0F;
+    float target_lfo_rate_hz_ = 0.25F;
+    float target_lfo_depth_ = 5.0F;
+    float target_lfo_phase_degrees_ = 180.0F;
+    float target_thru_zero_mix_ = 1.0F;
+    float target_lfo_mix_ = 0.0F;
     float target_mix_ = 0.5F;
     float minimum_time_step_ = 0.0F;
     float maximum_time_step_ = 0.0F;
     float manual_step_ = 0.0F;
     float dry_delay_position_step_ = 0.0F;
     float feedback_percent_step_ = 0.0F;
+    float lfo_rate_step_ = 0.0F;
+    float lfo_depth_step_ = 0.0F;
+    float lfo_phase_step_ = 0.0F;
+    float thru_zero_mix_step_ = 0.0F;
+    float lfo_mix_step_ = 0.0F;
     float mix_step_ = 0.0F;
+    float lfo_phase_cycles_ = 0.0F;
     std::size_t ramp_remaining_ = 0;
 };
 

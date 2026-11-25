@@ -171,7 +171,7 @@
             <label class="effect-row" data-category="synth"><input type="checkbox" data-effect="78"><span class="effect-number">79</span><span class="effect-name">Three-Voice Tracked Synth · project-authored</span><span class="effect-default">Guitar/Bass range · monophonic tracker</span><span class="effect-category-tag">Synth</span></label>
            <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="79"><span class="effect-number">80</span><span class="effect-name">Cloud Reverb · project-authored modulated reverb</span><span class="effect-default">Mix · Tone · Decay · Diffuse · High/Low Damp · Rate/Depth · Spillover</span><span class="effect-category-tag">Reverb</span></label>
             <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="80"><span class="effect-number">81</span><span class="effect-name">Three-Stage Distortion · project-authored</span><span class="effect-default">Three nonlinear stages · two interstage drives · active Bass/Mid/Treble</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
-            <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="81"><span class="effect-number">82</span><span class="effect-name">Manual Through-Zero Flanger · project-authored Fractal-inspired controls</span><span class="effect-default">Manual time · delayed dry crossing point · feedback · phase reverse</span><span class="effect-category-tag">Modulation</span></label>
+            <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="81"><span class="effect-number">82</span><span class="effect-name">Through-Zero Flanger · project-authored Fractal-inspired controls</span><span class="effect-default">Off / Auto / Manual · LFO sweep · delayed dry crossing point</span><span class="effect-category-tag">Modulation</span></label>
              <label class="effect-row" data-category="drive"><input type="checkbox" data-effect="82"><span class="effect-number">83</span><span class="effect-name">Octobot · project-authored</span><span class="effect-default">Direct dry · Down octave · Sizzle octave-up fuzz</span><span class="effect-category-tag">Drive &amp; fuzz</span></label>
              <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="83"><span class="effect-number">84</span><span class="effect-name">AM Ring Mod · project-authored</span><span class="effect-default">Rate · Depth · Mix · Level</span><span class="effect-category-tag">Modulation</span></label>
              <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="84"><span class="effect-number">85</span><span class="effect-name">Tape Echo · project-authored</span><span class="effect-default">Time · Tap Division · Feedback · Mix · Record Level · Bias · Noise · Wow/Flutter · Spillover</span><span class="effect-category-tag">Delay</span></label>
@@ -1274,7 +1274,7 @@
           <input id="manual-tzf-maximum-time" type="range" min="0.35" max="20" step="0.01" value="8">
         </label>
         <label class="mix-control" for="manual-tzf-manual">
-          <span>Manual · project range 0–10 ms</span><output id="manual-tzf-manual-value" for="manual-tzf-manual">5.00 ms</output>
+          <span>Manual position · project range 0–10</span><output id="manual-tzf-manual-value" for="manual-tzf-manual">5.00</output>
           <input id="manual-tzf-manual" type="range" min="0" max="10" step="0.01" value="5">
         </label>
         <label class="mix-control" for="manual-tzf-dry-delay-position">
@@ -1297,7 +1297,27 @@
           <span>Control smoothing · project range 0–1000 ms</span><output id="manual-tzf-smoothing-value" for="manual-tzf-smoothing">10 ms</output>
           <input id="manual-tzf-smoothing" type="range" min="0" max="1000" step="1" value="10">
         </label>
-        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide</a> documents Manual Thru-Zero Flanger, a Thru-Zero Off/Auto/Manual mode, Manual at 0.01–10 ms, minimum/maximum flanger times spanning 0.340–20 ms, Dry Delay moving the cancellation point, feedback −100…+100%, and channel phase reverse. This project implements Manual mode only; its parameter mapping, ranges/defaults, and DSP are independent. Both paths are delayed; at the default 8 ms maximum the path latency is 384 frames at 48 kHz. Host/graph latency compensation is not implemented.</p>
+        <label class="mix-control" for="manual-tzf-mode">
+          <span>Through-zero mode · project mapping</span><output id="manual-tzf-mode-value" for="manual-tzf-mode">Manual</output>
+          <select id="manual-tzf-mode"><option value="0">Off</option><option value="1">Auto</option><option value="2" selected>Manual</option></select>
+        </label>
+        <label class="mix-control" for="manual-tzf-lfo-rate">
+          <span>LFO Rate · project range 0.05–8 Hz</span><output id="manual-tzf-lfo-rate-value" for="manual-tzf-lfo-rate">0.25 Hz</output>
+          <input id="manual-tzf-lfo-rate" type="range" min="0.05" max="8" step="0.01" value="0.25">
+        </label>
+        <label class="mix-control" for="manual-tzf-lfo-depth">
+          <span>LFO Depth · project range 0–10</span><output id="manual-tzf-lfo-depth-value" for="manual-tzf-lfo-depth">5.0 / 10</output>
+          <input id="manual-tzf-lfo-depth" type="range" min="0" max="10" step="0.1" value="5">
+        </label>
+        <label class="mix-control" for="manual-tzf-lfo-waveform">
+          <span>LFO waveform · project choices</span><output id="manual-tzf-lfo-waveform-value" for="manual-tzf-lfo-waveform">Sine</output>
+          <select id="manual-tzf-lfo-waveform"><option value="0" selected>Sine</option><option value="1">Triangle</option></select>
+        </label>
+        <label class="mix-control" for="manual-tzf-lfo-phase">
+          <span>LFO L/R phase · project range 0–360°</span><output id="manual-tzf-lfo-phase-value" for="manual-tzf-lfo-phase">180°</output>
+          <input id="manual-tzf-lfo-phase" type="range" min="0" max="360" step="1" value="180">
+        </label>
+        <p class="hint">The <a href="https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf" target="_blank" rel="noreferrer">Fractal Audio Blocks Guide (November 2026, pp. 48–50, 111)</a> lists Off/Auto/Manual modes; Manual 0–10 is a position between Minimum and Maximum Time, not milliseconds. Auto moves the LFO through the zero point; Dry Delay moves the cancellation midpoint. Minimum/Maximum Time spans 0.340–20 ms, feedback is −100…+100%, and LFO phase offsets the right channel. The project now offers Off/Auto/Manual; its bounds, LFO mapping, waveform subset, defaults, and DSP are project choices, not Fractal settings or parity. Auto/Manual delay the dry path; Off keeps dry immediate. The configured 8 ms maximum allows up to 384 frames at 48 kHz; graph latency compensation is not implemented. Guide coverage is FM9-family evidence; the current download page lists FM9 Original/Turbo, not Mark II Turbo separately, and installed firmware is unknown.</p>
       </div>
       <div class="gain-controls" aria-label="Round fuzz controls">
         <label class="mix-control" for="round-fuzz-amount">

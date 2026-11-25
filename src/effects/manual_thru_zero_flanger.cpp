@@ -53,6 +53,27 @@ void ManualThruZeroFlanger::set_parameters(
         parameters.phase_reverse = FlangerPhaseReverse::Both;
         break;
     }
+    switch (parameters.mode) {
+    case ThruZeroMode::Off:
+    case ThruZeroMode::Auto:
+    case ThruZeroMode::Manual:
+        break;
+    default:
+        parameters.mode = ThruZeroMode::Manual;
+        break;
+    }
+    switch (parameters.lfo_waveform) {
+    case ThruZeroLfoWaveform::Sine:
+    case ThruZeroLfoWaveform::Triangle:
+        break;
+    default:
+        parameters.lfo_waveform = ThruZeroLfoWaveform::Sine;
+        break;
+    }
+    parameters.lfo_rate_hz = bounded(parameters.lfo_rate_hz, 0.25F, 0.05F, 8.0F);
+    parameters.lfo_depth = bounded(parameters.lfo_depth, 5.0F, 0.0F, 10.0F);
+    parameters.lfo_phase_degrees = bounded(
+        parameters.lfo_phase_degrees, 180.0F, 0.0F, 360.0F);
     parameters.mix = bounded(parameters.mix, 0.5F, 0.0F, 1.0F);
     parameters.smoothing_ms = bounded(parameters.smoothing_ms, 10.0F, 0.0F, 1000.0F);
 
@@ -62,6 +83,11 @@ void ManualThruZeroFlanger::set_parameters(
     target_manual_ = parameters_.manual;
     target_dry_delay_position_ = parameters_.dry_delay_position;
     target_feedback_percent_ = parameters_.feedback_percent;
+    target_lfo_rate_hz_ = parameters_.lfo_rate_hz;
+    target_lfo_depth_ = parameters_.lfo_depth;
+    target_lfo_phase_degrees_ = parameters_.lfo_phase_degrees;
+    target_thru_zero_mix_ = parameters_.mode == ThruZeroMode::Off ? 0.0F : 1.0F;
+    target_lfo_mix_ = parameters_.mode == ThruZeroMode::Manual ? 0.0F : 1.0F;
     target_mix_ = parameters_.mix;
     retarget(false);
 }
@@ -72,7 +98,16 @@ float ManualThruZeroFlanger::current_wet_time_ms() const noexcept {
     const float maximum = std::clamp(current_maximum_time_ms_,
                                      minimum + kMinimumTimeSpanMs,
                                      kMaximumTimeMs);
-    const float position = std::clamp(current_manual_ / 10.0F, 0.0F, 1.0F);
+    const float manual_position =
+        std::clamp(current_manual_ / 10.0F, 0.0F, 1.0F);
+    const float depth = std::clamp(current_lfo_depth_ / 10.0F, 0.0F, 1.0F);
+    const float lfo = lfo_value(parameters_.lfo_waveform, lfo_phase_cycles_);
+    const float lfo_center = 0.5F + (manual_position - 0.5F) * (1.0F - depth);
+    const float lfo_position = std::clamp(
+        lfo_center + lfo * 0.5F * depth, 0.0F, 1.0F);
+    const float position = std::clamp(
+        manual_position + (lfo_position - manual_position) * current_lfo_mix_,
+        0.0F, 1.0F);
     return minimum + (maximum - minimum) * position;
 }
 
@@ -115,12 +150,11 @@ void ManualThruZeroFlanger::process(std::span<float> interleaved,
             current_maximum_time_ms_, minimum_time + kMinimumTimeSpanMs,
             kMaximumTimeMs);
         const float span = maximum_time - minimum_time;
-        const float wet_position = std::clamp(current_manual_ / 10.0F, 0.0F, 1.0F);
         const float dry_position = std::clamp(current_dry_delay_position_, 0.0F, 1.0F);
-        const float wet_delay_frames =
-            (minimum_time + span * wet_position) * samples_per_ms;
         const float dry_delay_frames =
             (minimum_time + span * dry_position) * samples_per_ms;
+        const float manual_position = std::clamp(current_manual_ / 10.0F, 0.0F, 1.0F);
+        const float depth = std::clamp(current_lfo_depth_ / 10.0F, 0.0F, 1.0F);
         const float feedback_gain =
             std::clamp(current_feedback_percent_ / 100.0F, -1.0F, 1.0F) *
             kMaximumFeedbackGain;
@@ -133,10 +167,33 @@ void ManualThruZeroFlanger::process(std::span<float> interleaved,
             const float input = std::isfinite(interleaved[index])
                                     ? interleaved[index]
                                     : 0.0F;
+            float phase_cycles = lfo_phase_cycles_;
+            if (channel == 1) {
+                phase_cycles += current_lfo_phase_degrees_ / 360.0F;
+                if (phase_cycles >= 1.0F) phase_cycles -= 1.0F;
+            }
+            float wet_position = manual_position;
+            if (current_lfo_mix_ > 0.0F && depth > 0.0F) {
+                const float lfo = lfo_value(parameters_.lfo_waveform, phase_cycles);
+                // Project mapping: Depth=0 follows Manual; at Depth=10 the
+                // LFO determines the full sweep. This is not Fractal's law.
+                const float lfo_center =
+                    0.5F + (manual_position - 0.5F) * (1.0F - depth);
+                const float lfo_position = std::clamp(
+                    lfo_center + lfo * 0.5F * depth, 0.0F, 1.0F);
+                wet_position = std::clamp(
+                    manual_position + (lfo_position - manual_position) *
+                                         current_lfo_mix_,
+                    0.0F, 1.0F);
+            }
+            const float wet_delay_frames =
+                (minimum_time + span * wet_position) * samples_per_ms;
             const float wet = read_delay(wet_storage_, write_frame_, channel,
                                          wet_delay_frames);
-            const float dry = read_delay(dry_storage_, write_frame_, channel,
-                                         dry_delay_frames);
+            const float delayed_dry = read_delay(
+                dry_storage_, write_frame_, channel, dry_delay_frames);
+            const float dry = input * (1.0F - current_thru_zero_mix_) +
+                              delayed_dry * current_thru_zero_mix_;
 
             float feedback_sample = input + wet * feedback_gain;
             if (!std::isfinite(feedback_sample)) {
@@ -168,6 +225,8 @@ void ManualThruZeroFlanger::process(std::span<float> interleaved,
         if (write_frame_ == capacity_frames_) {
             write_frame_ = 0;
         }
+        lfo_phase_cycles_ += current_lfo_rate_hz_ / sample_rate_;
+        if (lfo_phase_cycles_ >= 1.0F) lfo_phase_cycles_ -= 1.0F;
     }
 }
 
@@ -175,6 +234,7 @@ void ManualThruZeroFlanger::reset() noexcept {
     std::fill(wet_storage_.begin(), wet_storage_.end(), 0.0F);
     std::fill(dry_storage_.begin(), dry_storage_.end(), 0.0F);
     write_frame_ = 0;
+    lfo_phase_cycles_ = 0.0F;
     retarget(true);
 }
 
@@ -204,6 +264,16 @@ float ManualThruZeroFlanger::read_delay(const std::vector<float>& storage,
     return std::isfinite(value) ? value : 0.0F;
 }
 
+float ManualThruZeroFlanger::lfo_value(ThruZeroLfoWaveform waveform,
+                                       float phase_cycles) noexcept {
+    const float phase = std::clamp(phase_cycles, 0.0F, 1.0F);
+    if (waveform == ThruZeroLfoWaveform::Triangle) {
+        return 1.0F - 4.0F * std::abs(phase - 0.5F);
+    }
+    constexpr float kTwoPi = 6.28318530717958647692F;
+    return std::sin(phase * kTwoPi);
+}
+
 void ManualThruZeroFlanger::retarget(bool immediate) noexcept {
     if (immediate) {
         current_minimum_time_ms_ = target_minimum_time_ms_;
@@ -211,12 +281,22 @@ void ManualThruZeroFlanger::retarget(bool immediate) noexcept {
         current_manual_ = target_manual_;
         current_dry_delay_position_ = target_dry_delay_position_;
         current_feedback_percent_ = target_feedback_percent_;
+        current_lfo_rate_hz_ = target_lfo_rate_hz_;
+        current_lfo_depth_ = target_lfo_depth_;
+        current_lfo_phase_degrees_ = target_lfo_phase_degrees_;
+        current_thru_zero_mix_ = target_thru_zero_mix_;
+        current_lfo_mix_ = target_lfo_mix_;
         current_mix_ = target_mix_;
         minimum_time_step_ = 0.0F;
         maximum_time_step_ = 0.0F;
         manual_step_ = 0.0F;
         dry_delay_position_step_ = 0.0F;
         feedback_percent_step_ = 0.0F;
+        lfo_rate_step_ = 0.0F;
+        lfo_depth_step_ = 0.0F;
+        lfo_phase_step_ = 0.0F;
+        thru_zero_mix_step_ = 0.0F;
+        lfo_mix_step_ = 0.0F;
         mix_step_ = 0.0F;
         ramp_remaining_ = 0;
         return;
@@ -241,6 +321,13 @@ void ManualThruZeroFlanger::retarget(bool immediate) noexcept {
         (target_dry_delay_position_ - current_dry_delay_position_) / denominator;
     feedback_percent_step_ =
         (target_feedback_percent_ - current_feedback_percent_) / denominator;
+    lfo_rate_step_ = (target_lfo_rate_hz_ - current_lfo_rate_hz_) / denominator;
+    lfo_depth_step_ = (target_lfo_depth_ - current_lfo_depth_) / denominator;
+    lfo_phase_step_ =
+        (target_lfo_phase_degrees_ - current_lfo_phase_degrees_) / denominator;
+    thru_zero_mix_step_ =
+        (target_thru_zero_mix_ - current_thru_zero_mix_) / denominator;
+    lfo_mix_step_ = (target_lfo_mix_ - current_lfo_mix_) / denominator;
     mix_step_ = (target_mix_ - current_mix_) / denominator;
 }
 
@@ -254,6 +341,11 @@ void ManualThruZeroFlanger::advance_ramps() noexcept {
     current_manual_ += manual_step_;
     current_dry_delay_position_ += dry_delay_position_step_;
     current_feedback_percent_ += feedback_percent_step_;
+    current_lfo_rate_hz_ += lfo_rate_step_;
+    current_lfo_depth_ += lfo_depth_step_;
+    current_lfo_phase_degrees_ += lfo_phase_step_;
+    current_thru_zero_mix_ += thru_zero_mix_step_;
+    current_lfo_mix_ += lfo_mix_step_;
     current_mix_ += mix_step_;
     --ramp_remaining_;
     if (ramp_remaining_ == 0) {
@@ -262,12 +354,22 @@ void ManualThruZeroFlanger::advance_ramps() noexcept {
         current_manual_ = target_manual_;
         current_dry_delay_position_ = target_dry_delay_position_;
         current_feedback_percent_ = target_feedback_percent_;
+        current_lfo_rate_hz_ = target_lfo_rate_hz_;
+        current_lfo_depth_ = target_lfo_depth_;
+        current_lfo_phase_degrees_ = target_lfo_phase_degrees_;
+        current_thru_zero_mix_ = target_thru_zero_mix_;
+        current_lfo_mix_ = target_lfo_mix_;
         current_mix_ = target_mix_;
         minimum_time_step_ = 0.0F;
         maximum_time_step_ = 0.0F;
         manual_step_ = 0.0F;
         dry_delay_position_step_ = 0.0F;
         feedback_percent_step_ = 0.0F;
+        lfo_rate_step_ = 0.0F;
+        lfo_depth_step_ = 0.0F;
+        lfo_phase_step_ = 0.0F;
+        thru_zero_mix_step_ = 0.0F;
+        lfo_mix_step_ = 0.0F;
         mix_step_ = 0.0F;
     }
 }

@@ -1785,6 +1785,25 @@ FRACTAL_TZF_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_TZF_AUTO_CHECKPOINT_PATHS = (
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/manual_thru_zero_flanger.hpp",
+    "src/effects/manual_thru_zero_flanger.cpp",
+    "tests/test_manual_thru_zero_flanger.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 MERCATOR_DIST_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "apps/offline_render.cpp",
@@ -2827,6 +2846,10 @@ CHECKPOINTS = {
                      "feat: add project-authored Cloud Reverb"),
     "fractal-tzf": (FRACTAL_TZF_CHECKPOINT_PATHS,
                     "feat: add project-authored manual through-zero flanger"),
+    "fractal-tzf-auto": (
+        FRACTAL_TZF_AUTO_CHECKPOINT_PATHS,
+        "feat: add project-authored through-zero flanger modes",
+    ),
     "mercator-dist": (MERCATOR_DIST_CHECKPOINT_PATHS,
                       "feat: add project-authored three-stage distortion"),
     "fractal-three-voice-synth": (

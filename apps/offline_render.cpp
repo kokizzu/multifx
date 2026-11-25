@@ -983,7 +983,34 @@ Options parse_options(int argc, char** argv, int first) {
             }
             constexpr std::string_view prefix = "--manual-thru-zero-flanger-";
             const std::string_view setting = key.substr(prefix.size());
-            if (setting == "phase-reverse") {
+            if (setting == "mode") {
+                const std::string_view value(argv[++i]);
+                if (value == "off") {
+                    options.manual_thru_zero_flanger.mode =
+                        tabletfx::ThruZeroMode::Off;
+                } else if (value == "auto") {
+                    options.manual_thru_zero_flanger.mode =
+                        tabletfx::ThruZeroMode::Auto;
+                } else if (value == "manual") {
+                    options.manual_thru_zero_flanger.mode =
+                        tabletfx::ThruZeroMode::Manual;
+                } else {
+                    throw std::invalid_argument(
+                        "Manual through-zero flanger mode must be off, auto, or manual");
+                }
+            } else if (setting == "lfo-waveform") {
+                const std::string_view value(argv[++i]);
+                if (value == "sine") {
+                    options.manual_thru_zero_flanger.lfo_waveform =
+                        tabletfx::ThruZeroLfoWaveform::Sine;
+                } else if (value == "triangle") {
+                    options.manual_thru_zero_flanger.lfo_waveform =
+                        tabletfx::ThruZeroLfoWaveform::Triangle;
+                } else {
+                    throw std::invalid_argument(
+                        "Manual through-zero flanger LFO waveform must be sine or triangle");
+                }
+            } else if (setting == "phase-reverse") {
                 const std::string_view value(argv[++i]);
                 if (value == "none") {
                     options.manual_thru_zero_flanger.phase_reverse =
@@ -1017,6 +1044,12 @@ Options parse_options(int argc, char** argv, int first) {
                     options.manual_thru_zero_flanger.mix = value;
                 } else if (setting == "smoothing-ms") {
                     options.manual_thru_zero_flanger.smoothing_ms = value;
+                } else if (setting == "lfo-rate-hz") {
+                    options.manual_thru_zero_flanger.lfo_rate_hz = value;
+                } else if (setting == "lfo-depth") {
+                    options.manual_thru_zero_flanger.lfo_depth = value;
+                } else if (setting == "lfo-phase-degrees") {
+                    options.manual_thru_zero_flanger.lfo_phase_degrees = value;
                 } else {
                     throw std::invalid_argument("Unknown option: " + std::string(key));
                 }
@@ -5005,6 +5038,21 @@ void run_bench() {
     std::cout << "# pitch_sequence_algorithmic_latency_ms="
               << std::fixed << std::setprecision(4)
               << pitch_sequence_latency_probe.pitch_shifter_latency_ms() << '\n';
+    benchmark_one("fractal-tzf-manual-project-authored", [=] {
+        tabletfx::ManualThruZeroFlangerParameters parameters;
+        parameters.mode = tabletfx::ThruZeroMode::Manual;
+        return std::make_unique<tabletfx::ManualThruZeroFlanger>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-tzf-auto-sine-project-authored", [=] {
+        tabletfx::ManualThruZeroFlangerParameters parameters;
+        parameters.mode = tabletfx::ThruZeroMode::Auto;
+        parameters.lfo_rate_hz = 1.0F;
+        parameters.lfo_depth = 10.0F;
+        parameters.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Sine;
+        return std::make_unique<tabletfx::ManualThruZeroFlanger>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("cabinet-ir-xr1-format", [=] {
         auto effect = std::make_unique<tabletfx::CabinetIr>(
             static_cast<float>(sample_rate), channels);
@@ -5935,6 +5983,11 @@ void print_usage() {
                   " [--manual-thru-zero-flanger-phase-reverse none|left|right|both]"
                   " [--manual-thru-zero-flanger-mix 0..1]"
                   " [--manual-thru-zero-flanger-smoothing-ms 0..1000]"
+                   " [--manual-thru-zero-flanger-mode off|auto|manual]"
+                   " [--manual-thru-zero-flanger-lfo-rate-hz 0.05..8]"
+                   " [--manual-thru-zero-flanger-lfo-depth 0..10]"
+                   " [--manual-thru-zero-flanger-lfo-waveform sine|triangle]"
+                   " [--manual-thru-zero-flanger-lfo-phase-degrees 0..360]"
                    " [--phaser-rate-hz Hz] [--phaser-min-hz Hz] [--phaser-max-hz Hz]"
                    " [--phaser-feedback -0.7..0.7] [--phaser-stages 4|6|8] [--phaser-mix 0..1]"
                    " [--vibrato-rate-hz 0.1..10] [--vibrato-depth-ms 0..1.5]"

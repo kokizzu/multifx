@@ -31,8 +31,12 @@ void test_documented_controls_and_project_bounds() {
                 defaults.manual == 5.0F && defaults.dry_delay_position == 0.5F &&
                 defaults.feedback_percent == 0.0F &&
                 defaults.phase_reverse == tabletfx::FlangerPhaseReverse::Both &&
+                defaults.mode == tabletfx::ThruZeroMode::Manual &&
+                defaults.lfo_rate_hz == 0.25F && defaults.lfo_depth == 5.0F &&
+                defaults.lfo_waveform == tabletfx::ThruZeroLfoWaveform::Sine &&
+                defaults.lfo_phase_degrees == 180.0F &&
                 defaults.mix == 0.5F && defaults.smoothing_ms == 10.0F,
-            "project-authored manual through-zero defaults changed");
+            "project-authored through-zero defaults changed");
     require(flanger.current_wet_time_ms() == flanger.current_dry_time_ms(),
             "default Manual and Dry Delay positions should meet at the zero point");
     require(flanger.maximum_path_latency_frames() == 384U,
@@ -45,6 +49,11 @@ void test_documented_controls_and_project_bounds() {
     parameters.dry_delay_position = -2.0F;
     parameters.feedback_percent = 200.0F;
     parameters.phase_reverse = static_cast<tabletfx::FlangerPhaseReverse>(99);
+    parameters.mode = static_cast<tabletfx::ThruZeroMode>(99);
+    parameters.lfo_waveform = static_cast<tabletfx::ThruZeroLfoWaveform>(99);
+    parameters.lfo_rate_hz = 99.0F;
+    parameters.lfo_depth = -1.0F;
+    parameters.lfo_phase_degrees = 400.0F;
     parameters.mix = -1.0F;
     parameters.smoothing_ms = 2000.0F;
     flanger.set_parameters(parameters);
@@ -53,8 +62,12 @@ void test_documented_controls_and_project_bounds() {
                 bounded.manual == 10.0F && bounded.dry_delay_position == 0.0F &&
                 bounded.feedback_percent == 100.0F &&
                 bounded.phase_reverse == tabletfx::FlangerPhaseReverse::Both &&
+                bounded.mode == tabletfx::ThruZeroMode::Manual &&
+                bounded.lfo_waveform == tabletfx::ThruZeroLfoWaveform::Sine &&
+                bounded.lfo_rate_hz == 8.0F && bounded.lfo_depth == 0.0F &&
+                bounded.lfo_phase_degrees == 360.0F &&
                 bounded.mix == 0.0F && bounded.smoothing_ms == 1000.0F,
-            "manual through-zero parameter bounds or invalid enum fallback changed");
+            "through-zero parameter bounds or invalid enum fallback changed");
 
     parameters = {};
     parameters.minimum_time_ms = 19.999F;
@@ -62,15 +75,112 @@ void test_documented_controls_and_project_bounds() {
     parameters.manual = std::numeric_limits<float>::quiet_NaN();
     parameters.dry_delay_position = std::numeric_limits<float>::infinity();
     parameters.feedback_percent = -std::numeric_limits<float>::infinity();
+    parameters.mode = tabletfx::ThruZeroMode::Auto;
+    parameters.lfo_rate_hz = std::numeric_limits<float>::quiet_NaN();
+    parameters.lfo_depth = std::numeric_limits<float>::infinity();
+    parameters.lfo_phase_degrees = -std::numeric_limits<float>::infinity();
     parameters.mix = std::numeric_limits<float>::quiet_NaN();
     parameters.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
     flanger.set_parameters(parameters);
     const auto finite = flanger.parameters();
     require(finite.minimum_time_ms == 19.99F && finite.maximum_time_ms == 20.0F &&
                 finite.manual == 5.0F && finite.dry_delay_position == 0.5F &&
-                finite.feedback_percent == 0.0F && finite.mix == 0.5F &&
+                finite.feedback_percent == 0.0F &&
+                finite.mode == tabletfx::ThruZeroMode::Auto &&
+                finite.lfo_rate_hz == 0.25F && finite.lfo_depth == 5.0F &&
+                finite.lfo_phase_degrees == 180.0F && finite.mix == 0.5F &&
                 finite.smoothing_ms == 10.0F,
             "invalid through-zero parameters did not fall back to bounded values");
+}
+
+void test_off_auto_and_lfo_waveforms() {
+    tabletfx::ManualThruZeroFlangerParameters parameters;
+    parameters.minimum_time_ms = 2.0F;
+    parameters.maximum_time_ms = 6.0F;
+    parameters.manual = 5.0F;
+    parameters.dry_delay_position = 0.5F;
+    parameters.phase_reverse = tabletfx::FlangerPhaseReverse::None;
+    parameters.mix = 0.5F;
+    parameters.smoothing_ms = 0.0F;
+
+    parameters.mode = tabletfx::ThruZeroMode::Off;
+    tabletfx::ManualThruZeroFlanger normal_flanger(8000.0F, 1, parameters);
+    std::array<float, 96> immediate_dry{};
+    immediate_dry[0] = 1.0F;
+    normal_flanger.process(immediate_dry, 1);
+    require(std::abs(immediate_dry[0] - 0.5F) < 1.0e-6F &&
+                std::abs(immediate_dry[16]) < 1.0e-6F &&
+                std::abs(immediate_dry[32] - 0.5F) < 0.03F,
+            "Off mode should use an immediate dry path and retain the wet flanger delay; got " +
+                std::to_string(immediate_dry[0]) + "/" +
+                std::to_string(immediate_dry[16]) + "/" +
+                std::to_string(immediate_dry[32]));
+
+    parameters.mode = tabletfx::ThruZeroMode::Auto;
+    parameters.lfo_rate_hz = 1.0F;
+    parameters.lfo_depth = 10.0F;
+    parameters.mix = 1.0F;
+    parameters.phase_reverse = tabletfx::FlangerPhaseReverse::Both;
+    tabletfx::ManualThruZeroFlanger auto_sine(8000.0F, 1, parameters);
+    parameters.mode = tabletfx::ThruZeroMode::Manual;
+    tabletfx::ManualThruZeroFlanger manual(8000.0F, 1, parameters);
+    std::array<float, 8192> source{};
+    for (std::size_t frame = 0; frame < source.size(); ++frame) {
+        source[frame] = 0.4F * std::sin(
+            6.28318530717958647692F * 713.0F * static_cast<float>(frame) / 8000.0F);
+    }
+    auto auto_output = source;
+    auto manual_output = source;
+    auto_sine.process(auto_output, 1);
+    manual.process(manual_output, 1);
+    const auto sine_output = auto_output;
+    double auto_manual_difference = 0.0;
+    for (std::size_t frame = 0; frame < source.size(); ++frame) {
+        const double difference = auto_output[frame] - manual_output[frame];
+        auto_manual_difference += difference * difference;
+    }
+    require(auto_manual_difference > 1.0,
+            "Auto mode must sweep the wet delay across the manual position");
+
+    parameters.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Triangle;
+    parameters.mode = tabletfx::ThruZeroMode::Auto;
+    tabletfx::ManualThruZeroFlanger auto_triangle(8000.0F, 1, parameters);
+    auto_output = source;
+    auto_triangle.process(auto_output, 1);
+    double waveform_difference = 0.0;
+    for (std::size_t frame = 0; frame < source.size(); ++frame) {
+        const double difference = auto_output[frame] - sine_output[frame];
+        waveform_difference += difference * difference;
+    }
+    require(waveform_difference > 1.0,
+            "Sine and Triangle waveforms should produce distinct Auto sweeps");
+
+    tabletfx::ManualThruZeroFlangerParameters stereo_parameters = parameters;
+    stereo_parameters.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Sine;
+    stereo_parameters.lfo_phase_degrees = 0.0F;
+    tabletfx::ManualThruZeroFlanger in_phase(8000.0F, 2, stereo_parameters);
+    stereo_parameters.lfo_phase_degrees = 180.0F;
+    tabletfx::ManualThruZeroFlanger opposite_phase(8000.0F, 2, stereo_parameters);
+    std::array<float, 8192> stereo_source{};
+    for (std::size_t frame = 0; frame < stereo_source.size() / 2; ++frame) {
+        const float sample = 0.4F * std::sin(
+            6.28318530717958647692F * 713.0F * static_cast<float>(frame) / 8000.0F);
+        stereo_source[frame * 2] = sample;
+        stereo_source[frame * 2 + 1] = sample;
+    }
+    auto in_phase_output = stereo_source;
+    auto opposite_phase_output = stereo_source;
+    in_phase.process(in_phase_output, 2);
+    opposite_phase.process(opposite_phase_output, 2);
+    double stereo_phase_difference = 0.0;
+    for (std::size_t sample = 0; sample < stereo_source.size(); sample += 2) {
+        const double difference =
+            (in_phase_output[sample] - in_phase_output[sample + 1]) -
+            (opposite_phase_output[sample] - opposite_phase_output[sample + 1]);
+        stereo_phase_difference += difference * difference;
+    }
+    require(stereo_phase_difference > 0.1,
+            "LFO phase should alter the relative stereo sweep");
 }
 
 void test_manual_sweep_crosses_delayed_dry_path() {
@@ -177,6 +287,11 @@ void test_stereo_isolation_smoothing_and_reset() {
     changed.dry_delay_position = 0.8F;
     changed.feedback_percent = -55.0F;
     changed.phase_reverse = tabletfx::FlangerPhaseReverse::Right;
+    changed.mode = tabletfx::ThruZeroMode::Auto;
+    changed.lfo_rate_hz = 2.0F;
+    changed.lfo_depth = 7.0F;
+    changed.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Triangle;
+    changed.lfo_phase_degrees = 95.0F;
     changed.mix = 0.8F;
     whole.set_parameters(changed);
     chunks.set_parameters(changed);
@@ -227,9 +342,15 @@ void test_finite_recovery_layout_and_no_process_allocations() {
 
     std::array<float, 512> block{};
     block.fill(0.25F);
+    tabletfx::ManualThruZeroFlangerParameters auto_parameters;
+    auto_parameters.mode = tabletfx::ThruZeroMode::Auto;
+    tabletfx::ManualThruZeroFlanger auto_flanger(48000.0F, 1, auto_parameters);
     const std::size_t before_allocations = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
         mono.process(block, 1);
+    }
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        auto_flanger.process(block, 1);
     }
     const std::size_t after_allocations = allocation_count.load(std::memory_order_relaxed);
     require(before_allocations == after_allocations,
@@ -268,6 +389,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_documented_controls_and_project_bounds();
+        test_off_auto_and_lfo_waveforms();
         test_manual_sweep_crosses_delayed_dry_path();
         test_zero_point_cancellation_and_phase_choices();
         test_feedback_is_bounded_and_polarity_controlled();

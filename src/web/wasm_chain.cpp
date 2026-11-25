@@ -2726,6 +2726,16 @@ public:
                          : tabletfx::FlangerPhaseReverse::Both;
         parameters.mix = values[6];
         parameters.smoothing_ms = values[7];
+        const auto mode = static_cast<int>(values[8]);
+        parameters.mode = mode == 0 ? tabletfx::ThruZeroMode::Off
+            : mode == 1 ? tabletfx::ThruZeroMode::Auto
+                        : tabletfx::ThruZeroMode::Manual;
+        parameters.lfo_rate_hz = values[9];
+        parameters.lfo_depth = values[10];
+        parameters.lfo_waveform = static_cast<int>(values[11]) == 1
+            ? tabletfx::ThruZeroLfoWaveform::Triangle
+            : tabletfx::ThruZeroLfoWaveform::Sine;
+        parameters.lfo_phase_degrees = values[12];
         static_cast<tabletfx::ManualThruZeroFlanger*>(effects_[81].effect.get())
             ->set_parameters(parameters);
     }

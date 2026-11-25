@@ -4,36 +4,35 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "977c01ad9d5a11cc6d2ff06ea5e021066a7986cc",
+  "previous_checkpoint_commit": "86e35782b988a6ddbfa002892563e718529abc3b",
   "latest_audit": {
-    "name": "Fractal FM9-family Formant Control LFO",
-    "status": "documented Control-to-LFO role implemented with project-authored defaults; native/browser/WASM/Windows checks and callback benchmark pass; human/device checks remain",
+    "name": "Fractal FM9-family Through-Zero Flanger modes",
+    "status": "Fractal Blocks Guide Off/Auto/Manual control roles mapped with project-authored defaults; native, focused browser/WASM Play, Windows cross-build, and callback benchmark pass; human/device checks remain",
     "date": "2026-11-26",
-    "picker_index": 43,
-    "category": "Filters & wah",
+    "picker_index": 81,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 Owner’s Manual",
-      "revision": "Blocks Guide November 2026, printed pp. 3 and 51; FM9 Owner’s Manual v3.x dated 2022-08-17 per FM9 downloads page, printed p. 67. FM9-family evidence; firmware applicability to Mark II Turbo and installed firmware are unknown.",
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026, printed pp. 48–50 and 111; FM9-family documentation. Applicability to Mark II Turbo and installed firmware are unknown.",
       "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "manual_url": "https://www.fractalaudio.com/downloads/manuals/FM9/FM9-Owners-Manual.pdf",
       "downloads_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The Blocks Guide allows Formant Control assignment to LFO, expression, or modifier; the manual describes general LFO controls. Neither provides this project’s LFO bounds/defaults. FM9 v12.0 is listed for Original/Turbo, not Mark II Turbo separately; installed firmware is unknown."
+      "qualification": "The Guide distinguishes Off (normal flanging), Auto (LFO through-zero sweep), and Manual (hand sweep); Dry Delay shifts the midpoint. Manual 0–10 is a position, not milliseconds. The FM9 downloads page names Original/Turbo, not Mark II Turbo separately; exact firmware applicability is unverified."
     },
-    "documented_controls": "The Blocks Guide says Formant Control may be assigned to an LFO, expression, or modifier. The FM9 Owner’s Manual v3.x lists LFO Type, Rate, Depth, Duty, Run, output B phase, and Quantize. These general controls are not Formant-specific bounds/defaults.",
-    "project_controls": "A default-off project LFO source drives Control only in three-vowel mode. Project choices: Sine/Triangle/Square; 0.05–8 Hz, default 0.5 Hz; Control Min/Max 0–100%, default 0/100%. Coefficients update every 32 frames and use the existing 10 ms smoothing. Manual source remains the default. No expression/modifier assignment or Fractal preset routing is implemented.",
+    "documented_controls": "Fractal documents Off, Auto, and Manual modes; Dry Delay, Manual position, LFO rate/depth/waveform/phase, minimum and maximum delay times, feedback, and phase behavior. Published minimum/maximum times span 0.340–20 ms and feedback spans −100…+100%. The Guide does not specify the project’s selected numeric defaults or establish sound/DSP parity.",
+    "project_controls": "Existing Modulation picker row 81 retains its position and adds Off/Auto/Manual. Off is normal flanging with immediate dry and delayed wet paths; Auto sweeps through zero with a project-authored sine/triangle LFO and delayed dry; Manual uses a hand position with delayed dry. Project defaults: Manual, min 0.34 ms, max 8 ms, position 5/10, dry delay 0.5 ms, feedback 0, phase reverse Both, mix 0.5, 10 ms smoothing; Auto defaults to 0.25 Hz, depth 5/10, sine, L/R phase 180°. Bounds are project choices, not Fractal defaults. Two 20 ms delay vectors are allocated at construction; no process-time allocation.",
     "verification": {
-      "native": "make web-test-formant-control-lfo passed its make test prerequisite: documentation validation (333 requirements/346 rows), 11/11 fixture checks, and 117/117 CTest tests. Focused tests cover changing morph response, callback partition invariance, bounds/waveform fallback, and no process allocation.",
-      "browser": "HeadlessChrome 151, 48 kHz stereo, 48,000 frames, local prerecorded Guitar-TECHS DI. Categorized Filters & wah effect ID 43, Triangle LFO at 2 Hz over 0–100%, two Play captures, manual-vs-LFO difference RMS 0.0073556667, browser state 664 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core/offline renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Active LFO p50/p95/p99/p99.9/max 0.1613/0.2318/0.2985/0.6079/1.3935% of callback deadline; manual 0.1125/0.1721/0.1946/0.5880/1.6020%. Native state 680 B, zero fixed latency, no audio buffer. Isolated desktop timing, not a target-device guarantee."
+      "native": "make test-fractal-tzf-auto passed focused native flanger tests and offline renderer CLI checks. make web-test-fractal-tzf-auto passed docs/audio-fixture prerequisites and all 117/117 CTest cases; focused tests cover mode behavior, bounds, waveform/phase, block invariance, and no process allocation.",
+      "browser": "HeadlessChrome 151, local prerecorded Guitar-TECHS DI, 48 kHz stereo/48,000 frames. Categorized Modulation picker ID 81 and Off/Auto/Manual controls exercised through WASM Play. Auto-vs-Manual RMS difference 0.0370054658; Auto-vs-Off 0.0314841598. Existing 70-stage chain comparison passed.",
+      "windows": "make windows-cross-build passed the Windows MinGW core library and offline renderer build.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Manual p50/p95/p99/p99.9/max 0.1219/0.1223/0.1766/0.4208/1.2222%; Auto sine/full-depth 0.2321/0.2880/0.3578/0.5813/0.9372% of callback deadline. Native state 15,664 B; maximum 20 ms delay at 48 kHz is 960 frames. Isolated desktop timing, not target-device or full-chain performance."
     },
-    "remaining": "Human listening, physical expression behavior, and target-device timing remain manual. Firmware applicability to Mark II Turbo and installed firmware remain unknown. This is a project-authored control role, not Fractal settings, routing, DSP, or sound parity."
+    "remaining": "Human listening, target-device timing, and physical Fractal behavior remain manual. Installed firmware and exact Mark II Turbo applicability are unknown. LFO High Cut/Quantize/Bypass Reset/Auto Depth and other Fractal flanger types remain gaps. Do not claim Fractal settings, DSP, algorithm, or sound parity."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "HeadRush Prime",
-    "next_feature": "Continue remaining Prime model-specific effect gaps (including Up Tune) using exact v5.2 manufacturer documentation; then select the strongest documented gap among Melofty AXOM MAX, Fender Tone Master Pro, Helix Stadium XL, Fractal FM9 Mk II Turbo, and XRecer XR1. Implement and publish one independently testable categorized checkpoint at a time.",
-    "qualification": "Prime Drop Tune now passes focused local-guitar browser/WASM Play, native suite, Windows MinGW build, and Ryzen desktop callback/memory/latency measurement. Per-preset/scene persistence, manufacturer control-table unknowns, human listening, physical-device behavior, and target-device timing remain open; the selected comparison is not a fresh full-catalogue audit."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Add optional Tap Division tempo sync to the existing Modulation Flanger (picker ID 17), preserving free-rate mode as the default. Exact subdivision list, numeric bounds, and default are not published; use clearly labeled project choices and verify tempo changes through native/browser paths.",
+    "qualification": "The through-zero modes checkpoint is locally implemented and passed focused native, browser/WASM guitar-Play, full CTest, Windows cross-build, and desktop callback/memory checks. Human listening, hardware behavior, target-device timing, exact firmware applicability, and parity remain open. Continue effect-by-effect; the six-model comparison remains a selected comparison, not a fresh full-catalogue audit."
   },
   "completed_checkpoints": [
     {
@@ -851,32 +850,32 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms deadline, 2,000 warm-up/5,000 measured). p50/p95/p99/p99.9/max 0.0533/0.0536/0.0536/0.2595/0.7339% of deadline; native state 4,816 B; zero fixed dry-path latency. Isolated desktop timing, not target-device performance."
       },
       "remaining": "Manual guitar listening and physical Tone Master Pro behavior remain open. Tap Division and Manual are not added by this control-only checkpoint. Do not claim Fender numeric settings, DSP, algorithm, or sound parity."
+    },
+    {
+      "name": "Fractal FM9-family Through-Zero Flanger modes",
+      "status": "Fractal Blocks Guide Off/Auto/Manual control roles mapped with project-authored defaults; native, focused browser/WASM Play, Windows cross-build, and callback benchmark pass; human/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 81,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide",
+        "revision": "November 2026, printed pp. 48–50 and 111; FM9-family documentation. Applicability to Mark II Turbo and installed firmware are unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "downloads_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The Guide distinguishes Off (normal flanging), Auto (LFO through-zero sweep), and Manual (hand sweep); Dry Delay shifts the midpoint. Manual 0–10 is a position, not milliseconds. The FM9 downloads page names Original/Turbo, not Mark II Turbo separately; exact firmware applicability is unverified."
+      },
+      "documented_controls": "Fractal documents Off, Auto, and Manual modes; Dry Delay, Manual position, LFO rate/depth/waveform/phase, minimum and maximum delay times, feedback, and phase behavior. Published minimum/maximum times span 0.340–20 ms and feedback spans −100…+100%. The Guide does not specify the project’s selected numeric defaults or establish sound/DSP parity.",
+      "project_controls": "Existing Modulation picker row 81 retains its position and adds Off/Auto/Manual. Off is normal flanging with immediate dry and delayed wet paths; Auto sweeps through zero with a project-authored sine/triangle LFO and delayed dry; Manual uses a hand position with delayed dry. Project defaults: Manual, min 0.34 ms, max 8 ms, position 5/10, dry delay 0.5 ms, feedback 0, phase reverse Both, mix 0.5, 10 ms smoothing; Auto defaults to 0.25 Hz, depth 5/10, sine, L/R phase 180°. Bounds are project choices, not Fractal defaults. Two 20 ms delay vectors are allocated at construction; no process-time allocation.",
+      "verification": {
+        "native": "make test-fractal-tzf-auto passed focused native flanger tests and offline renderer CLI checks. make web-test-fractal-tzf-auto passed docs/audio-fixture prerequisites and all 117/117 CTest cases; focused tests cover mode behavior, bounds, waveform/phase, block invariance, and no process allocation.",
+        "browser": "HeadlessChrome 151, local prerecorded Guitar-TECHS DI, 48 kHz stereo/48,000 frames. Categorized Modulation picker ID 81 and Off/Auto/Manual controls exercised through WASM Play. Auto-vs-Manual RMS difference 0.0370054658; Auto-vs-Off 0.0314841598. Existing 70-stage chain comparison passed.",
+        "windows": "make windows-cross-build passed the Windows MinGW core library and offline renderer build.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Manual p50/p95/p99/p99.9/max 0.1219/0.1223/0.1766/0.4208/1.2222%; Auto sine/full-depth 0.2321/0.2880/0.3578/0.5813/0.9372% of callback deadline. Native state 15,664 B; maximum 20 ms delay at 48 kHz is 960 frames. Isolated desktop timing, not target-device or full-chain performance."
+      },
+      "remaining": "Human listening, target-device timing, and physical Fractal behavior remain manual. Installed firmware and exact Mark II Turbo applicability are unknown. LFO High Cut/Quantize/Bypass Reset/Auto Depth and other Fractal flanger types remain gaps. Do not claim Fractal settings, DSP, algorithm, or sound parity."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Volume Pedal exact heel mute",
-    "status": "documented 0% mute behavior implemented in existing Utility processor; native, browser/WASM local-guitar Play, Windows, and benchmark checks pass; human/device checks remain",
-    "date": "2026-11-25",
-    "picker_index": 1,
-    "category": "Utility",
-    "official_source": {
-      "title": "Fender Tone Master Pro firmware history and Model Guide",
-      "revision": "Firmware note v1.3.74 dated 2024-06-03; current release listed v1.8.87 dated 2026-11-23. Model Guide v1.1.100 / Rev. A is a separate control snapshot; installed firmware is unknown.",
-      "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "model_guide_url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "qualification": "The v1.3.74 note says Volume Pedal fully mutes at 0%. The Guide lists Volume but publishes no numeric range, default, or taper law."
-    },
-    "documented_controls": "The exact-model Guide lists a Volume control without numeric bounds/defaults/taper. Fender firmware v1.3.74 release notes state that Volume Pedal fully mutes at 0% and supports mono/stereo. Latest listed firmware is v1.8.87 (2026-11-23); installed firmware is unknown.",
-    "project_controls": "Existing Utility Volume Pedal at picker ID 1 returns exact zero gain at normalized position 0 regardless of configured project minimum dB. Positive positions retain the project-authored selectable linear-amplitude or dB curve, endpoints, and 10 ms ramp. The new endpoint check runs while calculating a target off the audio callback; no per-sample work, state, allocation, stage, or fixed latency is added. No Fender taper, DSP, or sound parity is claimed.",
-    "verification": {
-      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Tests cover exact heel silence with normal and nonzero custom minimum, positive position, smoothing, both tapers, and no process allocation.",
-      "browser": "make web-test-volume-pedal passed HeadlessChrome 151, 48 kHz stereo, 48,000 frames, local prerecorded Guitar-TECHS DI. The Utility picker row at ID 1 produced peak 0 at 0%; at 100% it produced peak 0.191192626953125 and 95,980 active samples.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer.",
-      "benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback; 2,000 warm-up/5,000 measured) reports existing Volume Pedal p50/p95/p99/p99.9/max 0.0041/0.0041/0.0086/0.0094/0.2790% of callback budget and 56 B owned state. Zero algorithmic latency. This is existing processor-call cost; endpoint calculation is outside the audio callback, so no new per-sample work."
-    },
-    "remaining": "Human listening, physical expression-controller behavior, and target-device timing remain manual. Fender numeric curve/taper, DSP, hardware firmware, and sound parity remain unverified."
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Formant Control LFO",
     "status": "documented Control-to-LFO role implemented with project-authored defaults; native/browser/WASM/Windows checks and callback benchmark pass; human/device checks remain",
     "date": "2026-11-26",
@@ -899,6 +898,29 @@
       "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Active LFO p50/p95/p99/p99.9/max 0.1613/0.2318/0.2985/0.6079/1.3935% of callback deadline; manual 0.1125/0.1721/0.1946/0.5880/1.6020%. Native state 680 B, zero fixed latency, no audio buffer. Isolated desktop timing, not a target-device guarantee."
     },
     "remaining": "Human listening, physical expression behavior, and target-device timing remain manual. Firmware applicability to Mark II Turbo and installed firmware remain unknown. This is a project-authored control role, not Fractal settings, routing, DSP, or sound parity."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Through-Zero Flanger modes",
+    "status": "Fractal Blocks Guide Off/Auto/Manual control roles mapped with project-authored defaults; native, focused browser/WASM Play, Windows cross-build, and callback benchmark pass; human/device checks remain",
+    "date": "2026-11-26",
+    "picker_index": 81,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide",
+      "revision": "November 2026, printed pp. 48–50 and 111; FM9-family documentation. Applicability to Mark II Turbo and installed firmware are unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "downloads_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The Guide distinguishes Off (normal flanging), Auto (LFO through-zero sweep), and Manual (hand sweep); Dry Delay shifts the midpoint. Manual 0–10 is a position, not milliseconds. The FM9 downloads page names Original/Turbo, not Mark II Turbo separately; exact firmware applicability is unverified."
+    },
+    "documented_controls": "Fractal documents Off, Auto, and Manual modes; Dry Delay, Manual position, LFO rate/depth/waveform/phase, minimum and maximum delay times, feedback, and phase behavior. Published minimum/maximum times span 0.340–20 ms and feedback spans −100…+100%. The Guide does not specify the project’s selected numeric defaults or establish sound/DSP parity.",
+    "project_controls": "Existing Modulation picker row 81 retains its position and adds Off/Auto/Manual. Off is normal flanging with immediate dry and delayed wet paths; Auto sweeps through zero with a project-authored sine/triangle LFO and delayed dry; Manual uses a hand position with delayed dry. Project defaults: Manual, min 0.34 ms, max 8 ms, position 5/10, dry delay 0.5 ms, feedback 0, phase reverse Both, mix 0.5, 10 ms smoothing; Auto defaults to 0.25 Hz, depth 5/10, sine, L/R phase 180°. Bounds are project choices, not Fractal defaults. Two 20 ms delay vectors are allocated at construction; no process-time allocation.",
+    "verification": {
+      "native": "make test-fractal-tzf-auto passed focused native flanger tests and offline renderer CLI checks. make web-test-fractal-tzf-auto passed docs/audio-fixture prerequisites and all 117/117 CTest cases; focused tests cover mode behavior, bounds, waveform/phase, block invariance, and no process allocation.",
+      "browser": "HeadlessChrome 151, local prerecorded Guitar-TECHS DI, 48 kHz stereo/48,000 frames. Categorized Modulation picker ID 81 and Off/Auto/Manual controls exercised through WASM Play. Auto-vs-Manual RMS difference 0.0370054658; Auto-vs-Off 0.0314841598. Existing 70-stage chain comparison passed.",
+      "windows": "make windows-cross-build passed the Windows MinGW core library and offline renderer build.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 2,000 warm-up/5,000 measured). Manual p50/p95/p99/p99.9/max 0.1219/0.1223/0.1766/0.4208/1.2222%; Auto sine/full-depth 0.2321/0.2880/0.3578/0.5813/0.9372% of callback deadline. Native state 15,664 B; maximum 20 ms delay at 48 kHz is 960 frames. Isolated desktop timing, not target-device or full-chain performance."
+    },
+    "remaining": "Human listening, target-device timing, and physical Fractal behavior remain manual. Installed firmware and exact Mark II Turbo applicability are unknown. LFO High Cut/Quantize/Bypass Reset/Auto Depth and other Fractal flanger types remain gaps. Do not claim Fractal settings, DSP, algorithm, or sound parity."
   },
   "next_research": [
     {

@@ -541,3 +541,16 @@ The isolated Release benchmark used a synthetic stereo guitar-like signal, 3,000
 | Envelope | 0.355% | 0.437% | 0.540% | 0.837% | 5.084% | 0/20,000 |
 
 These are isolated desktop estimates, not tablet/Android performance. The broad `make web-browser-test` ran the panner playback check but later failed at the existing tuner response-time assertion (the A4 result was valid; the test's 300 ms limit was exceeded). The focused panner browser test passes. Human listening and live-device timing remain open.
+## Initial Manual Through-Zero Flanger checkpoint (2026-11-23)
+
+The project-authored manual through-zero flanger initially delayed both dry and wet paths. At 48 kHz, the declared maximum path latency was 384 frames with the browser 8 ms maximum-time setting or 960 frames at the supported 20 ms maximum. Host/graph compensation was not implemented.
+
+The browser/WASM implementation reserved fixed 20 ms delay vectors. The first checkpoint estimated the 15,392 bytes of ring storage and 15,544-byte wasm32 state from source, rather than a runtime measurement. That estimate predates the Off/Auto/Manual controls and should not be used for the current processor size.
+
+## Current Through-Zero Flanger Off/Auto/Manual checkpoint (2026-11-26)
+
+At 48 kHz stereo the current native processor owns 15,664 B, including two fixed delay rings reserved for 20 ms. Construction allocates the rings; process() performs no heap allocation. Off leaves dry immediate and still delays the wet tap; Auto and Manual delay both paths. The maximum configured wet-path delay is 384 frames at the default 8 ms range and 960 frames at 20 ms. Host/graph latency compensation is not implemented.
+
+On AMD Ryzen 9 5950X Release with 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up and 5,000 measured callbacks), Manual mode measured p50/p95/p99/p99.9/max callback use of 0.1219/0.1223/0.1766/0.4208/1.2222%. Auto sine at 1 Hz and full depth measured 0.2321/0.2880/0.3578/0.5813/0.9372%. The Auto path adds 0.1102 percentage points at p50 and 0.1812 points at p99 versus Manual. This is isolated desktop processor timing, not a complete chain, Windows/Android device, or live-route guarantee.
+
+The focused HeadlessChrome 151 browser/WASM Play test used local prerecorded Guitar-TECHS direct-input guitar, 48 kHz stereo and 48,000 frames. The effect remains in Modulation at index 81 with no extra stage. Auto vs Manual output RMS difference was 0.0370055 and Auto vs Off was 0.0314842; Auto peak was 0.165524, with 95,795 samples above 1e−6. `make web-test-fractal-tzf-auto` and `make windows-cross-build` pass, including all 117 CTest cases and the existing browser/native chain comparison. Listening, hardware behavior, firmware-specific comparison, and target-device timing remain manual.

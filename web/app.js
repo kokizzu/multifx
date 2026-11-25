@@ -292,7 +292,7 @@ const DEFAULT_PARAMETERS = {
   celestialReverb: [0.25, 3, 12, 7, 2, 9000, 0.5, 0],
   cloudReverb: [0.25, 0.5, 7, 0.8, 9000, 80, 0.3, 0.15, 0],
   mercatorDistortion: [0.45, 0.45, 0, 0, 0, 0, 0, 0],
-  manualThruZeroFlanger: [0.34, 8, 5, 0.5, 0, 3, 0.5, 10],
+  manualThruZeroFlanger: [0.34, 8, 5, 0.5, 0, 3, 0.5, 10, 2, 0.25, 5, 0, 180],
   octobot: [0.65, 0.2, 0.25],
   amRingMod: [440, 0.5, 1, 0],
   tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
@@ -680,6 +680,11 @@ const manualThruZeroFlangerControls = [
   document.querySelector("#manual-tzf-phase-reverse"),
   document.querySelector("#manual-tzf-mix"),
   document.querySelector("#manual-tzf-smoothing"),
+  document.querySelector("#manual-tzf-mode"),
+  document.querySelector("#manual-tzf-lfo-rate"),
+  document.querySelector("#manual-tzf-lfo-depth"),
+  document.querySelector("#manual-tzf-lfo-waveform"),
+  document.querySelector("#manual-tzf-lfo-phase"),
 ];
 const convolutionReverbControls = [
   document.querySelector("#convolution-reverb-mix"),
@@ -5766,21 +5771,33 @@ function updateManualThruZeroFlanger(event) {
     Number(manualThruZeroFlangerControls[5].value),
     Number(manualThruZeroFlangerControls[6].value),
     Number(manualThruZeroFlangerControls[7].value),
+    Number(manualThruZeroFlangerControls[8].value),
+    Number(manualThruZeroFlangerControls[9].value),
+    Number(manualThruZeroFlangerControls[10].value),
+    Number(manualThruZeroFlangerControls[11].value),
+    Number(manualThruZeroFlangerControls[12].value),
   ];
   DEFAULT_PARAMETERS.manualThruZeroFlanger = values;
   const formats = [
     (value) => `${value.toFixed(2)} ms`,
     (value) => `${value.toFixed(2)} ms`,
-    (value) => `${value.toFixed(2)} ms`,
+    (value) => value.toFixed(2),
     (value) => `${Math.round(value * 100)}%`,
     (value) => `${Math.round(value)}%`,
     (value) => ["None", "Left", "Right", "Both"][value] || "Both",
     (value) => `${Math.round(value * 100)}%`,
     (value) => `${Math.round(value)} ms`,
+    (value) => ["Off", "Auto", "Manual"][value] || "Manual",
+    (value) => `${value.toFixed(2)} Hz`,
+    (value) => `${value.toFixed(1)} / 10`,
+    (value) => ["Sine", "Triangle"][value] || "Sine",
+    (value) => `${Math.round(value)}°`,
   ];
   manualThruZeroFlangerControls.forEach((control, index) => {
     control.parentElement.querySelector("output").value = formats[index](values[index]);
   });
+  manualThruZeroFlangerControls[2].disabled =
+    values[8] !== 2 && values[10] >= 10;
   if (workletNode) {
     workletNode.port.postMessage({ type: "manual-thru-zero-flanger", value: values });
   }
@@ -9814,67 +9831,87 @@ async function runOctaveFuzzBrowserSmokeTest(reference, captureView, captureBuff
 async function runManualThruZeroFlangerBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = manualThruZeroFlangerControls.map((control) => control.value);
-  const testEnabled = previousEffectState.map((_, index) =>
-    index === 81 || index === 86 || index === 87);
+  const testEnabled = previousEffectState.map((_, index) => index === 81);
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext) {
       throw new Error("Manual Through-Zero Flanger smoke test requires the ready browser chain and local guitar audio.");
     }
+    const pickerRow = document.querySelector('label.effect-row[data-category="modulation"] input[data-effect="81"]');
+    if (!pickerRow || !pickerRow.parentElement.textContent.includes("Through-Zero Flanger")) {
+      throw new Error("Through-Zero Flanger must remain in the categorized Modulation picker.");
+    }
     await audioContext.resume();
     stopSource(false);
-    [0.34, 8, 5.25, 0.46, 30, 1, 0.55, 10].forEach((value, index) => {
-      manualThruZeroFlangerControls[index].value = String(value);
-    });
-    updateManualThruZeroFlanger();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
-    checkboxes.forEach((checkbox, index) => {
-      checkbox.checked = testEnabled[index];
-      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
-    });
-    workletNode.port.postMessage({ type: "reset" });
-    workletNode.port.postMessage({ type: "capture-reset" });
-    Atomics.store(captureView, 0, 0);
-    Atomics.store(captureView, 1, 0);
-    playbackOffset = 0;
-    playButton.click();
-    await Promise.race([
-      playTask,
-      new Promise((_, reject) => setTimeout(
-        () => reject(new Error("Timed out starting Manual Through-Zero Flanger playback.")), 5000,
-      )),
-    ]);
-    await waitForCapture(captureView, reference.samples.length);
-    stopSource(false);
-    const actual = new Float32Array(captureBuffer);
+    const captureMode = async (mode) => {
+      [0.34, 8, 5.25, 0.46, 30, 1, 0.55, 0, mode, 0.8, 10, 1, 180]
+        .forEach((value, index) => {
+          manualThruZeroFlangerControls[index].value = String(value);
+        });
+      updateManualThruZeroFlanger();
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = testEnabled[index];
+        workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Through-Zero Flanger playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+    const autoOutput = await captureMode(1);
+    const manualOutput = await captureMode(2);
+    const offOutput = await captureMode(0);
+    const rmsDifference = (left, right) => {
+      let sum = 0;
+      for (let index = 0; index < left.length; index += 1) {
+        const difference = left[index] - right[index];
+        sum += difference * difference;
+      }
+      return Math.sqrt(sum / Math.max(1, left.length));
+    };
     let peak = 0;
     let activeSamples = 0;
-    let differenceSquares = 0;
-    for (let index = 0; index < actual.length; index += 1) {
-      const sample = actual[index];
+    for (const sample of autoOutput) {
       const magnitude = Math.abs(sample);
       peak = Math.max(peak, magnitude);
       if (magnitude > 1e-6) activeSamples += 1;
-      const difference = sample - reference.samples[index];
-      differenceSquares += difference * difference;
     }
-    const differenceRms = Math.sqrt(differenceSquares / Math.max(1, actual.length));
-    if (peak < 1e-5 || activeSamples < 32 || differenceRms < 1e-5) {
-      throw new Error(`Manual Through-Zero Flanger produced no measurable processed guitar signal (peak ${peak}, changed samples ${activeSamples}, difference RMS ${differenceRms}).`);
+    const autoManualRms = rmsDifference(autoOutput, manualOutput);
+    const autoOffRms = rmsDifference(autoOutput, offOutput);
+    const guitarDifferenceRms = rmsDifference(autoOutput, reference.samples);
+    if (peak < 1e-5 || activeSamples < 32 || guitarDifferenceRms < 1e-5 ||
+        autoManualRms < 1e-5 || autoOffRms < 1e-5) {
+      throw new Error(`Through-Zero Flanger modes did not produce distinct guitar output (peak ${peak}, active samples ${activeSamples}, auto/manual RMS ${autoManualRms}, auto/off RMS ${autoOffRms}).`);
     }
     return {
       peak,
       activeSamples,
-      differenceRms,
+      guitarDifferenceRms,
+      autoManualRms,
+      autoOffRms,
       enabledEffectIndex: 81,
       minimumTimeMs: 0.34,
       maximumTimeMs: 8,
-      manualMs: 5.25,
+      manualPosition: 5.25,
       dryDelayPosition: 0.46,
       feedbackPercent: 30,
       phaseReverse: "Left",
       mix: 0.55,
-      smoothingMs: 10,
+      modesCompared: ["Auto", "Manual", "Off"],
+      lfo: { waveform: "Triangle", rateHz: 0.8, depth: 10, phaseDegrees: 180 },
+      smoothingMs: 0,
     };
   } finally {
     stopSource(false);
@@ -16328,7 +16365,7 @@ async function runBrowserSelfTest() {
     const manualTzfHint = document.querySelector(
       '.gain-controls[aria-label="Manual Through-Zero Flanger project-authored controls"] .hint',
     ).textContent;
-    if (manualThruZeroFlangerControls.length !== 8 ||
+    if (manualThruZeroFlangerControls.length !== 13 ||
         manualThruZeroFlangerControls[0].min !== "0.34" ||
         Math.abs(Number(manualThruZeroFlangerControls[0].max) -
           (Number(manualThruZeroFlangerControls[1].value) - 0.01)) > 0.0001 ||
@@ -16338,15 +16375,23 @@ async function runBrowserSelfTest() {
         manualThruZeroFlangerControls[2].max !== "10" ||
         manualThruZeroFlangerControls[4].min !== "-100" ||
         manualThruZeroFlangerControls[4].max !== "100" ||
+        manualThruZeroFlangerControls[8].value !== "2" ||
+        manualThruZeroFlangerControls[9].min !== "0.05" ||
+        manualThruZeroFlangerControls[9].max !== "8" ||
+        manualThruZeroFlangerControls[10].min !== "0" ||
+        manualThruZeroFlangerControls[10].max !== "10" ||
+        manualThruZeroFlangerControls[11].value !== "0" ||
+        manualThruZeroFlangerControls[12].value !== "180" ||
         manualTzfHint.includes("Fractal DSP") ||
-        !manualTzfHint.includes("Manual mode only") ||
+        !manualTzfHint.includes("project choices") ||
+        !manualTzfHint.includes("not milliseconds") ||
         !manualTzfHint.includes("384 frames at 48 kHz")) {
       throw new Error("Manual Through-Zero Flanger controls or source/latency qualifications are missing or incorrect.");
     }
     manualThruZeroFlangerControls[2].value = "6.25";
     manualThruZeroFlangerControls[2].dispatchEvent(new Event("input", { bubbles: true }));
     if (DEFAULT_PARAMETERS.manualThruZeroFlanger[2] !== 6.25 ||
-        manualThruZeroFlangerControls[2].parentElement.querySelector("output").value !== "6.25 ms") {
+        manualThruZeroFlangerControls[2].parentElement.querySelector("output").value !== "6.25") {
       throw new Error("Manual Through-Zero Flanger controls must update their displayed and chain parameters.");
     }
     originalManualTzfParameters.forEach((value, index) => {
@@ -17427,6 +17472,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Stereo Flanger phase browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-tzf-auto") {
+          testResult.textContent = "Checking Through-Zero Flanger Off/Auto/Manual on local guitar audio…";
+          const thruZeroSmoke = await runManualThruZeroFlangerBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            thruZeroFlanger: thruZeroSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Through-Zero Flanger browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fender-pedal-shifter") {

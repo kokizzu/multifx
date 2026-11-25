@@ -645,14 +645,18 @@ Total source requirements: 327; approved additions: 12.
 - [x] CPU, state memory, fixed latency, and process allocation measurements recorded in [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
 - [ ] Human listening and target-device checks remain open; do not claim Fender sound or DSP parity.
 
-## Latest effect checkpoint — Manual Through-Zero Flanger
+## Initial effect checkpoint — Manual Through-Zero Flanger (2026-11-23)
 
-- Picker: 84 entries; Manual Through-Zero Flanger is categorized under Modulation at index 81, before Output Level and Peak Limiter.
-- Implementation: project-authored, manual-only controls for min/max time, Manual position, normalized Dry Delay crossing position, feedback, channel phase reversal, mix, and smoothing. Auto/LFO behavior and other Fractal flanger types are not implemented.
-- Verification: `make test` passed (87/87 CTest tests); `make web-browser-test` passed with the new Play path at effect index 81. Offline CLI impulse tests and five EGFxSet pickup-position renders pass. The existing 70-stage browser/native parity check disables this independent new stage; parity with Fractal hardware is not claimed.
-- Browser/WASM: the fixed heap is 24 MiB with growth disabled. The browser smoke output was finite, with peak 0.1059155 across 47,813 active samples. These are processing checks, not sound-quality or latency measurements.
-- Open: hardware listening, physical latency/host compensation, isolated CPU measurement, and exact Fractal firmware/DSP parity.
+- The initial 84-row picker placed the project-authored Manual Through-Zero Flanger at Modulation index 81. It implemented manual wet delay, delayed Dry Delay crossing, feedback, phase reverse, mix, and smoothing; Auto/LFO had not yet been implemented.
+- Initial native/browser/EGFxSet tests are historical baseline evidence. The stage is project-authored and did not claim Fractal DSP or sound parity.
 
+## Latest effect checkpoint — Fractal FM9-family Through-Zero Flanger Off/Auto/Manual (2026-11-26)
+
+- [x] Rechecked the current Fractal Audio Blocks Guide (November 2026), pp. 48–50 and 111. It documents Off/Auto/Manual; Off is normal flanging, Auto sweeps through zero with Depth/Manual and Dry Delay positioning the midpoint, and Manual 0–10 is a position, not milliseconds. Minimum/Maximum Time span 0.340–20 ms; feedback is −100…+100%. LFO Phase offsets right from left, and 180° is opposite. Exact per-type seeds and most LFO/Dry Delay numeric bounds/defaults are not given. This is FM9-family evidence; v12.0 downloads list FM9 Original/Turbo but not Mark II Turbo separately, and installed firmware is unknown.
+- [x] Extended the existing Modulation picker entry at index 81; the picker remains 116 entries. Project defaults are Manual, 0.25 Hz sine, depth 5/10, and 180° L/R phase. Project-authored controls use 0.05–8 Hz, depth 0–10, sine/triangle, 0–360° phase, minimum/maximum 0.34/8 ms, Manual position 5/10, Dry Delay 0.50, feedback 0%, Phase Reverse Both, Mix 50%, and 10 ms smoothing. Off uses an immediate dry path; Auto/Manual delay dry and wet paths. The two delay rings reserve 20 ms so process() never allocates; no host/graph latency compensation is implemented. These are project choices, not Fractal settings or parity.
+- [x] `make test-fractal-tzf-auto` passed focused native mode/bounds/waveform/phase/allocation tests and offline CLI Off/Auto/Manual/invalid-mode renders. `make web-test-fractal-tzf-auto` passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, the categorized browser/WASM Play test with local prerecorded Guitar-TECHS DI, and existing 70-stage browser/native parity. Browser mode-comparison RMS differences were Auto vs Manual 0.037005 and Auto vs Off 0.031484; the feature remains in Modulation at index 81. `make windows-cross-build` passed the MinGW core and offline renderer build.
+- [x] `make bench` on AMD Ryzen 9 5950X Release at 48 kHz stereo/128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured) reports 15,664 B native state. Manual p50/p95/p99/p99.9/max callback use is 0.1219/0.1223/0.1766/0.4208/1.2222%; Auto sine is 0.2321/0.2880/0.3578/0.5813/0.9372%. These are isolated desktop measurements, not Android/device or complete-chain estimates. The configured 8 ms maximum allows up to 384 frames at 48 kHz (960 frames at 20 ms); Off keeps dry immediate.
+- [ ] Human listening, physical Fractal validation, and target-device timing remain manual. LFO High Cut, Quantize, Bypass Reset, Auto Depth, VCO Response/Exponent, Tempo sync, tone controls, the remaining Fractal flanger types, and exact vendor settings/DSP remain unimplemented or unverified.
 ## Latest flagship feature checkpoint — Fractal PEQ shapes and solo
 
 - Picker: Five-band Parametric EQ remains a single categorized Equalizer entry at ID 59. The 99-row picker still reports the Equalizer category.
