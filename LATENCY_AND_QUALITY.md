@@ -578,3 +578,15 @@ The sync benchmark uses quarter-note division at 120 BPM, 48 kHz stereo, 128-fra
 | Quarter-note sync, 120 BPM | 0.0679% | 0.0990% | 0.1031% | 0.4144% | 1.5439% | 288 B | 0 frames | 0/5,000 |
 
 `make test-fender-phaser-90-tap-division`, `make web-test-fender-phaser-90-tap-division`, `make windows-cross-build`, and `make bench` pass. Browser Play uses the local prerecorded stereo Guitar-TECHS DI. These isolated desktop timings do not predict Android/tablet performance. Manual listening, physical Tone Master Pro comparison, and target-device timing remain open; no Fender DSP, settings, or sound parity is claimed.
+
+## Fender Tone Master Pro Tremolo LFO Clip (2026-11-26)
+
+LFO clipping is applied to the existing normalized oscillator value before tremolo gain is calculated. Zero percent bypasses the clipping math and preserves the previous output exactly. At nonzero amounts, the project maps the selected percentage to a symmetric threshold from 1.0 to 0.5, clamps the bipolar LFO, and normalizes it back to its full range. The clip amount is prepared once per `process()` call; the callback uses no extra buffer, fixed latency, or heap allocation. Native state is 96 B; the browser/WASM effect state is 84 B.
+
+The benchmark measures 100% clip on a sine LFO at the default 5 Hz/50% depth, 48 kHz stereo, and 128-frame callbacks on AMD Ryzen 9 5950X Release. The callback deadline is 2.667 ms; 2,000 warm-up and 5,000 measured callbacks are used. Percentages are processor-call time relative to one callback deadline:
+
+| Mode | p50 | p95 | p99 | p99.9 | Max | Native state | Fixed latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Full LFO Clip | 0.0743% | 0.0750% | 0.0765% | 0.5374% | 2.0974% | 96 B | 0 frames | 0/5,000 |
+
+The unmodified tremolo benchmark in the same run measured p50/p95/p99/p99.9/max 0.0645/0.0803/0.0806/0.5798/1.8045%, also with 96 B state. `make test-fender-tremolo-lfo-clip`, `make web-test-fender-tremolo-lfo-clip`, `make windows-cross-build`, and `make bench` pass. Browser Play uses local prerecorded stereo guitar DI. These isolated desktop timings do not predict Android/tablet load. Manual listening and target-device timing remain open; the project curve is not Fender DSP parity.

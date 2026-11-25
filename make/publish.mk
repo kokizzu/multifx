@@ -19,6 +19,7 @@ PUBLISH_CHECKPOINTS += headrush-prime-drop-tune
 PUBLISH_CHECKPOINTS += fender-stereo-flanger-phase
 PUBLISH_CHECKPOINTS += fender-flanger-tap-division
 PUBLISH_CHECKPOINTS += fender-phaser-90-tap-division
+PUBLISH_CHECKPOINTS += fender-tremolo-lfo-clip
 PUBLISH_CHECKPOINTS += fractal-tzf-auto
 
 .PHONY: test-fender-stereo-flanger-phase web-test-fender-stereo-flanger-phase
@@ -43,6 +44,14 @@ test-fender-phaser-90-tap-division:
 
 web-test-fender-phaser-90-tap-division: test web-build
 	$(PYTHON) scripts/web.py test-fender-phaser-90-tap-division
+
+.PHONY: test-fender-tremolo-lfo-clip web-test-fender-tremolo-lfo-clip
+test-fender-tremolo-lfo-clip:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_tremolo_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fender-tremolo-lfo-clip: test web-build
+	$(PYTHON) scripts/web.py test-fender-tremolo-lfo-clip
 
 .PHONY: test-fractal-tzf-auto web-test-fractal-tzf-auto
 test-fractal-tzf-auto:

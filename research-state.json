@@ -4,35 +4,36 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "db4d7470b0d11b3f5445661e5e07b5696785b4aa",
+  "previous_checkpoint_commit": "32b3be5bcac54fc35a558332961a0cbbddaf1708",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Phaser 90 Tap Division",
-    "status": "Documented tempo-division role added as a project-authored option to the existing categorized Phaser; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+    "name": "Fender Tone Master Pro Tremolo LFO Clip",
+    "status": "Manufacturer-listed LFO Clip role added as a project-authored control to the existing categorized Tremolo; native, offline CLI, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 18,
+    "picker_index": 15,
     "category": "Modulation",
     "official_source": {
       "title": "Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, p. 40. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
+      "revision": "Model Guide v1.1.100 / Rev. A, p. 34. Current firmware history checked through v1.8.87 dated 2026-11-23; v1.8.58 also documents a Step Tremolo crash fix. Installed device firmware is unknown.",
       "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
       "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists Speed and Tap Division; it says the subdivision controls effect speed, but does not publish divisions, numeric bounds/defaults, DSP, or latency. Checked firmware notes do not mention Phaser 90; no Fender control, DSP, or sound parity is claimed."
+      "qualification": "The guide lists LFO Clip and describes adjusting tremolo-signal clipping percentage but publishes no numeric range, default, curve, DSP, or latency. The project interprets this as symmetric bipolar LFO clipping and does not claim Fender settings or sound parity."
     },
-    "documented_controls": "Phaser 90: Speed and Tap Division. Tap Division selects a tempo subdivision for effect speed. Division list and numeric bounds/defaults are not published.",
-    "project_controls": "Existing Modulation Phaser remains at picker ID 18; no effect slot is added. Free Hz remains the 0.5 Hz default. Project-authored Tap Division offers 14 named divisions, tempo 20–300 BPM (120 BPM default), with rate capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The dry path remains immediate.",
+    "documented_controls": "Tone Master Pro Tremolo guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its numeric range, default, curve, and DSP/latency are not published.",
+    "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored LFO Clip has range 0–100% and default 0%, which preserves existing output exactly. Nonzero values symmetrically clip the normalized bipolar LFO at a threshold interpolated from 1.0 to 0.5, then renormalize the wave to full range. No new picker row, buffer, or fixed latency is added.",
     "verification": {
-      "native": "make test-fender-phaser-90-tap-division passed focused Phaser tests and offline CLI checks for sync mapping, free/sync same-rate output, tempo changes, invalid division fallback, and missing-value guard.",
-      "browser": "make web-test-fender-phaser-90-tap-division passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native comparison, and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. Modulation picker ID 18, Free default, 14 divisions, 20–300 BPM, and synced 2 Hz/1 Hz display were checked. Browser/WASM effect state 276 B.",
+      "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests covering bounds, default identity, positive/negative peak flattening, limits, and process-time allocation.",
+      "offline_cli": "The same target passed offline CLI rendering that compares zero and 100% clip on a sine tremolo using constant input; output differences confirm the CLI reaches the DSP.",
+      "browser": "make web-test-fender-tremolo-lfo-clip passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native chain comparison, and three HeadlessChrome 151 Play captures from local prerecorded stereo Guitar-TECHS DI. Modulation category and picker ID 15, 0–100% range, zero default, and audible changes at 0/50/100% were verified. Browser/WASM state 84 B.",
       "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
-      "benchmark": "make bench measured quarter-note/120 BPM sync on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0679/0.0990/0.1031/0.4144/1.5439% of deadline. Native state 288 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
+      "benchmark": "make bench measured full clip at AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0743/0.0750/0.0765/0.5374/2.0974% of deadline. Native state 96 B; the unmodified profile measured 0.0645/0.0803/0.0806/0.5798/1.8045%, also 96 B. No fixed latency; process() allocates nothing. These are isolated desktop measurements, not target-device performance."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
+    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender algorithm, curve, settings, DSP, or sound parity."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Tremolo LFO Clip is listed in the exact Model Guide p. 34 with a brief clipping-percentage description, but no range/default/algorithm. Review the project Tremolo path and add only a conservative, clearly project-authored control with automated sound/parameter tests; keep the ambiguity explicit. Then continue the remaining Fender and other flagship families.",
-    "qualification": "The Phaser 90 Tap Division checkpoint is implemented, automated, Windows-cross-built, benchmarked, and ready to publish. Melofty Axom Max manual V1.7.4 plus app V1.9.2 notes did not identify a specific effect/control table safe to map; retain its unresolved notes and return if better model-specific documentation appears. Preserve the six-model comparison scope, manual listening, hardware, firmware, and target-device qualifications."
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Add project-authored Free Hz / tempo-synchronized Rate to existing basic Chorus after checking the November 2026 Blocks Guide p. 25. Preserve free 0.8 Hz default and 0.05–8 Hz project bounds; expose NONE/free and quarter-note sync with project tempo. Keep LFO1 controller sync separate and unresolved.",
+    "qualification": "The Tone Master Pro LFO Clip checkpoint is implemented, automated, Windows-cross-built, benchmarked, and ready to publish. Axom V1.7.4/V1.9.2 docs do not tie named effect/control tables to a model; Prime v5.0 examples contain sample values, not ranges/defaults, and the v5.2 guide remains unreadable. Keep both as unresolved research rather than inventing controls. FM9 Chorus Tempo is family-level evidence; v12.0 listing omits Mark II Turbo by name, installed firmware unknown. Continue the remaining flagship catalog and manual/device checks."
   },
   "completed_checkpoints": [
     {
@@ -919,32 +920,33 @@
         "benchmark": "make bench measured quarter-note/120 BPM sync on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0679/0.0990/0.1031/0.4144/1.5439% of deadline. Native state 288 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
+    },
+    {
+      "name": "Fender Tone Master Pro Tremolo LFO Clip",
+      "status": "Manufacturer-listed LFO Clip role added as a project-authored control to the existing categorized Tremolo; native, offline CLI, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+      "date": "2026-11-26",
+      "picker_index": 15,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, p. 34. Current firmware history checked through v1.8.87 dated 2026-11-23; v1.8.58 also documents a Step Tremolo crash fix. Installed device firmware is unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide lists LFO Clip and describes adjusting tremolo-signal clipping percentage but publishes no numeric range, default, curve, DSP, or latency. The project interprets this as symmetric bipolar LFO clipping and does not claim Fender settings or sound parity."
+      },
+      "documented_controls": "Tone Master Pro Tremolo guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its numeric range, default, curve, and DSP/latency are not published.",
+      "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored LFO Clip has range 0–100% and default 0%, which preserves existing output exactly. Nonzero values symmetrically clip the normalized bipolar LFO at a threshold interpolated from 1.0 to 0.5, then renormalize the wave to full range. No new picker row, buffer, or fixed latency is added.",
+      "verification": {
+        "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests covering bounds, default identity, positive/negative peak flattening, limits, and process-time allocation.",
+        "offline_cli": "The same target passed offline CLI rendering that compares zero and 100% clip on a sine tremolo using constant input; output differences confirm the CLI reaches the DSP.",
+        "browser": "make web-test-fender-tremolo-lfo-clip passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native chain comparison, and three HeadlessChrome 151 Play captures from local prerecorded stereo Guitar-TECHS DI. Modulation category and picker ID 15, 0–100% range, zero default, and audible changes at 0/50/100% were verified. Browser/WASM state 84 B.",
+        "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+        "benchmark": "make bench measured full clip at AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0743/0.0750/0.0765/0.5374/2.0974% of deadline. Native state 96 B; the unmodified profile measured 0.0645/0.0803/0.0806/0.5798/1.8045%, also 96 B. No fixed latency; process() allocates nothing. These are isolated desktop measurements, not target-device performance."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender algorithm, curve, settings, DSP, or sound parity."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Flanger Tap Division",
-    "status": "Documented tempo-division role added as a project-authored option to the existing categorized Flanger; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 17,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, p. 38. Firmware history checked through v1.8.87 dated 2026-11-23. Installed device firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide names Tap Division and says effect speed follows a tempo subdivision but publishes no division list, numeric range/defaults, DSP, or latency. Current checked firmware notes do not mention Flanger; no Fender control, DSP, or sound parity is claimed."
-    },
-    "documented_controls": "Mono/Stereo Flanger: Rate, Depth, Resonance, Tap Division, and Manual; Stereo additionally has L/R Phase. Tap Division selects a subdivision of current tempo for effect speed. Available divisions and numeric bounds/defaults are not published.",
-    "project_controls": "Existing Modulation Flanger remains at picker ID 17; no effect slot is added. Free Hz remains the 0.25 Hz default. Project-authored Tap Division offers whole, dotted half, half, dotted quarter, quarter, quarter triplet, dotted eighth, eighth, eighth triplet, dotted sixteenth, sixteenth, sixteenth triplet, thirty-second, and sixty-fourth notes; tempo range 20–300 BPM (120 BPM default); calculated LFO rate is capped at 80 Hz. Quarter note gives 2 Hz at 120 BPM and 1 Hz at 60 BPM. The wet path remains delayed and the dry path immediate.",
-    "verification": {
-      "native": "make test-fender-flanger-tap-division passed focused native Flanger tests and offline CLI tests for tempo mapping, same-rate free/sync output, tempo changes, invalid division, and missing on/off value.",
-      "browser": "make web-test-fender-flanger-tap-division passed all 117/117 CTest cases and HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures. The Modulation picker ID 17, Free default, all 14 choices, 20–300 BPM UI and synced 2 Hz/1 Hz display were checked. Browser WASM effect state 4,796 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
-      "benchmark": "make bench measured the quarter-note/120 BPM sync profile on AMD Ryzen 9 5950X Release at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of deadline. Native state 4,832 B; no fixed dry-path latency; process() allocates nothing. Isolated desktop timing, not device performance."
-    },
-    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Firmware installed on any device is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Phaser 90 Tap Division",
     "status": "Documented tempo-division role added as a project-authored option to the existing categorized Phaser; native, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
     "date": "2026-11-26",
@@ -967,6 +969,30 @@
     },
     "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender ranges, DSP, settings, or sound parity."
   },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Tremolo LFO Clip",
+    "status": "Manufacturer-listed LFO Clip role added as a project-authored control to the existing categorized Tremolo; native, offline CLI, local-guitar browser/WASM, Windows, and callback benchmark checks pass; manual/device checks remain.",
+    "date": "2026-11-26",
+    "picker_index": 15,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, p. 34. Current firmware history checked through v1.8.87 dated 2026-11-23; v1.8.58 also documents a Step Tremolo crash fix. Installed device firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists LFO Clip and describes adjusting tremolo-signal clipping percentage but publishes no numeric range, default, curve, DSP, or latency. The project interprets this as symmetric bipolar LFO clipping and does not claim Fender settings or sound parity."
+    },
+    "documented_controls": "Tone Master Pro Tremolo guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its numeric range, default, curve, and DSP/latency are not published.",
+    "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored LFO Clip has range 0–100% and default 0%, which preserves existing output exactly. Nonzero values symmetrically clip the normalized bipolar LFO at a threshold interpolated from 1.0 to 0.5, then renormalize the wave to full range. No new picker row, buffer, or fixed latency is added.",
+    "verification": {
+      "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests covering bounds, default identity, positive/negative peak flattening, limits, and process-time allocation.",
+      "offline_cli": "The same target passed offline CLI rendering that compares zero and 100% clip on a sine tremolo using constant input; output differences confirm the CLI reaches the DSP.",
+      "browser": "make web-test-fender-tremolo-lfo-clip passed documentation validation, 11/11 fixture-safety tests, all 117 CTest tests, full browser/native chain comparison, and three HeadlessChrome 151 Play captures from local prerecorded stereo Guitar-TECHS DI. Modulation category and picker ID 15, 0–100% range, zero default, and audible changes at 0/50/100% were verified. Browser/WASM state 84 B.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
+      "benchmark": "make bench measured full clip at AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline; 2,000 warm-up/5,000 measured): p50/p95/p99/p99.9/max 0.0743/0.0750/0.0765/0.5374/2.0974% of deadline. Native state 96 B; the unmodified profile measured 0.0645/0.0803/0.0806/0.5798/1.8045%, also 96 B. No fixed latency; process() allocates nothing. These are isolated desktop measurements, not target-device performance."
+    },
+    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Installed firmware is unknown. Do not claim Fender algorithm, curve, settings, DSP, or sound parity."
+  },
   "next_research": [
     {
       "device": "HeadRush Prime",
@@ -978,10 +1004,11 @@
         "https://cdn.inmusicbrands.com/Software/SGEE/5/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.0.pdf",
         "https://cdn.inmusicbrands.com/Software/SGEE/501/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.0.1.pdf",
         "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-        "https://www.youtube.com/watch?v=uHdfP6vwLb8"
+        "https://www.youtube.com/watch?v=uHdfP6vwLb8",
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf"
       ],
       "status": "Drop Tune now has a partial project-authored workflow in the existing Pitch ID 22 shifter; focused browser Play, native suite, Windows cross-build, and desktop benchmark pass. Official v5.0.1 documents Legacy/Refined; v5.0 video identifies a −12-semitone lower limit. Exact current controls/defaults, mix, polyphony, algorithm latency, DSP, and v5.2-specific behavior remain unknown. Up Tune has no verified control table; no separate Up Tune implementation is warranted while generic transposition covers the broad function.",
-      "known_controls": "Drop Tune: v5.0.1 Mode Legacy/Refined; official v5.0 video reports a −12-semitone lower range and reduced latency without a numeric value. Up Tune: presence in Pitch FX and introduction in v5.0.0 verified; exact range/controls/defaults/polyphony unknown. Exact full Drop Tune bounds/defaults/mix/polyphony unknown.",
+      "known_controls": "Drop Tune: v5.0.1 Mode Legacy/Refined; official v5.0 video reports a −12-semitone lower range and reduced latency without a numeric value. Up Tune: presence in Pitch FX and introduction in v5.0.0 verified; exact range/controls/defaults/polyphony unknown. Exact full Drop Tune bounds/defaults/mix/polyphony unknown. Alternate official Prime User Guide v5.0.0 printed p.24 shows an Orange Phaser example with Rate 0.6 Hz, Stereo ON, Sync OFF; these are example values only, not numeric ranges/defaults. C-Verb controls are already covered in the existing project. No new Prime effect has a safe complete parameter table.",
       "qualification": "Project Drop Tune is uniform whole-signal transposition at −1…−12 semitones, full wet, reusing one existing shifter. It is not string-specific tuning or a recreation of Prime algorithms. Preset/scene persistence is not implemented. Keep manufacturer unknowns and manual/device checks open."
     },
     {
@@ -1041,10 +1068,11 @@
         "https://www.headrushfx.com/downloads",
         "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
         "https://cdn.inmusicbrands.com/Software/SGEE/52/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.2.0.pdf",
-        "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf"
+        "https://cdn.inmusicbrands.com/HeadRush/FW/4/Finalized%20Update%20Guide%20and%20Change%20Notes%20PDFs/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v4.0.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf"
       ],
       "status": "Official release notes establish v3.2 Hybrid Synth, Electric Piano, and DB-33 Organ; v4.0 Spring Guru, Kill Seq, Splicer, and arpeggiator presence; and v4.1.1 DB-33 Rotary/Rotary Rate labels. The v5.2.0 guide reader failed with HTTP 400 at 11,709,295 bytes. Exact per-effect controls/ranges/defaults, DB-33 Rotary ranges, timing/polyphony, and model behavior remain unrecoverable from checked sources; do not infer them.",
-      "known_controls": "Official v3.2 notes: Hybrid Synth, Electric Piano, DB-33 Organ. v4.0 notes: Spring Guru in Reverb; Kill Seq and Splicer in Rhythmic; arpeggiator controls are present for Hybrid Synth, Electric Piano, and DB-33 Organ. v4.1.1 notes expose DB-33 Rotary and Rotary Rate labels only, with no numeric ranges. Product page lists Ambi-Verb and synth models. The linked v5.2.0 guide could not be read: HTTP 400 at 11,709,295 bytes.",
+      "known_controls": "Official v3.2 notes: Hybrid Synth, Electric Piano, DB-33 Organ. v4.0 notes: Spring Guru in Reverb; Kill Seq and Splicer in Rhythmic; arpeggiator controls are present for Hybrid Synth, Electric Piano, and DB-33 Organ. v4.1.1 notes expose DB-33 Rotary and Rotary Rate labels only, with no numeric ranges. Product page lists Ambi-Verb and synth models. The linked v5.2.0 guide could not be read: HTTP 400 at 11,709,295 bytes. Alternate official Prime User Guide v5.0.0 printed p.24 shows an Orange Phaser example with Rate 0.6 Hz, Stereo ON, Sync OFF; these are example values only, not numeric ranges/defaults. C-Verb controls are already covered in the existing project. No new Prime effect has a safe complete parameter table.",
       "qualification": "The v5.2.0 guide reader failed HTTP 400 at 11,709,295 bytes, so effect-specific numeric controls, ranges/defaults, input-note polyphony, rhythmic resolution, and DSP behavior remain unknown. v4.1.1 provides DB-33 Rotary and Rotary Rate names only. Product Pitch heading count mismatch and C-Verb project limitations remain as previously qualified; no Prime parity claim."
     },
     {
@@ -1056,8 +1084,8 @@
         "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf",
         "https://apps.apple.com/de/app/melofty/id6762972347?platform=ipad"
       ],
-      "status": "App V1.9.2 notes list Delay divisions 1/64–1/1 and High/Low Cut, lower Pitch CPU, Simplified Noise Gate, and Synth/Inst Subpatch switching/dynamic response; they do not name affected algorithms, expose parameter ranges, or prove installed hardware firmware. Related Filtered Delay tests are verified, but exact Axom model mapping remains unknown.",
-      "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables. The V1.9.2 app notes additionally mention Pitch CPU reduction, MFIM Sharpness for AMP/ENTIRE, improved Noise Gate, Synth/Inst Subpatch model switching, and dynamic response, without control tables or named affected models.",
+      "status": "App V1.9.2 notes list Delay divisions 1/64–1/1 and High/Low Cut, lower Pitch CPU, Simplified Noise Gate, and Synth/Inst Subpatch switching/dynamic response; they do not name affected algorithms, expose parameter ranges, or prove installed hardware firmware. Related Filtered Delay tests are verified, but exact Axom model mapping remains unknown. Independent audit confirms no exact named effect has a complete parameter table: V1.7.4 pp.11–17 covers dynamic slots/BPM sync, pp.27–28 DeepSynth quick presets without model/control tables, pp.45 output EQ/gains without controls, p.32 looper trigger threshold without range, and p.54 total model count. V1.9.2 app notes remain non-specific; no safe Axom-specific implementation.",
+      "known_controls": "Manual documents two A/B chains with nine dynamic slots each, CPU-limited availability, editable parameter pages, and BPM sync for some Delay/Mod timing controls. V1.9.2 app notes mention 1/64–1/1 delay divisions, High/Low Cut, Simplified Noise Gate, and Synth/Inst updates without naming affected algorithms or their parameter tables. The V1.9.2 app notes additionally mention Pitch CPU reduction, MFIM Sharpness for AMP/ENTIRE, improved Noise Gate, Synth/Inst Subpatch model switching, and dynamic response, without control tables or named affected models. Exact audit: no named effect algorithm plus complete controls/ranges/defaults was found in the current exact-model documents; do not map generic Filtered Delay to an Axom model.",
       "qualification": "The accessible manual is V1.7.4, not documentation for V1.9.2 firmware. Manual says 19 modules/880+ models; a secondary indexed Quick Guide lists 20 picker labels. Preserve the unresolved count mismatch and do not infer Axom model/control matching or installed firmware from the app notes."
     },
     {
@@ -1098,6 +1126,19 @@
       "status": "The Model Guide names Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip; it describes LFO Clip only as adjusting tremolo-signal clipping percentage. Existing project Tremolo supports rate, depth, sine/triangle/square, and tempo sync but lacks duty-cycle and clip controls. No manufacturer ranges/defaults or exact clip curve/behavior are documented; installed firmware is unknown.",
       "known_controls": "Documented names and the brief Duty Cycle / LFO Clip descriptions only. Numeric ranges, defaults, exact waveform choices beyond the project’s own controls, curve, DSP, and latency are not specified.",
       "qualification": "A project-authored bounded clipping control may be added with zero/default fast path, no buffer, allocation, or latency. Do not equate it to Fender behavior or claim Fender parity; test the full control/UI/native/WASM path and report CPU/memory."
+    },
+    {
+      "device": "Fractal FM9 Mark II Turbo",
+      "feature": "Basic Chorus Tempo control",
+      "source": "Fractal Audio Systems Blocks Guide, cover dated November 2026, printed pp.25–27; current FM9 downloads page checked 2026-11-26.",
+      "source_urls": [
+        "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "https://www.fractalaudio.com/fm9-downloads/",
+        "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit"
+      ],
+      "status": "Guide describes Chorus Tempo as setting Rate in rhythmic relation to tempo; quarter note at 120 BPM gives 2 Hz, and NONE restores manual Rate. Current basic project Chorus has free rate only; other chorus variants do not add tempo control to it. LFO1 SYNC is a separate controller-source behavior. No numeric ranges/default divisions/DSP are published.",
+      "known_controls": "Project option: preserve existing 0.8 Hz free-rate default and 0.05–8 Hz bounds; project-authored NONE/free or quarter-note tempo sync may use 120 BPM default. Keep LFO1 controller sync distinct. The guide also documents 2–8 voices and Delay Time 0.1–50 ms / Delay Range 1–40 ms; those are separate possible Chorus-family gaps.",
+      "qualification": "November 2026 family-level guide; product comparison includes FM9. Official v12.0 downloads list FM9 Original/Turbo, not Mark II Turbo explicitly; exact applicability and installed firmware are unknown. Project controls/ranges/DSP/sound do not claim Fractal parity."
     }
   ],
   "constraints": [

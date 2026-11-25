@@ -744,6 +744,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  fender_stereo_flanger_phase_only: bool = False,
                  fender_flanger_tap_division_only: bool = False,
                  fender_phaser_90_tap_division_only: bool = False,
+                 fender_tremolo_lfo_clip_only: bool = False,
                  fractal_tzf_auto_only: bool = False,
                  stereo_panner_only: bool = False,
                  mutant_filter_only: bool = False,
@@ -1293,6 +1294,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fender-flanger-tap-division"
         elif fender_phaser_90_tap_division_only:
             url = base_url + "/web/index.html?selftest=fender-phaser-90-tap-division"
+        elif fender_tremolo_lfo_clip_only:
+            url = base_url + "/web/index.html?selftest=fender-tremolo-lfo-clip"
         elif fractal_tzf_auto_only:
             url = base_url + "/web/index.html?selftest=fractal-tzf-auto"
         elif fender_pedal_shifter_only:
@@ -1637,6 +1640,7 @@ def main() -> None:
         "test-fender-stereo-flanger-phase",
         "test-fender-flanger-tap-division",
         "test-fender-phaser-90-tap-division",
+        "test-fender-tremolo-lfo-clip",
         "test-fractal-tzf-auto",
         "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
@@ -1674,6 +1678,8 @@ def main() -> None:
         browser_test(fender_flanger_tap_division_only=True)
     elif action == "test-fender-phaser-90-tap-division":
         browser_test(fender_phaser_90_tap_division_only=True)
+    elif action == "test-fender-tremolo-lfo-clip":
+        browser_test(fender_tremolo_lfo_clip_only=True)
     elif action == "test-fractal-tzf-auto":
         browser_test(fractal_tzf_auto_only=True)
     elif action == "test-volume-pan":

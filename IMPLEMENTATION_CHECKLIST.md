@@ -673,6 +673,14 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core and offline renderer build. `make bench` includes a separate Tap Division sync row: 4,832 B native state; p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of a 2.667 ms callback on Ryzen 9 5950X Release. Dry path has no fixed algorithmic delay; `process()` allocates nothing.
 - [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP or sound parity.
 
+## Fender Tone Master Pro — Tremolo LFO Clip (2026-11-26)
+
+- [x] Check exact-model Model Guide v1.1.100 / Rev. A (p. 34): Tremolo lists Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its range, default, curve, DSP, and latency are not published. Firmware history checked through v1.8.87 (2026-11-23); installed firmware is unknown.
+- [x] Extend the existing Modulation Tremolo at picker ID 15 without adding a slot or buffer. Add project-authored 0–100% symmetric LFO clip/renormalization; keep 0% as the default and preserve the old signal exactly. Do not claim Fender’s clipping curve or settings.
+- [x] `make test-fender-tremolo-lfo-clip` passes native Tremolo tests and offline CLI output checks. `make web-test-fender-tremolo-lfo-clip` passes documentation and fixture-safety checks, all 117 CTest tests, browser/native parity, and three HeadlessChrome 151 Play captures from the local prerecorded stereo Guitar-TECHS DI.
+- [x] `make windows-cross-build` passes the Windows MinGW core and offline renderer. `make bench` reports 96 B native state, 84 B browser/WASM state, no fixed audio latency or process allocation, and full-clip p50/p95/p99/p99.9/max CPU of 0.0743/0.0750/0.0765/0.5374/2.0974% of a 2.667 ms callback on Ryzen 9 5950X Release.
+- [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP or sound parity.
+
 ## Fender Tone Master Pro — Phaser 90 Tap Division (2026-11-26)
 
 - [x] Verify the exact-model Model Guide v1.1.100 / Rev. A (p. 40): Phaser 90 has Speed and Tap Division, which selects a tempo subdivision. Division list, numeric bounds/defaults, latency, and DSP are not published. Firmware notes checked through v1.8.87 dated 2026-11-23 contain no Phaser-specific change; installed firmware is unknown.

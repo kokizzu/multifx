@@ -2688,6 +2688,10 @@ Options parse_options(int argc, char** argv, int first) {
             options.tremolo.beats_per_cycle = value;
             options.tremolo_enabled = true;
         }
+        else if (key == "--tremolo-lfo-clip-percent") {
+            options.tremolo.lfo_clip_percent = value;
+            options.tremolo_enabled = true;
+        }
         else if (key == "--harmonic-tremolo-rate-hz") {
             options.harmonic_tremolo.rate_hz = value;
             options.harmonic_tremolo_enabled = true;
@@ -5808,6 +5812,14 @@ void run_bench() {
         parameters.depth = 0.5F;
         return std::make_unique<tabletfx::Tremolo>(static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fender-tremolo-lfo-clip-project-authored", [=] {
+        tabletfx::TremoloParameters parameters;
+        parameters.rate_hz = 5.0F;
+        parameters.depth = 0.5F;
+        parameters.lfo_clip_percent = 100.0F;
+        return std::make_unique<tabletfx::Tremolo>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("harmonic-tremolo", [=] {
         tabletfx::HarmonicTremoloParameters parameters;
         return std::make_unique<tabletfx::HarmonicTremolo>(
@@ -5890,6 +5902,7 @@ void print_usage() {
                  " [--tremolo-rate-hz Hz] [--tremolo-depth 0..1]"
                  " [--tremolo-waveform sine|triangle|square] [--tremolo-sync on|off]"
                  " [--tremolo-tempo-bpm BPM] [--tremolo-beats-per-cycle beats]"
+                 " [--tremolo-lfo-clip-percent 0..100]"
                   " [--optical-tremolo] [--optical-tremolo-variant optical-1|optical-2|neon]"
                   " [--optical-tremolo-rate-hz Hz] [--optical-tremolo-depth 0..1]"
                   " [--optical-tremolo-lfo sine|triangle|square|saw-up|saw-down|random|logarithmic|exponential|trapezoid|astable]"

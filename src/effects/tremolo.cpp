@@ -35,6 +35,8 @@ void Tremolo::configure(float sample_rate,
     parameters.rate_hz = bounded(parameters.rate_hz, 5.0F,
                                  kMinimumRateHz, kMaximumRateHz);
     parameters.depth = bounded(parameters.depth, 0.5F, 0.0F, 1.0F);
+    parameters.lfo_clip_percent = bounded(parameters.lfo_clip_percent, 0.0F,
+                                          0.0F, 100.0F);
     parameters.waveform = sanitize_waveform(parameters.waveform);
     parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
                                    kMinimumBpm, kMaximumBpm);
@@ -78,6 +80,12 @@ void Tremolo::set_depth(float depth) noexcept {
     depth_ramp_remaining_ = ramp_frames;
 }
 
+void Tremolo::set_lfo_clip_percent(float clip_percent) noexcept {
+    parameters_.lfo_clip_percent = bounded(clip_percent,
+                                          parameters_.lfo_clip_percent,
+                                          0.0F, 100.0F);
+}
+
 void Tremolo::set_depth_smoothing_ms(float smoothing_ms) noexcept {
     parameters_.depth_smoothing_ms = bounded(smoothing_ms, 10.0F,
                                              0.0F, 1000.0F);
@@ -112,6 +120,11 @@ void Tremolo::process(std::span<float> interleaved,
         return;
     }
 
+    const bool lfo_clip_enabled = parameters_.lfo_clip_percent > 0.0F;
+    const float lfo_clip_threshold =
+        1.0F - 0.005F * parameters_.lfo_clip_percent;
+    const float lfo_clip_normalization =
+        lfo_clip_enabled ? 1.0F / lfo_clip_threshold : 1.0F;
     const std::size_t frames = interleaved.size() / channels;
     for (std::size_t frame = 0; frame < frames; ++frame) {
         if (depth_ramp_remaining_ > 0) {
@@ -129,6 +142,11 @@ void Tremolo::process(std::span<float> interleaved,
                                  : 3.0F - 4.0F * phase_;
         } else if (parameters_.waveform == TremoloWaveform::Square) {
             waveform_value = phase_ < 0.5F ? 1.0F : -1.0F;
+        }
+        if (lfo_clip_enabled) {
+            waveform_value = std::clamp(waveform_value, -lfo_clip_threshold,
+                                        lfo_clip_threshold) *
+                             lfo_clip_normalization;
         }
 
         const float gain = 1.0F - current_depth_ * (1.0F - waveform_value) * 0.5F;

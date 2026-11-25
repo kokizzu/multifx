@@ -2009,9 +2009,11 @@ public:
 
     void configure_tremolo(float rate_hz, float depth, std::uint32_t waveform,
                            std::uint32_t tempo_sync, float tempo_bpm,
-                           float beats_per_cycle) noexcept {
+                           float beats_per_cycle,
+                           float lfo_clip_percent) noexcept {
         auto* tremolo = static_cast<tabletfx::Tremolo*>(effects_[15].effect.get());
         tremolo->set_rate_hz(rate_hz);
+        tremolo->set_lfo_clip_percent(lfo_clip_percent);
         switch (waveform) {
         case 1:
             tremolo->set_waveform(tabletfx::TremoloWaveform::Triangle);
@@ -4536,11 +4538,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_envelope_wah(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_tremolo(
     void* opaque, float rate_hz, float depth, std::uint32_t waveform,
-    std::uint32_t tempo_sync, float tempo_bpm, float beats_per_cycle) noexcept {
+    std::uint32_t tempo_sync, float tempo_bpm, float beats_per_cycle,
+    float lfo_clip_percent) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_tremolo(rate_hz, depth, waveform,
                                             tempo_sync, tempo_bpm,
-                                            beats_per_cycle);
+                                            beats_per_cycle, lfo_clip_percent);
     }
 }
 

@@ -17,6 +17,8 @@ enum class TremoloWaveform : std::uint8_t {
 struct TremoloParameters {
     float rate_hz = 5.0F;
     float depth = 0.5F;
+    // Project-authored symmetric LFO hard-clip amount; 0 preserves the source wave.
+    float lfo_clip_percent = 0.0F;
     TremoloWaveform waveform = TremoloWaveform::Sine;
     bool tempo_sync = false;
     float tempo_bpm = 120.0F;
@@ -48,6 +50,7 @@ public:
     void configure(float sample_rate, TremoloParameters parameters) noexcept;
     void set_rate_hz(float rate_hz) noexcept;
     void set_depth(float depth) noexcept;
+    void set_lfo_clip_percent(float clip_percent) noexcept;
     void set_depth_smoothing_ms(float smoothing_ms) noexcept;
     void set_waveform(TremoloWaveform waveform) noexcept;
     void set_tempo_sync(bool enabled, float bpm,

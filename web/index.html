@@ -1344,6 +1344,7 @@
         </label>
         <output id="tuner-reading" class="tuner-reading" aria-live="polite">Play guitar audio to detect a note.</output>
       </div>
+      <p class="hint">The Fender Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 34, lists LFO Clip and describes it as adjusting the tremolo signal's clipping percentage; it does not publish a numeric range, default, or clipping curve. This project-authored control maps 0–100% to symmetric hard clipping of the normalized bipolar LFO, with the threshold moving from 100% to 50% of its peak and the clipped wave normalized back to full range. Zero preserves the existing waveform. This is an explicit project interpretation, not a claim about Fender's internal behavior or sound.</p>
       <div class="gain-controls">
         <label class="mix-control" for="tremolo-rate-hz">
           <span>Tremolo rate</span><output id="tremolo-rate-value" for="tremolo-rate-hz">5.00 Hz</output>
@@ -1368,6 +1369,11 @@
         <label class="mix-control" for="tremolo-beats-per-cycle">
           <span>Beats per cycle</span>
           <select id="tremolo-beats-per-cycle"><option value="0.25">1/16 note</option><option value="0.5">1/8 note</option><option value="1" selected>Quarter note</option><option value="2">Half note</option><option value="4">Whole note</option></select>
+        </label>
+        <label class="mix-control" for="tremolo-lfo-clip-percent">
+          <span>LFO Clip · project-authored</span>
+          <output id="tremolo-lfo-clip-value" for="tremolo-lfo-clip-percent">0%</output>
+          <input id="tremolo-lfo-clip-percent" type="range" min="0" max="100" step="1" value="0">
         </label>
       </div>
       <div class="effect-parameter-group" aria-label="Harmonic Tremolo controls">

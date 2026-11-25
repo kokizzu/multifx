@@ -29,6 +29,7 @@ void test_defaults_bounds_and_memory() {
     const auto parameters = tremolo.parameters();
     require(tremolo.id() == "tremolo", "tremolo stable ID changed");
     require(parameters.rate_hz == 5.0F && parameters.depth == 0.5F &&
+                parameters.lfo_clip_percent == 0.0F &&
                 parameters.waveform == tabletfx::TremoloWaveform::Sine &&
                 !parameters.tempo_sync && parameters.depth_smoothing_ms == 10.0F &&
                 tremolo.effective_rate_hz() == 5.0F,
@@ -64,6 +65,15 @@ void test_defaults_bounds_and_memory() {
     tremolo.set_depth(std::numeric_limits<float>::infinity());
     require(tremolo.parameters().depth == 1.0F,
             "non-finite depth changed the last valid setting");
+    tremolo.set_lfo_clip_percent(-1.0F);
+    require(tremolo.parameters().lfo_clip_percent == 0.0F,
+            "negative LFO clip amount was not clamped to zero");
+    tremolo.set_lfo_clip_percent(150.0F);
+    require(tremolo.parameters().lfo_clip_percent == 100.0F,
+            "LFO clip amount above 100 percent was not clamped");
+    tremolo.set_lfo_clip_percent(std::numeric_limits<float>::quiet_NaN());
+    require(tremolo.parameters().lfo_clip_percent == 100.0F,
+            "non-finite LFO clip amount changed the last valid setting");
     tremolo.set_depth_smoothing_ms(-1.0F);
     require(tremolo.parameters().depth_smoothing_ms == 0.0F,
             "negative depth smoothing was not bounded to immediate response");
@@ -73,6 +83,37 @@ void test_defaults_bounds_and_memory() {
     tremolo.set_depth_smoothing_ms(std::numeric_limits<float>::quiet_NaN());
     require(tremolo.parameters().depth_smoothing_ms == 10.0F,
             "non-finite depth smoothing did not restore its safe default");
+}
+
+void test_lfo_clip_shape_and_default_identity() {
+    tabletfx::TremoloParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.depth = 1.0F;
+    parameters.depth_smoothing_ms = 0.0F;
+    std::vector<float> unmodified_samples(8000, 1.0F);
+    tabletfx::Tremolo unmodified(8000.0F, parameters);
+    unmodified.process(unmodified_samples, 1);
+
+    parameters.lfo_clip_percent = 100.0F;
+    std::vector<float> clipped_samples(8000, 1.0F);
+    tabletfx::Tremolo clipped(8000.0F, parameters);
+    clipped.process(clipped_samples, 1);
+    require(std::abs(unmodified_samples[1000] - 0.8535534F) < 0.002F &&
+                clipped_samples[1000] > 0.999F,
+            "maximum LFO clipping did not flatten the positive sine peak");
+    require(unmodified_samples[5000] > 0.146F &&
+                clipped_samples[5000] < 0.001F,
+            "maximum LFO clipping did not flatten the negative sine peak");
+    require(*std::min_element(clipped_samples.begin(), clipped_samples.end()) >= 0.0F &&
+                *std::max_element(clipped_samples.begin(), clipped_samples.end()) <= 1.0F,
+            "LFO clipping exceeded the tremolo gain limits");
+
+    parameters.lfo_clip_percent = 0.0F;
+    std::vector<float> default_samples(8000, 1.0F);
+    tabletfx::Tremolo default_clip(8000.0F, parameters);
+    default_clip.process(default_samples, 1);
+    require(default_samples == unmodified_samples,
+            "zero LFO clipping changed the existing tremolo waveform");
 }
 
 void test_waveforms_and_depth_endpoints() {
@@ -308,6 +349,7 @@ int main() {
     try {
         test_defaults_bounds_and_memory();
         test_waveforms_and_depth_endpoints();
+        test_lfo_clip_shape_and_default_identity();
         test_tempo_sync_conversion_and_bounds();
         test_variable_blocks_phase_continuity_and_stereo_link();
         test_depth_ramp_is_monotonic_retargetable_and_block_invariant();

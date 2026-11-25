@@ -746,6 +746,25 @@ FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/tremolo.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "src/effects/tremolo.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_tremolo.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2779,6 +2798,10 @@ CHECKPOINTS = {
     "fender-phaser-90-tap-division": (
         FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS,
         "feat: add Phaser 90 Tap Division tempo sync",
+    ),
+    "fender-tremolo-lfo-clip": (
+        FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS,
+        "feat: add project-authored Tremolo LFO Clip",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),
