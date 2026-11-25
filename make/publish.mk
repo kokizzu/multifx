@@ -21,6 +21,7 @@ PUBLISH_CHECKPOINTS += fender-flanger-tap-division
 PUBLISH_CHECKPOINTS += fender-phaser-90-tap-division
 PUBLISH_CHECKPOINTS += fender-tremolo-lfo-clip
 PUBLISH_CHECKPOINTS += fender-tremolo-duty-cycle
+PUBLISH_CHECKPOINTS += fractal-source-correction
 
 .PHONY: test-fender-tremolo-duty-cycle web-test-fender-tremolo-duty-cycle
 test-fender-tremolo-duty-cycle:

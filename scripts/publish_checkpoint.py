@@ -787,6 +787,11 @@ FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS = (
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2885,6 +2890,10 @@ CHECKPOINTS = {
     "fender-tremolo-duty-cycle": (
         FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS,
         "feat: add project-authored Tremolo Duty Cycle",
+    ),
+    "fractal-source-correction": (
+        FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS,
+        "docs: correct Fractal Chorus source notes",
     ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),

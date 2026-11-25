@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "5c41ad5cae7b5aec29d137ed45c6c9ce64b776f1",
+  "previous_checkpoint_commit": "f7035b45261283a3eb6d7c2a5b2bf1d85848272f",
   "latest_audit": {
     "name": "Fender Tone Master Pro Tremolo Duty Cycle",
     "status": "Project-authored 5–95% Square-only Duty control added to the existing Modulation Tremolo with a sample-identical 50% default; full native/browser, Windows cross-build, benchmark, and diff checks pass; manual/device checks remain.",
@@ -31,7 +31,7 @@
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Audit and implement project-authored Chorus Number Of Voices against the November 2026 Blocks Guide pp. 25–26. The guide suggests 2 voices and up to 8 but publishes no explicit lower bound/default; current Chorus has one delayed voice per channel. Keep project default at one voice to preserve output, share existing delay ring if feasible, and measure CPU. Do not call the Fractal control `Delay Range`: the guide names Delay Time as minimum delay (0.01–50 ms), while the project base_delay_ms is a sweep center; treat that as a separate future control. The guide is family-level; v12.0 lists FM9 Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
+    "next_feature": "Audit and implement project-authored Chorus Number Of Voices against the November 2026 Blocks Guide pp. 25–26. The guide recommends two voices for vintage chorus and up to eight for a lush ensemble, but does not publish numeric bounds or a default. The project Chorus has one delayed voice per channel; keep the project default at one to preserve output, share its existing delay ring if feasible, and measure CPU. The guide separately documents Delay Time (shown as Minimum Delay on the Expert page, 0.1–50 ms) and Delay Range (delay-sweep range, 1–40 ms). The project's base_delay_ms is a sweep center and depth_ms is modulation depth; neither is Fractal's Delay Range or Minimum Delay, so treat those as separate future controls. When voice count exceeds two, the guide says LFO Type changes automatically to SINE; changing it to non-SINE resets voices to two. The guide is family-level; FM9 v12.0 lists Original/Turbo, not Mark II Turbo by name; installed firmware unknown.",
     "qualification": "Fender Duty Cycle is fully automated-tested, Windows-cross-built, benchmarked, diff-checked, and published when this checkpoint completes; manufacturer bounds/defaults and Shape interaction remain unknown. Continue remaining flagship effects while preserving unrelated audit queues and manual/device checks."
   },
   "completed_checkpoints": [
@@ -998,7 +998,7 @@
         "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
         "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Do not claim Fractal controls, ranges, DSP, phase behavior, latency, or sound parity."
       },
-      "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. The guide also lists 2–8 voices and Delay Time/Delay Range controls as separate possible gaps.",
+    "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. Number Of Voices suggests two for vintage chorus and up to eight for an ensemble but states no numeric bounds/default. Delay Time/Minimum Delay is 0.1–50 ms and Delay Range is 1–40 ms. Above two voices the LFO changes to SINE; selecting a non-SINE LFO resets the count to two.",
       "project_controls": "Existing categorized Chorus remains at picker ID 16. Project-authored Rate mode is Free or Quarter-note; free Rate keeps its 0.8 Hz default and 0.05–8 Hz bounds. Tempo BPM is project-authored, default 120 BPM, bounded 20–300 BPM, and quarter-note Rate is BPM/60. Free mode restores the manual rate. No new picker slot, buffer, allocation, or fixed latency is added.",
       "verification": {
         "native": "make test-fractal-chorus-tempo passed focused tabletfx_chorus_tests, including tempo mapping, clamping, manual-rate restoration, changed output, and no process-time allocation.",
@@ -1047,7 +1047,7 @@
       "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
       "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Do not claim Fractal controls, ranges, DSP, phase behavior, latency, or sound parity."
     },
-    "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. The guide also lists 2–8 voices and Delay Time/Delay Range controls as separate possible gaps.",
+      "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. Number Of Voices suggests two for vintage chorus and up to eight for an ensemble but states no numeric bounds/default. Delay Time/Minimum Delay is 0.1–50 ms and Delay Range is 1–40 ms. Above two voices the LFO changes to SINE; selecting a non-SINE LFO resets the count to two.",
     "project_controls": "Existing categorized Chorus remains at picker ID 16. Project-authored Rate mode is Free or Quarter-note; free Rate keeps its 0.8 Hz default and 0.05–8 Hz bounds. Tempo BPM is project-authored, default 120 BPM, bounded 20–300 BPM, and quarter-note Rate is BPM/60. Free mode restores the manual rate. No new picker slot, buffer, allocation, or fixed latency is added.",
     "verification": {
       "native": "make test-fractal-chorus-tempo passed focused tabletfx_chorus_tests, including tempo mapping, clamping, manual-rate restoration, changed output, and no process-time allocation.",
@@ -1202,7 +1202,7 @@
         "https://shop.fractalaudio.com/products/fm9-mark-ii-turbo-amp-modeler-multi-fx-floor-unit"
       ],
       "status": "Verified and implemented as a project-authored quarter-note sync option on the existing Chorus. Tests, browser/WASM Play, Windows build, and isolated benchmark pass. Preserve unknown exact Mark II Turbo firmware applicability and keep LFO1 SYNC separate.",
-      "known_controls": "Blocks Guide says Tempo sets Chorus Rate rhythmically; quarter-note at 120 BPM is 2 Hz and NONE restores manual Rate. LFO1 SYNC is a separate controller source. Project retains Free 0.8 Hz default and 0.05–8 Hz bounds; project-authored tempo range 20–300 BPM and default 120 BPM. The guide's 2–8 voices and Delay Time 0.1–50 ms / Delay Range 1–40 ms are separate possible Chorus-family gaps.",
+      "known_controls": "Blocks Guide says Tempo sets Chorus Rate rhythmically; quarter-note at 120 BPM is 2 Hz and NONE restores manual Rate. LFO1 SYNC is a separate controller source. Project retains Free 0.8 Hz default and 0.05–8 Hz bounds; project-authored tempo range 20–300 BPM and default 120 BPM. Number Of Voices suggests two for vintage chorus and up to eight for ensemble but gives no numeric bounds/default; above two voices forces SINE LFO and selecting non-SINE resets the count to two. Separate Chorus controls are Delay Time/Minimum Delay 0.1–50 ms and Delay Range 1–40 ms.",
       "qualification": "November 2026 family-level guide. Official v12.0 downloads list FM9 Original/Turbo, not Mark II Turbo explicitly; exact applicability and installed firmware are unknown. Project controls/ranges/DSP/phase/sound do not claim Fractal parity. LFO1 SYNC remains unimplemented."
     },
     {
