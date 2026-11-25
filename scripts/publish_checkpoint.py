@@ -1983,6 +1983,22 @@ FENDER_STUDIO_DELAY_PAN_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+FENDER_VOLUME_PEDAL_MUTE_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "include/tabletfx/effects/volume_pedal.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/volume_pedal.cpp",
+    "tests/test_volume_pedal.cpp",
+    "web/app.js",
+)
+
 HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -2816,6 +2832,10 @@ CHECKPOINTS = {
     "fender-studio-delay-pan": (
         FENDER_STUDIO_DELAY_PAN_CHECKPOINT_PATHS,
         "feat: add Studio Delay envelope pan mode mapping",
+    ),
+    "fender-volume-pedal-mute": (
+        FENDER_VOLUME_PEDAL_MUTE_CHECKPOINT_PATHS,
+        "fix: fully mute volume pedal at heel",
     ),
     "headrush-bbd-mode": (
         HEADRUSH_BBD_MODE_CHECKPOINT_PATHS,

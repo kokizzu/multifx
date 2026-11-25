@@ -10420,6 +10420,116 @@ async function runStepFilterDelayBrowserSmokeTest(reference, captureView, captur
   }
 }
 
+async function runVolumePedalBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = [volumePosition.value, volumeMinimum.value,
+    volumeMaximum.value, volumeTaper.value];
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels) {
+      throw new Error("Volume Pedal browser smoke requires the local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "utility";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="1"]')?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "utility" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Utility" ||
+        !checkbox) {
+      throw new Error("Volume Pedal is missing from the Utility picker category.");
+    }
+    const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    checkboxes.forEach((box, index) => {
+      box.checked = false;
+      workletNode.port.postMessage({ type: "enable", index, value: false });
+    });
+    checkbox.click();
+    if (!checkbox.checked) {
+      throw new Error("Volume Pedal picker row did not enable from its click handler.");
+    }
+
+    volumeMinimum.value = "-96";
+    volumeMaximum.value = "0";
+    volumeTaper.value = "audio";
+    volumePosition.value = "0";
+    updateVolumePedal();
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Volume Pedal mute playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const muted = new Float32Array(captureBuffer);
+    let mutePeak = 0;
+    for (const sample of muted) mutePeak = Math.max(mutePeak, Math.abs(sample));
+    if (mutePeak !== 0) {
+      throw new Error(`Volume Pedal at 0% should produce exact silence; peak=${mutePeak}.`);
+    }
+
+    volumePosition.value = "100";
+    updateVolumePedal();
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Volume Pedal toe playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const toe = new Float32Array(captureBuffer);
+    let toePeak = 0;
+    let activeSamples = 0;
+    for (const sample of toe) {
+      toePeak = Math.max(toePeak, Math.abs(sample));
+      if (Math.abs(sample) > 1e-6) activeSamples += 1;
+    }
+    if (toePeak < 1e-5 || activeSamples < 32) {
+      throw new Error(`Volume Pedal at 100% did not pass guitar audio; peak=${toePeak}.`);
+    }
+    return { category: "Utility", enabledEffectIndex: 1, positionZeroPeak: mutePeak,
+      positionFullPeak: toePeak, positionFullActiveSamples: activeSamples,
+      exactZeroMute: true };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [volumePosition, volumeMinimum, volumeMaximum, volumeTaper].forEach(
+        (control, index) => { control.value = previousControls[index]; },
+      );
+      updateVolumePedal();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+  }
+}
+
 async function runVolumePanBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = volumePanControls.map((control) =>
@@ -16749,6 +16859,24 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "volume-pedal") {
+          testResult.textContent = "Checking exact Volume Pedal heel mute and toe playback on local guitar audio…";
+          const volumePedalSmoke = await runVolumePedalBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            volumePedal: volumePedalSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Volume Pedal browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "stereo-panner") {
           testResult.textContent = "Checking Stereo Panner Envelope mode with prerecorded stereo guitar audio…";
           const stereoPannerSmoke = await runStereoPannerBrowserSmokeTest(

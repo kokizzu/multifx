@@ -109,6 +109,12 @@ float VolumePedal::bounded(float value, float fallback,
 }
 
 float VolumePedal::target_for_position(float position) const noexcept {
+    // The exact heel endpoint is silence. minimum_db shapes the response
+    // above heel; it must not leave a residual signal at position 0.
+    if (position <= 0.0F) {
+        return 0.0F;
+    }
+
     if (parameters_.taper == VolumePedalTaper::LinearAmplitude) {
         const float minimum_gain = decibels_to_linear(parameters_.minimum_db);
         const float maximum_gain = decibels_to_linear(parameters_.maximum_db);

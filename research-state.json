@@ -4,35 +4,35 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "dd1ad51b7e758a8d7377c4eeeca0d7d795460cb0",
+  "previous_checkpoint_commit": "5325dda7a42d034ffeeca549e742b59f2876755c",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Studio Delay Envelope pan-mode mapping",
-    "status": "project control-role mapping verified with native, focused browser/WASM playback, Windows build, CPU, memory, and latency checks; complete Studio Delay integration and manual/device checks remain",
+    "name": "Fender Tone Master Pro Volume Pedal exact heel mute",
+    "status": "documented 0% mute behavior implemented in existing Utility processor; native, browser/WASM local-guitar Play, Windows, and benchmark checks pass; human/device checks remain",
     "date": "2026-11-25",
-    "picker_index": 90,
-    "category": "Modulation",
+    "picker_index": 1,
+    "category": "Utility",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide",
-      "revision": "v1.1.100 / Rev. A, printed p. 50; guide control snapshot, not a statement of installed firmware.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "qualification": "Guide documents Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/TRI/ENV; ENV follows input strength and widens pan at lower input. Numeric limits, defaults, and exact DSP are not stated."
+      "title": "Fender Tone Master Pro firmware history and Model Guide",
+      "revision": "Firmware note v1.3.74 dated 2024-06-03; current release listed v1.8.87 dated 2026-11-23. Model Guide v1.1.100 / Rev. A is a separate control snapshot; installed firmware is unknown.",
+      "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "model_guide_url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "qualification": "The v1.3.74 note says Volume Pedal fully mutes at 0%. The Guide lists Volume but publishes no numeric range, default, or taper law."
     },
-    "documented_controls": "Studio Delay Pan Rate, Pan Depth, and Pan Mode SINE/Triangle/Envelope. Envelope follows input strength and gives wider panning at lower input. Numeric ranges/defaults, wet-only behavior, and algorithm details remain undocumented in the reviewed guide.",
-    "project_controls": "Existing categorized Stereo Panner at Modulation index 90 adds Envelope. It uses the existing sine LFO and envelope detector, forcing full level-dependent excursion reduction in this mode; louder input narrows movement. Sine remains the default. This is a standalone project panner control-role mapping, not a Studio Delay block or wet-repeat panner. No extra processor/stage/buffer/state, fixed latency, or callback allocation; state remains 120 B.",
+    "documented_controls": "The exact-model Guide lists a Volume control without numeric bounds/defaults/taper. Fender firmware v1.3.74 release notes state that Volume Pedal fully mutes at 0% and supports mono/stereo. Latest listed firmware is v1.8.87 (2026-11-23); installed firmware is unknown.",
+    "project_controls": "Existing Utility Volume Pedal at picker ID 1 returns exact zero gain at normalized position 0 regardless of configured project minimum dB. Positive positions retain the project-authored selectable linear-amplitude or dB curve, endpoints, and 10 ms ramp. The new endpoint check runs while calculating a target off the audio callback; no per-sample work, state, allocation, stage, or fixed latency is added. No Fender taper, DSP, or sound parity is claimed.",
     "verification": {
-      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Panner tests cover the quieter-input wider-motion response, finite output, fixed memory, and zero process allocations.",
-      "browser": "make web-test-stereo-panner passed HeadlessChrome 151 at 48 kHz stereo with the local prerecorded Guitar-TECHS DI. Envelope mode selected; captured output peak 0.242084, L/R difference RMS 0.039952, 95,964 active samples.",
-      "windows": "make windows-cross-build passed the MinGW core library and offline renderer build.",
-      "benchmark": "make bench measured Sine and Envelope over 20,000 callbacks after 3,000 warm-ups, 48 kHz stereo, 128 frames, Release on AMD Ryzen 9 5950X. Envelope: p50/p95/p99/p99.9/max 0.355/0.437/0.540/0.837/5.084% of a 2,666.667 us callback. Sine: 0.373/0.474/0.587/0.807/4.954%. Both have zero deadline misses in measured calls; object memory 120 B; algorithmic latency 0 samples.",
-      "full_browser_suite": "make web-browser-test failed after the panner smoke at the tuner response-time assertion: the valid A4 readout was 440.0017 Hz and +31.77 cents against 432 Hz, but the test exceeded its 300 ms response limit. This target is not claimed to pass."
+      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Tests cover exact heel silence with normal and nonzero custom minimum, positive position, smoothing, both tapers, and no process allocation.",
+      "browser": "make web-test-volume-pedal passed HeadlessChrome 151, 48 kHz stereo, 48,000 frames, local prerecorded Guitar-TECHS DI. The Utility picker row at ID 1 produced peak 0 at 0%; at 100% it produced peak 0.191192626953125 and 95,980 active samples.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer.",
+      "benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback; 2,000 warm-up/5,000 measured) reports existing Volume Pedal p50/p95/p99/p99.9/max 0.0041/0.0041/0.0086/0.0094/0.2790% of callback budget and 56 B owned state. Zero algorithmic latency. This is existing processor-call cost; endpoint calculation is outside the audio callback, so no new per-sample work."
     },
-    "remaining": "Human listening, live-device timing, and a full wet-repeat Studio Delay implementation remain open. Do not claim Fender DSP/settings/sound parity."
+    "remaining": "Human listening, physical expression-controller behavior, and target-device timing remain manual. Fender numeric curve/taper, DSP, hardware firmware, and sound parity remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "HeadRush Prime",
-    "next_feature": "Continue checking exact-model v5.2 controls for Prime Up Tune, Drop Tune, and other documented effects. The official manual PDF was not parsed by the earlier audit; find accessible official parameter detail before implementing, and record unknowns without borrowing from other HeadRush models.",
-    "qualification": "The Tone Master Pro Studio Delay Envelope pan-mode mapping is now fully checked as a standalone project control; this is not full Studio Delay or wet-repeat panning. A focused browser/WASM guitar Play test passes. The broader web test still has a tuner response-time assertion failure after the panner smoke; manual audio/device checks remain open."
+    "next_feature": "Continue exact-model v5.2 effect-control research for Prime Up Tune, Drop Tune, and other pitch/time effects. The v5.2 guide PDF was not parsed; do not infer controls from another HeadRush model. Official FAQ also documents incoming MIDI Clock for time-based effects/looper, but treat that as a separate cross-cutting tempo-input feature rather than an effect-model control. If Prime control tables remain inaccessible, advance to the already identified FM9-family Formant Control LFO automation after verifying the current official guide revision.",
+    "qualification": "The Volume Pedal 0% mute behavior is implemented and fully automated-tested across native/browser/WASM/Windows. Inventory membership is unchanged at 116 categorized rows. Human listening, physical-controller, and target-device checks remain open."
   },
   "completed_checkpoints": [
     {
@@ -779,29 +779,6 @@
     }
   ],
   "previous_checkpoint": {
-    "name": "XRecer XR1-inspired Shuffling Looper beat quantization",
-    "status": "project implementation, automated native/browser/Windows checks, and CPU/memory measurements pass; manual listening and device checks remain",
-    "date": "2026-11-25",
-    "category": "Loop & performance",
-    "official_source": {
-      "title": "XRecer XR1 official FAQ",
-      "revision": "Checked 2026-11-25; FAQ does not specify XR1 firmware applicability for the looper quantize feature.",
-      "urls": [
-        "https://www.xrecer.com/pages/faq"
-      ],
-      "qualification": "The FAQ says the looper Quantize setting aligns recording start and end to a selected beat. It does not publish subdivisions, default, tempo-change behavior, or algorithm details."
-    },
-    "documented_controls": "XR1 FAQ documents Quantize and a selected beat for loop start/end alignment. It separately documents 40–300 BPM tap tempo and MIDI Clock sync, but does not state the loop-specific tempo range, beat subdivision options, defaults, or tempo-change behavior.",
-    "project_controls": "The project Shuffling Looper retains its 4-second default and memory-bounded selectable capacity. New project-authored Off/Beat quantize defaults Off; Beat aligns start and stop to a quarter-note grid at 40–300 BPM (120 default), with tempo latched when recording is armed. Live input monitoring stays immediate. No XR1 settings, DSP, UI, or sound parity is claimed.",
-    "verification": {
-      "native": "make test passed documentation validation, 11/11 fixture-safety checks, and 117/117 CTest cases, including quantized start/stop boundaries, shared stereo boundary, sub-beat capacity handling, transition memory, allocation-failure preservation, and no callback allocations.",
-      "browser": "make web-build and make web-browser-test passed with the local prerecorded Guitar-TECHS DI fixture; Off/Beat mode, armed capture states, playback, and browser/native output parity are covered.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline-renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz, 128-frame/2.667 ms callbacks; 1,000 warm-ups and 5,000 samples per profile. Fixed scheduler state 1,488 B; max-profile effect memory 11,521,488 B; sample storage 11,520,000 B; transition peaks 12,288,000 B mono / 13,056,000 B stereo. Mono Off p50/p95/p99/p99.9/max 0.0803/0.1298/0.1759/0.3945/1.5919%; Mono Beat 0.0836/0.1346/0.1455/0.4234/1.5240%; Stereo Off 0.1376/0.1391/0.2344/0.6402/2.0322%; Stereo Beat 0.1406/0.2276/0.2591/1.9227/2.4706%. All profiles 0/5,000 deadline misses. Isolated desktop measurements do not predict device performance."
-    },
-    "remaining": "Manual listening, live device timing, and physical footswitch mapping remain open. XR1 quantize subdivisions/defaults/tempo behavior and vendor DSP/latency remain unknown."
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Studio Delay Envelope pan-mode mapping",
     "status": "project control-role mapping verified with native, focused browser/WASM playback, Windows build, CPU, memory, and latency checks; complete Studio Delay integration and manual/device checks remain",
     "date": "2026-11-25",
@@ -823,6 +800,29 @@
       "full_browser_suite": "make web-browser-test failed after the panner smoke at the tuner response-time assertion: the valid A4 readout was 440.0017 Hz and +31.77 cents against 432 Hz, but the test exceeded its 300 ms response limit. This target is not claimed to pass."
     },
     "remaining": "Human listening, live-device timing, and a full wet-repeat Studio Delay implementation remain open. Do not claim Fender DSP/settings/sound parity."
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Volume Pedal exact heel mute",
+    "status": "documented 0% mute behavior implemented in existing Utility processor; native, browser/WASM local-guitar Play, Windows, and benchmark checks pass; human/device checks remain",
+    "date": "2026-11-25",
+    "picker_index": 1,
+    "category": "Utility",
+    "official_source": {
+      "title": "Fender Tone Master Pro firmware history and Model Guide",
+      "revision": "Firmware note v1.3.74 dated 2024-06-03; current release listed v1.8.87 dated 2026-11-23. Model Guide v1.1.100 / Rev. A is a separate control snapshot; installed firmware is unknown.",
+      "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "model_guide_url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "qualification": "The v1.3.74 note says Volume Pedal fully mutes at 0%. The Guide lists Volume but publishes no numeric range, default, or taper law."
+    },
+    "documented_controls": "The exact-model Guide lists a Volume control without numeric bounds/defaults/taper. Fender firmware v1.3.74 release notes state that Volume Pedal fully mutes at 0% and supports mono/stereo. Latest listed firmware is v1.8.87 (2026-11-23); installed firmware is unknown.",
+    "project_controls": "Existing Utility Volume Pedal at picker ID 1 returns exact zero gain at normalized position 0 regardless of configured project minimum dB. Positive positions retain the project-authored selectable linear-amplitude or dB curve, endpoints, and 10 ms ramp. The new endpoint check runs while calculating a target off the audio callback; no per-sample work, state, allocation, stage, or fixed latency is added. No Fender taper, DSP, or sound parity is claimed.",
+    "verification": {
+      "native": "make test passed documentation validation, 11/11 audio-fixture safety checks, and 117/117 CTest cases. Tests cover exact heel silence with normal and nonzero custom minimum, positive position, smoothing, both tapers, and no process allocation.",
+      "browser": "make web-test-volume-pedal passed HeadlessChrome 151, 48 kHz stereo, 48,000 frames, local prerecorded Guitar-TECHS DI. The Utility picker row at ID 1 produced peak 0 at 0%; at 100% it produced peak 0.191192626953125 and 95,980 active samples.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer.",
+      "benchmark": "make bench on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback; 2,000 warm-up/5,000 measured) reports existing Volume Pedal p50/p95/p99/p99.9/max 0.0041/0.0041/0.0086/0.0094/0.2790% of callback budget and 56 B owned state. Zero algorithmic latency. This is existing processor-call cost; endpoint calculation is outside the audio callback, so no new per-sample work."
+    },
+    "remaining": "Human listening, physical expression-controller behavior, and target-device timing remain manual. Fender numeric curve/taper, DSP, hardware firmware, and sound parity remain unverified."
   },
   "next_research": [
     {

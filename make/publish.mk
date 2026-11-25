@@ -13,6 +13,7 @@ PUBLISH_CHECKPOINTS := \
 PUBLISH_CHECKPOINTS += fender-pitch-sequence-audit
 PUBLISH_CHECKPOINTS += fender-virtual-capo-mix
 PUBLISH_CHECKPOINTS += fender-studio-delay-pan
+PUBLISH_CHECKPOINTS += fender-volume-pedal-mute
 
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
@@ -64,6 +65,7 @@ web-test-fender-pedal-detune: web-build
 	$(PYTHON) scripts/web.py test-fender-pedal-detune
 .PHONY: test-pitch-sequence test-poly-sustain
 .PHONY: test-volume-pan test-stereo-filter web-test-volume-pan web-test-stereo-filter
+.PHONY: test-volume-pedal web-test-volume-pedal
 
 .PHONY: inspect-volume-pan-path
 inspect-volume-pan-path:
@@ -233,3 +235,9 @@ bench-shuffling-looper:
 .PHONY: web-test-stereo-panner
 web-test-stereo-panner: test web-build
 	$(PYTHON) scripts/web.py test-stereo-panner
+
+test-volume-pedal:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_volume_pedal_tests
+
+web-test-volume-pedal: test web-build
+	$(PYTHON) scripts/web.py test-volume-pedal

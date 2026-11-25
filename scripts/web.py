@@ -738,6 +738,7 @@ def run_chrome_page(chrome: str, profile: Path, url: str,
 
 
 def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = False,
+                 volume_pedal_only: bool = False,
                  stereo_panner_only: bool = False,
                  mutant_filter_only: bool = False,
                  step_tremolo_only: bool = False,
@@ -1250,7 +1251,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        if step_tremolo_only:
+        if volume_pedal_only:
+            url = base_url + "/web/index.html?selftest=volume-pedal"
+        elif step_tremolo_only:
             url = base_url + "/web/index.html?selftest=step-tremolo"
         elif fractal_bias_trem_only:
             url = base_url + "/web/index.html?selftest=fractal-bias-trem"
@@ -1539,6 +1542,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif fractal_diatonic_custom_scale_only:
             print("Focused Fractal-family custom-scale browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
+        elif volume_pedal_only:
+            print("Focused Volume Pedal browser/WASM local-guitar mute and toe playback smoke passed.")
+            print(json.dumps(report, indent=2))
         elif fractal_resonator_input_gain_only:
             print("Focused Fractal-family Resonator Input Gain browser/WASM prerecorded-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
@@ -1594,7 +1600,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
-        "test-volume-pan", "test-stereo-filter", "test-stereo-panner",
+        "test-volume-pan", "test-volume-pedal", "test-stereo-filter", "test-stereo-panner",
         "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
         "test-fender-vibratone",
@@ -1619,6 +1625,8 @@ def main() -> None:
         serve_web()
     elif action == "test":
         browser_test()
+    elif action == "test-volume-pedal":
+        browser_test(volume_pedal_only=True)
     elif action == "test-volume-pan":
         browser_test(volume_pan_only=True)
     elif action == "test-stereo-filter":

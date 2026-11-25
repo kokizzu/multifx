@@ -44,8 +44,25 @@ void test_defaults_endpoints_and_memory() {
 
     pedal.set_position(0.0F);
     pedal.reset();
-    require(std::abs(pedal.current_gain_linear() - linear_gain(-96.0F)) < 1.0e-9F,
-            "heel position did not reach the configured minimum endpoint");
+    require(pedal.current_gain_linear() == 0.0F,
+            "heel position should fully mute rather than stop at -96 dB");
+    std::array<float, 4> heel_audio{1.0F, -0.5F, 0.25F, -0.125F};
+    pedal.process(heel_audio, 2);
+    require(heel_audio == std::array<float, 4>{0.0F, 0.0F, 0.0F, 0.0F},
+            "fully muted heel position should output exact silence");
+
+    tabletfx::VolumePedalParameters custom_endpoint;
+    custom_endpoint.position = 0.0F;
+    custom_endpoint.minimum_db = -12.0F;
+    custom_endpoint.maximum_db = 0.0F;
+    tabletfx::VolumePedal custom_minimum(48000.0F, custom_endpoint);
+    require(custom_minimum.current_gain_linear() == 0.0F,
+            "0% position must mute even with a nonzero configured minimum");
+
+    custom_minimum.set_position(0.001F);
+    custom_minimum.reset();
+    require(custom_minimum.current_gain_linear() > 0.0F,
+            "positive expression position should remain audible");
     pedal.set_position(1.0F);
     pedal.reset();
     require(pedal.current_gain_linear() == 1.0F,
@@ -144,7 +161,7 @@ void test_smoothing_retarget_and_variable_blocks() {
                     "decreasing position produced a non-monotonic ramp");
         }
     }
-    require(std::abs(whole.back() - linear_gain(-96.0F)) < 1.0e-9F,
+    require(whole.back() == 0.0F,
             "10 ms volume control ramp did not reach its target");
 
     whole_pedal.set_position(0.0F);

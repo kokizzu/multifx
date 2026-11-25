@@ -18,7 +18,7 @@ enum class VolumePedalTaper : std::uint8_t {
 
 struct VolumePedalParameters {
     float position = 1.0F;      // 0 = heel, 1 = toe
-    float minimum_db = -96.0F;  // heel endpoint
+    float minimum_db = -96.0F;  // curve floor above the exact heel mute
     float maximum_db = 0.0F;    // toe endpoint; positive gain is bounded to +12 dB
     VolumePedalTaper taper = VolumePedalTaper::AudioTaperDb;
     float smoothing_ms = 10.0F;
