@@ -96,15 +96,38 @@ def validate_overlay(remote: str, paths: list[str]) -> set[str]:
         overlay.add("scripts/sync_published_main.py")
 
     other_paths = [path for path in paths if path != "make/publish.mk"]
-    if other_paths:
-        # For all published checkpoint files, the working tree must exactly
-        # match the remote commit before advancing the local branch pointer.
-        diff = git("diff", "--quiet", remote, "--", *other_paths, check=False)
+    status = git("status", "--porcelain=v1", "--untracked-files=all").stdout
+    untracked = {
+        line[3:]
+        for line in status.splitlines()
+        if line.startswith("?? ")
+    }
+    matching_untracked: set[str] = set()
+    for path in other_paths:
+        if path not in untracked:
+            continue
+        local_path = ROOT / path
+        if not local_path.is_file():
+            raise SystemExit(f"untracked published path is missing locally: {path}")
+        local_content = local_path.read_text(encoding="utf-8")
+        remote_content = git("show", f"{remote}:{path}").stdout
+        if local_content != remote_content:
+            raise SystemExit(
+                "untracked published path differs from remote main: " + path
+            )
+        matching_untracked.add(path)
+
+    diff_paths = [path for path in other_paths if path not in matching_untracked]
+    if diff_paths:
+        # Tracked working-tree paths must match the published commit. An
+        # untracked path is accepted only after an exact byte-for-byte text
+        # comparison above; apply mode will stage that reviewed remote path.
+        diff = git("diff", "--quiet", remote, "--", *diff_paths, check=False)
         if diff.returncode:
             raise SystemExit(
                 "working-tree content differs from published main in: "
                 + ", ".join(
-                    git("diff", "--name-only", remote, "--", *other_paths).stdout.splitlines()
+                    git("diff", "--name-only", remote, "--", *diff_paths).stdout.splitlines()
                 )
             )
     return overlay
