@@ -228,6 +228,12 @@ def main() -> None:
             else "tabletfx_fractal_surround_delay_bench"
         )
         run([str(fractal_surround_delay_benchmark)])
+        fender_memory_delay_benchmark = BUILD_DIR / (
+            "tabletfx_fender_memory_delay_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_fender_memory_delay_bench"
+        )
+        run([str(fender_memory_delay_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":

@@ -147,7 +147,11 @@ public:
           mutant_filter_(static_cast<float>(sample_rate),
                          static_cast<std::uint16_t>(channels)),
           tone_master_pro_3d_chorus_(static_cast<float>(sample_rate),
-                                     static_cast<std::uint16_t>(channels)) {
+                                     static_cast<std::uint16_t>(channels)),
+          fractal_surround_delay_(static_cast<float>(sample_rate)),
+          fender_memory_delay_(std::make_unique<tabletfx::ModulatedDelay>(
+              static_cast<float>(sample_rate),
+              static_cast<std::uint16_t>(channels), 2000.0F)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -567,6 +571,18 @@ public:
             if (!enabled) tone_master_pro_3d_chorus_.reset();
             return true;
         }
+        if (index == 117U) {
+            fractal_surround_delay_enabled_ = enabled;
+            if (!enabled) fractal_surround_delay_.reset();
+            return true;
+        }
+        if (index == 118U) {
+            if (!enabled && !fender_memory_delay_->parameters().spillover) {
+                fender_memory_delay_->reset();
+            }
+            fender_memory_delay_enabled_ = enabled;
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -832,6 +848,22 @@ public:
             if (tone_master_pro_3d_chorus_enabled_) {
                 tone_master_pro_3d_chorus_.process(
                     std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
+        if (index == 117U) {
+            if (fractal_surround_delay_enabled_) {
+                fractal_surround_delay_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
+        if (index == 118U) {
+            const auto audio = std::span<float>(output_.data(), samples);
+            if (fender_memory_delay_enabled_) {
+                fender_memory_delay_->process(audio, channels_);
+            } else {
+                fender_memory_delay_->process_bypassed(audio, channels_);
             }
             return;
         }
@@ -3577,6 +3609,28 @@ public:
              spread_degrees, trigger_threshold_db});
     }
 
+    void configure_fender_memory_delay(
+        float time_ms, float feedback, float mix, float rate_hz,
+        float depth_ms, std::uint32_t waveform, float spread_degrees,
+        float trigger_threshold_db, float input_gain_db, float grit_percent,
+        std::uint32_t mode, std::uint32_t spillover) noexcept {
+        auto parameters = fender_memory_delay_->parameters();
+        parameters.time_ms = time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.rate_hz = rate_hz;
+        parameters.depth_ms = depth_ms;
+        parameters.waveform =
+            static_cast<tabletfx::ModulatedDelayWaveform>(waveform);
+        parameters.stereo_spread_degrees = spread_degrees;
+        parameters.trigger_threshold_db = trigger_threshold_db;
+        parameters.input_gain_db = input_gain_db;
+        parameters.grit_percent = grit_percent;
+        parameters.mode = static_cast<tabletfx::ModulatedDelayMode>(mode);
+        parameters.spillover = spillover != 0U;
+        fender_memory_delay_->configure(parameters);
+    }
+
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -3803,6 +3857,7 @@ public:
         bytes += work_.capacity() * sizeof(float) + output_.capacity() * sizeof(float);
         bytes += output_gain_.memory_bytes();
         bytes += output_limiter_.memory_bytes();
+        bytes += fender_memory_delay_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -3955,6 +4010,18 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 117U) {
+            const std::size_t bytes = fractal_surround_delay_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
+        if (index == 118U) {
+            const std::size_t bytes = fender_memory_delay_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4000,6 +4067,7 @@ private:
     tabletfx::MutantFilter mutant_filter_;
     tabletfx::ToneMasterPro3DChorus tone_master_pro_3d_chorus_;
     tabletfx::FractalSurroundDelay fractal_surround_delay_;
+    std::unique_ptr<tabletfx::ModulatedDelay> fender_memory_delay_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4028,6 +4096,8 @@ private:
     bool pedal_detune_enabled_ = false;
     bool mutant_filter_enabled_ = false;
     bool tone_master_pro_3d_chorus_enabled_ = false;
+    bool fractal_surround_delay_enabled_ = false;
+    bool fender_memory_delay_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;

@@ -786,6 +786,26 @@ FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_MEMORY_DELAY_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/fender_memory_delay_bench.cpp",
+    "include/tabletfx/effects/modulated_delay.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/modulated_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_modulated_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "research-state.json",
@@ -3022,6 +3042,10 @@ CHECKPOINTS = {
         FENDER_TREMOLO_DUTY_CYCLE_CHECKPOINT_PATHS,
         "feat: add project-authored Tremolo Duty Cycle",
     ),
+    "fender-memory-delay": (
+        FENDER_MEMORY_DELAY_CHECKPOINT_PATHS,
+        "feat: complete flagship delay picker and add Memory Delay",
+    ),
     "fractal-source-correction": (
         FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS,
         "docs: correct Fractal Chorus source notes",
@@ -3419,6 +3443,58 @@ PARTIAL_CHECKPOINT_HUNKS = {
         "RESEARCH.md": ("## Fractal FM9-family Surround Delay",),
         "research-state.json": ("Fractal FM9-family Surround Delay",),
     },
+    "fender-memory-delay": {
+        "CMakeLists.txt": ("fender_memory_delay",),
+        "include/tabletfx/effects/modulated_delay.hpp": (
+            "input_gain_db",
+            "grit_percent",
+            "ModulatedDelayMode::vibrato",
+            "spillover",
+        ),
+        "make/publish.mk": (
+            "publish-fender-memory-delay-plan:",
+            "stage-fender-memory-delay:",
+            "publish-fender-memory-delay:",
+        ),
+        "scripts/publish_checkpoint.py": (
+            "FENDER_MEMORY_DELAY_CHECKPOINT_PATHS",
+            '"fender-memory-delay": (',
+            '"fender-memory-delay": {',
+            '"memoryDelay"',
+            "remaining_diff",
+            "checkpoint-marked hunks",
+            "allow_no_match",
+            "complete flagship delay picker",
+        ),
+        "scripts/run_cmake.py": ("fender_memory_delay",),
+        "scripts/web.py": ("_tf_chain_set_fender_memory_delay",),
+        "src/effects/modulated_delay.cpp": (
+            "current_input_gain_",
+            "current_grit_amplitude_",
+            "process_bypassed",
+        ),
+        "src/web/wasm_chain.cpp": (
+            "fender_memory_delay_",
+            "_tf_chain_set_fender_memory_delay",
+            "effect_id == 118",
+        ),
+        "tests/test_modulated_delay.cpp": (
+            "test_memory_delay_gain_only_changes_the_recorded_wet_input",
+            "test_memory_delay_spillover_keeps_the_dry_path_and_stops_recording",
+        ),
+        "web/app.js": (
+            "fenderMemoryDelay",
+            "fender-memory-delay",
+            "memoryDelay",
+            "Memory Delay",
+        ),
+        "web/audio-worklet.js": ("fender-memory-delay",),
+        "web/index.html": (
+            "fender-memory-delay",
+            "Memory Delay controls",
+            "Memory Delay · project-authored Fender control roles",
+        ),
+    },
 }
 
 
@@ -3464,12 +3540,16 @@ def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
     return "".join(header + [line for hunk in selected for line in hunk]), len(hunks), len(selected)
 
 
-def stage_partial_path(path: str, markers: tuple[str, ...]) -> None:
+def stage_partial_path(
+    path: str, markers: tuple[str, ...], *, allow_no_match: bool = False
+) -> None:
     # Fractal Surround Delay checkpoint recovery reuses the exact marker selection.
     diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
     try:
         patch, _, _ = select_patch_hunks(diff, markers)
     except SystemExit as error:
+        if allow_no_match and "Expected at least one checkpoint-specific patch hunk" in str(error):
+            return
         raise SystemExit(f"Cannot stage {path}: {error}") from error
     temporary_path: Path | None = None
     try:
@@ -3497,13 +3577,16 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
         verify_partial_staging(checkpoint, pre_staged)
         partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
         for path in paths:
-            if path in pre_staged:
+            remaining_diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
+            if not remaining_diff:
                 continue
             markers = partial.get(path)
             if markers is None:
                 git("add", "--", path, capture=False)
             else:
-                stage_partial_path(path, markers)
+                # Resume a partially staged path by selecting only remaining
+                # checkpoint-marked hunks rather than broad-staging its edits.
+                stage_partial_path(path, markers, allow_no_match=True)
         return
 
     partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})

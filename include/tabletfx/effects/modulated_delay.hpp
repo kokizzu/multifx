@@ -25,6 +25,14 @@ struct ModulatedDelayParameters {
     ModulatedDelayWaveform waveform = ModulatedDelayWaveform::sine;
     float stereo_spread_degrees = 180.0F;
     float trigger_threshold_db = -24.0F;
+    // Project-authored Memory Delay control roles. Gain is applied to the
+    // recorded echo input; Grit adds deterministic noise to the wet output.
+    // Chorus keeps the normal dry/wet blend. Vibrato makes Mix a wet-level
+    // control and removes the direct path.
+    float input_gain_db = 0.0F;
+    float grit_percent = 0.0F;
+    ModulatedDelayMode mode = ModulatedDelayMode::chorus;
+    bool spillover = false;
 };
 
 /*

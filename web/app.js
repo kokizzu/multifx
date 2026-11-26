@@ -119,6 +119,7 @@ const EFFECT_NAMES = [
   "Fractal Diatonic Harmony · project-authored monophonic multi-voice pitch",
   "3D Chorus · project-authored four-mode chorus",
   "Surround Delay · project-authored Fractal FM9-family control concept",
+  "Memory Delay · project-authored Fender control roles",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -337,6 +338,7 @@ const DEFAULT_PARAMETERS = {
   reverseDelay: [350, 0.25, 0.35, 10, 0, 4, 120, 0, 0, 0, 0],
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
+  memoryDelay: [350, 0.25, 0.25, 0.8, 2, 0, 0, -24, 0, 0, 0, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2185,6 +2187,34 @@ const modulatedDelaySpread = document.querySelector("#modulated-delay-spread-deg
 const modulatedDelaySpreadValue = document.querySelector("#modulated-delay-spread-degrees-value");
 const modulatedDelayTriggerThreshold = document.querySelector("#modulated-delay-trigger-threshold-db");
 const modulatedDelayTriggerThresholdValue = document.querySelector("#modulated-delay-trigger-threshold-db-value");
+const fenderMemoryDelayTimeMode = document.querySelector("#fender-memory-delay-time-mode");
+const fenderMemoryDelayTime = document.querySelector("#fender-memory-delay-time-ms");
+const fenderMemoryDelayTimeValue = document.querySelector("#fender-memory-delay-time-ms-value");
+const fenderMemoryDelayTempo = document.querySelector("#fender-memory-delay-tempo-bpm");
+const fenderMemoryDelayTempoValue = document.querySelector("#fender-memory-delay-tempo-bpm-value");
+const fenderMemoryDelayDivision = document.querySelector("#fender-memory-delay-tap-division");
+const fenderMemoryDelayFeedback = document.querySelector("#fender-memory-delay-feedback");
+const fenderMemoryDelayFeedbackValue = document.querySelector("#fender-memory-delay-feedback-value");
+const fenderMemoryDelayMix = document.querySelector("#fender-memory-delay-mix");
+const fenderMemoryDelayMixValue = document.querySelector("#fender-memory-delay-mix-value");
+const fenderMemoryDelayDepth = document.querySelector("#fender-memory-delay-depth-ms");
+const fenderMemoryDelayDepthValue = document.querySelector("#fender-memory-delay-depth-ms-value");
+const fenderMemoryDelayGain = document.querySelector("#fender-memory-delay-gain-db");
+const fenderMemoryDelayGainValue = document.querySelector("#fender-memory-delay-gain-db-value");
+const fenderMemoryDelayGrit = document.querySelector("#fender-memory-delay-grit");
+const fenderMemoryDelayGritValue = document.querySelector("#fender-memory-delay-grit-value");
+const fenderMemoryDelayMode = document.querySelector("#fender-memory-delay-mode");
+const fenderMemoryDelayRate = document.querySelector("#fender-memory-delay-mod-rate-hz");
+const fenderMemoryDelayRateValue = document.querySelector("#fender-memory-delay-mod-rate-hz-value");
+const fenderMemoryDelayWaveform = document.querySelector("#fender-memory-delay-waveform");
+const fenderMemoryDelaySpillover = document.querySelector("#fender-memory-delay-spillover");
+const fenderMemoryDelayControls = [
+  fenderMemoryDelayTimeMode, fenderMemoryDelayTime, fenderMemoryDelayTempo,
+  fenderMemoryDelayDivision, fenderMemoryDelayFeedback, fenderMemoryDelayMix,
+  fenderMemoryDelayDepth, fenderMemoryDelayGain, fenderMemoryDelayGrit,
+  fenderMemoryDelayMode, fenderMemoryDelayRate, fenderMemoryDelayWaveform,
+  fenderMemoryDelaySpillover,
+];
 const filteredDelayTime = document.querySelector("#filtered-delay-time-ms");
 const filteredDelayTimeValue = document.querySelector("#filtered-delay-time-ms-value");
 const filteredDelayTimeMode = document.querySelector("#filtered-delay-time-mode");
@@ -7721,6 +7751,46 @@ function updateModulatedDelay() {
   if (workletNode) workletNode.port.postMessage({ type: "modulated-delay", value: values });
 }
 
+function updateFenderMemoryDelay() {
+  const timeMode = Number(fenderMemoryDelayTimeMode.value);
+  const tempoBpm = Number(fenderMemoryDelayTempo.value);
+  const division = Number(fenderMemoryDelayDivision.value);
+  const tapRatios = [1, 1.5, 2 / 3, 0.5, 0.75, 1 / 3, 0.25];
+  const requestedTimeMs = timeMode === 1
+    ? 60000 / tempoBpm * (tapRatios[division] || 1)
+    : Number(fenderMemoryDelayTime.value);
+  const timeMs = Math.max(1, Math.min(2000, requestedTimeMs));
+  fenderMemoryDelayTime.disabled = timeMode === 1;
+  fenderMemoryDelayTempo.disabled = timeMode !== 1;
+  fenderMemoryDelayDivision.disabled = timeMode !== 1;
+  fenderMemoryDelayTimeValue.value = `${timeMs.toFixed(0)} ms${timeMs < requestedTimeMs ? " · capped" : ""}`;
+  fenderMemoryDelayTempoValue.value = `${tempoBpm.toFixed(0)} BPM`;
+  const values = [
+    timeMs,
+    Number(fenderMemoryDelayFeedback.value) / 100,
+    Number(fenderMemoryDelayMix.value) / 100,
+    Number(fenderMemoryDelayRate.value),
+    Number(fenderMemoryDelayDepth.value),
+    Number(fenderMemoryDelayWaveform.value),
+    0,
+    -24,
+    Number(fenderMemoryDelayGain.value),
+    Number(fenderMemoryDelayGrit.value),
+    Number(fenderMemoryDelayMode.value),
+    fenderMemoryDelaySpillover.checked ? 1 : 0,
+  ];
+  fenderMemoryDelayFeedbackValue.value = `${Math.round(values[1] * 100)}%`;
+  fenderMemoryDelayMixValue.value = `${Math.round(values[2] * 100)}%`;
+  fenderMemoryDelayDepthValue.value = `${values[4].toFixed(1)} ms`;
+  fenderMemoryDelayGainValue.value = `${values[8].toFixed(1)} dB`;
+  fenderMemoryDelayGritValue.value = `${values[9].toFixed(0)}%`;
+  fenderMemoryDelayRateValue.value = `${values[3].toFixed(2)} Hz`;
+  DEFAULT_PARAMETERS.memoryDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "fender-memory-delay", value: values });
+  }
+}
+
 function updateFilteredDelay() {
   const timeMode = Number(filteredDelayTimeMode.value);
   const tempoBpm = Number(filteredDelayTempoBpm.value);
@@ -7931,6 +8001,16 @@ for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayM
   input.addEventListener("change", updateModulatedDelay);
 }
 modulatedDelayWaveform.addEventListener("change", updateModulatedDelay);
+for (const input of [fenderMemoryDelayTime, fenderMemoryDelayTempo,
+  fenderMemoryDelayFeedback, fenderMemoryDelayMix, fenderMemoryDelayDepth,
+  fenderMemoryDelayGain, fenderMemoryDelayGrit, fenderMemoryDelayRate]) {
+  input.addEventListener("input", updateFenderMemoryDelay);
+  input.addEventListener("change", updateFenderMemoryDelay);
+}
+for (const input of [fenderMemoryDelayTimeMode, fenderMemoryDelayDivision,
+  fenderMemoryDelayMode, fenderMemoryDelayWaveform, fenderMemoryDelaySpillover]) {
+  input.addEventListener("change", updateFenderMemoryDelay);
+}
 for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   filteredDelayLowCut, filteredDelayHighCut]) {
   input.addEventListener("input", updateFilteredDelay);
@@ -16747,6 +16827,140 @@ async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, c
   }
 }
 
+async function runFenderMemoryDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const effectIndex = 118;
+  const previousEffectState = enabledEffects();
+  const previousValues = fenderMemoryDelayControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.memoryDelay];
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Fender Memory Delay smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const expectedRingBytes =
+      (Math.ceil(audioContext.sampleRate * 2) + 3) * 2 * Float32Array.BYTES_PER_ELEMENT;
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Memory Delay") ||
+        !checkbox || checkbox.checked || fenderMemoryDelayControls.length !== 13 ||
+        DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0" ||
+        effectMemory.length !== EFFECT_NAMES.length ||
+        effectMemory[effectIndex] < expectedRingBytes ||
+        effectMemory[effectIndex] >= expectedRingBytes + 8192) {
+      throw new Error(`Fender Memory Delay picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.memoryDelay.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}/${expectedRingBytes}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [fenderMemoryDelayTime, "1", "2000"],
+      [fenderMemoryDelayTempo, "20", "300"],
+      [fenderMemoryDelayFeedback, "0", "95"],
+      [fenderMemoryDelayMix, "0", "100"],
+      [fenderMemoryDelayDepth, "0", "50"],
+      [fenderMemoryDelayGain, "-10", "20"],
+      [fenderMemoryDelayGrit, "0", "100"],
+      [fenderMemoryDelayRate, "0.05", "10"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Fender Memory Delay project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "delay";
+    updateEffectBrowser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    checkbox.checked = true;
+
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.3) * reference.channels),
+    );
+    const capture = async (mode) => {
+      [fenderMemoryDelayTimeMode.value, fenderMemoryDelayTime.value,
+        fenderMemoryDelayTempo.value, fenderMemoryDelayDivision.value,
+        fenderMemoryDelayFeedback.value, fenderMemoryDelayMix.value,
+        fenderMemoryDelayDepth.value, fenderMemoryDelayGain.value,
+        fenderMemoryDelayGrit.value, fenderMemoryDelayMode.value,
+        fenderMemoryDelayRate.value, fenderMemoryDelayWaveform.value] =
+        ["0", "40", "120", "0", "40", "60", "0", "0", "0",
+          String(mode), "0.8", "0"];
+      fenderMemoryDelaySpillover.checked = false;
+      updateFenderMemoryDelay();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+    };
+    const chorus = await capture(0);
+    const vibrato = await capture(1);
+    let peak = 0;
+    let inputDifferenceSquares = 0;
+    let modeDifferenceSquares = 0;
+    for (let index = 0; index < chorus.length; index += 1) {
+      const channel = index % reference.channels;
+      const frame = Math.floor(index / reference.channels);
+      const input = decodedAudio.getChannelData(channel)[frame];
+      if (!Number.isFinite(chorus[index]) || !Number.isFinite(vibrato[index])) {
+        throw new Error("Fender Memory Delay produced non-finite browser output.");
+      }
+      peak = Math.max(peak, Math.abs(chorus[index]), Math.abs(vibrato[index]));
+      const inputDifference = chorus[index] - input;
+      inputDifferenceSquares += inputDifference * inputDifference;
+      const modeDifference = chorus[index] - vibrato[index];
+      modeDifferenceSquares += modeDifference * modeDifference;
+    }
+    const inputDifferenceRms = Math.sqrt(inputDifferenceSquares / Math.max(1, chorus.length));
+    const modeDifferenceRms = Math.sqrt(modeDifferenceSquares / Math.max(1, chorus.length));
+    if (peak < 1.0e-5 || inputDifferenceRms < 1.0e-4 || modeDifferenceRms < 1.0e-5) {
+      throw new Error(`Fender Memory Delay Play captures failed: peak=${peak}, inputDiff=${inputDifferenceRms}, modeDiff=${modeDifferenceRms}, memory=${effectMemory[effectIndex]}.`);
+    }
+    return {
+      category: "Delay",
+      effectIndex,
+      playCaptures: 2,
+      inputDifferenceRms,
+      modeDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      ringBytes: expectedRingBytes,
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    fenderMemoryDelayControls.forEach((control, index) => {
+      if (control.type === "checkbox") control.checked = previousValues[index];
+      else control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.memoryDelay = previousParameters;
+    updateFenderMemoryDelay();
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -16754,6 +16968,7 @@ async function runBrowserSelfTest() {
   let stadiumTapResetSmoke = null;
   let toneMasterPro3DChorusSmoke = null;
   let fractalSurroundDelaySmoke = null;
+  let fenderMemoryDelaySmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -16873,9 +17088,14 @@ async function runBrowserSelfTest() {
                 effectRows[117]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
                 fractalSurroundDelayControls.length !== 10 ||
                 DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0" ||
+                 !EFFECT_NAMES[118]?.startsWith("Memory Delay · project-authored Fender control roles") ||
+                 effectRows[118]?.dataset.category !== "delay" ||
+                 effectRows[118]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+                 DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
-                initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
+                 initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
+                 initialEffectState[118] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -16912,7 +17132,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                 throw new Error(`The effect picker must list 118 ordered, categorized effects (IDs 0–117), including Fractal Diatonic Harmony, 3D Chorus, and Surround Delay; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[117]}, row117=${effectRows[117]?.dataset.category}/${effectRows[117]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[117]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                  throw new Error(`The effect picker must list 119 ordered, categorized effects (IDs 0–118), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, and Memory Delay; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[118]}, row118=${effectRows[118]?.dataset.category}/${effectRows[118]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[118]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -18281,9 +18501,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-     if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91,92,117" || effectCount.value !== `19 of ${effectRows.length}` ||
+      if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91,92,117,118" || effectCount.value !== `20 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-      throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
+       throw new Error("The Delay category must include the current delay effects, including Memory Delay, and preserve the current chain state.");
     }
     effectCategoryFilter.value = "reverb";
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
@@ -18627,6 +18847,8 @@ async function runBrowserSelfTest() {
     parityEnabled[116] = false;
     // Surround Delay has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[117] = false;
+    // Memory Delay has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[118] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -20032,6 +20254,10 @@ async function runBrowserSelfTest() {
     fractalSurroundDelaySmoke = await runFractalSurroundDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Fender Memory Delay with local guitar playback…";
+    fenderMemoryDelaySmoke = await runFenderMemoryDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -20106,6 +20332,7 @@ async function runBrowserSelfTest() {
       stadiumTapReset: stadiumTapResetSmoke,
       toneMasterPro3DChorus: toneMasterPro3DChorusSmoke,
       fractalSurroundDelay: fractalSurroundDelaySmoke,
+      fenderMemoryDelay: fenderMemoryDelaySmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

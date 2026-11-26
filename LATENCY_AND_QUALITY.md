@@ -756,3 +756,17 @@ The isolated benchmark uses an AMD Ryzen 9 5950X Release build, 48 kHz, stereo, 
 | Default mono | 0.0244% | 0.0315% | 0.0323% | 0.0435% | 0.2385% | 144,168 B | 0/20,000 |
 
 `make test`, `make web-test`, `make windows-cross-build`, and `make bench` pass. These are isolated processor-call measurements, not total-chain or device latency; the new effect's native/WASM parity remains untested because the offline CLI does not expose it. Manual listening and target-device timing remain open.
+
+## Fender Tone Master Pro Memory Delay (2026-11-26)
+
+At 48 kHz stereo, the project allocates 768,256 B of native effect state, including 768,024 B for the two-second delay ring; the browser/WASM effect reports 768,216 B. `process()` performs no heap allocations. The direct dry path has zero fixed algorithmic latency; repeats use the selected delay time. This is project memory and timing, not Fender hardware specifications.
+
+The isolated benchmark uses AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. CPU percentages are processor-call time relative to one callback deadline:
+
+| Profile | p50 | p95 | p99 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default Chorus | 0.264% | 0.284% | 0.431% | 4.236% | 768,256 B | 0/20,000 |
+| Gain + Grit Chorus | 0.240% | 0.318% | 0.362% | 1.236% | 768,256 B | 0/20,000 |
+| Gain + Grit Vibrato | 0.240% | 0.329% | 0.381% | 1.759% | 768,256 B | 0/20,000 |
+
+The browser/WASM local prerecorded Guitar-TECHS stereo DI test measured 768,216 B and passed two audible Play captures with distinct input and Chorus/Vibrato responses. `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench` pass. These isolated desktop timings do not predict tablet performance. Human listening and target-device measurements remain open.

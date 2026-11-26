@@ -52,12 +52,21 @@ ModulatedDelay::ModulatedDelay(float sample_rate, std::uint16_t channels,
     current_depth_samples_ = static_cast<float>(
         static_cast<double>(sample_rate_) * parameters_.depth_ms / 1000.0);
     current_spread_degrees_ = parameters_.stereo_spread_degrees;
+    current_input_gain_ = std::pow(10.0F, parameters_.input_gain_db / 20.0F);
+    current_grit_amplitude_ = parameters_.grit_percent / 100.0F *
+                              kMaximumGritNoiseAmplitude;
+    current_vibrato_blend_ = parameters_.mode == ModulatedDelayMode::vibrato
+                                 ? 1.0F
+                                 : 0.0F;
     time_step_ = 0.0F;
     feedback_step_ = 0.0F;
     mix_step_ = 0.0F;
     rate_step_ = 0.0F;
     depth_step_ = 0.0F;
     spread_step_ = 0.0F;
+    input_gain_step_ = 0.0F;
+    grit_amplitude_step_ = 0.0F;
+    vibrato_blend_step_ = 0.0F;
     ramp_remaining_ = 0;
     reset();
 }
@@ -107,6 +116,18 @@ void ModulatedDelay::configure(ModulatedDelayParameters parameters) noexcept {
                   static_cast<float>(ramp_total_);
     spread_step_ = (parameters.stereo_spread_degrees - current_spread_degrees_) /
                    static_cast<float>(ramp_total_);
+    const float new_input_gain = std::pow(10.0F, parameters.input_gain_db / 20.0F);
+    input_gain_step_ = (new_input_gain - current_input_gain_) /
+                       static_cast<float>(ramp_total_);
+    const float new_grit_amplitude = parameters.grit_percent / 100.0F *
+                                     kMaximumGritNoiseAmplitude;
+    grit_amplitude_step_ = (new_grit_amplitude - current_grit_amplitude_) /
+                           static_cast<float>(ramp_total_);
+    const float new_vibrato_blend = parameters.mode == ModulatedDelayMode::vibrato
+                                        ? 1.0F
+                                        : 0.0F;
+    vibrato_blend_step_ = (new_vibrato_blend - current_vibrato_blend_) /
+                          static_cast<float>(ramp_total_);
     trigger_amplitude_ = std::pow(10.0F, parameters.trigger_threshold_db / 20.0F);
     parameters_ = parameters;
     ramp_remaining_ = ramp_total_;
@@ -114,6 +135,18 @@ void ModulatedDelay::configure(ModulatedDelayParameters parameters) noexcept {
 
 void ModulatedDelay::process(std::span<float> interleaved,
                              std::uint16_t channels) noexcept {
+    process_impl(interleaved, channels, true);
+}
+
+void ModulatedDelay::process_bypassed(std::span<float> interleaved,
+                                      std::uint16_t channels) noexcept {
+    if (!parameters_.spillover) return;
+    process_impl(interleaved, channels, false);
+}
+
+void ModulatedDelay::process_impl(std::span<float> interleaved,
+                                  std::uint16_t channels,
+                                  bool capture_input) noexcept {
     if (channels != channels_ || channels == 0) return;
     const std::size_t frames = interleaved.size() / channels_;
     std::array<float, 2> original{};
@@ -142,14 +175,32 @@ void ModulatedDelay::process(std::span<float> interleaved,
 
         const std::size_t write_offset = write_frame_ * channels_;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
-            const double output = static_cast<double>(original[channel]) *
-                                      static_cast<double>(1.0F - current_mix_) +
-                                  static_cast<double>(delayed[channel]) *
-                                      static_cast<double>(current_mix_);
+            float wet = delayed[channel];
+            if (current_grit_amplitude_ > 0.0F &&
+                (capture_input || std::abs(delayed[channel]) > 1.0e-12F)) {
+                wet += random_value(grit_random_state_) *
+                       current_grit_amplitude_;
+            }
+            const double chorus_output =
+                static_cast<double>(original[channel]) *
+                    static_cast<double>(1.0F - current_mix_) +
+                static_cast<double>(wet) * static_cast<double>(current_mix_);
+            const double vibrato_output = static_cast<double>(wet) *
+                                          static_cast<double>(current_mix_);
+            const double output = capture_input
+                ? chorus_output *
+                      static_cast<double>(1.0F - current_vibrato_blend_) +
+                      vibrato_output *
+                      static_cast<double>(current_vibrato_blend_)
+                : static_cast<double>(original[channel]) +
+                      static_cast<double>(wet) * static_cast<double>(current_mix_);
             interleaved[frame * channels_ + channel] = bounded_sample(output);
-            const double recorded = static_cast<double>(original[channel]) +
-                                    static_cast<double>(delayed[channel]) *
-                                        static_cast<double>(current_feedback_);
+            const double recorded = (capture_input
+                ? static_cast<double>(original[channel]) *
+                      static_cast<double>(current_input_gain_)
+                : 0.0) +
+                static_cast<double>(delayed[channel]) *
+                    static_cast<double>(current_feedback_);
             storage_[write_offset + channel] = bounded_sample(recorded);
         }
 
@@ -182,12 +233,21 @@ void ModulatedDelay::reset() noexcept {
     current_depth_samples_ = static_cast<float>(
         static_cast<double>(sample_rate_) * parameters_.depth_ms / 1000.0);
     current_spread_degrees_ = parameters_.stereo_spread_degrees;
+    current_input_gain_ = std::pow(10.0F, parameters_.input_gain_db / 20.0F);
+    current_grit_amplitude_ = parameters_.grit_percent / 100.0F *
+                              kMaximumGritNoiseAmplitude;
+    current_vibrato_blend_ = parameters_.mode == ModulatedDelayMode::vibrato
+                                 ? 1.0F
+                                 : 0.0F;
     time_step_ = 0.0F;
     feedback_step_ = 0.0F;
     mix_step_ = 0.0F;
     rate_step_ = 0.0F;
     depth_step_ = 0.0F;
     spread_step_ = 0.0F;
+    input_gain_step_ = 0.0F;
+    grit_amplitude_step_ = 0.0F;
+    vibrato_blend_step_ = 0.0F;
     ramp_remaining_ = 0;
 }
 
@@ -264,6 +324,12 @@ void ModulatedDelay::advance_ramps() noexcept {
         current_depth_samples_ = static_cast<float>(
             static_cast<double>(sample_rate_) * parameters_.depth_ms / 1000.0);
         current_spread_degrees_ = parameters_.stereo_spread_degrees;
+        current_input_gain_ = std::pow(10.0F, parameters_.input_gain_db / 20.0F);
+        current_grit_amplitude_ = parameters_.grit_percent / 100.0F *
+                                  kMaximumGritNoiseAmplitude;
+        current_vibrato_blend_ = parameters_.mode == ModulatedDelayMode::vibrato
+                                     ? 1.0F
+                                     : 0.0F;
     } else {
         current_time_samples_ += time_step_;
         current_feedback_ += feedback_step_;
@@ -271,6 +337,9 @@ void ModulatedDelay::advance_ramps() noexcept {
         current_rate_hz_ += rate_step_;
         current_depth_samples_ += depth_step_;
         current_spread_degrees_ += spread_step_;
+        current_input_gain_ += input_gain_step_;
+        current_grit_amplitude_ += grit_amplitude_step_;
+        current_vibrato_blend_ += vibrato_blend_step_;
     }
 }
 

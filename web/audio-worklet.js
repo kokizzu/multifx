@@ -39,6 +39,7 @@ EFFECTS.push("stadium-seven-band-peq");
 EFFECTS.push("fractal-diatonic-harmonizer");
 EFFECTS.push("tone-master-pro-3d-chorus");
 EFFECTS.push("fractal-surround-delay");
+EFFECTS.push("fender-memory-delay");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -1481,6 +1482,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_ducking_delay(this.chain, ...message.value);
     } else if (message.type === "modulated-delay" && this.ready) {
       this.module._tf_chain_set_modulated_delay(this.chain, ...message.value);
+    } else if (message.type === "fender-memory-delay" && this.ready) {
+      this.module._tf_chain_set_fender_memory_delay(
+        this.chain, ...message.value,
+      );
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

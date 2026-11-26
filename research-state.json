@@ -4,36 +4,36 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6843e38d7fa8c4d69110f50712d3d4e8deb7e87a",
+  "previous_checkpoint_commit": "6a08d8c6820fba17cc8ecfe8ac9c639778d792a3",
   "latest_audit": {
-    "name": "Fractal FM9-family Surround Delay",
-    "status": "Current FM9-family controls verified and a project-authored rotating stereo delay is implemented in the categorized Delay picker. Native, local-DI browser/WASM smoke, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
+    "name": "Fender Tone Master Pro Memory Delay",
+    "status": "Exact-model controls verified and a project-authored Memory Delay is implemented at Delay picker ID 118. Native, browser/WASM local-DI Play, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
     "date": "2026-11-26",
-    "picker_index": 117,
+    "picker_index": 118,
     "category": "Delay",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide, November 2026 cover, printed pp. 31–34; FM9 firmware v12.0 dated 2026-07-07 lists FM9 Original and Turbo, not Mark II Turbo separately. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The family guide describes Surround Delay, Rotation direction, stereo L/R Time Ratio, independent L/R feedback, Width/Spread, Master Time 25–400%, and Master Feedback 0–200%. Most bounds/defaults and Rotation's numeric range/curve are unpublished. Exact Mark II Turbo applicability is unverified."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 46; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists Memory Delay control roles and Gain range; most bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo has independent L/R time and Tap Division but the project links the times."
     },
-    "documented_controls": "Time/Tempo, Master Time, Master Feedback, L/R Time Ratio, Feedback L/R, Width/Spread, and Surround Delay Rotation; negative Rotation reverses direction. Manufacturer numeric Rotation range/default and most other bounds/defaults are unspecified.",
-    "project_controls": "Delay picker ID 117; project-authored defaults: Time 375 ms, Master Time 100%, Right Time Ratio 100%, Feedback L/R 35%, Master Feedback 100%, Rotation 50%, Width 100%, Mix 25%, Level 0 dB. Project ranges: 5–500 ms, 25–400%, 25–200%, feedback 0–100%, Master Feedback 0–200%, Rotation −200…+200%, Width −100…+100%, Mix 0–100%, Level −24…+12 dB. Tempo sync is not implemented. No Fractal settings, DSP, or sound parity is claimed.",
+    "documented_controls": "Model Guide p. 46 lists Time, Tap Division, Feedback, Mix, Depth, Gain (−10…+20 dB), Grit (self-noise), Chorus/Vibrato Mode, and Spillover. Stereo Memory Delay has separate left/right times and tap divisions. Most numeric bounds/defaults and modulation rate/waveform are unspecified.",
+    "project_controls": "Delay picker ID 118. Project-authored linked stereo time, delay range/default, tap divisions, modulation, and wet-path Grit; Gain/Grit affect the recorded wet input, direct dry audio remains immediate, and bypass Spillover retains the tail without recording new input. Two-second project cap; no independent stereo L/R time/division. No Fender settings, DSP, or sound parity.",
     "verification": {
-      "native": "make test passes documentation validation, 13 fixture-safety checks, and 119/119 CTests, including the Surround Delay tests.",
-      "browser": "make web-test passes local prerecorded stereo Guitar-TECHS DI Play smoke for picker category, defaults, bounded memory, finite output, and changes under Rotation. Full HeadlessChrome 151 browser/native parity passes for the existing offline-renderable stages (maximum absolute error 0.000001661420846; RMS error 0.0000003308441757); this new effect is excluded because the offline CLI does not expose a matching stage. Browser state for the effect is 144,124 B.",
+      "native": "make test passes documentation validation, 13 fixture-safety checks, and 119/119 CTests, including the Memory Delay tests.",
+      "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures verify Delay picker ID 118, category, defaults, parameter bounds, 768,216 B effect storage, and distinct input/Chorus/Vibrato output. Full browser/native comparison passes; this new effect is excluded because the offline CLI does not expose a matching stage.",
       "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
-      "latency_memory": "Native state is 144,168 B at default stereo settings and 1,536,168 B at maximum-time settings at 48 kHz. Processing allocates nothing; storage grows only during control updates. Dry audio has zero fixed algorithmic latency; wet echoes follow selected time. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up / 20,000 measured: default p50/p95/p99/p99.9/max 0.0649/0.0803/0.0979/0.2606/1.4629%; maximum-time p50/p95/p99/p99.9/max 0.1324/0.1537/0.1609/0.3559/0.4740% of the 2.667 ms callback. No deadline misses in either profile; these isolated desktop figures do not guarantee tablet performance.",
+      "latency_memory": "Native state is 768,256 B, including 768,024 B ring storage; browser state is 768,216 B. Processing allocates nothing and the dry path adds no fixed latency. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up / 20,000 measured: default Chorus p50/p95/p99/max 0.264/0.284/0.431/4.236%; Gain+Grit Chorus 0.240/0.318/0.362/1.236%; Gain+Grit Vibrato 0.240/0.329/0.381/1.759% of the 2.667 ms callback. No deadline misses; isolated desktop timing does not guarantee tablet performance.",
       "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
     },
-    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. Tempo sync is not implemented. No Fractal settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Independent stereo L/R time/division is not implemented. No Fender settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Integrate a bounded project-authored subset of the Fractal FM9-family Plex Delay feedback matrix and Stack/Hold behavior, with native automated tests, local prerecorded-guitar browser/WASM playback, Windows, memory, allocation, and callback CPU checks. Track omitted tempo, filters, modulation, envelope, and vendor-specific behavior separately.",
-    "qualification": "Preserve the independent general research cursor, expression-volume queue, and footswitch-display queue. The November 2026 Blocks Guide is FM9-family evidence; the v12.0 download listing names Original/Turbo, not Mark II Turbo separately, and exact applicability/installed firmware remain unknown. Axom Max, HeadRush Prime, and XR1 remain limited by inaccessible exact algorithm/control tables; continue recording gaps without inventing settings."
+    "next_feature": "Verify the exact official Fractal guide revision/pages for Plex Shift, then implement a bounded project-authored subset of independently shifted Plex Delay lines. Keep Plex Shift distinct from note tracking, Plex Detune, and the existing feedback matrix/Stack-Hold implementation. Add native/browser local-DI/Windows and callback memory/CPU checks.",
+    "qualification": "Preserve the independent general research cursor, expression-volume queue, and footswitch-display queue. Existing Fractal documentation is family-level; exact FM9 Mark II Turbo applicability and installed firmware remain unknown. AXOM MAX firmware V1.9.2 notes do not name the changed Delay/Synth algorithms or controls; keep the exact mapping unresolved. HeadRush Prime and Helix Stadium/XR1 still need exact-model source verification for remaining gaps."
   },
   "completed_checkpoints": [
     {
@@ -1224,6 +1224,29 @@
         "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
       },
       "remaining": "Human listening, physical-device comparison, target-device timing, and exact installed firmware remain open."
+    },
+    {
+      "name": "Fender Tone Master Pro Memory Delay",
+      "status": "Verified exact-model controls; project-authored categorized Delay picker ID 118 and automated native/browser/Windows/performance checks complete; human and device checks remain.",
+      "date": "2026-11-26",
+      "picker_index": 118,
+      "category": "Delay",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 46; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "Most numeric bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo has independent L/R times/tap divisions; the project links them."
+      },
+      "project_controls": "Project-authored Delay ID 118 with linked stereo delay time, wet-path Gain/Grit, Chorus/Vibrato, two-second storage cap, immediate dry path, and Spillover tail behavior. Not Fender settings, DSP, or sound parity.",
+      "verification": {
+        "native": "make test passes 119/119 CTests and 13 fixture-safety tests.",
+        "browser": "make web-build and make web-browser-test pass; full HeadlessChrome browser/native run and local prerecorded stereo Guitar-TECHS DI Play captures pass.",
+        "windows": "make windows-cross-build passes Windows MinGW core/offline renderer.",
+        "benchmark": "Native state 768,256 B (768,024 B ring), browser state 768,216 B; zero process allocations and deadline misses. Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default Chorus p50/p95/p99/max 0.264/0.284/0.431/4.236%, Gain+Grit Chorus 0.240/0.318/0.362/1.236%, Gain+Grit Vibrato 0.240/0.329/0.381/1.759% of 2.667 ms callback.",
+        "diff_check": "make diff-check passes; no workflow files are included."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open."
     }
   ],
   "previous_checkpoint": {
@@ -1252,28 +1275,28 @@
     "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
   },
   "current_checkpoint": {
-    "name": "Fender Tone Master Pro Electric Flanger Filter mode and Tap Division",
-    "status": "Project-authored Filter mode and Free/tempo sync are added to existing Modulation Flanger ID 17. Native/CLI, browser/WASM Play, Windows, benchmark, and diff checks pass; manual listening remains.",
+    "name": "Fender Tone Master Pro Memory Delay",
+    "status": "Project-authored Memory Delay is implemented in Delay at picker ID 118. Native, browser/WASM local-DI Play, Windows, benchmark, and diff checks pass; manual listening remains.",
     "date": "2026-11-26",
-    "picker_index": 17,
-    "category": "Modulation",
+    "picker_index": 118,
+    "category": "Delay",
     "official_source": {
       "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 38–39; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 46; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
       "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "Tap Division and Filter-mode control roles are documented, but numeric division choices, bounds/defaults, DSP topology, and latency are not. Project choices do not claim Fender settings or parity."
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists Memory Delay controls and Gain range; most other numeric bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo provides independent L/R time/division, not implemented here. Project choices do not claim Fender settings or parity."
     },
-    "documented_controls": "Model Guide p. 38 lists Mono/Stereo Flanger Rate, Depth, Resonance, Tap Division, and Manual; Stereo adds L/R Phase. Page 39 lists Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter retains harmonic flanging without frequency modulation; Rate changes tone and Color controls intensity. No division list, numeric bounds/defaults, DSP, or latency is published.",
-    "project_controls": "Existing Modulation Flanger ID 17 keeps Flanger and Free Hz defaults, with 14 project beat divisions at 20–300 BPM. Filter is a project-authored static short comb: position 0.05–8 maps to 0.5–10 ms and Color 0–0.9 (default 0.35) sets positive feedback. It reuses existing storage; native state is 4,840 B, browser state 4,804 B, with no added fixed latency or process allocation.",
+    "documented_controls": "Model Guide p. 46 lists Time, Tap Division, Feedback, Mix, Depth, Gain (−10…+20 dB), Grit (self-noise), Chorus/Vibrato Mode, and Spillover. Stereo Memory Delay provides separate left/right times and tap divisions. Other bounds/defaults and modulation rate/waveform are not specified.",
+    "project_controls": "Delay picker ID 118. Project-authored default/ranges and tap divisions; linked stereo delay times; Gain and deterministic Grit affect delayed input; Chorus/Vibrato alter the wet modulation; bypass Spillover preserves the tail without recording new input. The effect uses a two-second cap and has an immediate dry path. This is not Fender DSP/settings/sound parity.",
     "verification": {
-      "native_cli": "Focused Flanger native and offline CLI tests pass, including Filter bounds, output changes, and invalid mode handling.",
-      "browser": "Focused local guitar Play captures pass for existing category ID 17, default, tap sync, and Filter Color/Rate/mode. Full browser/native comparison and 117 CTests pass.",
+      "native": "make test passes documentation validation, 13 fixture-safety checks, and 119/119 CTests, including focused Memory Delay tests.",
+      "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 plays local prerecorded stereo Guitar-TECHS DI through picker ID 118 and verifies category/defaults, bounded parameters, 768,216 B browser state, and distinct input/Chorus/Vibrato captures. Full browser/native comparison passes; this stage is excluded because the offline CLI has no equivalent.",
       "windows": "Windows MinGW core/offline renderer cross-build passes.",
-      "benchmark": "AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Filter mode p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of 2.667 ms; native state 4,840 B.",
+      "benchmark": "AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native state 768,256 B, ring 768,024 B; no process-time allocations. Default Chorus p50/p95/p99/max 0.264/0.284/0.431/4.236%, Gain+Grit Chorus 0.240/0.318/0.362/1.236%, Gain+Grit Vibrato 0.240/0.329/0.381/1.759% of 2.667 ms; zero deadline misses.",
       "diff_check": "make diff-check passes without workflow changes."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, target-device timing, and manufacturer DSP/settings/sound parity remain open."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Independent stereo L/R time and division are not implemented. No Fender DSP/settings/sound parity is claimed."
   },
   "next_research": [
     {

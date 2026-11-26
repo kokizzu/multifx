@@ -351,3 +351,16 @@ web-test-formant-control-lfo: test web-build
 .PHONY: web-test-headrush-drop-tune
 web-test-headrush-drop-tune: test web-build
 	$(PYTHON) scripts/web.py test-headrush-drop-tune
+
+.PHONY: publish-fender-memory-delay-plan stage-fender-memory-delay publish-fender-memory-delay
+publish-fender-memory-delay-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fender-memory-delay
+
+stage-fender-memory-delay:
+	$(PYTHON) scripts/publish_checkpoint.py stage --checkpoint fender-memory-delay
+
+publish-fender-memory-delay:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint fender-memory-delay
+ .PHONY: inspect-stadium-delay-probe
+inspect-stadium-delay-probe:
+	python3 scripts/inspect_stadium_delay_probe.py
