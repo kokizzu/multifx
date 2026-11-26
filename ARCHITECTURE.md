@@ -49,3 +49,7 @@ An initial event-driven shared-mode WASAPI backend now lives in `include/tabletf
 ## Validation gates
 
 Before accepting this ADR: verify Qt release support for all three targets; Android Qt/Oboe lifecycle and 4 GB physical RAM; Linux JACK/PipeWire routing; Windows WASAPI endpoint/format negotiation; package sizes; build baseline; licenses; and whether native UI and backend APIs can be tested in the available environment. Record actual versions in `RESEARCH.md`. Revise this decision only with evidence.
+
+## External effects-loop routing status
+
+The current browser/WASM audition path has a single input and output and limits the chain to one or two channels. The initial Windows WASAPI backend uses the default capture and render endpoints; it has no endpoint selection or independent hardware send/return routes. Android/Linux full-duplex host routing is still future work. A hardware FX Loop block must wait until a host can route an external send and return at a selected point in the chain, with bounded buffers and device-format handling. A pass-through DSP block would not provide that capability.

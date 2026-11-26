@@ -2,6 +2,12 @@
 
 Research snapshot: **2026-11-27**. This compares manufacturer-documented categories and representative features for the named flagship processors. It is a focused documentation check, not a fresh audit of every algorithm in every firmware or of the whole effects catalogue. Product names below identify documented examples; TabletFX implementations should use project-authored names, controls, and signal paths rather than copy proprietary presets or imply circuit emulation.
 
+## XRecer XR1 FX Loop routing gap (2026-11-27)
+
+The live [XRecer FAQ](https://www.xrecer.com/pages/faq), checked 2026-11-27, documents two external effects loops with SEND 1/2 and RETURN 1/2. It says an FX Loop block can adjust send level, return level, and the dry/returned mix. The [XR1 product page](https://www.xrecer.com/products/xr1) still says “3 Mono/Stereo FX Loops,” so the count and exact loop variants conflict across the manufacturer's pages. The FAQ's physical I/O description and the product-page statement do not establish a third send/return pair. The linked manual portal did not expose readable manual content in this audit.
+
+TabletFX has no usable equivalent yet. The browser worklet and WASM chain process one selected input/output route with up to two channels. The current Windows WASAPI prototype opens default capture and render endpoints and does not provide independent hardware send/return selection. No XR1 FX Loop processor or placeholder is added; routing, device selection, exact controls, and external-hardware behavior remain an open host feature, not a DSP algorithm comparison.
+
 ## HeadRush Prime Orange Phaser Stereo control (2026-11-27)
 
 The Prime v5.0.0 User Guide, §4.4.2, printed p. 23 (PDF p. 24), shows Orange Phaser controls for Rate, Stereo On/Off, and Sync On/Off. The pictured 0.6 Hz and Stereo On are screenshot values, not published ranges or defaults. The manual does not define what Stereo changes in the algorithm or how it persists. The official v5.2.0 firmware notes (October 2026) do not call out an Orange Phaser change; this does not establish the v5.0 manual's exact applicability to every later firmware. Installed firmware is unknown. [Prime User Guide v5.0.0](https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf) · [Prime v5.2.0 firmware notes](https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf) · [HeadRush downloads](https://www.headrushfx.com/downloads)

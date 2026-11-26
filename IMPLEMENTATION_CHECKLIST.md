@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## XRecer XR1 FX Loop host-routing feasibility (2026-11-27)
+
+- [x] Checked the live XRecer FAQ on 2026-11-27: it documents two physical FX loops, SEND 1/2 and RETURN 1/2, and an FX Loop block with Send Level, Return Level, and dry/returned Mix. The linked user-manual portal did not expose a readable manual copy during this audit.
+- [x] Preserved the manufacturer source conflict: the FAQ says two loops and names two send/return pairs, while the product page still advertises “3 Mono/Stereo FX Loops.” The exact block variants and the product-page count remain unresolved; do not infer a third physical loop.
+- [x] Checked TabletFX hosts: the browser AudioWorklet currently has one input and one output with up to two channels; the WASM chain accepts one or two channels; the Windows WASAPI prototype opens default capture/render endpoints without device selection or independent send/return routing. Android/Linux full-duplex host implementations are not yet present in this repository.
+- [ ] Do not add a pass-through FX Loop picker row. The feature needs real selectable hardware send outputs and return inputs, bounded host routing, and hardware verification. This is a routing block, not a self-contained DSP algorithm, so no processor CPU percentage is claimed yet.
+- [ ] Revisit after the audio hosts can expose and verify the required external send/return paths. Exact level ranges/defaults, stereo mapping, loop variants, and current manual behavior remain unknown.
+
 ## Fender Tone Master Pro Harmonic Tremolo Mode Switch (2026-11-27)
 
 - [x] Verify the exact-model Model Guide v1.1.100 / Rev. A, printed p. 33: Harmonic Tremolo lists Speed, Intensity, Shape, Tap Division, and a 1960 6G4 / 1963 6G4A Mode Switch. It supplies no numeric ranges/defaults or explanation of the two circuit responses. The separately introduced Stereo Harmonic Tremolo is not covered by inference from this mono table.
