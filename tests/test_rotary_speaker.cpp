@@ -365,6 +365,102 @@ void test_variable_blocks_preserve_motor_and_audio_state() {
             "rotary motor acceleration changed with variable block sizes");
 }
 
+void test_modulation_phase_reset_preserves_motor_and_audio_history() {
+    tabletfx::RotarySpeakerParameters parameters;
+    parameters.speed = tabletfx::RotarySpeed::fast;
+    parameters.rate_hz = 7.1F;
+    parameters.low_rate_multi = 0.63F;
+    parameters.low_time_constant_ms = 10.0F;
+    parameters.hi_time_constant_ms = 10.0F;
+    parameters.hi_depth = 1.0F;
+    parameters.low_depth = 0.7F;
+    parameters.rotor_length = 0.85F;
+    parameters.mix = 1.0F;
+
+    tabletfx::RotarySpeaker restarted(48000.0F, 1, parameters);
+    tabletfx::RotarySpeaker replay(48000.0F, 1, parameters);
+    tabletfx::RotarySpeaker uninterrupted(48000.0F, 1, parameters);
+    tabletfx::RotarySpeaker silent_history(48000.0F, 1, parameters);
+
+    constexpr std::size_t prefix_frames = 4096;
+    std::vector<float> prefix(prefix_frames);
+    for (std::size_t frame = 0; frame < prefix.size(); ++frame) {
+        prefix[frame] = 0.6F * std::sin(
+            2.0F * 3.14159265358979323846F * 3000.0F *
+            static_cast<float>(frame) / 48000.0F);
+    }
+    auto replay_prefix = prefix;
+    auto uninterrupted_prefix = prefix;
+    std::vector<float> zero_prefix(prefix.size(), 0.0F);
+    restarted.process(prefix, 1);
+    replay.process(replay_prefix, 1);
+    uninterrupted.process(uninterrupted_prefix, 1);
+    silent_history.process(zero_prefix, 1);
+
+    const float hi_rate_before = restarted.current_hi_rate_hz();
+    const float low_rate_before = restarted.current_low_rate_hz();
+    require(hi_rate_before > 0.0F && low_rate_before > 0.0F &&
+                replay.current_hi_rate_hz() == hi_rate_before &&
+                replay.current_low_rate_hz() == low_rate_before &&
+                uninterrupted.current_hi_rate_hz() == hi_rate_before &&
+                uninterrupted.current_low_rate_hz() == low_rate_before &&
+                silent_history.current_hi_rate_hz() == hi_rate_before &&
+                silent_history.current_low_rate_hz() == low_rate_before,
+            "test setup did not synchronize rotor motor speeds");
+
+    restarted.reset_modulation_phase();
+    replay.reset_modulation_phase();
+    silent_history.reset_modulation_phase();
+    require(restarted.current_hi_rate_hz() == hi_rate_before &&
+                restarted.current_low_rate_hz() == low_rate_before &&
+                replay.current_hi_rate_hz() == hi_rate_before &&
+                replay.current_low_rate_hz() == low_rate_before &&
+                silent_history.current_hi_rate_hz() == hi_rate_before &&
+                silent_history.current_low_rate_hz() == low_rate_before,
+            "phase reset changed either rotor's current motor speed");
+
+    constexpr std::size_t suffix_frames = 512;
+    std::vector<float> suffix(suffix_frames);
+    for (std::size_t frame = 0; frame < suffix.size(); ++frame) {
+        suffix[frame] = 0.6F * std::sin(
+            2.0F * 3.14159265358979323846F * 3000.0F *
+            static_cast<float>(prefix_frames + frame) / 48000.0F);
+    }
+    auto replay_suffix = suffix;
+    auto uninterrupted_suffix = suffix;
+    std::vector<float> silent_suffix(suffix.size(), 0.0F);
+    restarted.process(suffix, 1);
+    replay.process(replay_suffix, 1);
+    uninterrupted.process(uninterrupted_suffix, 1);
+    silent_history.process(silent_suffix, 1);
+    require(suffix == replay_suffix,
+            "repeated rotor phase resets did not produce a deterministic restart");
+
+    bool phase_changed_output = false;
+    for (std::size_t frame = 0; frame < suffix.size(); ++frame) {
+        if (std::abs(suffix[frame] - uninterrupted_suffix[frame]) > 1.0e-4F) {
+            phase_changed_output = true;
+            break;
+        }
+    }
+    require(phase_changed_output,
+            "rotor phase reset did not restart the modulation cycle");
+
+    std::array<float, 256> tail{};
+    std::array<float, 256> empty_tail{};
+    restarted.process(tail, 1);
+    silent_history.process(empty_tail, 1);
+    bool preserved_audio_history = false;
+    for (std::size_t frame = 0; frame < tail.size(); ++frame) {
+        if (std::abs(tail[frame] - empty_tail[frame]) > 1.0e-4F) {
+            preserved_audio_history = true;
+            break;
+        }
+    }
+    require(preserved_audio_history,
+            "phase reset cleared rotary delay or crossover audio history");
+}
+
 void test_reset_invalid_samples_layout_and_no_allocations() {
     tabletfx::RotarySpeaker rotary;
     std::array<float, 8> invalid{
@@ -495,6 +591,7 @@ int main() {
         test_rotor_controls_and_delay_are_finite();
         test_hi_depth_zero_parks_horn_and_disables_its_doppler_motion();
         test_variable_blocks_preserve_motor_and_audio_state();
+        test_modulation_phase_reset_preserves_motor_and_audio_history();
         test_reset_invalid_samples_layout_and_no_allocations();
         test_extreme_finite_stereo_sum_does_not_poison_state();
         test_invalid_construction();

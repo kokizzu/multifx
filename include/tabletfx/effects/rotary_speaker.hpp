@@ -101,6 +101,9 @@ public:
 
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    // Restart horn and drum phase only. Rotor motor speeds and audio history
+    // remain intact.
+    void reset_modulation_phase() noexcept override;
     void reset() noexcept override;
 
 private:

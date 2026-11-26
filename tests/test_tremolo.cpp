@@ -297,6 +297,57 @@ void test_variable_blocks_phase_continuity_and_stereo_link() {
             "reset did not restore the deterministic initial phase");
 }
 
+void test_modulation_phase_reset_preserves_smoothing() {
+    for (const auto waveform : {tabletfx::TremoloWaveform::Sine,
+                                tabletfx::TremoloWaveform::Triangle,
+                                tabletfx::TremoloWaveform::Square}) {
+        tabletfx::TremoloParameters parameters;
+        parameters.rate_hz = 3.7F;
+        parameters.depth = 0.82F;
+        parameters.depth_smoothing_ms = 0.0F;
+        parameters.waveform = waveform;
+        tabletfx::Tremolo restarted(8000.0F, parameters);
+        std::vector<float> prefix(347, 1.0F);
+        restarted.process(prefix, 1);
+        restarted.reset_modulation_phase();
+
+        std::vector<float> actual(513, 1.0F);
+        restarted.process(actual, 1);
+        tabletfx::Tremolo initial_phase(8000.0F, parameters);
+        std::vector<float> expected(actual.size(), 1.0F);
+        initial_phase.process(expected, 1);
+        require(actual == expected,
+                "phase reset did not restart the selected tremolo waveform");
+    }
+
+    tabletfx::TremoloParameters ramp_parameters;
+    ramp_parameters.depth = 0.1F;
+    ramp_parameters.depth_smoothing_ms = 100.0F;
+    ramp_parameters.waveform = tabletfx::TremoloWaveform::Square;
+    tabletfx::Tremolo ramp(8000.0F, ramp_parameters);
+    ramp.set_depth(0.9F);
+    ramp.set_duty_cycle_percent(80.0F);
+    std::array<float, 160> prefix{};
+    prefix.fill(1.0F);
+    ramp.process(prefix, 1);
+    const float depth_before_reset = ramp.current_depth();
+    const float duty_before_reset = ramp.current_duty_cycle_percent();
+    require(depth_before_reset > 0.1F && depth_before_reset < 0.9F &&
+                duty_before_reset > 50.0F && duty_before_reset < 80.0F,
+            "test setup did not leave parameter ramps in progress");
+
+    ramp.reset_modulation_phase();
+    require(ramp.current_depth() == depth_before_reset &&
+                ramp.current_duty_cycle_percent() == duty_before_reset,
+            "phase reset changed the current smoothed parameter values");
+    std::array<float, 80> ramp_continuation{};
+    ramp_continuation.fill(1.0F);
+    ramp.process(ramp_continuation, 1);
+    require(ramp.current_depth() > depth_before_reset &&
+                ramp.current_duty_cycle_percent() > duty_before_reset,
+            "phase reset canceled in-progress parameter smoothing");
+}
+
 void test_depth_ramp_is_monotonic_retargetable_and_block_invariant() {
     tabletfx::TremoloParameters parameters;
     parameters.rate_hz = 0.05F;
@@ -453,6 +504,7 @@ int main() {
         test_lfo_clip_shape_and_default_identity();
         test_tempo_sync_conversion_and_bounds();
         test_variable_blocks_phase_continuity_and_stereo_link();
+        test_modulation_phase_reset_preserves_smoothing();
         test_depth_ramp_is_monotonic_retargetable_and_block_invariant();
         test_duty_cycle_ramp_is_smoothed_and_block_invariant();
         test_invalid_samples_and_zero_process_allocations();

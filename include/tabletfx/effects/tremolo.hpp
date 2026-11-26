@@ -72,6 +72,9 @@ public:
 
     void process(std::span<float> interleaved,
                  std::uint16_t channels) noexcept override;
+    // Restart only the LFO phase. Parameter smoothing and its current ramps
+    // continue unchanged.
+    void reset_modulation_phase() noexcept override;
     void reset() noexcept override;
 
 private:

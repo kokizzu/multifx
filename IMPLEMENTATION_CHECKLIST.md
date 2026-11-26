@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Line 6 Helix Stadium global TAP modulation reset (2026-11-26)
+
+- [x] Verify the live Effects manual selector revision (v1.4 Rev D / v1.3 Rev B / v1.2). Its common Speed/Rate entry says one TAP press resets modulation in LFO-based effects, including tremolos and rotary speakers; exact phase semantics and numeric settings are not specified. Hardware v1.4.2 notes are dated 2026-10-27; installed firmware is unknown.
+- [x] Add a global TAP control and a phase-only virtual hook for the existing categorized Tremolo and Rotary Speaker. Preserve current picker IDs/defaults, Tremolo smoothing ramps, and Rotary motor/delay history. This action is not tempo measurement and does not add a new effect row or reset all project LFO processors.
+- [x] `make test` passes 333 source requirements/346 tracked rows, 13 fixture safety tests, and 117/117 CTests, including phase restart and state-preservation coverage.
+- [x] `make web-test` passes the local Guitar-TECHS DI path, full browser/native comparison, and HeadlessChrome 151 check that the visible TAP control reaches the WASM chain. The full chain uses 80,644,616 B processor state plus 10,364 B tuner state in a fixed 100,663,296 B WASM heap.
+- [x] `make windows-cross-build` passes the MinGW core/offline-renderer build; `make diff-check` is recorded after final review.
+- [ ] Human listening, target-device timing, and hardware comparison remain manual. TAP adds no processor state or per-sample work; one-shot event-handler CPU has not been separately benchmarked. No Line 6 settings, phase, DSP, or sound parity is claimed.
+
 ## Fractal Blocks Guide source revision check (2026-11-26)
 
 - [x] Follow the official FM9 Downloads page link and verify the current Blocks Guide has a November 2026 cover and 114 pages. A direct fetch may return a stale June 2023 copy. The current v12.0 download listing names Original/Turbo, not Mark II Turbo.

@@ -223,11 +223,15 @@ void Tremolo::process(std::span<float> interleaved,
     }
 }
 
-void Tremolo::reset() noexcept {
+void Tremolo::reset_modulation_phase() noexcept {
     phase_ = 0.0F;
     sine_phase_ = 0.0F;
     cosine_phase_ = 1.0F;
     normalization_counter_ = 0;
+}
+
+void Tremolo::reset() noexcept {
+    reset_modulation_phase();
     current_depth_ = target_depth_;
     depth_ramp_step_ = 0.0F;
     depth_ramp_remaining_ = 0;

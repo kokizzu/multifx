@@ -1,5 +1,11 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium global TAP modulation reset (2026-11-26)
+
+The live Helix Stadium Effects manual (selector v1.4 Rev D / v1.3 Rev B / v1.2) says one TAP press resets LFO-based modulation, with tremolos and rotary speakers as examples. It does not specify exact phase semantics. TabletFX routes a global UI action to the existing Tremolo and Rotary Speaker processors only. This is a user event, not a new audio effect: it adds no processor state, buffer, fixed latency, or work inside the per-sample processing loop. The worklet performs one virtual phase-reset dispatch across the existing processor list on a TAP press; its isolated event-handler CPU time is not separately benchmarked, so no callback percentage is claimed for that one-shot action.
+
+`make test` passes the focused phase/state-preservation checks and all 117 CTests. `make web-test` passes local prerecorded Guitar-TECHS DI playback plus the WASM button-to-chain acknowledgement; the browser/native comparison has maximum absolute error 0.0000016615 and RMS error 0.0000003308. The complete browser chain reports 80,644,616 B processor state and 10,364 B tuner state in a fixed 100,663,296 B WASM heap. `make windows-cross-build` passes. These full-chain measurements do not estimate one-shot TAP event cost or target-device performance. Human listening/device checks and broader TAP coverage for other project LFO processors remain open. [Helix Stadium Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) · [v1.4.2 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes)
+
 ## Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width (2026-11-26)
 
 The Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 41, lists Low Cut and High Cut for Chorus Mono and Stereo, with Width only for Stereo. It publishes no units, ranges, defaults, topology, DSP cost, or latency. Fender firmware history was checked through v1.8.87 (2026-11-23); its notes identify no specific change for these controls. Installed firmware is unknown. TabletFX's 0–1,200 Hz Low Cut, 0–20,000 Hz High Cut, and 0–200% Width controls (defaults: both cuts off, Width 100%) and processing are project-authored.

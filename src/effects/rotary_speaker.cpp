@@ -190,12 +190,16 @@ void RotarySpeaker::process(std::span<float> interleaved,
     }
 }
 
+void RotarySpeaker::reset_modulation_phase() noexcept {
+    low_phase_cycles_ = 0.0F;
+    hi_phase_cycles_ = 0.0F;
+}
+
 void RotarySpeaker::reset() noexcept {
     std::fill(rotor_delay_buffer_.begin(), rotor_delay_buffer_.end(), 0.0F);
     crossover_state_ = {};
     delay_write_frame_ = 0;
-    low_phase_cycles_ = 0.0F;
-    hi_phase_cycles_ = 0.0F;
+    reset_modulation_phase();
     current_low_rate_hz_ = 0.0F;
     current_hi_rate_hz_ = 0.0F;
 }

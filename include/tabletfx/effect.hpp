@@ -15,6 +15,8 @@ public:
     // Effects with spillover can emit their stored tail while passing a bypassed
     // signal through. Other effects remain transparent while bypassed.
     virtual void process_bypassed(std::span<float>, std::uint16_t) noexcept {}
+    // Restart modulation phase without resetting the effect's other state.
+    virtual void reset_modulation_phase() noexcept {}
     virtual void reset() noexcept {}
     // Object plus memory owned directly by the processor; excludes caller buffers,
     // allocator metadata, and backend/runtime overhead.

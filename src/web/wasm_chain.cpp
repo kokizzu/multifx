@@ -913,6 +913,12 @@ public:
         frames_ = 0;
     }
 
+    void reset_modulation_phase() noexcept {
+        for (EffectEntry& entry : effects_) {
+            entry.effect->reset_modulation_phase();
+        }
+    }
+
     [[nodiscard]] float meter_peak(std::uint32_t index) const noexcept {
         if (index == 0) {
             return input_meter_.peak();
@@ -4250,6 +4256,12 @@ TABLETFX_WASM_EXPORT float tf_chain_tuner_confidence(void* opaque) noexcept {
 TABLETFX_WASM_EXPORT void tf_chain_reset(void* opaque) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->reset();
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_reset_modulation_phase(void* opaque) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->reset_modulation_phase();
     }
 }
 

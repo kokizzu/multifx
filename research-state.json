@@ -4,38 +4,58 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "12b4221c6630606698b9be9f41c1cfe66ebabf8a",
+  "previous_checkpoint_commit": "c43bab54793f041e4a01605143cdcecb3e384fdc",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width",
-    "status": "Verified project-authored tone controls on existing Modulation Chorus ID 16. Exact-model guide, native/browser/WASM local-DI playback and parity, Windows cross-build, automated tests, and CPU/memory measurements pass. Human listening and hardware/target-device checks remain open; Fender DSP/settings/sound parity is not claimed.",
+    "name": "Line 6 Helix Stadium TAP modulation reset",
+    "status": "Verified the live Stadium TAP semantics and implemented a global phase-reset action for the existing Tremolo and Rotary Speaker. Native and local-DI browser/WASM tests plus the Windows MinGW build pass. This is not tempo entry, targets only these two processors, and does not claim Line 6 settings, DSP, exact phase, or sound parity.",
     "date": "2026-11-26",
-    "picker_index": 16,
-    "category": "Modulation",
+    "category": "global performance control",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 41; firmware history through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "Chorus Mono and Chorus Stereo list Low Cut and High Cut; Chorus Stereo also lists Width. No units, bounds, defaults, topology, DSP use, or latency are published."
+      "title": "Line 6 Helix Stadium Effects manual and hardware release notes",
+      "revision": "Live Effects manual selector lists v1.4 Rev D, v1.3 Rev B, and v1.2; hardware release notes list v1.4.2 dated 2026-10-27. Installed device firmware is unknown.",
+      "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "The common Speed/Rate entry says one TAP press resets modulation for LFO-based effects, including tremolos and rotary speakers. It does not specify exact phase semantics or tempo capture."
     },
-    "documented_controls": "The exact-model Model Guide v1.1.100 / Rev. A, printed p. 41, lists Low Cut and High Cut for Chorus Mono and Stereo; Width is listed for Stereo only. Firmware history checked through v1.8.87 has no change specific to these controls.",
-    "project_controls": "Project-authored Low Cut 0–1,200 Hz and High Cut 0–20,000 Hz, both off by default, plus Stereo Width 0–200%, default 100%, are added to the existing Chorus row at ID 16. The seven-value legacy preset array is preserved; new values are serialized separately. Filter work is skipped when cuts are off, while histories are seeded dry for smooth activation.",
+    "documented_controls": "One global TAP press resets LFO-based modulation. The manual names tremolos and rotary speakers as examples; the exact reset phase is not stated.",
+    "project_controls": "A global TAP button calls Effect::reset_modulation_phase() on the existing processor list. Only standard Tremolo and Rotary Speaker currently override the hook. Tremolo phase restarts without clearing depth/duty ramps; Rotary horn/drum phase restarts while motor rates, delay history, and crossover state remain. No picker ID or default changes, tempo measurement, or new processor is added.",
     "verification": {
-      "native": "make test passes documentation validation, 13 audio-fixture safety checks, and 117/117 CTests. Focused tests cover bounds, defaults, filter behavior, width, reset, smoothing, and no process-time allocation.",
-      "browser": "make web-test-fractal-chorus-tempo passes UI/category/default/range checks and local prerecorded Guitar-TECHS stereo-DI Play captures. Browser/native parity passes; width-zero side RMS is 0 and doubled width ratio is about 2.016.",
+      "native": "make test passes documentation validation (333 source requirements/346 tracked rows), 13 audio-fixture safety checks, and 117/117 CTests, including Tremolo and Rotary phase-only reset/state-preservation tests.",
+      "browser": "make web-test passes local prerecorded Guitar-TECHS DI playback, full browser/native chain comparison (maximum absolute error 0.0000016614208462; RMS error 0.0000003308441757), and HeadlessChrome 151 UI-to-WASM TAP acknowledgement. Full chain: 79 optional processors; 80,644,616 B processor state, 10,364 B tuner state, and 100,663,296 B WASM memory.",
       "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks, 3,000 warm-up and 20,000 measured. Latest run defaults p50/p95/p99/p99.9/max: 0.082/0.083/0.085/0.279/0.900%; both cuts plus Width 200%: 0.145/0.147/0.210/0.449/2.193% of the 2.667 ms deadline. Native state 34,848 B; WASM effect state 34,812 B; zero added fixed latency and process allocation. Percentiles report the full Chorus processor, not marginal control cost.",
-      "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+      "latency_memory": "No per-sample work, added processor state, fixed latency, or allocation. The one-shot TAP handler CPU time was not separately benchmarked; no DSP percent is claimed for this event.",
+      "diff_check": "make diff-check passes; working and staged diffs have no whitespace errors or workflow changes."
     },
-    "remaining": "Human listening, physical Fender comparison, target-device timing/memory, and exact installed firmware remain open."
+    "remaining": "Human listening, target-device timing, device behavior, installed firmware, and TAP coverage for other project LFO processors remain open; no Line 6 phase/settings/DSP/sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Audit and add the documented TAP action that resets LFO-based modulation to the existing categorized Tremolo/Rotary effects. Keep the current effect defaults and stable picker IDs; add native, browser/WASM prerecorded-DI, Windows, latency/CPU/memory tests and commit the checkpoint. Then continue the remaining exact-model effect gaps one at a time.",
-    "qualification": "The independent general research cursor and next_research array are preserved. Stadium sidechain remains deferred until an independent key-input route exists. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Verify the exact-model v1.1.100 / Rev. A Model Guide and current firmware notes for 3D Chorus (printed p. 42), then add a separate Modulation picker feature with the four documented Mode choices if the project-authored behavior can be kept clearly distinct from Fender DSP/settings/sound. Record missing mode names, response curves, numeric values, stereo behavior, and device applicability as unknown; test native/browser/WASM local-DI, Windows, CPU, and memory before committing.",
+    "qualification": "Preserve the independent general research cursor, expression-volume queue, footswitch-display queue, and remaining source audits. Stadium TAP coverage is currently limited to standard Tremolo and Rotary Speaker; other LFO stages remain open. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
   },
   "completed_checkpoints": [
+    {
+      "name": "Line 6 Helix Stadium TAP modulation reset",
+      "status": "verified project control; automated verification complete; human listening/device checks remain",
+      "date": "2026-11-26",
+      "category": "global performance control",
+      "official_source": {
+        "title": "Line 6 Helix Stadium Effects manual and hardware release notes",
+        "revision": "Live Effects manual selector lists v1.4 Rev D, v1.3 Rev B, and v1.2; hardware release notes list v1.4.2 dated 2026-10-27; installed firmware unknown.",
+        "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "qualification": "The common Speed/Rate entry says one TAP press resets modulation on LFO-based effects, including tremolos and rotary speakers. It does not specify exact phase semantics or tempo capture."
+      },
+      "project_controls": "The global TAP button calls Effect::reset_modulation_phase() on the existing chain. Standard Tremolo resets oscillator phase while preserving active depth/duty ramps. Rotary Speaker resets horn/drum phase while preserving motor rates, delay history, and crossover state. No new effect row, picker ID, processor state, or per-sample operation is added; other project LFO processors do not yet override the hook.",
+      "verification": {
+        "native": "make test passes 333 source requirements/346 rows, 13 fixture safety checks, and 117/117 CTests.",
+        "browser": "make web-test passes local Guitar-TECHS DI playback and browser/native parity; the button-to-WASM message is acknowledged by HeadlessChrome 151.",
+        "windows": "make windows-cross-build passes the MinGW core/offline-renderer build.",
+        "memory_latency": "No new processor state, per-sample work, fixed latency, or process allocation. One-shot TAP event CPU is not separately measured.",
+        "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+      },
+      "remaining": "Human listening, hardware/device comparison, target-device timing, exact installed firmware, and broader reset coverage for other LFO processors remain open."
+    },
     {
       "name": "Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width",
       "status": "verified project-authored controls; automated verification complete; manual listening/device checks remain",

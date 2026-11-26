@@ -1662,6 +1662,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_reset(this.chain);
       this.tunerGeneration = 0;
       this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
+    } else if (message.type === "tap" && this.ready) {
+      this.module._tf_chain_reset_modulation_phase(this.chain);
+      this.port.postMessage({ type: "modulation-tap-reset" });
     }
   }
 

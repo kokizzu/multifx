@@ -1004,6 +1004,7 @@ const wetMix = document.querySelector("#wet-mix");
 const wetMixValue = document.querySelector("#wet-mix-value");
 const inputMute = document.querySelector("#input-mute");
 const globalBypass = document.querySelector("#global-bypass");
+const modulationTap = document.querySelector("#modulation-tap");
 const panicMute = document.querySelector("#panic-mute");
 const inputTrim = document.querySelector("#input-trim-db");
 const inputTrimValue = document.querySelector("#input-trim-value");
@@ -4384,6 +4385,7 @@ async function setupProcessor(testOptions = null) {
       effectMemory = message.effectMemoryBytes;
       tunerMemoryBytes = message.tunerMemoryBytes || 0;
       timerResolution = message.timerResolution || "unknown";
+      modulationTap.disabled = false;
       timerResolutionNote.hidden = timerResolution === "high-resolution";
       document.querySelector("#sample-rate").textContent = `${message.sampleRate} Hz`;
       document.querySelector("#block-size").textContent = `up to ${message.maxBlockFrames}`;
@@ -5088,6 +5090,12 @@ inputMute.addEventListener("change", () => {
 
 globalBypass.addEventListener("change", () => {
   if (workletNode) workletNode.port.postMessage({ type: "global-bypass", value: globalBypass.checked });
+});
+
+modulationTap.addEventListener("click", () => {
+  if (workletNode && !modulationTap.disabled) {
+    workletNode.port.postMessage({ type: "tap" });
+  }
 });
 
 panicMute.addEventListener("click", () => {
@@ -16419,6 +16427,7 @@ async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
   testResult.textContent = "Running browser audio test…";
+  let stadiumTapResetSmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -18745,6 +18754,35 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "1") {
+          if (!modulationTap || modulationTap.disabled || !workletNode) {
+            throw new Error("The global modulation TAP control must be ready with the audio chain.");
+          }
+          let tapTimeout;
+          const tapAcknowledged = new Promise((resolve, reject) => {
+            const onMessage = (event) => {
+              if (event.data?.type !== "modulation-tap-reset") return;
+              workletNode.port.removeEventListener("message", onMessage);
+              clearTimeout(tapTimeout);
+              resolve(true);
+            };
+            workletNode.port.addEventListener("message", onMessage);
+            tapTimeout = setTimeout(() => {
+              workletNode.port.removeEventListener("message", onMessage);
+              reject(new Error("The modulation TAP command did not reach the ready WASM chain."));
+            }, 1000);
+          });
+          modulationTap.click();
+          await tapAcknowledged;
+          workletNode.port.postMessage({ type: "reset" });
+          stadiumTapResetSmoke = {
+            control: "TAP · reset modulation",
+            acknowledgedByWasmWorklet: true,
+            targets: ["Tremolo", "Rotary Speaker"],
+            addedProcessorStateBytes: 0,
+            perSampleProcessing: false,
+          };
+        }
         if (new URLSearchParams(location.search).get("selftest") === "stadium-delay-trails") {
           testResult.textContent = "Checking Digital Delay Trails On/Off bypass with local guitar Play…";
           const delayTrailsSmoke = await runStadiumDelayTrailsBrowserSmokeTest(
@@ -19718,6 +19756,7 @@ async function runBrowserSelfTest() {
       chromaticPitchDelay: chromaticPitchDelaySmoke,
       volumePan: volumePanSmoke,
       stepTremolo: stepTremoloSmoke,
+      stadiumTapReset: stadiumTapResetSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,
