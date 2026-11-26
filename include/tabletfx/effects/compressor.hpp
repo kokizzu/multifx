@@ -66,6 +66,20 @@ public:
     [[nodiscard]] CompressorParameters parameters() const noexcept { return parameters_; }
 
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override {
+        process_with_detector(
+            interleaved,
+            std::span<const float>(interleaved.data(), interleaved.size()),
+            channels);
+    }
+
+    // Uses a separate detector signal while applying gain to the program audio.
+    // The caller supplies equally sized, interleaved buffers in real-time use;
+    // if they differ, only their shared complete frames are processed. Audio
+    // and detector may alias: each frame's detector is read before its audio is
+    // changed. No scratch storage or allocations are used.
+    void process_with_detector(std::span<float> interleaved,
+                               std::span<const float> detector,
+                               std::uint16_t channels) noexcept {
         if (!configured_ || channels == 0) {
             return;
         }

@@ -1,5 +1,18 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium Dynamics Sidechain project mode (2026-11-27)
+
+The live [Stadium Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) selector lists v1.4 Rev D / v1.3 Rev B / v1.2. It describes Sidechain for all Dynamics models except Feedbacker, defaulting Off/block input, with examples of Instrument, Mic, Return, USB, and S/PDIF source levels. The complete source list and selector ranges are not published. [Hardware v1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes) list v1.4.2 dated 2026-10-27 but do not mention Sidechain; installed hardware firmware is unknown. TabletFX exposes only the project-authored Studio Compressor's Block Input default or Pre-effect Dry Chain detector source. No external buses, sidechain filter, extra audio buffer, fixed latency, or processing allocation is added. Native effect state is 64 B; browser effect state is 60 B. The browser test reports 81,694,296 B for the entire chain, not incremental sidechain storage.
+
+HeadlessChrome 151 played the local prerecorded Guitar-TECHS stereo DI through Dynamics picker ID 6. Switching detector source produced relative output-difference RMS 0.777148; no new audio buffer was added. On an AMD Ryzen 9 5950X Release build at 48 kHz stereo/128-frame callbacks (2.6667 ms), after 3,000 warm-up callbacks and 20,000 measured callbacks:
+
+| Detector mode | p50 | p95 | p99 | p99.9 | Max | Fixed state | Allocations | Deadline misses |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Block Input (default) | 0.1069% | 0.1283% | 0.1511% | 0.5272% | 6.3564% | 64 B native / 60 B WASM | 0 | 0/20,000 |
+| Pre-effect Dry Chain | 0.1046% | 0.1069% | 0.1485% | 0.3492% | 0.8010% | 64 B native / 60 B WASM | 0 | 0/20,000 |
+
+Percentages are processor-call time divided by the callback deadline; maximum values are scheduling-sensitive and the Block Input maximum is an OS scheduling outlier. This is not a tablet or whole-chain guarantee. Native tests, browser/WASM playback, the MinGW Windows core/offline-renderer build, and the focused Release benchmark pass. Hardware listening, external-bus routing, native Windows UI/runtime, and target-device timing remain manual.
+
 ## Fender Tone Master Pro Harmonic Tremolo mode switch (2026-11-27)
 
 The Model Guide v1.1.100 / Rev. A, printed p. 33, names 1960 6G4 and 1963 6G4A but does not describe their circuit differences or publish numeric bounds/defaults. TabletFX preserves the existing 6G4 output and applies a smoothed, project-authored 1.25× effective-crossover shift for 6G4A (700→875 Hz); it does not claim to reproduce either historic circuit. The existing one-pole split and LFO remain in place. Native state is 136 B, browser/WASM effect state is 112 B, and the mode adds no fixed audio-path latency or process allocation.

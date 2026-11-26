@@ -6,36 +6,34 @@
   "workflow": "flagship-effects-categorized",
   "previous_checkpoint_commit": "c6463464671a0a5084fcafdcb766716df7fc76dd",
   "latest_audit": {
-    "name": "Fender Phaser stage choices and HeadRush Prime Orange Phaser Stereo control",
-    "status": "Fender's 4/8/10/12-stage choices and Prime's Orange Phaser Stereo control surface were verified from exact-model documentation. The existing categorized Phaser at Modulation ID 18 now supports 4/6/8/10/12 stages and a project-authored L/R phase-link toggle. Native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks pass; manual/device checks remain. No vendor DSP/settings/sound parity is claimed.",
+    "name": "Line 6 Helix Stadium Dynamics Sidechain project mode",
+    "status": "The current Stadium Effects manual documents a Sidechain selector for Dynamics except Feedbacker, defaulting to Off/block input, with external input-level examples. TabletFX implements only a project-limited Block Input or Pre-effect Dry Chain detector on its existing Dynamics Studio Compressor. Native, browser/local-guitar, Windows MinGW, and CPU/memory checks pass; manual/device checks remain. No Stadium DSP, routing, setting, or sound parity is claimed.",
     "date": "2026-11-27",
-    "picker_index": 18,
-    "category": "Modulation",
+    "picker_index": 6,
+    "category": "Dynamics",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and HeadRush Prime User Guide",
-      "revision": "Fender Model Guide v1.1.100 / Rev. A, printed p. 40; firmware notes through v1.8.87 dated 2026-11-23. Prime User Guide v5.0.0 §4.4.2 printed p. 23/PDF p. 24; current notes v5.2.0 (October 2026). Installed device firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "prime_guide_url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "prime_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-      "qualification": "Fender's Phaser stage diagram displays 4/8/10/12 but no numeric bounds/defaults, DSP, or latency. Prime's example screen displays Rate, Stereo, and Sync but does not define Stereo behavior or ranges/defaults. Current firmware notes do not name Phaser changes; installed firmware and later-guide applicability remain unknown."
+      "title": "Line 6 Helix Stadium Effects manual and hardware v1.4 release notes",
+      "revision": "Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware notes list v1.4.2 dated 2026-10-27; installed firmware unknown.",
+      "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "Manual common parameter table says Sidechain applies to Dynamics except Feedbacker, defaults Off/block input, and lists Instrument, Mic, Return, USB, and S/PDIF as examples. It does not publish the complete source list or selector ranges. The v1.4.2 notes do not mention Sidechain; that does not establish unchanged behavior."
     },
-    "documented_controls": "Fender Phaser: Rate, Depth, Resonance, Tap Division, Mode, and Stages; diagram shows 4/8/10/12. Prime Orange Phaser example: Rate, Stereo On/Off, and Sync On/Off; example values do not define limits or defaults.",
-    "project_controls": "Existing Modulation Phaser ID 18 supports 4/6/8/10/12 (4-stage default; 6 is project-only) and clears state on stage changes. Its project-authored Stereo toggle defaults On with opposite L/R LFO phases; Off links them. Maximum fixed state is 360 B native / 344 B browser/WASM; the wider stage bank adds 64 B over prior 8-stage capacity. No buffers, fixed latency, or process allocations are added.",
+    "documented_controls": "Sidechain selects the signal level that triggers compressor/limiter/gate Threshold. Off uses the block input. Examples of other input levels are Instrument, Mic, Return, USB, and S/PDIF. It is documented for all Dynamics except Feedbacker; numeric ranges and complete source list are unknown.",
+    "project_controls": "Existing Studio Compressor at Dynamics picker ID 6 exposes project-authored Threshold, Ratio, Knee, Attack, Release, and Makeup, plus a detector choice: Block Input (default) or Pre-effect Dry Chain. The dry-chain buffer is reused; no separate external buses, detector filter, extra audio buffer, fixed latency, or process allocation is added. Settings/ranges are project-authored, not Stadium settings or sound parity.",
     "verification": {
-      "native": "make web-test-fender-phaser-90-tap-division passes all 123 CTest cases; Phaser tests cover each supported stage count, distinct responses, fallback/reset, stereo behavior, and zero process allocation.",
-      "browser": "HeadlessChrome 151, local prerecorded stereo Guitar-TECHS DI, categorized Modulation picker ID 18. Six Play captures verify tempo sync, Stereo On/Off RMS difference 0.053119, and 4/12-stage RMS difference 0.085007; browser/native chain comparison passes.",
+      "native": "make test passes all 123 CTest cases and 13 fixture-safety checks. Focused compressor tests cover external detector response, aliased Block Input identity, bounds, variable blocks, non-finite handling, and no allocation.",
+      "browser": "make web-test-stadium-dynamics-sidechain passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI, verifies the Dynamics picker and source control, and observes relative output-difference RMS 0.777148. Effect memory is 60 B; the whole chain is 81,694,296 B; no new audio buffers.",
       "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 callbacks/profile. p50/p95 CPU ranges 0.072/0.089% at 4 stages to 0.192/0.192% at 12 stages of the 2.667 ms budget. 360 B native state, zero fixed latency and no process allocation. 12-stage max 8.231% is an OS scheduling outlier; no callback budget was exceeded.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured calls. Block Input p50/p95/p99/p99.9/max is 0.1069/0.1283/0.1511/0.5272/6.3564%; Pre-effect Dry Chain is 0.1046/0.1069/0.1485/0.3492/0.8010% of the 2.6667 ms deadline. Zero deadline misses; 64 B native state and zero allocations. Block Input's maximum is an OS scheduling outlier.",
       "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
     },
-    "remaining": "Human listening, physical Fender/Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
+    "remaining": "Human listening, physical Stadium comparison, external-bus routing and filtering, installed firmware confirmation, native Windows UI/audio runtime, and target-device timing remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Implement the project-scoped Dynamics Sidechain detector choice on the existing categorized compressor using preallocated inputs; distinguish Block Input from pre-effect Dry Chain and do not claim Stadium's external Instrument/Mic/Return/USB/S/PDIF buses. Then assess Fractal FM9-family Global Mix only on processors with compatible existing wet/dry controls, HeadRush Prime Global EQ only after independent output routes exist, and XRecer XR1 global routing after a real routing host exists.",
-    "qualification": "Preserve the existing manufacturer-versus-project distinction, categorized picker, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; manual hardware/listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Verify the November 2026 Blocks Guide Global Mix block list, FM9 availability and formula. Apply only a project-scoped global wet/dry offset to compatible existing mix controls, keeping each block's regular Mix setting separate and recording the exact formula, bounds, defaults, categories, CPU, and memory. Then return to model-specific gaps; do not start HeadRush Prime Global EQ before independent output routes exist or XRecer XR1 FX loops before a real routing host exists.",
+    "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
     {
@@ -1414,9 +1412,79 @@
         "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
         "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
-        "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+    },
+    "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
+    },
+    {
+      "name": "HeadRush Prime Orange Phaser Stereo control",
+      "status": "Prime v5.0.0's Orange Phaser Stereo control surface is documented; a project-authored toggle on the existing categorized Phaser passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. Manual/device checks remain; no Prime behavior or DSP parity is claimed.",
+      "date": "2026-11-27",
+      "picker_index": 18,
+      "category": "Modulation",
+      "official_source": {
+        "title": "HeadRush Prime User Guide and firmware notes",
+        "revision": "User Guide v5.0.0 §4.4.2, printed p. 23/PDF p. 24; current update notes v5.2.0 (October 2026). Installed firmware and later-guide applicability unknown.",
+        "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "qualification": "The Orange Phaser screen shows Rate, Stereo On/Off, and Sync On/Off. The pictured 0.6 Hz and Stereo On values are examples, not ranges/defaults; the guide does not define Stereo semantics. v5.2.0 notes do not mention Orange Phaser and do not establish unchanged behavior."
       },
-      "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
+      "documented_controls": "Rate, Stereo On/Off, and Sync On/Off appear in the Orange Phaser example. Numeric bounds/defaults and the Stereo signal behavior are not published.",
+      "project_controls": "Existing Modulation Phaser ID 18 has a project-authored Stereo toggle: On preserves the previous opposite L/R LFO phase, Off links channels; default On preserves existing output. The current combined Phaser state uses 360 B native / 344 B browser/WASM with 12-stage capacity, but the Stereo toggle itself adds no buffer, fixed latency, or process allocation.",
+      "verification": {
+        "native": "make web-test-fender-phaser-90-tap-division passes Phaser defaults/compatibility, Stereo On/Off, supported stage counts, and zero-process-allocation coverage as part of all 123 CTest cases.",
+        "browser": "HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play through categorized Modulation ID 18; Stereo On/Off RMS difference 0.053119. Full browser/native comparison passes.",
+        "windows": "make windows-cross-build passes the shared Phaser core and offline-renderer build with MinGW.",
+        "benchmark": "At 6 stages, 48 kHz stereo/128-frame callbacks on Ryzen 9 5950X Release: Stereo On p50/p95/p99/p99.9/max 0.099/0.123/0.149/0.321/1.033%; Off 0.099/0.099/0.148/0.662/1.337% of the 2.667 ms deadline. The larger 12-stage object is fixed at 360 B; neither profile allocates or adds latency."
+      },
+      "remaining": "Human listening, Prime hardware comparison, installed firmware confirmation, and target-device timing remain manual; do not infer Prime's Stereo behavior from the project toggle."
+    },
+    {
+      "name": "Fender Tone Master Pro Phaser stage choices",
+      "status": "Documented 4/8/10/12 stage choices are available in the existing categorized Modulation Phaser alongside retained project choice 6. Native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks pass; manual/device checks remain without parity claims.",
+      "date": "2026-11-27",
+      "picker_index": 18,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 40; firmware notes checked through v1.8.87 dated 2026-11-23. Installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The separate Phaser model's guide illustration shows 4/8/10/12 Stages and names Rate, Depth, Resonance, Tap Division, and Mode. Numeric bounds/defaults, DSP, latency, and sound behavior are not published; current notes do not mention Phaser."
+      },
+      "documented_controls": "Rate, Depth, Resonance, Tap Division, Mode, and Stages; documented stage choices are 4/8/10/12.",
+      "project_controls": "Existing Modulation Phaser ID 18 accepts 4/6/8/10/12, retaining 4 as default and 6 as an additional project option. Discrete stage changes clear all-pass history. Maximum fixed arrays are 360 B native / 344 B browser/WASM; increasing capacity from eight to twelve stages adds 64 B and no buffer, fixed latency, or process allocation.",
+      "verification": {
+        "native": "make web-test-fender-phaser-90-tap-division passes distinct-response and fallback/reset Phaser tests for 4/6/8/10/12, as part of all 123 CTest cases.",
+        "browser": "HeadlessChrome 151 plays local prerecorded stereo Guitar-TECHS DI through categorized Modulation ID 18; selector contains 4/6/8/10/12 and 4/12 output-difference RMS is 0.085007. Full browser/native comparison passes.",
+        "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128-frame, 20,000 callbacks per profile. Stage 4→12 p50 CPU is 0.072→0.192% and p95 0.089→0.192% of the 2.667 ms callback budget. The 12-stage observed max 8.231% is an OS scheduling outlier; no callback budget was exceeded. State is 360 B native / 344 B browser/WASM; zero process allocations and zero fixed latency."
+      },
+      "remaining": "Human listening, physical Fender comparison, installed firmware confirmation, and target-device timing remain manual; do not claim Fender settings, algorithm, DSP, or sound parity."
+    },
+    {
+      "name": "Line 6 Helix Stadium Dynamics Sidechain project mode",
+      "status": "Project-limited detector choice on the categorized Studio Compressor; native, browser, MinGW, and CPU/memory verification pass. External input buses, listening, hardware comparison, and device timing remain.",
+      "date": "2026-11-27",
+      "picker_index": 6,
+      "category": "Dynamics",
+      "official_source": {
+        "title": "Line 6 Helix Stadium Effects manual and hardware v1.4 release notes",
+        "revision": "Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware notes list v1.4.2 dated 2026-10-27; installed firmware unknown.",
+        "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "qualification": "Sidechain is documented for Dynamics except Feedbacker, defaults Off/block input, and has examples Instrument, Mic, Return, USB, and S/PDIF. Complete source list and numeric bounds are unpublished. The v1.4.2 notes do not mention Sidechain."
+      },
+      "documented_controls": "Threshold detector source; Off/block input default and external input-level examples. Stadium routing behavior is not reproduced.",
+      "project_controls": "Studio Compressor ID 6 uses Block Input by default or the project-only Pre-effect Dry Chain detector; existing dry buffer is reused. Project compressor settings, bounds, DSP, and detector semantics do not claim Stadium parity.",
+      "verification": {
+        "native": "make test passes all 123 CTest cases and 13 fixture-safety checks, including focused compressor detector and zero-allocation coverage.",
+        "browser": "make web-test-stadium-dynamics-sidechain passes HeadlessChrome 151 local stereo Guitar-TECHS DI playback; relative RMS difference between sources is 0.777148. No new audio buffers; 60 B browser effect state.",
+        "windows": "make windows-cross-build passes MinGW shared-core and offline renderer compilation.",
+        "benchmark": "48 kHz stereo/128 frames, 20,000 calls/profile; p50/p95/p99/p99.9/max are 0.1069/0.1283/0.1511/0.5272/6.3564% for Block Input and 0.1046/0.1069/0.1485/0.3492/0.8010% for Pre-effect Dry Chain. Zero misses; native state 64 B; no allocation. The Block Input maximum is an OS scheduling outlier.",
+        "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
+      },
+      "remaining": "External buses/filtering, other dynamics blocks, broad ducking, human listening, physical comparison, installed firmware, native Windows UI/runtime, and target-device timing remain open."
     }
   ],
   "previous_checkpoint": {
@@ -1444,28 +1512,28 @@
     "remaining": "Human listening, physical Prime comparison, installed firmware, native Windows UI/audio runtime, and target-device timing remain open."
   },
   "current_checkpoint": {
-    "name": "Fender Phaser stage choices and HeadRush Prime Orange Phaser Stereo control",
-    "status": "Exact model guide controls verified; 4/8/10/12 stage choices and a project-authored Stereo toggle are implemented on existing Modulation ID 18. Native, browser/WASM local-guitar, Windows MinGW, and CPU/memory checks pass; only manual/device checks remain.",
+    "name": "Line 6 Helix Stadium Dynamics Sidechain project mode",
+    "status": "A project-limited detector choice on the existing categorized Studio Compressor is implemented. Native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks pass; manual/device checks remain.",
     "date": "2026-11-27",
-    "picker_index": 18,
-    "category": "Modulation",
+    "picker_index": 6,
+    "category": "Dynamics",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and HeadRush Prime User Guide",
-      "revision": "Fender Model Guide v1.1.100 / Rev. A, p. 40; Prime User Guide v5.0.0 §4.4.2, printed p. 23/PDF p. 24; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "prime_guide_url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
-      "qualification": "Fender's stage graphic shows 4/8/10/12 without ranges/defaults/DSP/latency. Prime's screenshot shows Stereo but does not define its semantics or defaults."
+      "title": "Line 6 Helix Stadium Effects manual and hardware v1.4 release notes",
+      "revision": "Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware notes list v1.4.2 dated 2026-10-27; installed firmware unknown.",
+      "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "The manual describes Sidechain for Dynamics except Feedbacker, defaulting Off/block input and listing Instrument, Mic, Return, USB, and S/PDIF examples. It does not publish the full source list or ranges."
     },
-    "documented_controls": "Fender Phaser lists Rate, Depth, Resonance, Tap Division, Mode, Stages; graphic shows 4/8/10/12. Prime Orange Phaser example shows Rate, Stereo, Sync.",
-    "project_controls": "One Modulation Phaser at ID 18 supports 4/6/8/10/12, default 4, clears state on count change, and offers a project Stereo On/Off LFO-phase mapping. Maximum fixed state 360 B native / 344 B browser/WASM; no added buffer, fixed latency, or process allocation.",
+    "documented_controls": "Threshold detector source; Off/block input default and external input-level examples. No complete external source list, selector range, or per-model routing details are published.",
+    "project_controls": "Studio Compressor ID 6 keeps its existing project-authored parameter ranges and defaults. Detector choice is Block Input (default) or Pre-effect Dry Chain. The existing dry-chain buffer is reused. No Stadium buses, filtering, DSP, or sound parity is claimed.",
     "verification": {
-      "native": "All 123 CTest cases pass, including Phaser stage-count, distinct-response, fallback/reset, stereo, and no-allocation coverage.",
-      "browser": "HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI, categorized Modulation ID 18. Stage selector and 12-stage Play pass; 4/12 RMS difference 0.085007, Stereo On/Off difference 0.053119; browser/native comparison passes.",
-      "windows": "make windows-cross-build passes the MinGW core and offline-renderer build.",
-      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128-frame: p50/p95 CPU 0.072/0.089% at 4 stages, 0.192/0.192% at 12; fixed state 360 B native / 344 B browser/WASM, no allocations/latency.",
+      "native": "make test passes all 123 CTest cases and 13 fixture-safety checks; focused tests cover external detector response, aliased input compatibility, and no allocation.",
+      "browser": "make web-test-stadium-dynamics-sidechain passes HeadlessChrome 151 on local prerecorded stereo Guitar-TECHS DI and checks the Dynamics picker. Source changes produce relative RMS difference 0.777148; effect state 60 B; no additional audio buffers.",
+      "windows": "make windows-cross-build passes MinGW shared-core and offline-renderer compilation; native Windows UI/runtime remains unverified.",
+      "benchmark": "Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured calls: Block Input p50/p95/p99/p99.9/max 0.1069/0.1283/0.1511/0.5272/6.3564%; Pre-effect Dry Chain 0.1046/0.1069/0.1485/0.3492/0.8010% of a 2.6667 ms deadline. Zero misses, 64 B native state, and no allocation; the Block Input maximum is a scheduling outlier.",
       "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
     },
-    "remaining": "Human listening, physical Fender/Prime comparisons, installed firmware confirmation, native Windows UI/audio runtime, and target-device timing remain open. No vendor settings, algorithm, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Stadium comparison, separate external buses/filtering, installed firmware confirmation, native Windows UI/audio runtime, and target-device timing remain open. This project-limited source selector does not implement general sidechain ducking."
   },
   "next_research": [
     {

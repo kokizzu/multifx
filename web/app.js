@@ -21356,3 +21356,158 @@ async function runBrowserSelfTest() {
  if (new URLSearchParams(location.search).has("selftest")) {
   void runBrowserSelfTest();
 }
+  compressorSidechainSource: 0,
+const compressorSidechainSourceControl = document.querySelector("#compressor-sidechain-source");
+const studioCompressorControls = [
+  "studio-compressor-threshold-db", "studio-compressor-ratio", "studio-compressor-knee-db",
+  "studio-compressor-attack-ms", "studio-compressor-release-ms", "studio-compressor-makeup-db",
+].map((id) => ({ input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) }));
+function updateStudioCompressor() {
+  updateCompressorControls(
+    studioCompressorControls, "compressor", "compressor",
+    [" dB", "ratio", " dB", " ms", " ms", " dB"],
+  );
+}
+
+function updateCompressorSidechainSource() {
+  const source = Number(compressorSidechainSourceControl.value);
+  const selectedSource = source === 1 ? 1 : 0;
+  compressorSidechainSourceControl.value = String(selectedSource);
+  DEFAULT_PARAMETERS.compressorSidechainSource = selectedSource;
+  if (workletNode) {
+    workletNode.port.postMessage({
+      type: "compressor-sidechain-source",
+      value: selectedSource,
+    });
+  }
+}
+
+compressorSidechainSourceControl.addEventListener("change", updateCompressorSidechainSource);
+updateStudioCompressor();
+updateCompressorSidechainSource();
+async function runStadiumDynamicsSidechainBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousSearch = effectSearch.value;
+  const previousSource = compressorSidechainSourceControl.value;
+  const previousCompressor = studioCompressorControls.map(({ input }) => input.value);
+  const previousVolume = [volumePosition.value, volumeMinimum.value,
+    volumeMaximum.value, volumeTaper.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        reference.channels !== decodedAudio.numberOfChannels) {
+      throw new Error("Stadium sidechain smoke requires the local prerecorded guitar DI fixture.");
+    }
+    const compressorRow = document.querySelector('input[data-effect="6"]')?.closest(".effect-row");
+    if (!compressorRow || compressorRow.dataset.category !== "dynamics" ||
+        !compressorRow.querySelector(".effect-name")?.textContent.includes("Studio compressor")) {
+      throw new Error("Studio compressor must remain in the categorized Dynamics picker.");
+    }
+    if (compressorSidechainSourceControl.value !== "0") {
+      throw new Error("Block input (Sidechain Off) must be the default detector source.");
+    }
+    effectCategoryFilter.value = "dynamics";
+    updateEffectBrowser();
+    await audioContext.resume();
+    stopSource(false);
+
+    let inputSquares = 0;
+    let inputSamples = 0;
+    for (let channel = 0; channel < decodedAudio.numberOfChannels; channel += 1) {
+      const channelSamples = decodedAudio.getChannelData(channel);
+      for (let index = 0; index < channelSamples.length; index += 1) {
+        inputSquares += channelSamples[index] * channelSamples[index];
+        inputSamples += 1;
+      }
+    }
+    const inputRms = Math.sqrt(inputSquares / Math.max(1, inputSamples));
+    if (!(inputRms > 1e-5)) throw new Error("Prerecorded guitar DI is unexpectedly silent.");
+    const thresholdDb = Math.max(-60, Math.min(0, 20 * Math.log10(inputRms) - 6));
+    const controls = studioCompressorControls.map(({ input }) => input);
+    [thresholdDb, 12, 0, 0.1, 100, 0].forEach((value, index) => {
+      controls[index].value = String(value);
+    });
+    updateStudioCompressor();
+    volumePosition.value = "20";
+    updateVolumePedal();
+
+    const capture = async (source) => {
+      document.querySelectorAll("[data-effect]").forEach((box, index) => {
+        box.checked = index === 1 || index === 6;
+        workletNode.port.postMessage({ type: "enable", index, value: box.checked });
+      });
+      compressorSidechainSourceControl.value = String(source);
+      updateCompressorSidechainSource();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting compressor sidechain playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const blockInput = await capture(0);
+    const preEffectDry = await capture(1);
+    let differenceSquares = 0;
+    let blockSquares = 0;
+    for (let index = 0; index < blockInput.length; index += 1) {
+      if (!Number.isFinite(blockInput[index]) || !Number.isFinite(preEffectDry[index])) {
+        throw new Error("Compressor sidechain produced non-finite browser audio.");
+      }
+      const difference = blockInput[index] - preEffectDry[index];
+      differenceSquares += difference * difference;
+      blockSquares += blockInput[index] * blockInput[index];
+    }
+    const differenceRms = Math.sqrt(differenceSquares / blockInput.length);
+    const relativeDifferenceRms = differenceRms /
+      Math.max(Math.sqrt(blockSquares / blockInput.length), 1e-12);
+    if (relativeDifferenceRms < 0.01) {
+      throw new Error("Changing the compressor detector source did not alter the local-guitar output.");
+    }
+    return {
+      category: "Dynamics",
+      effectId: 6,
+      defaultDetector: "Block Input (Off)",
+      projectDetector: "Pre-effect Dry Chain",
+      sourceRms: inputRms,
+      thresholdDb,
+      relativeDifferenceRms,
+      compressorStateBytes: effectMemory[6],
+      chainMemoryBytes,
+      addedAudioBuffers: 0,
+    };
+  } finally {
+    stopSource(false);
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+    });
+    studioCompressorControls.forEach(({ input }, index) => {
+      input.value = previousCompressor[index];
+    });
+    [volumePosition.value, volumeMinimum.value, volumeMaximum.value, volumeTaper.value] =
+      previousVolume;
+    compressorSidechainSourceControl.value = previousSource;
+    updateStudioCompressor();
+    updateVolumePedal();
+    updateCompressorSidechainSource();
+    effectCategoryFilter.value = previousCategory;
+    effectSearch.value = previousSearch;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
+        compressorSidechainSource: 0,

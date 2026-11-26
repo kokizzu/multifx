@@ -1364,6 +1364,15 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_pitch_expression(
         this.chain, Number(message.targetSemitones), Number(message.position),
       );
+    } else if (message.type === "compressor" && this.ready) {
+      this.module._tf_chain_set_compressor(this.chain, ...message.value);
+    } else if (message.type === "compressor-sidechain-source" && this.ready) {
+      const accepted = this.module._tf_chain_set_compressor_sidechain_source(
+        this.chain, Number(message.value) | 0,
+      ) !== 0;
+      if (!accepted) {
+        this.port.postMessage({ type: "compressor-sidechain-error", value: message.value });
+      }
     } else if (message.type === "optical-compressor" && this.ready) {
       this.module._tf_chain_set_optical_compressor(this.chain, ...message.value);
     } else if (message.type === "fet-compressor" && this.ready) {

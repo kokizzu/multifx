@@ -290,6 +290,7 @@ PUBLISH_CHECKPOINTS += fractal-plex-shift
 PUBLISH_CHECKPOINTS += pitch-ring-mod
 PUBLISH_CHECKPOINTS += headrush-phaser-stereo
 PUBLISH_CHECKPOINTS += headrush-phase-invert
+PUBLISH_CHECKPOINTS += stadium-dynamics-sidechain
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -424,3 +425,13 @@ web-test-headrush-phase-invert: test-headrush-phase-invert web-build
 
 bench-headrush-phase-invert:
 	$(PYTHON) scripts/run_cmake.py bench-headrush-phase-invert
+
+.PHONY: test-stadium-dynamics-sidechain web-test-stadium-dynamics-sidechain bench-stadium-dynamics-sidechain
+test-stadium-dynamics-sidechain:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_compressor_tests
+
+web-test-stadium-dynamics-sidechain: test-stadium-dynamics-sidechain web-build
+	$(PYTHON) scripts/web.py test-stadium-dynamics-sidechain
+
+bench-stadium-dynamics-sidechain:
+	$(PYTHON) scripts/run_cmake.py bench-stadium-dynamics-sidechain

@@ -292,6 +292,19 @@
         <div id="fractal-diatonic-voice-controls" class="fractal-voice-controls"></div>
         <p class="hint">The note tracker adds control-response time before pitch shifting; the audio path itself uses the existing 256-sample shifter latency. Measurements are reported separately. Zero delay and feedback are the default; per-voice delay rings allocate only when selected.</p>
       </div>
+      <div class="effect-parameter-group" aria-label="Studio compressor controls">
+        <h3>Studio compressor · project controls</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="studio-compressor-threshold-db"><span>Threshold</span><output id="studio-compressor-threshold-db-value" for="studio-compressor-threshold-db">−18.0 dB</output><input id="studio-compressor-threshold-db" type="range" min="-60" max="0" step="0.5" value="-18"></label>
+          <label class="mix-control" for="studio-compressor-ratio"><span>Ratio</span><output id="studio-compressor-ratio-value" for="studio-compressor-ratio">3.0:1</output><input id="studio-compressor-ratio" type="range" min="1" max="20" step="0.1" value="3"></label>
+          <label class="mix-control" for="studio-compressor-knee-db"><span>Knee</span><output id="studio-compressor-knee-db-value" for="studio-compressor-knee-db">6.0 dB</output><input id="studio-compressor-knee-db" type="range" min="0" max="18" step="0.5" value="6"></label>
+          <label class="mix-control" for="studio-compressor-attack-ms"><span>Attack</span><output id="studio-compressor-attack-ms-value" for="studio-compressor-attack-ms">8.0 ms</output><input id="studio-compressor-attack-ms" type="range" min="0.1" max="200" step="0.1" value="8"></label>
+          <label class="mix-control" for="studio-compressor-release-ms"><span>Release</span><output id="studio-compressor-release-ms-value" for="studio-compressor-release-ms">100.0 ms</output><input id="studio-compressor-release-ms" type="range" min="5" max="2000" step="1" value="100"></label>
+          <label class="mix-control" for="studio-compressor-makeup-db"><span>Makeup gain</span><output id="studio-compressor-makeup-db-value" for="studio-compressor-makeup-db">0.0 dB</output><input id="studio-compressor-makeup-db" type="range" min="-12" max="18" step="0.5" value="0"></label>
+          <label class="mix-control" for="compressor-sidechain-source"><span>Detector source</span><select id="compressor-sidechain-source" aria-describedby="compressor-sidechain-note"><option value="0" selected>Block input (off, default)</option><option value="1">Pre-effect dry chain (project-only)</option></select></label>
+        </div>
+        <p id="compressor-sidechain-note" class="hint">The project-only option detects the chain input before effect blocks while compressing the current block signal. It uses the existing pre-effect buffer. Separate Instrument, Mic, Return, USB, and S/PDIF sidechain buses are not available in this host. Controls, ranges, detector behavior, and DSP are project choices, not Helix Stadium settings or sound parity.</p>
+      </div>
       <div class="effect-parameter-group" aria-label="Optical-style compressor controls">
         <h3>Optical-style compressor · project-authored</h3>
         <div class="gain-controls">

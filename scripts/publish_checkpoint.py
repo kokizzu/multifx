@@ -3063,6 +3063,27 @@ HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+STADIUM_DYNAMICS_SIDECHAIN_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/stadium_dynamics_sidechain_bench.cpp",
+    "include/tabletfx/effects/compressor.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/validate_docs.py",
+    "scripts/web.py",
+    "src/web/wasm_chain.cpp",
+    "tests/test_compressor.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 HEADRUSH_PHASE_INVERT_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
@@ -3135,6 +3156,10 @@ CHECKPOINTS = {
     "headrush-phaser-stereo": (
         HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS,
         "feat: add project-authored Phaser stereo spread control",
+    ),
+    "stadium-dynamics-sidechain": (
+        STADIUM_DYNAMICS_SIDECHAIN_CHECKPOINT_PATHS,
+        "feat: add project-limited compressor sidechain source",
     ),
     "fractal-vco-response": (
         FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS,
@@ -4218,7 +4243,10 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
             else:
                 # Resume a partially staged path by selecting only remaining
                 # checkpoint-marked hunks rather than broad-staging its edits.
-                stage_partial_path(path, markers, allow_no_match=True)
+                stage_partial_path(
+                    path, markers, context=partial_checkpoint_context(checkpoint, path),
+                    allow_no_match=True,
+                )
         return
 
     partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
@@ -4228,7 +4256,9 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
             git("add", "--", path, capture=False)
             continue
 
-        stage_partial_path(path, markers)
+        stage_partial_path(
+            path, markers, context=partial_checkpoint_context(checkpoint, path)
+        )
 
 
 def verify_partial_staging(
@@ -4239,7 +4269,8 @@ def verify_partial_staging(
             # Fractal Surround Delay checkpoint recovery validates staged files only.
             continue
         # Validate staged minimal-context hunks with the same selector used during staging.
-        diff = git("diff", "--cached", "--no-ext-diff", "--unified=1", "--", path)
+        context = partial_checkpoint_context(checkpoint, path)
+        diff = git("diff", "--cached", "--no-ext-diff", f"--unified={context}", "--", path)
         try:
             _, hunk_count, selected_hunk_count = select_patch_hunks(diff, markers)
         except SystemExit as error:
@@ -4334,8 +4365,9 @@ def plan(checkpoint: str) -> list[str]:
     # Show the exact checkpoint patch before publication, including partial-file selections.
     print("Exact patch selected for this checkpoint:")
     for path in paths:
-        staged_diff = git("diff", "--no-ext-diff", "--unified=1", "--cached", "--", path)
-        unstaged_diff = git("diff", "--no-ext-diff", "--unified=1", "--", path)
+        context = partial_checkpoint_context(checkpoint, path) if path in partial else 1
+        staged_diff = git("diff", "--no-ext-diff", f"--unified={context}", "--cached", "--", path)
+        unstaged_diff = git("diff", "--no-ext-diff", f"--unified={context}", "--", path)
         diff = staged_diff if path in staged_paths else unstaged_diff
         if path in partial and diff:
             try:
@@ -4471,6 +4503,65 @@ PARTIAL_CHECKPOINT_HUNKS["axom-source-audit"] = {
     ),
 }
 
+PARTIAL_CHECKPOINT_HUNKS["stadium-dynamics-sidechain"] = {
+    "CMakeLists.txt": ("stadium_dynamics_sidechain_bench",),
+    "apps/stadium_dynamics_sidechain_bench.cpp": ('run_profile({"Block input (default)"',),
+    "EFFECTS_MATRIX.md": ("pre-effect dry chain for threshold detection",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "## Line 6 Helix Stadium Dynamics Sidechain",
+        "project-limited Studio Compressor detector selector",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "Status marks in the first column",
+        "DYN-15",
+        "Project-authored Studio Compressor controls:",
+    ),
+    "LATENCY_AND_QUALITY.md": ("## Line 6 Helix Stadium Dynamics Sidechain",),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += stadium-dynamics-sidechain",
+        "test-stadium-dynamics-sidechain",
+    ),
+    "RESEARCH.md": ("## Line 6 Helix Stadium Dynamics Sidechain",),
+    "research-state.json": (
+        "Line 6 Helix Stadium Dynamics Sidechain project mode",
+        '"next_device": "Fractal FM9 Mark II Turbo"',
+    ),
+    "scripts/publish_checkpoint.py": (
+        "STADIUM_DYNAMICS_SIDECHAIN_CHECKPOINT_PATHS",
+        '"stadium-dynamics-sidechain": (',
+        'PARTIAL_CHECKPOINT_HUNKS["stadium-dynamics-sidechain"]',
+        "PARTIAL_CHECKPOINT_CONTEXT",
+        "partial_checkpoint_context",
+    ),
+    "scripts/run_cmake.py": ("bench_stadium_dynamics_sidechain",),
+    "scripts/validate_docs.py": ("row_pattern = re.compile",),
+    "scripts/web.py": ("stadium_dynamics_sidechain_only", "test-stadium-dynamics-sidechain"),
+    "include/tabletfx/effects/compressor.hpp": ("process_with_detector",),
+    "src/web/wasm_chain.cpp": (
+        "set_compressor_sidechain_source",
+        "compressor_pre_effect_detector_",
+    ),
+    "tests/test_compressor.cpp": (
+        "process_with_detector",
+        "test_aliased_block_input_is_identical_and_allocation_free",
+    ),
+    "web/app.js": ("compressorSidechainSource", "updateCompressorSidechainSource"),
+    "web/audio-worklet.js": ("compressor-sidechain-source",),
+    "web/index.html": (
+        "compressor-sidechain-source",
+        "Separate Instrument, Mic, Return, USB, and S/PDIF sidechain buses are not available",
+    ),
+}
+
+# Some adjacent independent edits share a normal-context diff hunk. Keep the
+# Sidechain browser parameter isolated from the pending Phaser stereo defaults.
+PARTIAL_CHECKPOINT_CONTEXT = {
+    "stadium-dynamics-sidechain": {"web/app.js": 0},
+}
+
+
+def partial_checkpoint_context(checkpoint: str, path: str) -> int:
+    return PARTIAL_CHECKPOINT_CONTEXT.get(checkpoint, {}).get(path, 1)
 
 if __name__ == "__main__":
     main()

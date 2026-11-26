@@ -1,5 +1,11 @@
 # Research and source audit
 
+## Line 6 Helix Stadium Dynamics Sidechain project mode (2026-11-27)
+
+The current live [Helix Stadium Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) selector reads v1.4 Rev D / v1.3 Rev B / v1.2. Its common parameter table says Sidechain is offered for Dynamics except Feedbacker, defaults Off (the block input), and can use other input levels such as Instrument, Mic, Return, USB, or S/PDIF. The complete source list and numeric ranges are not published. Hardware [v1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes) list v1.4.2 dated 2026-10-27 without a Sidechain note; absence of a note does not establish unchanged behavior. Installed firmware is unknown.
+
+TabletFX reuses its Studio Compressor and selects either its current Block Input (default) or the existing pre-effect dry-chain buffer as detector. The latter does not add external buses or Stadium-equivalent routing. The source choice adds no audio buffer, fixed latency, process allocation, or incremental processor state. The project compressor's numeric ranges/defaults are documented in IMPLEMENTATION_CHECKLIST.md; native/browser state, local guitar-DI smoke, CPU percentages, and automated results are in EFFECTS_MATRIX.md and LATENCY_AND_QUALITY.md. The manufacturer comparison remains unverified beyond the documented control concept. Human listening, hardware comparison, and target-device timing remain open.
+
 ## HeadRush Prime Orange Phaser Stereo control (2026-11-27)
 
 The official Prime v5.0.0 User Guide §4.4.2, printed p. 23 (PDF p. 24), shows the Orange Phaser with Rate, Stereo On/Off, and Sync On/Off. The displayed 0.6 Hz and Stereo On values are examples, not bounds or defaults; the guide does not define Stereo's signal behavior. Current v5.2.0 release notes do not mention Orange Phaser, which does not establish unchanged behavior or later-manual applicability. Installed Prime firmware is unknown. [Prime User Guide v5.0.0](https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf) · [Prime v5.2.0 notes](https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf)

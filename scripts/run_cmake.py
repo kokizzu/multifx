@@ -159,6 +159,17 @@ def bench_headrush_phaser_stereo(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_stadium_dynamics_sidechain(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_stadium_dynamics_sidechain_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_stadium_dynamics_sidechain_bench"
+    )
+    run([str(executable)])
+
+
 def bench_headrush_phase_invert(cmake: str) -> None:
     build(cmake)
     print(f"CPU: {cpu_name()}")
@@ -314,6 +325,8 @@ def main() -> None:
         bench_pitch_ring_mod(cmake)
     elif action == "bench-headrush-phaser-stereo":
         bench_headrush_phaser_stereo(cmake)
+    elif action == "bench-stadium-dynamics-sidechain":
+        bench_stadium_dynamics_sidechain(cmake)
     elif action == "bench-headrush-phase-invert":
         bench_headrush_phase_invert(cmake)
     elif action == "bench-fractal-flanger-vco":

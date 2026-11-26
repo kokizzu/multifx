@@ -62,6 +62,42 @@ void test_stereo_link_preserves_relative_image() {
             "stereo channels did not receive the same gain reduction");
 }
 
+void test_external_detector_compresses_audio_without_changing_its_level() {
+    tabletfx::Compressor compressor(48000.0F, hard_knee_settings());
+    std::vector<float> audio(48000, 0.25F);
+    std::vector<float> detector(48000, 0.5F);
+    compressor.process_with_detector(audio, detector, 1);
+
+    require(audio.back() < 0.08F,
+            "an above-threshold detector did not compress below-threshold program audio");
+
+    tabletfx::Compressor quiet_detector(48000.0F, hard_knee_settings());
+    std::fill(audio.begin(), audio.end(), 0.25F);
+    std::fill(detector.begin(), detector.end(), 0.05F);
+    quiet_detector.process_with_detector(audio, detector, 1);
+    require(std::abs(audio.back() - 0.25F) < 1.0e-3F,
+            "a below-threshold external detector changed program audio");
+}
+
+void test_block_input_detector_matches_legacy_processing() {
+    tabletfx::Compressor legacy(48000.0F, hard_knee_settings());
+    tabletfx::Compressor explicit_input(48000.0F, hard_knee_settings());
+    std::array<float, 1024> legacy_audio{};
+    std::array<float, 1024> explicit_audio{};
+    for (std::size_t i = 0; i < legacy_audio.size(); ++i) {
+        legacy_audio[i] = explicit_audio[i] =
+            0.55F * std::sin(static_cast<float>(i) * 0.031F);
+    }
+
+    legacy.process(legacy_audio, 2);
+    explicit_input.process_with_detector(
+        explicit_audio, std::span<const float>(explicit_audio.data(), explicit_audio.size()), 2);
+    for (std::size_t i = 0; i < legacy_audio.size(); ++i) {
+        require(legacy_audio[i] == explicit_audio[i],
+                "the explicit block-input detector changed legacy compressor output");
+    }
+}
+
 void test_defaults_bounds_reset_and_nonfinite_input() {
     tabletfx::Compressor compressor;
     const auto defaults = compressor.parameters();
@@ -134,6 +170,7 @@ void test_variable_block_sizes_and_no_process_allocations() {
         compressor.process(one_frame, 1);
         compressor.process(irregular_block, 1);
         compressor.process(stereo_block, 2);
+        compressor.process_with_detector(stereo_block, external_detector, 2);
     }
     const std::size_t after = allocation_count.load(std::memory_order_relaxed);
     require(after == before, "compressor allocated memory during process()");

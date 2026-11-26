@@ -763,6 +763,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  headrush_drop_tune_only: bool = False,
                  headrush_phase_invert_only: bool = False,
                  stadium_delay_trails_only: bool = False,
+                 stadium_dynamics_sidechain_only: bool = False,
                  fender_stereo_flanger_phase_only: bool = False,
                  fender_flanger_tap_division_only: bool = False,
                  fender_phaser_90_tap_division_only: bool = False,
@@ -814,6 +815,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             if (fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only
                     or stereo_panner_only or formant_control_lfo_only
                     or headrush_drop_tune_only or headrush_phase_invert_only
+                    or stadium_dynamics_sidechain_only
                     or fender_stereo_flanger_phase_only
                     or fender_flanger_tap_division_only
                     or fender_phaser_90_tap_division_only
@@ -1311,6 +1313,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         LocalWebHandler.request_paths = []
         if stadium_delay_trails_only:
             url = base_url + "/web/index.html?selftest=stadium-delay-trails"
+        elif stadium_dynamics_sidechain_only:
+            url = base_url + "/web/index.html?selftest=stadium-dynamics-sidechain"
         elif formant_control_lfo_only:
             url = base_url + "/web/index.html?selftest=formant-control-lfo"
         elif volume_pedal_only:
@@ -1592,6 +1596,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif stereo_filter_only:
             print("Focused Stereo Filter browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
+        elif stadium_dynamics_sidechain_only:
+            print("Focused Stadium Dynamics sidechain browser/WASM local-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
         elif step_tremolo_only:
             print("Focused Step Tremolo browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
@@ -1685,6 +1692,7 @@ def main() -> None:
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
         "test-volume-pan", "test-volume-pedal", "test-stereo-filter", "test-stereo-panner",
         "test-stadium-delay-trails",
+        "test-stadium-dynamics-sidechain",
         "test-formant-control-lfo",
         "test-headrush-drop-tune",
         "test-headrush-phase-invert",
@@ -1724,6 +1732,8 @@ def main() -> None:
         browser_test(volume_pedal_only=True)
     elif action == "test-stadium-delay-trails":
         browser_test(stadium_delay_trails_only=True)
+    elif action == "test-stadium-dynamics-sidechain":
+        browser_test(stadium_dynamics_sidechain_only=True)
     elif action == "test-formant-control-lfo":
         browser_test(formant_control_lfo_only=True)
     elif action == "test-headrush-drop-tune":

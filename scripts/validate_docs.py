@@ -54,7 +54,7 @@ def main() -> None:
 
     id_pattern = re.compile(r"^\s*- \[ \] \*\*([A-Z][A-Z0-9]*-\d+)(?: · P[012])?\*\*", re.MULTILINE)
     source_ids = id_pattern.findall(goal.split("## Maintainer-approved additions", 1)[0])
-    row_pattern = re.compile(r"^\| \[[ x]\] \| `([A-Z][A-Z0-9]*-\d+)` \|", re.MULTILINE)
+    row_pattern = re.compile(r"^\| \[[ x~]\] \| `([A-Z][A-Z0-9]*-\d+)` \|", re.MULTILINE)
     tracked_ids = row_pattern.findall(checklist)
     if len(source_ids) != len(set(source_ids)):
         raise SystemExit("GOAL.md contains duplicate requirement IDs")

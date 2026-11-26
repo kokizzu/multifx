@@ -163,6 +163,10 @@ add_executable(tabletfx_headrush_phaser_stereo_bench
     apps/headrush_phaser_stereo_bench.cpp)
 target_link_libraries(tabletfx_headrush_phaser_stereo_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_stadium_dynamics_sidechain_bench
+    apps/stadium_dynamics_sidechain_bench.cpp)
+target_link_libraries(tabletfx_stadium_dynamics_sidechain_bench PRIVATE tabletfx_core)
+
 add_executable(tabletfx_tone_master_pro_3d_chorus_bench
     apps/tone_master_pro_3d_chorus_bench.cpp)
 target_link_libraries(tabletfx_tone_master_pro_3d_chorus_bench PRIVATE tabletfx_core)

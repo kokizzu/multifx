@@ -765,6 +765,19 @@ public:
             return;
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        if (index == 6U) {
+            auto* compressor = static_cast<tabletfx::Compressor*>(effects_[6].effect.get());
+            const auto audio = std::span<float>(work_.data(), samples);
+            if (!effects_[6].enabled) {
+                compressor->process_bypassed(audio, channels_);
+            } else if (compressor_pre_effect_detector_) {
+                compressor->process_with_detector(
+                    audio, std::span<const float>(dry_.data(), samples), channels_);
+            } else {
+                compressor->process(audio, channels_);
+            }
+            return;
+        }
         if (index == 96U) {
             if (stereo_filter_enabled_) {
                 stereo_filter_->process_with_detector(
@@ -1149,6 +1162,14 @@ public:
         parameters.release_ms = release_ms;
         parameters.makeup_db = makeup_db;
         compressor->set_parameters(parameters);
+    }
+
+    [[nodiscard]] bool set_compressor_sidechain_source(std::uint32_t source) noexcept {
+        if (source > 1U) {
+            return false;
+        }
+        compressor_pre_effect_detector_ = source == 1U;
+        return true;
     }
 
     void configure_drive(float drive) noexcept {
@@ -4283,6 +4304,7 @@ private:
     std::uint16_t channels_;
     std::uint32_t max_frames_;
     std::uint32_t frames_ = 0;
+    bool compressor_pre_effect_detector_ = false;
     std::vector<EffectEntry> effects_;
     std::vector<float> input_;
     std::vector<float> dry_;
@@ -4656,6 +4678,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_compressor(
         as_chain(opaque)->configure_compressor(threshold_db, ratio, knee_db, attack_ms,
                                                release_ms, makeup_db);
     }
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_set_compressor_sidechain_source(
+    void* opaque, std::uint32_t source) noexcept {
+    return opaque != nullptr &&
+            as_chain(opaque)->set_compressor_sidechain_source(source)
+        ? 1U
+        : 0U;
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_optical_compressor(
