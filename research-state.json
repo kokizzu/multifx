@@ -1262,6 +1262,45 @@
       "status": "Next candidate: audit an optional project-authored bypass tail drain for the existing Digital Delay ID 21. The common Effects table documents Trails Off as immediately muting delay repeats/reverb decays on bypass and Trails On as allowing them to fade after bypass or a snapshot change. No default is stated. Simple Delay-specific applicability is unresolved.",
       "known_controls": "Two-state Trails Off/On behavior appears in the common Effects parameter table. Trails On preserves decaying delay/reverb tails through block bypass or snapshot changes; Off mutes them immediately. The table does not identify a default or enumerate Simple Delay availability.",
       "qualification": "The public manual version labels conflict: selector/header v1.4 Rev D, cover Firmware 1.4, and footer Rev E / Firmware v1.4.1. Hardware firmware v1.4.2 notes are dated 2026-10-27; installed hardware firmware is unknown. Keep applicability to Simple Delay unresolved; do not infer a default or claim Line 6 settings/DSP/sound parity."
+    },
+    {
+      "device": "Melofty Axom Max",
+      "feature": "DeepSynth, Inst.Sim, and output EQ source audit",
+      "source": "Exact-model Axom Max User Manual V1.7.4 dated 2026-08-31, pp. 3, 8, 27, 45, and 54; official downloads page checked 2026-11-26.",
+      "source_urls": [
+        "https://cdn.rockboard.de/nos/data/erp/Artikell_PDF/Manual_PDF/Melofty/EN/MEL_AXOM_MAX_Manual_EN.pdf",
+        "https://www.meloftyaudio.com/support/downloads"
+      ],
+      "status": "The manual names DeepSynth and Inst.Sim but provides only the DeepSynth Quick Preset workflow and broad effect-module categories, not a model-level algorithm list or parameter guide. It documents separate output EQ enablement for unbalanced, balanced, and headphone outputs without band controls. The official downloads page lists Axom Max firmware V1.9.2 dated 2026-10-27, with no readable release notes. Existing project looper controls and in-chain Global EQ are related functions, not verified Axom behavior or per-output EQ.",
+      "known_controls": "DeepSynth: Quick Preset selection is documented, but oscillator/voice behavior, note tracking, control names, parameter ranges/defaults, and DSP are not. Output EQ: per-output enablement is documented; bands, filters, ranges, defaults, and signal routing are not. Manual's 19 module / 880+ model figures do not identify stomp-effect algorithms.",
+      "qualification": "No exact Axom DeepSynth or Inst.Sim algorithm implementation is justified by the accessible manual. Do not invent controls, equate tone-capture fitting EQ with a chain effect, or claim project parity. Axom firmware applicability and installed device firmware remain unknown; exact model-level effect documentation remains an open research gap."
+    },
+    {
+      "device": "Fender Tone Master Pro",
+      "feature": "Post-guide Polysynth, Pitch Sequencer, Prismatic Delay, Cirrostratus Synthverb, and Spectral Reverb source audit",
+      "source": "Official Fender firmware history through v1.8.87 dated 2026-11-23; Model Guide v1.1.100 / Rev. A; official v1.8.45 feature article.",
+      "source_urls": [
+        "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here",
+        "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf"
+      ],
+      "status": "Firmware history dates Aethon, Cerberus, and Wavemorph Polysynth to v1.7.53 and Pitch Sequencer, Prismatic Delay, Cirrostratus Synthverb, and Spectral Reverb to v1.8.45. Current listed firmware is v1.8.87; its notes do not give parameter changes for these models. The Model Guide predates the additions. Fender's feature article gives only qualitative descriptions of pitched delay, pitch-shifted reverb, and synth-infused reverb.",
+      "known_controls": "These five newer models have no verified model-specific control names, numeric ranges/defaults, synth input-note polyphony, DSP use, or latency in the inspected official materials. The separate Chromatic Pitch Shifter controls on Model Guide p. 66 are not transferable to Prismatic Delay or Pitch Sequencer.",
+      "qualification": "Project-adjacent pitch, synth, sequence, and reverb effects do not establish parity. Installed Fender firmware remains unknown. Keep exact model parameters as an open source gap until an exact model guide, parameter page, or official control documentation is available."
+    },
+    {
+      "device": "HeadRush Prime",
+      "feature": "Drop Tune Legacy/Refined mode and Drum Machine source audit",
+      "source": "Official Prime v5.2.0 cumulative update notes (PDF p. 4); v5.0.0 User Guide sections 4.11.2–4.11.5; Prime product page and downloads checked 2026-11-26.",
+      "source_urls": [
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "https://www.headrushfx.com/products/prime/",
+        "https://www.headrushfx.com/downloads"
+      ],
+      "status": "The v5.2.0 cumulative notes retain the v5.0.1 Drop Tune Legacy/Refined selector; Refined is described as improving tracking speed and tonal quality. Prime v5.0.0 also documents a Drum Machine with fill/count-in, auto-tempo/fill, accent, kit, groove, and intensity controls. No later release-note change to these features was found. The v5.2.0 User Guide is officially listed, but the 11.7 MB PDF and all verified official links point to the same unreadable CDN copy.",
+      "known_controls": "Drop Tune exposes Legacy and Refined; no numeric range/default, algorithm details, latency, or polyphony are stated. Drum Machine controls include Next Pattern, Count-In, Auto-Tempo, Fill Select/Auto Fill/Auto Fill Rate, accent Select/One-Shot/Quantize/Volume, kit Tuning/mixes/Length/Drive/Reverb/Volume/Timbre, and style Intensity/Groove-Mod/Groove. Screen values are examples, not specified bounds/defaults; its 16 kits and 134 styles are proprietary content.",
+      "qualification": "The project has a related Drop Tune workflow but does not reproduce Prime's Legacy/Refined algorithms. A project-authored mode can only be labeled as such. The Drum Machine would require new project-authored patterns/sounds and cannot reuse HeadRush content. Prime-specific synth, sequencer, and acoustic block parameter tables remain unverified; installed firmware is unknown."
     }
   ],
   "constraints": [

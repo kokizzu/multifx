@@ -2825,6 +2825,12 @@ LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+AXOM_SOURCE_AUDIT_CHECKPOINT_PATHS = (
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+)
+
 PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -2854,6 +2860,10 @@ PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
 )
 
 CHECKPOINTS = {
+    "axom-source-audit": (
+        AXOM_SOURCE_AUDIT_CHECKPOINT_PATHS,
+        "docs: audit Melofty Axom Max effect sources",
+    ),
     "prime-reverb-tails": (
         PRIME_REVERB_TAILS_CHECKPOINT_PATHS,
         "feat: add optional reverb tails on bypass",
