@@ -3000,7 +3000,35 @@ PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+PITCH_RING_MOD_CHECKPOINT_PATHS = (
+    "Makefile",
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/pitch_ring_mod_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/pitch_ring_mod.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/pitch_ring_mod.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_pitch_ring_mod.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
+    "pitch-ring-mod": (
+        PITCH_RING_MOD_CHECKPOINT_PATHS,
+        "feat: add project-authored Pitch Ring Mod effect",
+    ),
     "tone-master-small-hall": (
         TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS,
         "feat: add project-authored Modulated Small Hall",
@@ -3470,6 +3498,49 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "pitch-ring-mod": {
+        "CMakeLists.txt": ("pitch_ring_mod",),
+        "EFFECTS_MATRIX.md": (
+            "Current Line 6 Helix Stadium Pitch Ring Mod checkpoint",
+        ),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "## Line 6 Helix Stadium Pitch Ring Mod",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## Line 6 Helix Stadium Pitch Ring Mod",
+        ),
+        "LATENCY_AND_QUALITY.md": (
+            "## Line 6 Helix Stadium Pitch Ring Mod project effect",
+        ),
+        "Makefile": ("bench-pitch-ring-mod", "test-pitch-ring-mod"),
+        "RESEARCH.md": (
+            "## Line 6 Helix Stadium Pitch Ring Mod source",
+        ),
+        "include/tabletfx/effects.hpp": ("pitch_ring_mod.hpp",),
+        "make/publish.mk": ("pitch-ring-mod",),
+        "research-state.json": (
+            "Line 6 Helix Stadium Pitch Ring Mod",
+            "Fender Tone Master Pro Modulated Large Hall",
+            "Drum Machine controls and project-authored categorized generator",
+        ),
+        "scripts/publish_checkpoint.py": (
+            "PITCH_RING_MOD_CHECKPOINT_PATHS",
+            '"pitch-ring-mod": (',
+            '"pitch-ring-mod": {',
+        ),
+        "scripts/run_cmake.py": ("pitch-ring-mod",),
+        "scripts/web.py": ("pitch_ring_mod", "pitch-ring-mod"),
+        "src/web/wasm_chain.cpp": (
+            "pitch_ring_mod",
+            "pitch-ring-mod",
+        ),
+        "web/app.js": ("pitchRingMod", "Pitch Ring Mod"),
+        "web/audio-worklet.js": (
+            "pitch-ring-mod",
+            "pitchRingMod",
+        ),
+        "web/index.html": ("pitch-ring-mod", "Pitch Ring Mod"),
+    },
     "tone-master-modulated-large-hall": {
         "CMakeLists.txt": ("tone_master_modulated_large_hall",),
         "EFFECTS_MATRIX.md": (

@@ -370,6 +370,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "manual_thru_zero_flanger.cpp"),
         str(ROOT / "src" / "effects" / "octobot.cpp"),
         str(ROOT / "src" / "effects" / "am_ring_mod.cpp"),
+        str(ROOT / "src" / "effects" / "pitch_ring_mod.cpp"),
         str(ROOT / "src" / "effects" / "tape_echo.cpp"),
         str(ROOT / "src" / "effects" / "octave_fuzz.cpp"),
         str(ROOT / "src" / "effects" / "rock_box_dist.cpp"),

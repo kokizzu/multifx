@@ -1,5 +1,19 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium Pitch Ring Mod project effect (2026-11-27)
+
+The Stadium model catalogue lists Pitch Ring Mod as a Stereo Line 6 Original in Modulation, first appearing in v1.0. The live manual selector is v1.4 Rev D / v1.3 Rev B / v1.2, but no model-specific parameter table was available. The project-authored kernel uses a bounded monophonic autocorrelation tracker on the mono average of the channels. Its carrier is shared across stereo output; chords and noisy/polyphonic input can mislead the tracker. Project defaults are Carrier Ratio 1.0, Fallback Pitch 110 Hz, Tracking Confidence 0.55, Mix 0.5, and Level 0 dB. Project bounds are recorded in `IMPLEMENTATION_CHECKLIST.md`.
+
+The audio path has no fixed delay, but pitch acquisition is not instantaneous: measured initial tracking warm-up is 42.7 ms, a 220→440 Hz note transition settles within 5 Hz in 48 ms, and silence releases to fallback in 26.7 ms. This is tracking response, not buffered audio latency.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), and 20,000 measured callbacks. Values are processor time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Project defaults | 1.0065% | 1.0812% | 1.2739% | 2.1676% | 4.3437% | 2,176 B | 0/20,000 |
+
+The tracker uses approximately 7,180 B of temporary stack scratch during pitch estimation; this transient memory is not included in the object-state number. The browser reports 2,148 B effect state. Native processing allocates nothing. The local-Guitar-TECHS-DI browser/WASM smoke verifies finite output and distinct parameter profiles; the browser timer's millisecond fallback is too coarse to report isolated DSP percentage. These results are host measurements, not a target-device guarantee. Human listening, physical comparison, installed firmware, and tablet timing remain manual; no Line 6 DSP/settings/sound parity is claimed.
+
 ## Fender Tone Master Pro Modulated Large Hall project effect (2026-11-27)
 
 The Fender Model Guide v1.1.100 / Rev. A, printed p. 55, lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover. High/Low Cut are shelf gains. It gives no numeric defaults/ranges, shelf pivots, DSP, or latency. TabletFX uses project-chosen controls and a four-line modulated FDN; the immediate dry path has zero added fixed latency. Native tests verify `process()` has no allocations. Native state accounting is `sizeof(object)` plus vector capacity and excludes allocator metadata; WASM effect state uses the chain's `memory_bytes()` report.

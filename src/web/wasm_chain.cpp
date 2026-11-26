@@ -161,7 +161,10 @@ public:
           tone_master_modulated_large_hall_(
               std::make_unique<tabletfx::ToneMasterModulatedLargeHallReverb>(
                   static_cast<float>(sample_rate),
-                  static_cast<std::uint16_t>(channels))) {
+                  static_cast<std::uint16_t>(channels))),
+          pitch_ring_mod_(std::make_unique<tabletfx::effects::PitchRingMod>(
+              static_cast<float>(sample_rate),
+              static_cast<std::uint16_t>(channels))) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -610,6 +613,11 @@ public:
             tone_master_modulated_large_hall_enabled_ = enabled;
             return true;
         }
+        if (index == 121U) {
+            if (!enabled) pitch_ring_mod_->reset();
+            pitch_ring_mod_enabled_ = enabled;
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -913,6 +921,13 @@ public:
             }
             return;
         }
+        if (index == 121U) {
+            if (pitch_ring_mod_enabled_) {
+                pitch_ring_mod_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -979,6 +994,7 @@ public:
         output_limiter_.reset();
         tone_master_small_hall_->reset();
         tone_master_modulated_large_hall_->reset();
+        pitch_ring_mod_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -3736,6 +3752,18 @@ public:
         tone_master_modulated_large_hall_->configure(parameters);
     }
 
+    void configure_pitch_ring_mod(float carrier_ratio, float fallback_pitch_hz,
+                                  float tracking_confidence, float mix,
+                                  float level_db) noexcept {
+        tabletfx::effects::PitchRingModParameters parameters;
+        parameters.carrier_ratio = carrier_ratio;
+        parameters.fallback_pitch_hz = fallback_pitch_hz;
+        parameters.tracking_confidence = tracking_confidence;
+        parameters.mix = mix;
+        parameters.level_db = level_db;
+        pitch_ring_mod_->configure(parameters);
+    }
+
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -3965,6 +3993,7 @@ public:
         bytes += fender_memory_delay_->memory_bytes();
         bytes += tone_master_small_hall_->memory_bytes();
         bytes += tone_master_modulated_large_hall_->memory_bytes();
+        bytes += pitch_ring_mod_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4142,6 +4171,9 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 121U) {
+            return static_cast<std::uint32_t>(pitch_ring_mod_->memory_bytes());
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4191,6 +4223,7 @@ private:
     std::unique_ptr<tabletfx::ToneMasterSmallHallReverb> tone_master_small_hall_;
     std::unique_ptr<tabletfx::ToneMasterModulatedLargeHallReverb>
         tone_master_modulated_large_hall_;
+    std::unique_ptr<tabletfx::effects::PitchRingMod> pitch_ring_mod_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4223,6 +4256,7 @@ private:
     bool fractal_surround_delay_enabled_ = false;
     bool fender_memory_delay_enabled_ = false;
     bool tone_master_small_hall_enabled_ = false;
+    bool pitch_ring_mod_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -6064,6 +6098,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tone_master_modulated_large_hall(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_tone_master_modulated_large_hall(
             values, value_count);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_pitch_ring_mod(
+    void* opaque, float carrier_ratio, float fallback_pitch_hz,
+    float tracking_confidence, float mix, float level_db) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_pitch_ring_mod(
+            carrier_ratio, fallback_pitch_hz, tracking_confidence, mix,
+            level_db);
     }
 }
 } // extern "C"

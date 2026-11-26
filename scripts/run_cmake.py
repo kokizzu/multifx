@@ -179,6 +179,7 @@ def main() -> None:
                  "bench-fractal-diatonic-harmonizer",
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
+                 "bench-pitch-ring-mod",
                  "windows-build"),
     )
     parser.add_argument("--test-filter", default="")
@@ -262,6 +263,8 @@ def main() -> None:
         bench_fractal_chorus_tempo(cmake)
     elif action == "bench-fender-tremolo-duty-cycle":
         bench_fender_tremolo_duty_cycle(cmake)
+    elif action == "bench-pitch-ring-mod":
+        bench_pitch_ring_mod(cmake)
     elif action == "windows-build":
         build_windows(cmake)
 

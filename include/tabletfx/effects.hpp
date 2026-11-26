@@ -57,6 +57,7 @@
 #include "tabletfx/effects/dimension_chorus.hpp"
 #include "tabletfx/effects/tone_master_pro_3d_chorus.hpp"
 #include "tabletfx/effects/tone_master_modulated_large_hall.hpp"
+#include "tabletfx/effects/pitch_ring_mod.hpp"
 #include "tabletfx/effects/fractal_surround_delay.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/fractal_chromatic_harmonizer.hpp"

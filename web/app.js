@@ -122,6 +122,7 @@ const EFFECT_NAMES = [
   "Memory Delay · project-authored Fender control roles",
   "Modulated Small Hall · project-authored",
   "Modulated Large Hall · project-authored Fender control roles",
+  "Pitch Ring Mod · project-authored monophonic tracking",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -343,6 +344,7 @@ const DEFAULT_PARAMETERS = {
   memoryDelay: [350, 0.25, 0.25, 0.8, 2, 0, 0, -24, 0, 0, 0, 0],
   toneMasterSmallHall: [0.25, 3.2, 0, 0.6, 0.3, 0.15, 0, 0, 0],
   toneMasterModulatedLargeHall: [0.28, 6.5, 1, 0.74, 0.23, 0.2, -1.5, -0.5, 0],
+  pitchRingMod: [1, 110, 0.55, 0.5, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2240,6 +2242,13 @@ const toneMasterModulatedLargeHallControls = [
   document.querySelector("#tone-master-modulated-large-hall-high-cut"),
   document.querySelector("#tone-master-modulated-large-hall-low-cut"),
   document.querySelector("#tone-master-modulated-large-hall-spillover"),
+];
+const pitchRingModControls = [
+  document.querySelector("#pitch-ring-mod-carrier-ratio"),
+  document.querySelector("#pitch-ring-mod-fallback-pitch"),
+  document.querySelector("#pitch-ring-mod-tracking-confidence"),
+  document.querySelector("#pitch-ring-mod-mix"),
+  document.querySelector("#pitch-ring-mod-level"),
 ];
 const filteredDelayTime = document.querySelector("#filtered-delay-time-ms");
 const filteredDelayTimeValue = document.querySelector("#filtered-delay-time-ms-value");
@@ -7909,6 +7918,31 @@ function updateToneMasterModulatedLargeHall() {
   }
 }
 
+function updatePitchRingMod() {
+  const values = [
+    Number(pitchRingModControls[0].value),
+    Number(pitchRingModControls[1].value),
+    Number(pitchRingModControls[2].value),
+    Number(pitchRingModControls[3].value) / 100,
+    Number(pitchRingModControls[4].value),
+  ];
+  const formats = [
+    (value) => `${value.toFixed(2)}×`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} dB`,
+  ];
+  pitchRingModControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.pitchRingMod = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "pitch-ring-mod", value: values });
+  }
+}
+
 function updateFilteredDelay() {
   const timeMode = Number(filteredDelayTimeMode.value);
   const tempoBpm = Number(filteredDelayTempoBpm.value);
@@ -8136,6 +8170,10 @@ for (const control of toneMasterSmallHallControls) {
 for (const control of toneMasterModulatedLargeHallControls) {
   control.addEventListener("input", updateToneMasterModulatedLargeHall);
   control.addEventListener("change", updateToneMasterModulatedLargeHall);
+}
+for (const control of pitchRingModControls) {
+  control.addEventListener("input", updatePitchRingMod);
+  control.addEventListener("change", updatePitchRingMod);
 }
 for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   filteredDelayLowCut, filteredDelayHighCut]) {
@@ -17390,6 +17428,127 @@ async function runToneMasterModulatedLargeHallBrowserSmokeTest(
   }
 }
 
+async function runPitchRingModBrowserSmokeTest(
+  reference, captureView, captureBuffer,
+) {
+  const effectIndex = 121;
+  const previousEffectState = enabledEffects();
+  const previousValues = pitchRingModControls.map((control) => control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.pitchRingMod];
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Pitch Ring Mod smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Pitch Ring Mod") ||
+        !checkbox || checkbox.checked || pitchRingModControls.length !== 5 ||
+        EFFECT_NAMES.length !== 122 || effectMemory.length !== EFFECT_NAMES.length ||
+        DEFAULT_PARAMETERS.pitchRingMod.join(",") !== "1,110,0.55,0.5,0" ||
+        effectMemory[effectIndex] <= 0 || effectMemory[effectIndex] >= 8192) {
+      throw new Error(`Pitch Ring Mod picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.pitchRingMod.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [pitchRingModControls[0], "0.25", "4"],
+      [pitchRingModControls[1], "55", "880"],
+      [pitchRingModControls[2], "0.2", "0.98"],
+      [pitchRingModControls[3], "0", "100"],
+      [pitchRingModControls[4], "-24", "12"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Pitch Ring Mod project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.4) * reference.channels),
+    );
+    const capture = async (parameters) => {
+      pitchRingModControls.forEach((control, index) => {
+        control.value = String(index === 3 ? parameters[index] * 100 : parameters[index]);
+      });
+      updatePitchRingMod();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+    };
+    const normalCarrier = await capture([1, 110, 0.2, 1, 0]);
+    const octaveCarrier = await capture([2, 110, 0.2, 1, 0]);
+    let peak = 0;
+    let inputDifferenceSquares = 0;
+    let profileDifferenceSquares = 0;
+    for (let index = 0; index < normalCarrier.length; index += 1) {
+      const channel = index % reference.channels;
+      const frame = Math.floor(index / reference.channels);
+      const input = decodedAudio.getChannelData(channel)[frame];
+      if (!Number.isFinite(normalCarrier[index]) ||
+          !Number.isFinite(octaveCarrier[index])) {
+        throw new Error("Pitch Ring Mod produced non-finite browser output.");
+      }
+      peak = Math.max(peak, Math.abs(normalCarrier[index]), Math.abs(octaveCarrier[index]));
+      const inputDifference = normalCarrier[index] - input;
+      inputDifferenceSquares += inputDifference * inputDifference;
+      const profileDifference = normalCarrier[index] - octaveCarrier[index];
+      profileDifferenceSquares += profileDifference * profileDifference;
+    }
+    const inputDifferenceRms = Math.sqrt(inputDifferenceSquares / Math.max(1, normalCarrier.length));
+    const profileDifferenceRms = Math.sqrt(profileDifferenceSquares / Math.max(1, normalCarrier.length));
+    if (peak < 1.0e-5 || inputDifferenceRms < 1.0e-4 || profileDifferenceRms < 1.0e-5) {
+      throw new Error(`Pitch Ring Mod Play captures failed: peak=${peak}, inputDiff=${inputDifferenceRms}, profileDiff=${profileDifferenceRms}, memory=${effectMemory[effectIndex]}.`);
+    }
+    return {
+      category: "Modulation",
+      effectIndex,
+      playCaptures: 2,
+      inputDifferenceRms,
+      profileDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    pitchRingModControls.forEach((control, index) => {
+      control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.pitchRingMod = previousParameters;
+    updatePitchRingMod();
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -17400,6 +17559,7 @@ async function runBrowserSelfTest() {
   let fenderMemoryDelaySmoke = null;
   let toneMasterSmallHallSmoke = null;
   let toneMasterModulatedLargeHallSmoke = null;
+  let pitchRingModSmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -17531,6 +17691,10 @@ async function runBrowserSelfTest() {
                   effectRows[120]?.dataset.category !== "reverb" ||
                   effectRows[120]?.querySelector(".effect-category-tag")?.textContent !== "Reverb" ||
                   DEFAULT_PARAMETERS.toneMasterModulatedLargeHall.join(",") !== "0.28,6.5,1,0.74,0.23,0.2,-1.5,-0.5,0" ||
+                  !EFFECT_NAMES[121]?.startsWith("Pitch Ring Mod · project-authored monophonic tracking") ||
+                  effectRows[121]?.dataset.category !== "modulation" ||
+                  effectRows[121]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+                  DEFAULT_PARAMETERS.pitchRingMod.join(",") !== "1,110,0.55,0.5,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
                  initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
@@ -17571,7 +17735,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                   throw new Error(`The effect picker must list 121 ordered, categorized effects (IDs 0–120), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, Modulated Small Hall, and Modulated Large Hall; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[120]}, row120=${effectRows[120]?.dataset.category}/${effectRows[120]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[120]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                   throw new Error(`The effect picker must list 122 ordered, categorized effects (IDs 0–121), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, both Tone Master halls, and Pitch Ring Mod; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[121]}, row121=${effectRows[121]?.dataset.category}/${effectRows[121]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[121]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -19292,6 +19456,8 @@ async function runBrowserSelfTest() {
     parityEnabled[119] = false;
     // Modulated Large Hall has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[120] = false;
+    // Pitch Ring Mod has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[121] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -20709,6 +20875,10 @@ async function runBrowserSelfTest() {
       toneMasterModulatedLargeHallSmoke = await runToneMasterModulatedLargeHallBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
+      testResult.textContent = "Checking Pitch Ring Mod with local guitar playback…";
+      pitchRingModSmoke = await runPitchRingModBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -20786,6 +20956,7 @@ async function runBrowserSelfTest() {
       fenderMemoryDelay: fenderMemoryDelaySmoke,
       toneMasterSmallHall: toneMasterSmallHallSmoke,
       toneMasterModulatedLargeHall: toneMasterModulatedLargeHallSmoke,
+      pitchRingMod: pitchRingModSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

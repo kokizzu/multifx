@@ -92,6 +92,7 @@ add_library(tabletfx_core
     src/effects/vibratone.cpp
     src/effects/ring_modulator.cpp
     src/effects/am_ring_mod.cpp
+    src/effects/pitch_ring_mod.cpp
     src/effects/tape_echo.cpp
     src/effects/rhythmic_slicer.cpp
     src/effects/step_filter.cpp
@@ -181,6 +182,9 @@ target_link_libraries(tabletfx_tone_master_small_hall_bench PRIVATE tabletfx_cor
 add_executable(tabletfx_tone_master_modulated_large_hall_bench
     apps/tone_master_modulated_large_hall_bench.cpp)
 target_link_libraries(tabletfx_tone_master_modulated_large_hall_bench PRIVATE tabletfx_core)
+
+add_executable(tabletfx_pitch_ring_mod_bench apps/pitch_ring_mod_bench.cpp)
+target_link_libraries(tabletfx_pitch_ring_mod_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -615,6 +619,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_am_ring_mod_tests tests/test_am_ring_mod.cpp)
     target_link_libraries(tabletfx_am_ring_mod_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_am_ring_mod_tests COMMAND tabletfx_am_ring_mod_tests)
+
+    add_executable(tabletfx_pitch_ring_mod_tests tests/test_pitch_ring_mod.cpp)
+    target_link_libraries(tabletfx_pitch_ring_mod_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_pitch_ring_mod_tests COMMAND tabletfx_pitch_ring_mod_tests)
 
     add_executable(tabletfx_tape_echo_tests tests/test_tape_echo.cpp)
     target_link_libraries(tabletfx_tape_echo_tests PRIVATE tabletfx_core)

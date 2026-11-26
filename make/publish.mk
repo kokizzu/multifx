@@ -260,6 +260,7 @@ PUBLISH_CHECKPOINTS += fender-3d-chorus
 PUBLISH_CHECKPOINTS += fractal-surround-delay
 PUBLISH_CHECKPOINTS += tone-master-small-hall
 PUBLISH_CHECKPOINTS += fractal-plex-shift
+PUBLISH_CHECKPOINTS += pitch-ring-mod
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -295,6 +296,10 @@ unstage-%:
 	$(PYTHON) scripts/publish_checkpoint.py unstage --checkpoint "$*"
 inspect-effect-picker:
 	python3 scripts/inspect_effect_picker.py
+
+.PHONY: inspect-pitch-ring-mod-draft
+inspect-pitch-ring-mod-draft:
+	python3 scripts/inspect_effect_draft.py "pitch_ring_mod"
 
 
 

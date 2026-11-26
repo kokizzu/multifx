@@ -1,9 +1,10 @@
 PYTHON ?= python3
 
-.PHONY: bootstrap-docs doctor repo-status test-docs test build configure bench audio-regression \
+.PHONY: bootstrap-docs doctor repo-status inspect-effect-draft test-docs test build configure bench audio-regression \
+	test-pitch-ring-mod \
 	audio-fixtures-plan audio-fixtures-fetch audio-fixtures-verify audio-fixtures-inspect \
 	test-audio-fixtures windows-cross-build web-toolchain-bootstrap web-toolchain-verify \
-	web-build web-browser-test web-test web-serve diff-check
+web-build web-browser-test web-test web-serve diff-check bench-pitch-ring-mod
 
 DATA_DIR ?= auto
 FIXTURE_LINK ?= testdata/reference_audio
@@ -35,6 +36,12 @@ test:
 
 bench:
 	$(PYTHON) scripts/run_cmake.py bench
+
+bench-pitch-ring-mod:
+	$(PYTHON) scripts/run_cmake.py bench-pitch-ring-mod
+
+test-pitch-ring-mod:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_pitch_ring_mod_tests
 
 audio-regression: build
 	$(PYTHON) scripts/audio_regression.py --repo-root . --data-dir "$(DATA_DIR)" --link "$(FIXTURE_LINK)" --renderer build/native/tabletfx_offline

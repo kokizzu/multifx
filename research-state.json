@@ -4,30 +4,31 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6eb3254487047a36ab70ea5917da1c048253a1fa",
+  "previous_checkpoint_commit": "430a87ece812590e0b59bd25375907cdb1884914",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Modulated Large Hall",
-    "status": "Exact-model control roles verified; project-authored categorized Reverb ID 120 passes native, local-guitar browser/WASM, Windows, and isolated CPU/memory checks; only human/device validation remains.",
+    "name": "Line 6 Helix Stadium Pitch Ring Mod",
+    "status": "Current model catalog entry verified; project-authored categorized Modulation ID 121 passes native, browser/WASM local-guitar, Windows, and CPU/memory checks; manual/device validation remains. Exact Line 6 algorithm parameters are undocumented in checked sources.",
     "date": "2026-11-27",
-    "picker_index": 120,
-    "category": "Reverb",
+    "picker_index": 121,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history lists v1.8.87 dated 2026-11-23; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide documents control roles and that High/Low Cut adjust post-reverb shelf gains, but no numerical bounds/defaults, shelf pivots, modulation topology, DSP, or latency. Firmware v1.8.87 notes do not mention this effect."
+      "title": "Line 6 Helix Stadium model catalog, Effects manual, and hardware release notes",
+      "revision": "Model catalog checked 2026-11-27: Pitch Ring Mod is a Stereo Line 6 Original in Modulation, initial appearance 1.0. Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 notes dated 2026-10-27; installed firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "The catalog verifies model name, category, stereo format, and first appearance. The checked manual has no model-specific control table; algorithm, ranges/defaults, DSP, latency, and installed firmware remain unknown."
     },
-    "documented_controls": "Level wet blend; Decay reverb trail length; Dwell input level; Diffuse echo density/reflections; Rate modulation speed; Depth modulation intensity; High Cut post-reverb high-shelf gain; Low Cut post-reverb low-shelf gain; Spillover continues the tail after bypass.",
-    "project_controls": "Project-authored four-line modulated FDN at Reverb picker ID 120, disabled by default. Defaults: Level 0.28; Decay 6.5 s; Dwell 1.0×; Diffuse 0.74; Rate 0.23 Hz; Depth 0.20; High/Low shelf gains −1.5/−0.5 dB; Spillover off. Project bounds and fixed delay lengths are not Fender values. Immediate dry path; zero fixed added latency.",
+    "documented_controls": "No model-specific Pitch Ring Mod controls are listed in the checked manual; generic Modulation category descriptions only.",
+    "project_controls": "Project-authored monophonic pitch-tracked ring modulator at Modulation picker ID 121, disabled by default. Carrier Ratio 0.25–4.0 (1.0); Fallback Pitch 55–880 Hz (110 Hz); Tracking Confidence 0.20–0.98 (0.55); Mix 0–1 (0.5); Level −24…+12 dB (0 dB). Chords/noisy signals can be tracked inaccurately. Zero fixed audio-path latency; tracking warm-up 42.7 ms and 220→440 Hz response 48 ms.",
     "verification": {
-      "native": "make test passes documentation validation, 13 fixture-safety tests, 121/121 CTests, focused control response/bounds/mono/stereo/finite/bypass/memory checks, and zero process-time allocations.",
-      "browser": "make web-build and make web-browser-test pass HeadlessChrome 151, categorized Reverb ID 120, two local prerecorded stereo Guitar-TECHS DI Play captures responsive to input/profile changes, and the full browser/native comparison. WASM reports 117,976 B effect state.",
+      "native": "make test-pitch-ring-mod passes focused defaults/bounds, tracking, fallback, stereo, finite-output, partitioning, reset, and no-allocation checks; make test passes documentation validation, 13 fixture-safety checks, and 122/122 CTests.",
+      "browser": "make web-browser-test passes HeadlessChrome 151, Modulation picker ID 121, two local prerecorded stereo Guitar-TECHS DI Play captures with responsive profiles, and full browser/native comparison. Browser effect state is 2,148 B.",
       "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
-      "latency_memory": "Native state is 118,184 B by sizeof(object)+vector-capacity accounting, excluding allocator metadata. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured: project default p50/p95/p99/p99.9/max 0.618/0.773/0.937/1.188/1.847%; maximum project decay/modulation 0.618/0.656/0.895/1.179/1.806% of 2.667 ms; 0 deadline misses in both profiles. The browser timer fell back to millisecond resolution and is too coarse for isolated CPU reporting. Process allocations 0 and fixed dry latency 0. These are host measurements, not tablet DSP predictions.",
+      "latency_memory": "Native object state 2,176 B; estimator temporary stack scratch about 7,180 B; processing allocations 0. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 measured: p50/p95/p99/p99.9/max 1.0065/1.0812/1.2739/2.1676/4.3437% of 2.667 ms; 0 deadline misses. Tracker warm-up 42.7 ms, 220→440 Hz response 48 ms, silence-to-fallback 26.7 ms. Browser timer granularity is too coarse for isolated CPU reporting; host timings are not tablet predictions.",
       "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. No Fender settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 algorithm, settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
@@ -1319,13 +1320,38 @@
         "diff_check": "make diff-check passes; no workflow files are included."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device performance remain open; Fender settings/DSP/sound parity are not claimed."
+    },
+    {
+      "name": "Line 6 Helix Stadium Pitch Ring Mod",
+      "status": "Current model catalog entry verified; project-authored categorized Modulation ID 121 passes native, browser/WASM local-guitar, Windows, and CPU/memory checks; manual/device validation remains. Exact Line 6 algorithm parameters are undocumented in checked sources.",
+      "date": "2026-11-27",
+      "picker_index": 121,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Line 6 Helix Stadium model catalog, Effects manual, and hardware release notes",
+        "revision": "Model catalog checked 2026-11-27: Pitch Ring Mod is a Stereo Line 6 Original in Modulation, initial appearance 1.0. Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 notes dated 2026-10-27; installed firmware unknown.",
+        "url": "https://line6.com/helix-stadium-models/",
+        "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "qualification": "The catalog verifies model name, category, stereo format, and first appearance. The checked manual has no model-specific control table; algorithm, ranges/defaults, DSP, latency, and installed firmware remain unknown."
+      },
+      "documented_controls": "No model-specific Pitch Ring Mod controls are listed in the checked manual; generic Modulation category descriptions only.",
+      "project_controls": "Project-authored monophonic pitch-tracked ring modulator at Modulation picker ID 121, disabled by default. Carrier Ratio 0.25–4.0 (1.0); Fallback Pitch 55–880 Hz (110 Hz); Tracking Confidence 0.20–0.98 (0.55); Mix 0–1 (0.5); Level −24…+12 dB (0 dB). Chords/noisy signals can be tracked inaccurately. Zero fixed audio-path latency; tracking warm-up 42.7 ms and 220→440 Hz response 48 ms.",
+      "verification": {
+        "native": "make test-pitch-ring-mod passes focused defaults/bounds, tracking, fallback, stereo, finite-output, partitioning, reset, and no-allocation checks; make test passes documentation validation, 13 fixture-safety checks, and 122/122 CTests.",
+        "browser": "make web-browser-test passes HeadlessChrome 151, Modulation picker ID 121, two local prerecorded stereo Guitar-TECHS DI Play captures with responsive profiles, and full browser/native comparison. Browser effect state is 2,148 B.",
+        "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
+        "benchmark": "Native object state 2,176 B; estimator temporary stack scratch about 7,180 B; processing allocations 0. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 measured: p50/p95/p99/p99.9/max 1.0065/1.0812/1.2739/2.1676/4.3437% of 2.667 ms; 0 deadline misses. Tracker warm-up 42.7 ms, 220→440 Hz response 48 ms, silence-to-fallback 26.7 ms. Browser timer granularity is too coarse for isolated CPU reporting; host timings are not tablet predictions.",
+        "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
+      },
+      "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 algorithm, settings, DSP, or sound parity is claimed."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Modulated Small Hall",
-    "status": "Exact-model control roles verified; categorized project-authored Reverb ID 119 and native/browser/Windows/performance checks pass; human/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 119,
+    "name": "Fender Tone Master Pro Modulated Large Hall",
+    "status": "Exact-model controls verified; categorized project-authored Reverb ID 120 passes native/browser/Windows/benchmark checks; human/device checks remain.",
+    "date": "2026-11-27",
+    "picker_index": 120,
     "category": "Reverb",
     "official_source": {
       "title": "Fender Tone Master Pro Model Guide and firmware history",
@@ -1346,42 +1372,44 @@
     "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
   },
   "current_checkpoint": {
-    "name": "Fender Tone Master Pro Modulated Large Hall",
-    "status": "Exact-model controls verified; project-authored categorized Reverb ID 120 passes native/browser/Windows/benchmark checks; human/device checks remain.",
+    "name": "Line 6 Helix Stadium Pitch Ring Mod",
+    "status": "Current model catalog entry verified; project-authored categorized Modulation ID 121 passes native/browser/WASM/Windows/CPU/memory checks; human/device checks remain.",
     "date": "2026-11-27",
-    "picker_index": 120,
-    "category": "Reverb",
+    "picker_index": 121,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware v1.8.87 dated 2026-11-23; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "Manual lists exact control roles, but no numeric ranges/defaults, shelf pivots, topology, DSP, or latency; checked firmware notes do not mention this effect."
+      "title": "Line 6 Helix Stadium model catalog and current Effects manual",
+      "revision": "Catalog checked 2026-11-27: Stereo Line 6 Original under Modulation, initial appearance 1.0. Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
+      "url": "https://line6.com/helix-stadium-models/",
+      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "No Pitch Ring Mod-specific controls, ranges/defaults, algorithm, DSP, or latency are in the checked manual/catalog references."
     },
-    "documented_controls": "Level, Decay, Dwell, Diffuse, Rate, Depth, high-shelf gain (High Cut), low-shelf gain (Low Cut), and Spillover.",
-    "project_controls": "Project-authored four-line modulated FDN, Reverb ID 120, disabled by default; project-chosen bounds/defaults. Immediate dry path and zero fixed added latency.",
+    "documented_controls": "No model-specific controls verified; generic Modulation category information only.",
+    "project_controls": "Project-authored monophonic pitch-tracked ring modulator at Modulation ID 121, disabled by default. Project controls: Carrier Ratio (0.25–4.0, default 1.0), Fallback Pitch (55–880 Hz, 110 Hz), Tracking Confidence (0.20–0.98, 0.55), Mix (0–1, 0.5), Level (−24…+12 dB, 0 dB). Chords may track inaccurately. Zero fixed audio-path latency; 42.7 ms tracking warm-up and 48 ms measured 220→440 Hz response.",
     "verification": {
-      "native": "make test passes documentation validation, fixture checks, and 121/121 CTests including focused hall tests.",
-      "browser": "make web-build and make web-browser-test pass local Guitar-TECHS DI captures on Hall ID 120 and full browser/native comparison.",
+      "native": "make test-pitch-ring-mod and make test pass; 13 fixture-safety checks and 122/122 CTests.",
+      "browser": "make web-browser-test passes local prerecorded Guitar-TECHS DI playback at Modulation ID 121, two responsive profiles, and full browser/native comparison; 2,148 B browser effect state.",
       "windows": "make windows-cross-build passes.",
-      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default p50/p95/p99/p99.9/max 0.660/0.908/1.140/2.612/17.815%; zero deadline misses, 118,184 B native state, zero process allocations.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 callbacks: p50/p95/p99/p99.9/max 1.0065/1.0812/1.2739/2.1676/4.3437% of 2.667 ms; 0 misses, 2,176 B native object, about 7,180 B temporary stack scratch, zero process allocations.",
       "diff_check": "make diff-check passes; no workflow files are included."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. No Fender settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 settings, DSP, algorithm, or sound parity is claimed."
   },
   "next_research": [
     {
-      "device": "Line 6 Helix Stadium XL",
-      "feature": "Pitch Ring Mod catalog entry and project-authored modulation implementation",
-      "source": "Official Helix Stadium model catalog and current manual selector; catalog lists Pitch Ring Mod as a Stereo Line 6 Original, v1.0.",
+      "device": "HeadRush Prime",
+      "feature": "Drum Machine controls and project-authored categorized generator",
+      "source": "Official Prime User Guide v5.0.0 sections 4.11.2–4.11.5; Prime v5.2.0 cumulative firmware notes; current HeadRush Drum Machine support article.",
       "source_urls": [
-        "https://line6.com/helix-stadium-models/",
-        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "https://support.headrushfx.com/en/support/solutions/articles/69000875010-headrush-fx-drum-machine-setup-and-troubleshooting",
+        "https://www.headrushfx.com/downloads"
       ],
-      "status": "The manufacturer catalog confirms the model name, category, stereo designation, and v1.0 introduction. No exact model-specific controls, numeric ranges/defaults, topology, DSP, or latency are published in the checked manual selector; the model remains a documentation-limited candidate.",
-      "known_controls": "No model-specific controls or ranges verified. Do not transfer controls from generic Pitch & Synth or similar Ring Mod models.",
-      "qualification": "Any project implementation must use explicit project-authored controls and remain distinct from note-tracked pitch shifting. Preserve the lack of exact manual parameters and make no Line 6 DSP/settings/sound-parity claim."
+      "status": "Prime v5.0 documents Drum Machine pattern/count-in, auto-tempo/fill, accent, kit, groove, and intensity controls; v5.2.0 notes list 16 kits and 134 styles but do not publish numeric ranges/defaults. A project-authored generator prototype exists only in isolated files and is not yet compiled, integrated, or validated. Review identified behavior, sample-rate buffer, callback benchmark, and insert-placement issues before adoption.",
+      "known_controls": "Manufacturer control names include Next Pattern, Count-In, Auto-Tempo, Fill Select/Auto Fill/Auto Fill Rate, Accent Select/One-Shot/Quantize/Volume, kit Tuning/Mixes/Length/Drive/Reverb/Volume/Timbre, and style Intensity/Groove-Mod/Groove. The project prototype uses its own patterns and controls; it does not reproduce Prime BFD samples/kits/styles or the complete fill/count-in/auto-tempo workflow.",
+      "qualification": "Keep the prototype project-authored and categorized under Loop & performance only if its audio routing is appropriate. Verify usable phrase/variation behavior, supported sample rates, bounded output, real callback input, and CPU/memory before marking implementation complete. Installed device firmware is unknown."
     },
     {
       "device": "HeadRush Prime",

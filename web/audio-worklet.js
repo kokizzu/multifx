@@ -42,6 +42,7 @@ EFFECTS.push("fractal-surround-delay");
 EFFECTS.push("fender-memory-delay");
 EFFECTS.push("tone-master-small-hall");
 EFFECTS.push("tone-master-modulated-large-hall");
+EFFECTS.push("pitch-ring-mod");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -609,6 +610,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureToneMasterModulatedLargeHall(
         parameters.toneMasterModulatedLargeHall ||
         [0.28, 6.5, 1, 0.74, 0.23, 0.2, -1.5, -0.5, 0],
+      );
+      this.configurePitchRingMod(
+        parameters.pitchRingMod || [1, 110, 0.55, 0.5, 0],
       );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -1536,6 +1540,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureToneMasterSmallHall(message.value);
     } else if (message.type === "tone-master-modulated-large-hall" && this.ready) {
       this.configureToneMasterModulatedLargeHall(message.value);
+    } else if (message.type === "pitch-ring-mod" && this.ready) {
+      this.configurePitchRingMod(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Line 6 Helix Stadium Pitch Ring Mod (2026-11-27)
+
+- [x] Check the current Stadium model catalogue and live Effects manual. The catalogue lists Pitch Ring Mod as a Stereo Line 6 Original in Modulation, first appearing in v1.0. The manual selector is v1.4 Rev D / v1.3 Rev B / v1.2 but supplies no model-specific parameter table; firmware v1.4.2 notes dated 2026-10-27 do not mention this effect. Exact algorithm/controls/ranges/defaults/DSP/latency and installed device firmware remain unknown.
+- [x] Add a project-authored monophonic pitch-tracked ring modulator in Modulation at picker ID 121, off by default. Project controls/defaults: Carrier Ratio 0.25–4.0 (1.0), Fallback Pitch 55–880 Hz (110 Hz), Tracking Confidence 0.20–0.98 (0.55), Mix 0–1 (0.5), Level −24…+12 dB (0 dB). Chords are not reliably tracked; this does not claim Stadium algorithm parity.
+- [x] `make test-pitch-ring-mod` passes the focused bounds, pitch tracking, fallback, stereo-link, finite-output, callback-partition, reset, and zero-allocation checks. `make test` passes documentation validation, 13 fixture-safety checks, and 122/122 CTests.
+- [x] `make web-browser-test` passes local prerecorded stereo Guitar-TECHS DI playback in Modulation ID 121 with two profiles and the full browser/native comparison. Browser effect state is 2,148 B. `make windows-cross-build` passes the MinGW core/offline-renderer build.
+- [x] `make bench-pitch-ring-mod` on Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 20,000 callbacks: 1.0065/1.0812/1.2739/2.1676/4.3437% p50/p95/p99/p99.9/max of a 2.667 ms callback deadline, zero misses. Native state 2,176 B; approximately 7,180 B estimator stack scratch; zero processing allocations; zero fixed audio-path latency. Tracking warm-up is 42.7 ms; measured 220→440 Hz response is 48 ms.
+- [ ] Human listening, physical Stadium comparison, installed-firmware confirmation, and target-device timing remain manual. The desktop timing does not predict tablet DSP; no Line 6 settings, algorithm, DSP, or sound parity is claimed.
+
 ## Fender Tone Master Pro Modulated Large Hall (2026-11-27)
 
 - [x] Verify the exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 55. It lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover; High/Low Cut are post-reverb shelf gains. The guide supplies no numeric ranges/defaults, shelf pivots, modulation topology, DSP, or latency. Fender's current firmware history is v1.8.87 dated 2026-11-23; its notes do not mention this effect, and installed firmware is unknown.

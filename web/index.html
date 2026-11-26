@@ -214,6 +214,7 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="118"><span class="effect-number">119</span><span class="effect-name">Memory Delay · project-authored Fender control roles</span><span class="effect-default">350 ms · Chorus · 25% repeats · disabled by default</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="119"><span class="effect-number">120</span><span class="effect-name">Modulated Small Hall · project-authored</span><span class="effect-default">3.2 s decay · 25% wet · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
          <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="120"><span class="effect-number">121</span><span class="effect-name">Modulated Large Hall · project-authored Fender control roles</span><span class="effect-default">6.5 s decay · 28% wet · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="121"><span class="effect-number">122</span><span class="effect-name">Pitch Ring Mod · project-authored monophonic tracking</span><span class="effect-default">1× carrier · 50% mix · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -630,6 +631,17 @@
         </div>
         <div class="slicer-global-controls"><label class="slicer-sync" for="tone-master-modulated-large-hall-spillover"><input id="tone-master-modulated-large-hall-spillover" type="checkbox"><span>Spillover on bypass</span></label></div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 55, lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover. Its High/Low Cut controls are shelf gains, not cutoff frequencies; it does not publish numeric ranges, defaults, shelf frequencies, or modulation topology. These ranges, defaults, fixed FDN delay lengths, and modulation design are project choices. The four-line FDN adds no algorithmic dry-path latency and claims no Fender DSP or sound parity. Firmware notes checked through v1.8.87 (2026-11-23) do not mention this model; installed firmware is unknown.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Pitch Ring Mod controls">
+        <h3>Pitch Ring Mod · project-authored monophonic tracker</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="pitch-ring-mod-carrier-ratio"><span>Carrier ratio</span><output id="pitch-ring-mod-carrier-ratio-value" for="pitch-ring-mod-carrier-ratio">1.00×</output><input id="pitch-ring-mod-carrier-ratio" type="range" min="0.25" max="4" step="0.01" value="1"></label>
+          <label class="mix-control" for="pitch-ring-mod-fallback-pitch"><span>Fallback pitch</span><output id="pitch-ring-mod-fallback-pitch-value" for="pitch-ring-mod-fallback-pitch">110 Hz</output><input id="pitch-ring-mod-fallback-pitch" type="range" min="55" max="880" step="1" value="110"></label>
+          <label class="mix-control" for="pitch-ring-mod-tracking-confidence"><span>Tracking confidence</span><output id="pitch-ring-mod-tracking-confidence-value" for="pitch-ring-mod-tracking-confidence">55%</output><input id="pitch-ring-mod-tracking-confidence" type="range" min="0.2" max="0.98" step="0.01" value="0.55"></label>
+          <label class="mix-control" for="pitch-ring-mod-mix"><span>Ring modulation mix</span><output id="pitch-ring-mod-mix-value" for="pitch-ring-mod-mix">50%</output><input id="pitch-ring-mod-mix" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="pitch-ring-mod-level"><span>Output level</span><output id="pitch-ring-mod-level-value" for="pitch-ring-mod-level">0.0 dB</output><input id="pitch-ring-mod-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
+        </div>
+        <p class="hint">Line 6’s current Helix Stadium model list verifies Pitch Ring Mod as a Stereo, Line 6 Original effect in Modulation (first appearance 1.0). The live manual describes the category generally; neither source publishes this model’s algorithm, parameter list, numeric ranges, defaults, DSP, or latency. This project uses a monophonic autocorrelation tracker and sine carrier; the project controls above are not Line 6 settings or sound parity. It handles one clear note best, falls back to the selected pitch on weak or ambiguous input, and has about 43 ms default tracking warm-up while its audio path itself adds no fixed latency.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Filtered Delay controls">
         <h3>Filtered Delay · project-authored</h3>
