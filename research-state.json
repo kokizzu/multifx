@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "af9e37a4a5162396b1f1284a9e8e4f22cf8207d4",
+  "previous_checkpoint_commit": "c10e62fd87908f584112cf52c35df9e7c164a396",
   "latest_audit": {
     "name": "HeadRush Prime per-block Phase Invert",
     "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
@@ -31,8 +31,8 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Melofty Axom Max",
-    "next_feature": "Audit the current exact-model documentation and firmware source for a named effect with usable control behavior. Do not map broad DeepSynth, Inst.Sim, generic effect families, app notes, or unavailable ranges into vendor-specific DSP. If no safe model-specific effect can be justified, record the unresolved boundary and continue with the next documented gap: Fender Phaser stages 10/12, then Helix Stadium Dynamics Sidechain, Fractal FM9-family Global Mix, and HeadRush Prime Global EQ. Revisit XRecer XR1 global routing only after a real output-routing host exists.",
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Extend the existing categorized Phaser's project-authored stage selector to cover Fender's documented 10- and 12-stage choices, preserving existing 4/6/8 behavior and default. Then continue with Helix Stadium Dynamics Sidechain, Fractal FM9-family Global Mix, and HeadRush Prime Global EQ. Revisit XRecer XR1 global routing only after a real output-routing host exists.",
     "qualification": "Preserve the existing manufacturer-versus-project distinction, categorized picker, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; manual hardware/listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [

@@ -244,6 +244,14 @@
 - [x] `make test` passes 112/112 CTest cases and 11/11 fixture checks; full `make web-test`, Windows MinGW cross-build, and `make bench` pass. The existing Filtered Delay benchmark row is recorded separately; these checks do not establish an AXOM model match.
 - [ ] Device listening and exact AXOM algorithm/parameter mapping remain open.
 
+## Melofty AXOM MAX — current effect-source audit (2026-11-27)
+
+- [x] Rechecked the official downloads page: Axom Max firmware, controller, and app are listed at V1.9.2 dated 2026-10-27. The V1.9.2 app notes (2026-10-26) mention Delay divisions 1/64–1/1 and High/Low Cut, reduced Pitch CPU, a Simplified Noise Gate, Wah changes, and Synth/Inst subpatch switching/dynamic response. These notes do not identify affected effect algorithms, provide their parameter tables, or prove the device has installed that firmware.
+- [x] Rechecked the accessible exact-model English User Manual V1.7.4 (2026-08-31), including pp. 3, 8, 27, 45, and 54. DeepSynth and Inst.Sim are named, but DeepSynth has only a Quick Preset workflow; the manual does not publish a model-level algorithm inventory or effect control ranges/defaults. The Global Output page enables EQ separately for unbalanced, balanced, and headphone outputs, but does not document bands or signal routing.
+- [x] No safe Axom-specific effect can be implemented from these sources. Existing Filtered Delay and output EQ remain related project functions; neither is attributed to a named Axom algorithm or output-routing behavior.
+- [x] `make test-docs` and `make diff-check` pass. No workflow files changed.
+- [ ] Exact V1.9.2 device controls, installed firmware, and device/listening checks remain open. Continue with the documented Fender Phaser stage-count gap.
+
 ## Fractal FM9 family — Touch-Wah/Touch-Ladder physical detector source (2026-11-25)
 
 - [x] The November 2026 Blocks Guide, pp. 45–47, documents block or physical detector source for Touch-Wah and Touch-Ladder. The guide is family-level evidence; firmware v12.0 is listed for FM9 Original/Turbo, not Mark II Turbo by name, and installed firmware is unknown.

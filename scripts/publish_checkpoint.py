@@ -2947,6 +2947,9 @@ LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS = (
 
 AXOM_SOURCE_AUDIT_CHECKPOINT_PATHS = (
     "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "RESEARCH.md",
+    "make/publish.mk",
     "research-state.json",
     "scripts/publish_checkpoint.py",
 )
@@ -4366,6 +4369,29 @@ def main() -> None:
         stage(args.checkpoint)
     else:
         publish(args.checkpoint)
+
+
+PARTIAL_CHECKPOINT_HUNKS["axom-source-audit"] = {
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "Flagship effect implementation checklist (source status 2026-11-27)",
+        "V1.9.2 dated 2026-10-26",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "Melofty AXOM MAX — current effect-source audit (2026-11-27)",
+    ),
+    "RESEARCH.md": (
+        "MELOFTY downloads page](https://www.meloftyaudio.com/support/downloads), rechecked 2026-11-27",
+    ),
+    "research-state.json": (
+        '"previous_checkpoint_commit": "c10e62fd87908f584112cf52c35df9e7c164a396"',
+        '"next_device": "Fender Tone Master Pro"',
+        '"next_feature": "Extend the existing categorized Phaser',
+    ),
+    "scripts/publish_checkpoint.py": (
+        '"make/publish.mk"',
+        'PARTIAL_CHECKPOINT_HUNKS["axom-source-audit"]',
+    ),
+}
 
 
 if __name__ == "__main__":
