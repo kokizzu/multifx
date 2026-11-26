@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Electric Flanger Filter mode (2026-11-26)
+
+The Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 39, describes Electric Flanger Filter mode as retaining harmonic flanging without frequency modulation; Rate changes its tonality and Color adjusts intensity. It publishes no numeric ranges/defaults, DSP topology, or latency. Firmware history is checked through v1.8.87 (2026-11-23); installed firmware is unknown.
+
+TabletFX adds a project-authored static short-comb Filter mode to the existing Flanger at Modulation ID 17. Flanger remains the default. In Filter mode, the project Rate position (0.05–8, default 0.25) maps linearly to a fixed 0.5–10 ms comb delay; project Color (0–0.9, default 0.35) sets positive feedback. Mix remains active; tempo division, movement depth, feedback polarity, and stereo phase are disabled. The existing delay ring is reused, so there is no new audio buffer, fixed latency, or process-time allocation. Native state is 4,840 B; focused browser/WASM state is 4,804 B.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline), 3,000 warm-up blocks, and 20,000 measured blocks. The Filter profile was p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of the callback budget. This is an isolated desktop processor measurement, not Android or live-chain performance, and it should not be interpreted as a measured CPU reduction relative to Flanger mode. Native and CLI tests, browser/WASM Play on local prerecorded guitar DI, Windows MinGW cross-build, and `make diff-check` pass. Physical Fender comparison and human listening remain manual; no Fender DSP/settings/sound parity is claimed.
+
 ## Fractal FM9-family Synth block output Level (2026-11-26)
 
 The November 2026 Fractal Audio Blocks Guide, printed pp. 4 and 102, documents the Synth block's shared Level and describes block Level as overall output. It does not publish a numeric Level range/default. FM9 v12.0 downloads list FM9 Original and Turbo, not Mark II Turbo by name; installed firmware is unknown.

@@ -27,6 +27,9 @@ Flanger::Flanger(float sample_rate, std::uint16_t channels,
 
 void Flanger::set_parameters(FlangerParameters parameters) noexcept {
     parameters.rate_hz = bounded(parameters.rate_hz, 0.25F, 0.05F, 8.0F);
+    parameters.mode = sanitize_mode(parameters.mode);
+    parameters.color = bounded(parameters.color, 0.35F, 0.0F,
+                               kFilterMaximumColor);
     parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
                                    kMinimumTempoBpm, kMaximumTempoBpm);
     if (!valid_tap_division(parameters.tap_division)) {
@@ -68,12 +71,22 @@ void Flanger::set_parameters(FlangerParameters parameters) noexcept {
         target_right_phase_sine_ = std::sin(phase_radians);
         target_right_phase_cosine_ = std::cos(phase_radians);
     }
-    target_base_delay_ms_ = parameters_.base_delay_ms;
-    target_depth_ms_ = parameters_.depth_ms;
-    const float polarity = parameters_.feedback_polarity == FlangerFeedbackPolarity::Negative
-                               ? -1.0F
-                               : 1.0F;
-    target_feedback_ = parameters_.feedback * polarity;
+    const bool filter_mode = parameters_.mode == FlangerMode::Filter;
+    target_base_delay_ms_ = filter_mode
+                                ? filter_delay_ms(parameters_.rate_hz)
+                                : parameters_.base_delay_ms;
+    target_depth_ms_ = filter_mode ? 0.0F : parameters_.depth_ms;
+    if (filter_mode) {
+        // The project-authored static comb interprets Color as positive
+        // feedback/intensity. Tap Division and tempo sync intentionally do
+        // not affect this fixed spectral response.
+        target_feedback_ = parameters_.color;
+    } else {
+        const float polarity = parameters_.feedback_polarity == FlangerFeedbackPolarity::Negative
+                                   ? -1.0F
+                                   : 1.0F;
+        target_feedback_ = parameters_.feedback * polarity;
+    }
     target_mix_ = parameters_.mix;
     prepare_rate();
     retarget(false);
@@ -99,6 +112,26 @@ bool Flanger::valid_tap_division(DelayDivision division) noexcept {
     default:
         return false;
     }
+}
+
+FlangerMode Flanger::sanitize_mode(FlangerMode mode) noexcept {
+    switch (mode) {
+    case FlangerMode::Flanger:
+    case FlangerMode::Filter:
+        return mode;
+    }
+    return FlangerMode::Flanger;
+}
+
+float Flanger::filter_delay_ms(float rate_setting) noexcept {
+    // The guide describes different static tonalities at different Rate
+    // positions but publishes no mapping. This linear 0.5..10 ms mapping is a
+    // project choice that reuses the existing short delay line.
+    const float rate = bounded(rate_setting, 0.25F, kFilterMinimumRate,
+                               kFilterMaximumRate);
+    const float position = (rate - kFilterMinimumRate) /
+                           (kFilterMaximumRate - kFilterMinimumRate);
+    return kMinimumDelayMs + position * (kMaximumDelayMs - kMinimumDelayMs);
 }
 
 float Flanger::beats_for_tap_division(DelayDivision division) noexcept {
@@ -170,7 +203,7 @@ void Flanger::process(std::span<float> interleaved,
         const float base_delay = current_base_delay_ms_ * samples_per_ms;
         const float modulation_depth = current_depth_ms_ * samples_per_ms;
         float right_modulation = sine_phase_;
-        if (channels_ > 1) {
+        if (parameters_.mode == FlangerMode::Flanger && channels_ > 1) {
             right_modulation = sine_phase_ * right_phase_cosine_ +
                                cosine_phase_ * right_phase_sine_;
         }
@@ -181,10 +214,16 @@ void Flanger::process(std::span<float> interleaved,
             const float input = std::isfinite(interleaved[index])
                                     ? interleaved[index]
                                     : 0.0F;
-            const float modulation = channel == 0 ? sine_phase_ : right_modulation;
-            const float delay = std::clamp(base_delay + modulation_depth * modulation,
-                                           1.0F,
-                                           static_cast<float>(capacity_frames_ - 2));
+            float delay = base_delay;
+            if (parameters_.mode == FlangerMode::Flanger) {
+                const float modulation = channel == 0 ? sine_phase_ : right_modulation;
+                delay = std::clamp(base_delay + modulation_depth * modulation,
+                                   1.0F,
+                                   static_cast<float>(capacity_frames_ - 2));
+            } else {
+                delay = std::clamp(base_delay, 1.0F,
+                                   static_cast<float>(capacity_frames_ - 2));
+            }
             const std::size_t whole_delay = static_cast<std::size_t>(delay);
             const float fraction = delay - static_cast<float>(whole_delay);
             std::size_t read_frame = write_frame_ + capacity_frames_ - whole_delay;
@@ -210,7 +249,9 @@ void Flanger::process(std::span<float> interleaved,
         if (write_frame_ == capacity_frames_) {
             write_frame_ = 0;
         }
-        advance_modulator();
+        if (parameters_.mode == FlangerMode::Flanger) {
+            advance_modulator();
+        }
     }
 }
 

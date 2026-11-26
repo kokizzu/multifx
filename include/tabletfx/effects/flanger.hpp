@@ -15,6 +15,11 @@ enum class FlangerFeedbackPolarity : std::uint8_t {
     Negative,
 };
 
+enum class FlangerMode : std::uint8_t {
+    Flanger,
+    Filter,
+};
+
 struct FlangerParameters {
     float rate_hz = 0.25F;
     bool tempo_sync = false;
@@ -27,10 +32,16 @@ struct FlangerParameters {
     float mix = 0.35F;
     float right_channel_phase_degrees = 180.0F;
     float smoothing_ms = 10.0F;
+    FlangerMode mode = FlangerMode::Flanger;
+    // Project-authored static-comb feedback/intensity control used only by
+    // Filter mode: 0..0.9, default 0.35. It is not a Fender Color scale.
+    float color = 0.35F;
 };
 
-// Short sine-LFO modulated delay flanger with bounded signed feedback.
-// Delay storage is allocated at construction; process() is allocation-free.
+// Project-authored short sine-LFO modulated delay flanger. Filter mode uses a
+// fixed comb delay tuned from the Rate setting and reuses the same storage.
+// Neither mode claims Fender DSP, settings, or sound parity. Delay storage is
+// allocated at construction; process() is allocation-free.
 class Flanger final : public Effect {
 public:
     explicit Flanger(float sample_rate = 48000.0F, std::uint16_t channels = 2,
@@ -57,6 +68,9 @@ private:
     static constexpr float kMinimumDelayMs = 0.5F;
     static constexpr float kMaximumDelayMs = 10.0F;
     static constexpr float kStorageDelayMs = 12.0F;
+    static constexpr float kFilterMinimumRate = 0.05F;
+    static constexpr float kFilterMaximumRate = 8.0F;
+    static constexpr float kFilterMaximumColor = 0.9F;
     static constexpr float kMaximumSynchronizedRateHz = 80.0F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
@@ -64,6 +78,8 @@ private:
     [[nodiscard]] static float bounded(float value, float fallback,
                                        float minimum, float maximum) noexcept;
     [[nodiscard]] static bool valid_tap_division(DelayDivision division) noexcept;
+    [[nodiscard]] static FlangerMode sanitize_mode(FlangerMode mode) noexcept;
+    [[nodiscard]] static float filter_delay_ms(float rate_setting) noexcept;
     [[nodiscard]] static float beats_for_tap_division(DelayDivision division) noexcept;
     void prepare_rate() noexcept;
     void retarget(bool immediate) noexcept;

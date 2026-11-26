@@ -716,7 +716,6 @@ FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "apps/offline_render.cpp",
     "include/tabletfx/effects/flanger.hpp",
-    "make/publish.mk",
     "research-state.json",
     "scripts/publish_checkpoint.py",
     "scripts/test_offline_cli.py",
@@ -2964,7 +2963,7 @@ CHECKPOINTS = {
     ),
     "fender-flanger-tap-division": (
         FENDER_FLANGER_TAP_DIVISION_CHECKPOINT_PATHS,
-        "feat: add Flanger Tap Division tempo sync",
+        "feat: add Flanger tempo sync and Filter mode",
     ),
     "fender-phaser-90-tap-division": (
         FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS,

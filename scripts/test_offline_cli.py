@@ -1958,6 +1958,42 @@ def check_flanger(executable: Path) -> None:
                 f"Flanger CLI should render negative feedback at frames 64/128; got {samples[64]}/{samples[128]}"
             )
 
+        filter_zero = root / "filter-color-zero.wav"
+        filter_color = root / "filter-color-high.wav"
+        filter_common = [
+            "--flanger-mode", "filter", "--flanger-rate-hz", "0.05",
+            "--flanger-mix", "1",
+        ]
+        for destination, color in ((filter_zero, "0"), (filter_color, "0.7")):
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(destination),
+                 *filter_common, "--flanger-color", color],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"Flanger Filter mode did not create one processor: {result.stdout}")
+        filter_zero_samples = struct.unpack(
+            "<160f", filter_zero.read_bytes()[44:44 + 160 * 4]
+        )
+        filter_color_samples = struct.unpack(
+            "<160f", filter_color.read_bytes()[44:44 + 160 * 4]
+        )
+        color_difference = math.sqrt(sum(
+            (left - right) ** 2
+            for left, right in zip(filter_zero_samples, filter_color_samples, strict=True)
+        ) / len(filter_zero_samples))
+        if color_difference < 1e-4:
+            raise AssertionError("Flanger Filter Color did not change its rendered output")
+
+        invalid_mode = subprocess.run(
+            [str(executable), "render", str(source), str(root / "invalid-mode.wav"),
+             "--flanger-mode", "adaptive"],
+            capture_output=True, text=True, check=False,
+        )
+        if (invalid_mode.returncode == 0 or
+                "Flanger mode must be flanger or filter" not in invalid_mode.stderr):
+            raise AssertionError("Flanger accepted an unsupported mode")
+
         stereo_source = root / "stereo-guitar.wav"
         phase_zero_output = root / "phase-zero.wav"
         phase_opposite_output = root / "phase-opposite.wav"

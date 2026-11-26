@@ -2457,6 +2457,21 @@ Options parse_options(int argc, char** argv, int first) {
             options.flanger_enabled = true;
             continue;
         }
+        if (key == "--flanger-mode") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --flanger-mode");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "flanger") {
+                options.flanger.mode = tabletfx::FlangerMode::Flanger;
+            } else if (value == "filter") {
+                options.flanger.mode = tabletfx::FlangerMode::Filter;
+            } else {
+                throw std::invalid_argument("Flanger mode must be flanger or filter");
+            }
+            options.flanger_enabled = true;
+            continue;
+        }
         if (key == "--flanger-tempo-sync") {
             if (i + 1 >= argc) {
                 throw std::invalid_argument("Missing value for --flanger-tempo-sync");
@@ -2883,6 +2898,10 @@ Options parse_options(int argc, char** argv, int first) {
         }
         else if (key == "--flanger-right-phase-degrees") {
             options.flanger.right_channel_phase_degrees = value;
+            options.flanger_enabled = true;
+        }
+        else if (key == "--flanger-color") {
+            options.flanger.color = value;
             options.flanger_enabled = true;
         }
         else if (key == "--phaser-rate-hz") {
@@ -6055,6 +6074,15 @@ void run_bench() {
         return std::make_unique<tabletfx::Flanger>(
             static_cast<float>(sample_rate), channels, parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fender-electric-flanger-filter-mode-project-authored", [=] {
+        tabletfx::FlangerParameters parameters;
+        parameters.mode = tabletfx::FlangerMode::Filter;
+        parameters.rate_hz = 1.0F;
+        parameters.color = 0.7F;
+        parameters.mix = 1.0F;
+        return std::make_unique<tabletfx::Flanger>(
+            static_cast<float>(sample_rate), channels, parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("phaser", [=] {
         tabletfx::PhaserParameters parameters;
         parameters.feedback = 0.15F;
@@ -6248,7 +6276,8 @@ void print_usage() {
                     " [--plex-delay-ducker-attenuation-db dB] [--plex-delay-ducker-threshold-db dB]"
                     " [--plex-delay-ducker-release-ms ms] [--plex-delay-stereo-spread -2..2]"
                    " [--plex-delay-stack-mode off|stack|hold]"
-                  " [--flanger-rate-hz Hz] [--flanger-delay-ms ms]"
+                  " [--flanger-mode flanger|filter] [--flanger-rate-hz Hz] [--flanger-color 0..0.9]"
+                  " [--flanger-delay-ms ms]"
                   " [--flanger-depth-ms ms] [--flanger-feedback 0..0.9]"
                   " [--flanger-feedback-polarity positive|negative] [--flanger-mix 0..1]"
                   " [--manual-thru-zero-flanger]"

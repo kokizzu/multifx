@@ -734,6 +734,14 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core and offline renderer build. `make bench` includes a separate Tap Division sync row: 4,832 B native state; p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of a 2.667 ms callback on Ryzen 9 5950X Release. Dry path has no fixed algorithmic delay; `process()` allocates nothing.
 - [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP or sound parity.
 
+## Fender Tone Master Pro — Electric Flanger Filter mode (2026-11-26)
+
+- [x] Verify the exact Model Guide v1.1.100 / Rev. A, printed p. 39: Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter keeps harmonic flanging without frequency modulation; Rate changes tone and Color adjusts intensity. The guide gives no ranges/defaults, DSP, or latency. Firmware history checked through v1.8.87 dated 2026-11-23; installed firmware is unknown.
+- [x] Add a project-authored static short-comb Filter mode to the existing Modulation Flanger at ID 17. Preserve Flanger as default. Rate position 0.05–8 maps to 0.5–10 ms, and project Color 0–0.9 (default 0.35) controls positive feedback. Disable irrelevant modulation/tap/stereo controls; reuse the existing ring with no new buffer or fixed latency. Do not claim Fender settings or parity.
+- [x] `make test-fender-flanger-tap-division` passes focused native and offline CLI checks; `make web-test-fender-flanger-tap-division` passes all 117 CTests and seven HeadlessChrome 151 Play captures from local stereo Guitar-TECHS DI. Color, Rate, and mode changes produce distinct output; effect memory is 4,804 B.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline renderer. `make bench` measures 4,840 B native state and p50/p95/p99/p99.9/max callback use 0.0308/0.0311/0.0495/0.0570/0.2291% of 2.667 ms on Ryzen 9 5950X Release.
+- [ ] Human listening and physical Tone Master Pro comparison remain manual. Keep manufacturer DSP, ranges/defaults, and sound parity unclaimed.
+
 ## Fender Tone Master Pro — Tremolo LFO Clip (2026-11-26)
 
 - [x] Check exact-model Model Guide v1.1.100 / Rev. A (p. 34): Tremolo lists Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. LFO Clip is described as adjusting clipping percentage; its range, default, curve, DSP, and latency are not published. Firmware history checked through v1.8.87 (2026-11-23); installed firmware is unknown.

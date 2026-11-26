@@ -298,7 +298,7 @@ const DEFAULT_PARAMETERS = {
   tapeEcho: [0, 350, 120, 4, 0.35, 0.25, 0.25, 0.35, 0, 0.15, 0,
     0, 350, 350, 4, 4],
   convolutionReverb: [0.25, 0],
-  flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180, 0, 120, 4],
+  flanger: [0.25, 2, 1, 0.35, 0, 0.35, 180, 0, 120, 4, 0, 0.35],
   phaser: [0.5, 250, 1600, 0.2, 4, 0.5, 0, 120, 4],
   vibrato: [5, 0.35, 1],
   compressor: [-18, 3, 6, 8, 100, 0],
@@ -1655,6 +1655,10 @@ const tripleDoubleChorusSparkleValue = document.querySelector("#triple-double-ch
 const tripleDoubleChorusStereoSwitch = document.querySelector("#triple-double-chorus-stereo-switch");
 const flangerRate = document.querySelector("#flanger-rate-hz");
 const flangerRateValue = document.querySelector("#flanger-rate-value");
+const flangerRateLabel = document.querySelector("#flanger-rate-label");
+const flangerMode = document.querySelector("#flanger-mode");
+const flangerColor = document.querySelector("#flanger-color");
+const flangerColorValue = document.querySelector("#flanger-color-value");
 const flangerDelay = document.querySelector("#flanger-delay-ms");
 const flangerDelayValue = document.querySelector("#flanger-delay-value");
 const flangerDepth = document.querySelector("#flanger-depth-ms");
@@ -6726,13 +6730,14 @@ convolutionReverbTails.addEventListener("change", updateConvolutionReverb);
 updateConvolutionReverb();
 
 function updateFlanger() {
+  const filterMode = flangerMode.value === "filter";
   const delayMs = Number(flangerDelay.value);
   const maximumDepthMs = Math.max(0, Math.min(4.5, delayMs - 0.25, 12 - delayMs));
   flangerDepth.max = String(maximumDepthMs);
   flangerDepth.value = String(Math.min(Number(flangerDepth.value), maximumDepthMs));
   const polarity = flangerPolarity.value === "negative" ? 1 : 0;
   const rightPhaseDegrees = Number(flangerRightPhase.value);
-  const tempoSync = flangerTapDivision.value !== "free";
+  const tempoSync = !filterMode && flangerTapDivision.value !== "free";
   const division = tempoSync ? Number(flangerTapDivision.value) : 4;
   const tempoBpm = Number(flangerTempoBpm.value);
   const freeRateHz = Number(flangerRate.value);
@@ -6741,14 +6746,27 @@ function updateFlanger() {
     Math.max(0.05, (tempoBpm / 60) / flangerDivisionBeats[division]),
   );
   flangerRate.disabled = tempoSync;
+  flangerTapDivision.disabled = filterMode;
   flangerTempoBpm.disabled = !tempoSync;
+  flangerDelay.disabled = filterMode;
+  flangerDepth.disabled = filterMode;
+  flangerFeedback.disabled = filterMode;
+  flangerPolarity.disabled = filterMode;
+  flangerRightPhase.disabled = filterMode;
+  flangerColor.disabled = !filterMode;
+  flangerRateLabel.textContent = filterMode
+    ? "Filter Rate position · project scale"
+    : "Flanger rate";
   const values = [
     freeRateHz, delayMs, Number(flangerDepth.value),
     Number(flangerFeedback.value), polarity, Number(flangerMix.value),
     rightPhaseDegrees, tempoSync ? 1 : 0, tempoBpm, division,
+    filterMode ? 1 : 0, Number(flangerColor.value),
   ];
   DEFAULT_PARAMETERS.flanger = values;
-  flangerRateValue.value = tempoSync
+  flangerRateValue.value = filterMode
+    ? `${freeRateHz.toFixed(2)} · tone`
+    : tempoSync
     ? `${synchronizedRateHz.toFixed(2)} Hz · sync`
     : `${freeRateHz.toFixed(2)} Hz`;
   flangerDelayValue.value = `${delayMs.toFixed(2)} ms`;
@@ -6757,12 +6775,13 @@ function updateFlanger() {
   flangerRightPhaseValue.value = `${rightPhaseDegrees}°`;
   flangerMixValue.value = `${Math.round(Number(flangerMix.value) * 100)}%`;
   flangerTempoBpmValue.value = `${tempoBpm} BPM`;
+  flangerColorValue.value = `${Math.round(Number(flangerColor.value) * 100)}%`;
   if (workletNode) workletNode.port.postMessage({ type: "flanger", value: values });
 }
 
 for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
   flangerPolarity, flangerRightPhase, flangerMix, flangerTapDivision,
-  flangerTempoBpm]) {
+  flangerTempoBpm, flangerMode, flangerColor]) {
   control.addEventListener("input", updateFlanger);
   control.addEventListener("change", updateFlanger);
 }
@@ -13335,7 +13354,8 @@ async function runFenderStereoFlangerPhaseBrowserSmokeTest(reference, captureVie
 async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
-  const previousControls = [flangerRate.value, flangerDelay.value, flangerDepth.value,
+  const previousControls = [flangerMode.value, flangerColor.value,
+    flangerRate.value, flangerDelay.value, flangerDepth.value,
     flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value, flangerMix.value,
     flangerTapDivision.value, flangerTempoBpm.value];
   try {
@@ -13351,6 +13371,7 @@ async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureVie
     const row = document.querySelector('[data-effect="17"]')?.closest(".effect-row");
     if (row?.dataset.category !== "modulation" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        flangerMode.value !== "flanger" || !flangerColor.disabled ||
         flangerTapDivision.value !== "free" || !flangerRate || flangerRate.disabled ||
         flangerRate.value !== "0.25" ||
         flangerTapDivision.options.length !== 15 ||
@@ -13410,6 +13431,42 @@ async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureVie
       throw new Error("Quarter-note sync did not follow a tempo change to 60 BPM.");
     }
 
+    const rmsDifference = (left, right) => {
+      if (left.length !== right.length || left.length === 0) {
+        throw new Error("Flanger comparison captures have incompatible lengths.");
+      }
+      let energy = 0;
+      for (let i = 0; i < left.length; i += 1) {
+        const difference = left[i] - right[i];
+        energy += difference * difference;
+      }
+      return Math.sqrt(energy / left.length);
+    };
+
+    flangerMode.value = "filter";
+    flangerMix.value = "1";
+    flangerColor.value = "0";
+    const filterNoColor = await captureAt("free", 120, 0.05);
+    if (flangerRate.disabled || flangerTapDivision.disabled !== true ||
+        flangerTempoBpm.disabled !== true || flangerDelay.disabled !== true ||
+        flangerDepth.disabled !== true || flangerFeedback.disabled !== true ||
+        flangerPolarity.disabled !== true || flangerRightPhase.disabled !== true ||
+        flangerColor.disabled || flangerRateValue.value !== "0.05 · tone") {
+      throw new Error("Filter mode did not expose only its active project controls.");
+    }
+    flangerColor.value = "0.7";
+    const filterColored = await captureAt("free", 120, 0.05);
+    const filterHighRate = await captureAt("free", 120, 8);
+    flangerMode.value = "flanger";
+    const flangerAtLowRate = await captureAt("free", 120, 0.05);
+    const colorDifferenceRms = rmsDifference(filterNoColor.output, filterColored.output);
+    const rateDifferenceRms = rmsDifference(filterColored.output, filterHighRate.output);
+    const modeDifferenceRms = rmsDifference(filterColored.output, flangerAtLowRate.output);
+    if (colorDifferenceRms < 1e-6 || rateDifferenceRms < 1e-6 ||
+        modeDifferenceRms < 1e-6) {
+      throw new Error("Filter mode Color, Rate, or mode selection did not change Play output.");
+    }
+
     return {
       category: "Modulation",
       effectId: 17,
@@ -13419,13 +13476,23 @@ async function runFenderFlangerTapDivisionBrowserSmokeTest(reference, captureVie
       freeRateDefaultHz: 0.25,
       quarterAt120Hz: 2,
       quarterAt60Hz: 1,
-      playCaptures: 3,
+      playCaptures: 7,
       peaks: [freeTwoHz.peak, quarterAt120.peak, quarterAt60.peak],
+      filterMode: {
+        mode: "Filter",
+        projectRateScale: [0.05, 8],
+        projectColorRange: [0, 0.9],
+        projectColorDefault: 0.35,
+        captures: 4,
+        colorDifferenceRms,
+        rateDifferenceRms,
+        modeDifferenceRms,
+      },
       effectMemoryBytes: effectMemory[17],
     };
   } finally {
     stopSource(false);
-    [flangerRate.value, flangerDelay.value, flangerDepth.value,
+    [flangerMode.value, flangerColor.value, flangerRate.value, flangerDelay.value, flangerDepth.value,
       flangerFeedback.value, flangerPolarity.value, flangerRightPhase.value,
       flangerMix.value, flangerTapDivision.value, flangerTempoBpm.value] = previousControls;
     updateFlanger();

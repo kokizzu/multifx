@@ -2375,8 +2375,15 @@
         </div>
       </div>
       <div class="gain-controls" aria-label="Flanger controls">
+        <label class="mix-control" for="flanger-mode">
+          <span>Flanger mode · project choices</span>
+          <select id="flanger-mode">
+            <option value="flanger" selected>Flanger</option>
+            <option value="filter">Filter · no frequency modulation</option>
+          </select>
+        </label>
         <label class="mix-control" for="flanger-rate-hz">
-          <span>Flanger rate</span><output id="flanger-rate-value" for="flanger-rate-hz">0.25 Hz</output>
+          <span id="flanger-rate-label">Flanger rate</span><output id="flanger-rate-value" for="flanger-rate-hz">0.25 Hz</output>
           <input id="flanger-rate-hz" type="range" min="0.05" max="8" step="0.05" value="0.25">
         </label>
         <label class="mix-control" for="flanger-tap-division">
@@ -2424,12 +2431,18 @@
           <span>L/R phase offset · project range</span><output id="flanger-right-phase-value" for="flanger-right-phase-degrees">180°</output>
           <input id="flanger-right-phase-degrees" type="range" min="0" max="360" step="1" value="180">
         </label>
+        <label class="mix-control" for="flanger-color">
+          <span>Filter Color · project range</span>
+          <output id="flanger-color-value" for="flanger-color">35%</output>
+          <input id="flanger-color" type="range" min="0" max="0.9" step="0.01" value="0.35" disabled>
+        </label>
         <label class="mix-control" for="flanger-mix">
           <span>Flanger wet mix</span><output id="flanger-mix-value" for="flanger-mix">35%</output>
           <input id="flanger-mix" type="range" min="0" max="1" step="0.01" value="0.35">
         </label>
       </div>
       <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 38</a> lists Rate, Depth, Resonance, Tap Division and Manual for Mono Flanger; Stereo also lists L/R Phase. Tap Division selects a subdivision of the current tempo for effect speed. The guide does not state the available divisions, numeric bounds, defaults or DSP. This project adds a free-rate/tempo-sync selector, project-selected divisions and 20–300 BPM range while preserving the existing free-rate default. The project exposes a right-channel offset of 0–360°, default 180°. These mappings, values and processing are project-authored, not Fender settings or sound parity. Fender's current listed firmware is v1.8.87 (23 Nov 2026); its notes do not mention a Flanger change, and installed firmware is unknown.</p>
+      <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 39</a> describes Electric Flanger Filter mode as retaining harmonic flanging without frequency modulation; Rate changes the resulting tonality, and Color controls effect intensity. This project adds a static short-comb Filter mode at the existing picker row. Its Rate-to-delay mapping, positive-feedback interpretation of Color, 0–0.9 Color bounds and 35% default are project-authored; Depth and tempo division are inactive in Filter mode. This is not Fender DSP, control-range, or sound parity.</p>
       <p class="hint">Fender's <a href="https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf" target="_blank" rel="noreferrer">Tone Master Pro Model Guide v1.1.100 / Rev. A, p. 40</a> lists Speed and Tap Division for Phaser 90; Tap Division selects a subdivision of the current tempo for effect speed. The guide does not publish the available divisions, rate bounds/default, DSP or latency. This project adds a Free Hz / Tap Division selector with project-chosen subdivisions and 20–300 BPM (120 BPM default), while keeping the current 0.5 Hz free-rate default. These controls and the broader multi-stage Phaser are project-authored, not Fender settings or sound parity. Firmware notes through v1.8.87 (23 Nov 2026) do not mention Phaser; installed firmware is unknown.</p>
       <div class="gain-controls" aria-label="Phaser controls">
         <label class="mix-control" for="phaser-rate-hz">

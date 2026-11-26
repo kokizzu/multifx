@@ -2,6 +2,12 @@
 
 Research snapshot: **2026-11-26**. This compares manufacturer-documented categories and representative features for the six named flagship processors. It is a focused documentation check, not a fresh audit of every algorithm in every firmware or of the whole effects catalogue. Product names below identify documented examples; TabletFX implementations should use project-authored names, controls, and signal paths rather than copy proprietary presets or imply circuit emulation.
 
+## Current Fender Tone Master Pro Electric Flanger Filter mode (2026-11-26)
+
+The Model Guide v1.1.100 / Rev. A, printed p. 39, lists Electric Flanger controls Rate, Depth, Color, Tap Division, and a Flanger/Filter mode switch. It describes Filter mode as keeping the harmonic flanging characteristic while removing frequency modulation, with Rate changing the resulting tonality. Color adjusts effect intensity. Numeric bounds/defaults, DSP topology, and latency are not published. Firmware history was checked through v1.8.87 dated 2026-11-23; installed firmware remains unknown. [Model Guide](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf) · [Firmware history](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates)
+
+TabletFX adds a project-authored static short-comb Filter mode to its existing Modulation Flanger at ID 17. Flanger remains the default; Filter Rate position maps 0.05–8 linearly to 0.5–10 ms, and project Color 0–0.9 (default 0.35) controls positive feedback. Tempo division, moving delay depth, feedback polarity, and stereo phase are disabled in Filter mode. It reuses the existing ring; the native instance is 4,840 B, browser state 4,804 B, with no added fixed latency or processing allocation. Native tests, CLI, seven local-guitar browser Play captures, Windows cross-build, and a callback benchmark pass. Device listening and physical Fender comparison remain open. The mapping is not a Fender settings, algorithm, DSP, or sound match.
+
 ## Current verified checkpoint — Fractal FM9-family Synth block output Level (2026-11-26)
 
 The November 2026 Fractal Audio Blocks Guide, printed pp. 4 and 102, documents a shared Synth block Level control and describes block Level as overall output level. It publishes no numeric range or default. The evidence is FM9-family documentation; current FM9 v12.0 downloads list Original and Turbo, not Mark II Turbo by name, and installed firmware is unknown.

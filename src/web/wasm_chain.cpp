@@ -3012,7 +3012,8 @@ public:
                            float feedback, std::uint32_t feedback_polarity,
                            float mix, float right_channel_phase_degrees,
                            std::uint32_t tempo_sync, float tempo_bpm,
-                           std::uint32_t tap_division) noexcept {
+                           std::uint32_t tap_division, std::uint32_t mode,
+                           float color) noexcept {
         tabletfx::FlangerParameters parameters;
         parameters.rate_hz = rate_hz;
         parameters.tempo_sync = tempo_sync != 0U;
@@ -3027,6 +3028,9 @@ public:
             : tabletfx::FlangerFeedbackPolarity::Positive;
         parameters.mix = mix;
         parameters.right_channel_phase_degrees = right_channel_phase_degrees;
+        parameters.mode = mode == 1U ? tabletfx::FlangerMode::Filter
+                                     : tabletfx::FlangerMode::Flanger;
+        parameters.color = color;
         static_cast<tabletfx::Flanger*>(effects_[17].effect.get())
             ->set_parameters(parameters);
     }
@@ -5129,12 +5133,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_flanger(
     void* opaque, float rate_hz, float base_delay_ms, float depth_ms,
     float feedback, std::uint32_t feedback_polarity, float mix,
     float right_channel_phase_degrees, std::uint32_t tempo_sync,
-    float tempo_bpm, std::uint32_t tap_division) noexcept {
+    float tempo_bpm, std::uint32_t tap_division, std::uint32_t mode,
+    float color) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_flanger(rate_hz, base_delay_ms, depth_ms,
                                             feedback, feedback_polarity, mix,
                                             right_channel_phase_degrees,
-                                            tempo_sync, tempo_bpm, tap_division);
+                                            tempo_sync, tempo_bpm, tap_division,
+                                            mode, color);
     }
 }
 

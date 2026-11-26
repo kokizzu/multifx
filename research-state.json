@@ -4,36 +4,36 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "b207dc85312ac32dac674b4d94803b795af15f3b",
+  "previous_checkpoint_commit": "164e3b81e51e451e9468e69f34ba87fe94db1cb3",
   "latest_audit": {
-    "name": "Fractal FM9-family Synth block output Level",
-    "status": "Project-authored block output Level added to the existing Three-Voice Tracked Synth at picker ID 78; native, browser/WASM, Windows, and benchmark checks pass. Human/device checks and firmware applicability remain open.",
+    "name": "Fender Tone Master Pro Electric Flanger Filter mode and Tap Division",
+    "status": "The existing categorized Flanger now includes project-authored Free/tempo-sync and static Filter modes without a new picker row. Native/CLI, seven local-guitar browser Play captures, full browser/native checks, Windows cross-build, benchmark, and diff-check pass. Human listening and physical Fender comparison remain open.",
     "date": "2026-11-26",
-    "picker_index": 78,
-    "category": "Synth",
+    "picker_index": 17,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 102. FM9 downloads page lists firmware v12.0 as compatible with FM9 Original and FM9 Turbo (2026-07-07), not Mark II Turbo by name. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "release_notes_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide documents a Synth block Level but no numeric range/default. The block is explicitly monophonic; three oscillators do not mean polyphonic input tracking. Firmware applicability to Mark II Turbo is not explicit. Project control bounds/defaults and DSP are not Fractal parity."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 38–39; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents Tap Division and Filter-mode control roles but gives no division list, numeric ranges/defaults, DSP topology, or latency. The implemented Filter mapping, Color interpretation, tempo divisions, and defaults are project-authored and do not claim Fender settings, DSP, or sound parity."
     },
-    "documented_controls": "The November 2026 Blocks Guide, pp. 4 and 102, describes shared block Level as overall output and lists Synth Mix, Level, Balance, Bypass, Bypass Mode, and Global Mix. It separately documents three oscillators with single-note input tracking and per-voice controls. No numeric block-Level bounds/default are provided.",
-    "project_controls": "Added project-authored −24…+12 dB output Level, default 0 dB, with a 10 ms linear gain ramp. It affects the complete dry-plus-synth output. The browser/WASM bridge accepts legacy 34-value arrays at 0 dB and the new 35-value array. Native state grows by 16 B to 1,031,360 B; no additional audio buffer, fixed latency, or process-time allocation.",
+    "documented_controls": "Model Guide p. 38 lists Mono/Stereo Flanger Rate, Depth, Resonance, Tap Division, and Manual; Stereo adds L/R Phase. Page 39 lists Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter retains harmonic flanging without frequency modulation; Rate changes tone and Color controls intensity. The guide publishes no division choices, numeric bounds/defaults, DSP, or latency.",
+    "project_controls": "At existing Modulation Flanger ID 17, Free Hz remains default and project tempo sync offers 14 divisions at 20–300 BPM. Filter mode uses a static short comb; project Rate position 0.05–8 maps to 0.5–10 ms and project Color 0–0.9 (default 0.35) sets positive feedback. Flanger remains the default. No new picker row, ring, fixed latency, or process allocation is added. Native state 4,840 B; browser effect state 4,804 B.",
     "verification": {
-      "native": "make test passed: 333 source requirements/346 tracked rows, 13/13 fixture-safety tests, and 117/117 CTests. Focused Synth tests cover unity identity, −12 dB ramp endpoints, partition invariance, clamping, NaN fallback, finite output, and no process-time allocation.",
-      "browser": "Full make web-test passed. HeadlessChrome 151 uses local prerecorded Guitar-TECHS direct-input guitar; the Synth Play smoke confirms changed output, then measures −12 dB Level using repeatable oscillator captures. Browser/native full-chain comparison passed (maximum absolute error 1.6113e−6, RMS 2.9850e−7).",
-      "windows": "make windows-cross-build passed for the MinGW core and offline renderer; compile-only.",
-      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 2,000 warm-up and 5,000 measured blocks. Full three-voice tracked Synth at 0 dB: p50/p95/p99/p99.9/max 11.4427/12.0082/12.3555/18.2566/19.9783%. At −12 dB: 9.0295/12.0416/12.4717/15.0525/21.1311%. Both report 1,031,360 B native state. This measures the whole Synth; noisy run-to-run differences do not isolate marginal Level CPU.",
-      "diff_check": "make diff-check passed with no whitespace errors; no workflow paths are included."
+      "native_cli": "make test-fender-flanger-tap-division passes focused Flanger coverage and offline CLI checks, including Filter Color output changes and invalid mode handling.",
+      "browser": "make web-test-fender-flanger-tap-division passes 117/117 CTests and HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. Seven captures verify default controls, tempo behavior, Filter Color/Rate/mode output differences, and active controls. Full browser/native comparison passes.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer compile.",
+      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 3,000 warm-up/20,000 measured. Filter mode: p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of callback deadline; native state 4,840 B. This is isolated desktop timing, not Android/tablet performance or a measured CPU reduction.",
+      "diff_check": "make diff-check passes with no whitespace errors; no workflow files are included."
     },
-    "remaining": "Human listening, physical Fractal device behavior, target tablet CPU/memory, Mark II Turbo firmware applicability, manufacturer numeric Level bounds/default, and all Fractal settings/DSP/sound parity remain unverified."
+    "remaining": "Human listening, physical Tone Master Pro comparison, target-device timing, and installed firmware remain open. Manufacturer ranges/defaults, DSP topology, and sound parity are not established."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Review and complete the existing local Flanger Filter-mode draft against Model Guide v1.1.100 / Rev. A, printed p. 39. The guide says Filter mode retains harmonic flanging while removing frequency modulation, and Rate affects tone; it gives no ranges/defaults. Inspect all current dirty Flanger files first, preserve unrelated changes, then finish the native/CLI/WASM/browser/Windows path and benchmark if the draft is sound. After that, continue the source-backed HeadRush Prime BBD Classic/Mod refinement and the documented Fender Chorus Low Cut/High Cut/Width controls.",
-    "qualification": "Fractal Synth output Level is verified locally and is ready for checkpoint publication. The broader independent research queue in next_research is preserved. Stadium sidechain remains deferred until an actual independent key-input route exists; do not let that block other source-backed effect work. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
+    "next_device": "HeadRush Prime",
+    "next_feature": "Complete the existing BBD delay's project-authored Classic/Mod refinement from Prime v5.1/v5.2 source notes, including bypass-level behavior only if a safe chain-level implementation is supported. Then finish Fender Tone Master Pro Chorus Low Cut, High Cut, and Width in the existing Chorus. Continue the named flagship model inventory with exact-model documentation and one tested feature per checkpoint.",
+    "qualification": "The independent general research cursor and next_research array are preserved. Stadium sidechain remains deferred until an independent key-input route exists. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
   },
   "completed_checkpoints": [
     {
@@ -1087,6 +1087,29 @@
       "picker_index": 16,
       "category": "Modulation",
       "status": "verified; project-authored Minimum Delay and Delay Range controls with legacy conversion, native/offline/browser tests, full suites, Windows build, diff-check, and callback benchmarks pass; manual/device checks remain"
+    },
+    {
+      "name": "Fender Tone Master Pro Electric Flanger Filter mode and Tap Division",
+      "status": "verified; project-authored Filter mode and tempo sync share the existing Modulation Flanger ID 17; native/CLI, browser/WASM Play on local guitar, Windows MinGW cross-build, benchmark, and diff-check pass; manual listening remains",
+      "date": "2026-11-26",
+      "picker_index": 17,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 38–39; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide documents control roles but no Tap Division choices, numeric bounds/defaults, DSP topology, or latency. Project mappings and processing do not claim Fender settings or parity."
+      },
+      "project_controls": "Existing Flanger ID 17 gains project-authored 14-division tempo sync and static short-comb Filter mode. Filter Rate position 0.05–8 maps to 0.5–10 ms; project Color 0–0.9 (default 0.35) sets positive feedback. Flanger remains the default. Native state is 4,840 B and browser state 4,804 B; no added ring, fixed latency, or process allocation.",
+      "verification": {
+        "native_cli": "make test-fender-flanger-tap-division passes focused Flanger and offline CLI tests.",
+        "browser": "make web-test-fender-flanger-tap-division passes 117/117 CTests, seven HeadlessChrome Play captures on local prerecorded stereo Guitar-TECHS DI, categorized-picker checks, and full browser/native comparison.",
+        "windows": "make windows-cross-build passes Windows MinGW core and offline-renderer compilation.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: Filter profile p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of a 2.667 ms callback; 4,840 B native state.",
+        "diff_check": "make diff-check passes; workflow files are excluded."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, target-device timing, and manufacturer DSP/settings/sound parity remain open."
     }
   ],
   "previous_checkpoint": {
@@ -1115,28 +1138,28 @@
     "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Synth block output Level",
-    "status": "Project-authored block output Level added to existing Synth ID 78. Full native/browser verification, Windows cross-build, benchmark, and diff review are recorded; manual/device listening remains.",
+    "name": "Fender Tone Master Pro Electric Flanger Filter mode and Tap Division",
+    "status": "Project-authored Filter mode and Free/tempo sync are added to existing Modulation Flanger ID 17. Native/CLI, browser/WASM Play, Windows, benchmark, and diff checks pass; manual listening remains.",
     "date": "2026-11-26",
-    "picker_index": 78,
-    "category": "Synth",
+    "picker_index": 17,
+    "category": "Modulation",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 102. FM9 downloads page lists firmware v12.0 as compatible with FM9 Original and FM9 Turbo (2026-07-07), not Mark II Turbo by name. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "release_notes_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide documents a Synth block Level but no numeric range/default. The block is explicitly monophonic; three oscillators do not mean polyphonic input tracking. Firmware applicability to Mark II Turbo is not explicit. Project control bounds/defaults and DSP are not Fractal parity."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 38–39; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "Tap Division and Filter-mode control roles are documented, but numeric division choices, bounds/defaults, DSP topology, and latency are not. Project choices do not claim Fender settings or parity."
     },
-    "documented_controls": "November 2026 Blocks Guide, printed pp. 4 and 102: Synth has shared Level; block Level means overall output. The guide supplies no numeric Level range/default. FM9 v12.0 is listed for Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.",
-    "project_controls": "Project-authored −24…+12 dB block output Level, default 0 dB, 10 ms ramp, applied to complete dry-plus-synth output. Legacy 34-value WASM presets still map to 0 dB; new control extends the array to 35. Adds 16 B state (1,031,360 B total), no new buffer, fixed latency, or process allocation.",
+    "documented_controls": "Model Guide p. 38 lists Mono/Stereo Flanger Rate, Depth, Resonance, Tap Division, and Manual; Stereo adds L/R Phase. Page 39 lists Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter retains harmonic flanging without frequency modulation; Rate changes tone and Color controls intensity. No division list, numeric bounds/defaults, DSP, or latency is published.",
+    "project_controls": "Existing Modulation Flanger ID 17 keeps Flanger and Free Hz defaults, with 14 project beat divisions at 20–300 BPM. Filter is a project-authored static short comb: position 0.05–8 maps to 0.5–10 ms and Color 0–0.9 (default 0.35) sets positive feedback. It reuses existing storage; native state is 4,840 B, browser state 4,804 B, with no added fixed latency or process allocation.",
     "verification": {
-      "native": "make test passed: 333 source requirements/346 tracked rows, 13/13 fixture-safety tests, and 117/117 CTests. Focused Synth tests cover unity identity, −12 dB ramp endpoints, partition invariance, clamping, NaN fallback, finite output, and no process-time allocation.",
-      "browser": "Full make web-test passed. HeadlessChrome 151 uses local prerecorded Guitar-TECHS direct-input guitar; the Synth Play smoke confirms changed output, then measures −12 dB Level using repeatable oscillator captures. Browser/native full-chain comparison passed (maximum absolute error 1.6113e−6, RMS 2.9850e−7).",
-      "windows": "make windows-cross-build passed for the MinGW core and offline renderer; compile-only.",
-      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 2,000 warm-up and 5,000 measured blocks. Full three-voice tracked Synth at 0 dB: p50/p95/p99/p99.9/max 11.4427/12.0082/12.3555/18.2566/19.9783%. At −12 dB: 9.0295/12.0416/12.4717/15.0525/21.1311%. Both report 1,031,360 B native state. This measures the whole Synth; noisy run-to-run differences do not isolate marginal Level CPU.",
-      "diff_check": "make diff-check passed with no whitespace errors; no workflow paths are included."
+      "native_cli": "Focused Flanger native and offline CLI tests pass, including Filter bounds, output changes, and invalid mode handling.",
+      "browser": "Focused local guitar Play captures pass for existing category ID 17, default, tap sync, and Filter Color/Rate/mode. Full browser/native comparison and 117 CTests pass.",
+      "windows": "Windows MinGW core/offline renderer cross-build passes.",
+      "benchmark": "AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Filter mode p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of 2.667 ms; native state 4,840 B.",
+      "diff_check": "make diff-check passes without workflow changes."
     },
-    "remaining": "Human listening, physical-device behavior, target-device timing/memory, exact Mark II Turbo firmware applicability, and Fractal numeric settings/DSP/sound parity remain open."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, target-device timing, and manufacturer DSP/settings/sound parity remain open."
   },
   "next_research": [
     {

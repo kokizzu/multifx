@@ -22,10 +22,30 @@ void require(bool condition, const std::string& message) {
     if (!condition) throw std::runtime_error(message);
 }
 
+tabletfx::FlangerParameters filter_mode_parameters() {
+    tabletfx::FlangerParameters parameters;
+    parameters.mode = tabletfx::FlangerMode::Filter;
+    parameters.rate_hz = 0.05F;
+    parameters.tempo_sync = true;
+    parameters.tempo_bpm = 300.0F;
+    parameters.tap_division = tabletfx::DelayDivision::whole;
+    parameters.base_delay_ms = 10.0F;
+    parameters.depth_ms = 4.5F;
+    parameters.feedback = 0.9F;
+    parameters.feedback_polarity = tabletfx::FlangerFeedbackPolarity::Negative;
+    parameters.mix = 1.0F;
+    parameters.smoothing_ms = 0.0F;
+    parameters.color = 0.0F;
+    return parameters;
+}
+
 void test_defaults_bounds_and_memory() {
     tabletfx::Flanger flanger;
     const auto defaults = flanger.parameters();
     require(flanger.id() == "flanger", "flanger stable ID changed");
+    require(defaults.mode == tabletfx::FlangerMode::Flanger &&
+                defaults.color == 0.35F,
+            "default Flanger mode or project Color default changed");
     require(defaults.rate_hz == 0.25F && defaults.base_delay_ms == 2.0F &&
                 defaults.depth_ms == 1.0F && defaults.feedback == 0.35F &&
                 defaults.feedback_polarity == tabletfx::FlangerFeedbackPolarity::Positive &&
@@ -45,6 +65,7 @@ void test_defaults_bounds_and_memory() {
     parameters.mix = -1.0F;
     parameters.right_channel_phase_degrees = 720.0F;
     parameters.smoothing_ms = 2000.0F;
+    parameters.color = 3.0F;
     flanger.set_parameters(parameters);
     const auto bounds = flanger.parameters();
     require(bounds.rate_hz == 8.0F && bounds.base_delay_ms == 10.0F &&
@@ -52,7 +73,7 @@ void test_defaults_bounds_and_memory() {
                 bounds.feedback_polarity == tabletfx::FlangerFeedbackPolarity::Positive &&
                 bounds.mix == 0.0F &&
                 bounds.right_channel_phase_degrees == 360.0F &&
-                bounds.smoothing_ms == 1000.0F,
+                bounds.smoothing_ms == 1000.0F && bounds.color == 0.9F,
             "flanger bounds or invalid polarity fallback changed");
 
     parameters = {};
@@ -64,14 +85,195 @@ void test_defaults_bounds_and_memory() {
     parameters.right_channel_phase_degrees =
         std::numeric_limits<float>::quiet_NaN();
     parameters.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
+    parameters.color = std::numeric_limits<float>::quiet_NaN();
+    parameters.mode = static_cast<tabletfx::FlangerMode>(99);
     flanger.set_parameters(parameters);
     const auto finite = flanger.parameters();
     require(finite.rate_hz == 0.25F && finite.base_delay_ms == 2.0F &&
                 finite.depth_ms == 1.0F && finite.feedback == 0.35F &&
                 finite.mix == 0.35F &&
                 finite.right_channel_phase_degrees == 180.0F &&
-                finite.smoothing_ms == 10.0F,
+                finite.smoothing_ms == 10.0F &&
+                finite.mode == tabletfx::FlangerMode::Flanger &&
+                finite.color == 0.35F,
             "non-finite flanger parameters did not use safe defaults");
+}
+
+void test_filter_mode_legacy_identity_and_shared_memory() {
+    tabletfx::Flanger defaults(48000.0F, 2);
+    tabletfx::FlangerParameters explicit_parameters;
+    explicit_parameters.mode = tabletfx::FlangerMode::Flanger;
+    tabletfx::Flanger explicit_flanger(48000.0F, 2, explicit_parameters);
+    require(defaults.memory_bytes() == explicit_flanger.memory_bytes(),
+            "Flanger mode allocated storage beyond the existing delay ring");
+
+    std::vector<float> input(8192U);
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = 0.3F * std::sin(2.0F * 3.14159265358979323846F *
+                                   311.0F * static_cast<float>(i / 2U) / 48000.0F);
+    }
+    auto default_output = input;
+    auto explicit_output = input;
+    defaults.process(default_output, 2);
+    explicit_flanger.process(explicit_output, 2);
+    require(default_output == explicit_output,
+            "default mode no longer matches explicit legacy Flanger output");
+
+    tabletfx::FlangerParameters filter_parameters = filter_mode_parameters();
+    tabletfx::Flanger filter(48000.0F, 2, filter_parameters);
+    require(filter.memory_bytes() == defaults.memory_bytes(),
+            "Filter mode did not reuse the existing delay ring");
+}
+
+void test_filter_mode_rate_tunes_fixed_comb_and_ignores_sync() {
+    auto low_rate_parameters = filter_mode_parameters();
+    low_rate_parameters.rate_hz = 0.05F;
+    tabletfx::Flanger low_rate(8000.0F, 1, low_rate_parameters);
+    std::array<float, 128> low_impulse{};
+    low_impulse[0] = 1.0F;
+    low_rate.process(low_impulse, 1);
+    require(std::abs(low_impulse[4] - 1.0F) < 1.0e-6F,
+            "Filter-mode minimum Rate did not select the project 0.5 ms comb delay");
+    for (std::size_t i = 0; i < low_impulse.size(); ++i) {
+        const float expected = i == 4U ? 1.0F : 0.0F;
+        require(std::abs(low_impulse[i] - expected) < 1.0e-6F,
+                "Filter mode unexpectedly swept its fixed comb delay");
+    }
+
+    auto high_rate_parameters = filter_mode_parameters();
+    high_rate_parameters.rate_hz = 8.0F;
+    tabletfx::Flanger high_rate(8000.0F, 1, high_rate_parameters);
+    std::array<float, 128> high_impulse{};
+    high_impulse[0] = 1.0F;
+    high_rate.process(high_impulse, 1);
+    require(std::abs(high_impulse[80] - 1.0F) < 1.0e-6F,
+            "Filter-mode maximum Rate did not select the project 10 ms comb delay");
+
+    auto unsynced_parameters = filter_mode_parameters();
+    unsynced_parameters.rate_hz = 1.25F;
+    unsynced_parameters.tempo_sync = false;
+    unsynced_parameters.tap_division = tabletfx::DelayDivision::quarter;
+    tabletfx::Flanger unsynced(8000.0F, 1, unsynced_parameters);
+    auto other_sync_parameters = unsynced_parameters;
+    other_sync_parameters.tempo_sync = true;
+    other_sync_parameters.tempo_bpm = 37.0F;
+    other_sync_parameters.tap_division = tabletfx::DelayDivision::sixty_fourth;
+    tabletfx::Flanger other_sync(8000.0F, 1, other_sync_parameters);
+    std::array<float, 512> sync_a{};
+    sync_a[0] = 1.0F;
+    auto sync_b = sync_a;
+    unsynced.process(sync_a, 1);
+    other_sync.process(sync_b, 1);
+    require(sync_a == sync_b,
+            "Filter mode used tempo sync or Tap Division for its static Rate mapping");
+
+    auto varied_modulation = unsynced_parameters;
+    varied_modulation.depth_ms = 0.0F;
+    tabletfx::Flanger no_modulation_depth(8000.0F, 1, varied_modulation);
+    auto high_modulation_depth = unsynced_parameters;
+    high_modulation_depth.depth_ms = 4.5F;
+    tabletfx::Flanger ignored_modulation_depth(8000.0F, 1,
+                                              high_modulation_depth);
+    std::array<float, 512> depth_a{};
+    depth_a[0] = 1.0F;
+    auto depth_b = depth_a;
+    no_modulation_depth.process(depth_a, 1);
+    ignored_modulation_depth.process(depth_b, 1);
+    require(depth_a == depth_b,
+            "Filter mode used modulation depth despite its fixed comb response");
+}
+
+void test_filter_mode_depth_color_and_stability() {
+    auto dry_parameters = filter_mode_parameters();
+    dry_parameters.mix = 0.0F;
+    tabletfx::Flanger dry(8000.0F, 1, dry_parameters);
+    std::array<float, 128> dry_input{};
+    dry_input[0] = 1.0F;
+    dry_input[19] = -0.25F;
+    const auto expected_dry = dry_input;
+    dry.process(dry_input, 1);
+    require(dry_input == expected_dry,
+            "Filter-mode project wet mix at zero did not preserve the dry signal");
+
+    auto neutral_color = filter_mode_parameters();
+    neutral_color.mix = 1.0F;
+    neutral_color.color = 0.0F;
+    tabletfx::Flanger no_color(8000.0F, 1, neutral_color);
+    auto colored = neutral_color;
+    colored.color = 0.7F;
+    tabletfx::Flanger color(8000.0F, 1, colored);
+    std::array<float, 128> no_color_impulse{};
+    no_color_impulse[0] = 1.0F;
+    auto color_impulse = no_color_impulse;
+    no_color.process(no_color_impulse, 1);
+    color.process(color_impulse, 1);
+    require(std::abs(no_color_impulse[8]) < 1.0e-7F &&
+                std::abs(color_impulse[8] - 0.7F) < 1.0e-6F,
+            "Filter-mode Color did not control bounded comb feedback intensity");
+
+    auto resonant_parameters = filter_mode_parameters();
+    resonant_parameters.rate_hz = 0.05F;
+    resonant_parameters.color = 0.9F;
+    std::vector<float> resonant_input(32000U);
+    for (std::size_t i = 0; i < resonant_input.size(); ++i) {
+        resonant_input[i] = 0.1F * std::sin(
+            2.0F * 3.14159265358979323846F * 2000.0F *
+            static_cast<float>(i) / 8000.0F);
+    }
+    tabletfx::Flanger resonant(8000.0F, 1, resonant_parameters);
+    resonant.process(resonant_input, 1);
+    require(std::all_of(resonant_input.begin(), resonant_input.end(),
+                        [](float sample) {
+                            return std::isfinite(sample) && std::abs(sample) < 2.0F;
+                        }),
+            "Filter-mode high Color became unstable or emitted non-finite audio");
+}
+
+void test_filter_mode_stereo_isolation_and_block_continuity() {
+    auto parameters = filter_mode_parameters();
+    parameters.rate_hz = 0.75F;
+    parameters.mix = 0.8F;
+    parameters.color = 0.6F;
+    tabletfx::Flanger stereo(8000.0F, 2, parameters);
+    std::array<float, 1024> stereo_impulse{};
+    stereo_impulse[0] = 1.0F;
+    stereo.process(stereo_impulse, 2);
+    for (std::size_t i = 1; i < stereo_impulse.size(); i += 2U) {
+        require(std::abs(stereo_impulse[i]) < 1.0e-7F,
+                "Filter-mode feedback leaked the left channel into the right");
+    }
+
+    std::vector<float> source(4096U);
+    for (std::size_t i = 0; i < source.size(); ++i) {
+        source[i] = 0.2F * std::sin(2.0F * 3.14159265358979323846F *
+                                    337.0F * static_cast<float>(i / 2U) /
+                                    48000.0F);
+    }
+    auto whole_output = source;
+    auto partitioned_output = source;
+    tabletfx::Flanger whole(48000.0F, 2, parameters);
+    tabletfx::Flanger partitioned(48000.0F, 2, parameters);
+    whole.process(whole_output, 2);
+    std::size_t offset = 0U;
+    for (const std::size_t block_frames : {1U, 17U, 128U, 257U, 64U, 511U}) {
+        const std::size_t remaining_frames =
+            partitioned_output.size() / 2U - offset;
+        const std::size_t frames = std::min(block_frames, remaining_frames);
+        partitioned.process(
+            std::span<float>(partitioned_output.data() + offset * 2U,
+                             frames * 2U),
+            2);
+        offset += frames;
+        if (offset == partitioned_output.size() / 2U) break;
+    }
+    if (offset < partitioned_output.size() / 2U) {
+        partitioned.process(
+            std::span<float>(partitioned_output.data() + offset * 2U,
+                             partitioned_output.size() - offset * 2U),
+            2);
+    }
+    require(whole_output == partitioned_output,
+            "Filter-mode fixed-comb output depends on block partitioning");
 }
 
 void test_tempo_sync_divisions() {
@@ -312,6 +514,24 @@ void test_invalid_samples_and_no_process_allocations() {
     require(std::all_of(block.begin(), block.end(),
                         [](float sample) { return std::isfinite(sample); }),
             "flanger emitted a non-finite sample");
+
+    auto filter_parameters = filter_mode_parameters();
+    filter_parameters.color = 0.7F;
+    tabletfx::Flanger filter(48000.0F, 2, filter_parameters);
+    std::array<float, 512> filter_block{};
+    filter_block.fill(0.25F);
+    const std::size_t before_filter_allocations =
+        allocation_count.load(std::memory_order_relaxed);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        filter.process(filter_block, 2);
+    }
+    const std::size_t after_filter_allocations =
+        allocation_count.load(std::memory_order_relaxed);
+    require(before_filter_allocations == after_filter_allocations,
+            "Filter mode allocated during process()");
+    require(std::all_of(filter_block.begin(), filter_block.end(),
+                        [](float sample) { return std::isfinite(sample); }),
+            "Filter mode emitted a non-finite sample");
 }
 
 void test_invalid_construction() {
@@ -346,6 +566,10 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_filter_mode_legacy_identity_and_shared_memory();
+        test_filter_mode_rate_tunes_fixed_comb_and_ignores_sync();
+        test_filter_mode_depth_color_and_stability();
+        test_filter_mode_stereo_isolation_and_block_continuity();
         test_tempo_sync_divisions();
         test_stereo_phase_relationship();
         test_delay_feedback_and_polarity();
