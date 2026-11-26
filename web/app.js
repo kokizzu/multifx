@@ -177,6 +177,7 @@ const DEFAULT_PARAMETERS = {
   tremolo: [5, 0.5, 0, 0, 120, 1, 0, 50],
   harmonicTremolo: [3, 0.65, 700, 0, 0, 120, 1, 1, 10],
   chorus: [0.8, 15, 7, 0.3, 0, 120, 1],
+  chorusTone: [0, 0, 1],
   dimensionChorus: [0, 0, 0.5, 0],
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
@@ -1632,6 +1633,12 @@ const chorusMix = document.querySelector("#chorus-mix");
 const chorusMixValue = document.querySelector("#chorus-mix-value");
 const chorusNumberOfVoices = document.querySelector("#chorus-number-of-voices");
 const chorusNumberOfVoicesValue = document.querySelector("#chorus-number-of-voices-value");
+const chorusLowCut = document.querySelector("#chorus-low-cut-hz");
+const chorusLowCutValue = document.querySelector("#chorus-low-cut-value");
+const chorusHighCut = document.querySelector("#chorus-high-cut-hz");
+const chorusHighCutValue = document.querySelector("#chorus-high-cut-value");
+const chorusStereoWidth = document.querySelector("#chorus-stereo-width");
+const chorusStereoWidthValue = document.querySelector("#chorus-stereo-width-value");
 const dimensionChorusVersion = document.querySelector("#dimension-chorus-version");
 const dimensionChorusMode = document.querySelector("#dimension-chorus-mode");
 const dimensionChorusMix = document.querySelector("#dimension-chorus-mix");
@@ -6009,7 +6016,13 @@ function updateChorus() {
     tempoBpm,
     Number(chorusNumberOfVoices.value),
   ];
+  const toneValues = [
+    Number(chorusLowCut.value),
+    Number(chorusHighCut.value),
+    Number(chorusStereoWidth.value),
+  ];
   DEFAULT_PARAMETERS.chorus = values;
+  DEFAULT_PARAMETERS.chorusTone = toneValues;
   const effectiveRate = tempoSync ? tempoBpm / 60 : Number(chorusRate.value);
   chorusRate.disabled = tempoSync;
   chorusTempoBpm.disabled = !tempoSync;
@@ -6019,11 +6032,17 @@ function updateChorus() {
   chorusDelayRangeValue.value = `${delayRangeMs.toFixed(1)} ms`;
   chorusMixValue.value = `${Math.round(Number(chorusMix.value) * 100)}%`;
   chorusNumberOfVoicesValue.value = String(Number(chorusNumberOfVoices.value));
-  if (workletNode) workletNode.port.postMessage({ type: "chorus", value: values });
+  chorusLowCutValue.value = toneValues[0] === 0 ? "Off" : `${toneValues[0]} Hz`;
+  chorusHighCutValue.value = toneValues[1] === 0 ? "Off" : `${toneValues[1]} Hz`;
+  chorusStereoWidthValue.value = `${Math.round(toneValues[2] * 100)}%`;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "chorus", value: [...values, ...toneValues] });
+  }
 }
 
 for (const control of [chorusRate, chorusTempoMode, chorusTempoBpm,
-  chorusMinimumDelay, chorusDelayRange, chorusMix, chorusNumberOfVoices]) {
+  chorusMinimumDelay, chorusDelayRange, chorusMix, chorusNumberOfVoices,
+  chorusLowCut, chorusHighCut, chorusStereoWidth]) {
   control.addEventListener("input", updateChorus);
   control.addEventListener("change", updateChorus);
 }
@@ -13749,7 +13768,8 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
   const previousCategory = effectCategoryFilter.value;
   const previousControls = [chorusRate.value, chorusTempoMode.value,
     chorusTempoBpm.value, chorusMinimumDelay.value, chorusDelayRange.value, chorusMix.value,
-    chorusNumberOfVoices.value];
+    chorusNumberOfVoices.value, chorusLowCut.value, chorusHighCut.value,
+    chorusStereoWidth.value];
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext ||
@@ -13774,10 +13794,17 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
         chorusNumberOfVoices.min !== "1" || chorusNumberOfVoices.max !== "8" ||
         chorusNumberOfVoices.value !== "1" ||
         chorusNumberOfVoicesValue.value !== "1" ||
+        chorusLowCut.min !== "0" || chorusLowCut.max !== "1200" ||
+        chorusLowCut.value !== "0" || chorusLowCutValue.value !== "Off" ||
+        chorusHighCut.min !== "0" || chorusHighCut.max !== "20000" ||
+        chorusHighCut.value !== "0" || chorusHighCutValue.value !== "Off" ||
+        chorusStereoWidth.min !== "0" || chorusStereoWidth.max !== "2" ||
+        chorusStereoWidth.value !== "1" || chorusStereoWidthValue.value !== "100%" ||
         DEFAULT_PARAMETERS.chorus[1] !== 15 ||
         DEFAULT_PARAMETERS.chorus[2] !== 7 ||
+        JSON.stringify(DEFAULT_PARAMETERS.chorusTone) !== "[0,0,1]" ||
         !(effectMemory[16] > 0)) {
-      throw new Error("Chorus tempo/voice controls or unchanged one-voice free-rate default are invalid.");
+      throw new Error("Chorus controls, project tone defaults, or unchanged one-voice free-rate default are invalid.");
     }
 
     chorusMinimumDelay.value = "8";
@@ -13791,19 +13818,25 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
 
     const captureAt = async (
       mode, bpm, voiceCount = 1, minimumDelay = 8, delayRange = 14,
+      lowCutHz = 0, highCutHz = 0, stereoWidth = 1,
     ) => {
       chorusTempoMode.value = mode;
       chorusTempoBpm.value = String(bpm);
       chorusMinimumDelay.value = String(minimumDelay);
       chorusDelayRange.value = String(delayRange);
       chorusNumberOfVoices.value = String(voiceCount);
+      chorusLowCut.value = String(lowCutHz);
+      chorusHighCut.value = String(highCutHz);
+      chorusStereoWidth.value = String(stereoWidth);
       updateChorus();
       if (DEFAULT_PARAMETERS.chorus[6] !== voiceCount ||
           Math.abs(DEFAULT_PARAMETERS.chorus[1] -
             (minimumDelay + delayRange * 0.5)) > 1e-6 ||
           Math.abs(DEFAULT_PARAMETERS.chorus[2] - delayRange * 0.5) > 1e-6 ||
-          chorusNumberOfVoicesValue.value !== String(voiceCount)) {
-        throw new Error(`Chorus controls did not select ${minimumDelay} ms minimum, ${delayRange} ms range, and ${voiceCount} voices.`);
+          chorusNumberOfVoicesValue.value !== String(voiceCount) ||
+          JSON.stringify(DEFAULT_PARAMETERS.chorusTone) !==
+            JSON.stringify([lowCutHz, highCutHz, stereoWidth])) {
+        throw new Error(`Chorus controls did not select ${minimumDelay} ms minimum, ${delayRange} ms range, ${voiceCount} voices, and requested tone settings.`);
       }
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
@@ -13843,6 +13876,9 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
     const freeAt8Voices = await captureAt("free", 120, 8);
     const minimumRange = await captureAt("free", 120, 1, 0.1, 1);
     const maximumRange = await captureAt("free", 120, 1, 50, 40);
+    const cutControls = await captureAt("free", 120, 1, 8, 14, 200, 6000, 1);
+    const zeroWidth = await captureAt("free", 120, 1, 8, 14, 0, 0, 0);
+    const doubleWidth = await captureAt("free", 120, 1, 8, 14, 0, 0, 2);
     const rmsDifference = (left, right) => {
       let squared = 0;
       for (let i = 0; i < left.length; i += 1) {
@@ -13857,10 +13893,25 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
     const fourToEightVoices = rmsDifference(freeAt4Voices.output, freeAt8Voices.output);
     const defaultToMinimumRange = rmsDifference(free.output, minimumRange.output);
     const defaultToMaximumRange = rmsDifference(free.output, maximumRange.output);
+    const cutControlsDifference = rmsDifference(free.output, cutControls.output);
+    const sideRms = (output) => {
+      let squared = 0;
+      for (let frame = 0; frame < output.length / 2; frame += 1) {
+        const side = output[frame * 2] - output[frame * 2 + 1];
+        squared += side * side;
+      }
+      return Math.sqrt(squared / Math.max(1, output.length / 2));
+    };
+    const zeroWidthSideRms = sideRms(zeroWidth.output);
+    const defaultSideRms = sideRms(free.output);
+    const doubleWidthSideRms = sideRms(doubleWidth.output);
+    const widthRatio = doubleWidthSideRms / Math.max(defaultSideRms, 1e-12);
     if (freeTo120 < 1e-4 || tempoChange < 1e-4 ||
         oneToFourVoices < 1e-4 || fourToEightVoices < 1e-4 ||
-        defaultToMinimumRange < 1e-4 || defaultToMaximumRange < 1e-4) {
-      throw new Error(`Chorus sync/voice/delay-range controls did not change captured audio (RMS ${freeTo120}, ${tempoChange}, ${oneToFourVoices}, ${fourToEightVoices}, ${defaultToMinimumRange}, ${defaultToMaximumRange}).`);
+        defaultToMinimumRange < 1e-4 || defaultToMaximumRange < 1e-4 ||
+        cutControlsDifference < 1e-4 || zeroWidthSideRms > 1e-6 ||
+        Math.abs(widthRatio - 2) > 0.02) {
+      throw new Error(`Chorus controls did not change captured audio as expected (RMS ${freeTo120}, ${tempoChange}, ${oneToFourVoices}, ${fourToEightVoices}, ${defaultToMinimumRange}, ${defaultToMaximumRange}, ${cutControlsDifference}; zero-width side RMS ${zeroWidthSideRms}; width ratio ${widthRatio}).`);
     }
     return {
       category: "Modulation",
@@ -13877,12 +13928,17 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
       projectDefaultDelayRangeMs: 14,
       minimumDelayBoundsMs: [0.1, 50],
       delayRangeBoundsMs: [1, 40],
+      documentedToneControls: ["Low Cut", "High Cut", "Stereo Width"],
+      projectToneDefaults: [0, 0, 1],
+      projectToneRanges: { lowCutHz: [0, 1200], highCutHz: [0, 20000], stereoWidth: [0, 2] },
+      tonePlayCaptures: { lowCutHz: 200, highCutHz: 6000, zeroWidthSideRms,
+        widthTwoToOneSideRatio: widthRatio },
       voiceCountPlayCaptures: [1, 4, 8],
       delayRangePlayCaptures: {
         minimum: [0.1, 1],
         maximum: [50, 40],
       },
-      playCaptures: 7,
+      playCaptures: 10,
       peaks: [free.peak, quarterAt120.peak, quarterAt60.peak,
         freeAt4Voices.peak, freeAt8Voices.peak,
         minimumRange.peak, maximumRange.peak],
@@ -13893,6 +13949,7 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
         fourToEightVoices,
         defaultToMinimumRange,
         defaultToMaximumRange,
+        cutControls: cutControlsDifference,
       },
       effectMemoryBytes: effectMemory[16],
     };
@@ -13900,7 +13957,8 @@ async function runFractalChorusTempoBrowserSmokeTest(reference, captureView, cap
     stopSource(false);
     [chorusRate.value, chorusTempoMode.value, chorusTempoBpm.value,
       chorusMinimumDelay.value, chorusDelayRange.value, chorusMix.value,
-      chorusNumberOfVoices.value] = previousControls;
+      chorusNumberOfVoices.value, chorusLowCut.value, chorusHighCut.value,
+      chorusStereoWidth.value] = previousControls;
     updateChorus();
     [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
       box.checked = previousEffectState[index];

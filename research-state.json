@@ -4,37 +4,60 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "e755f3c46e2bc735afa81624d230efa84c81b275",
+  "previous_checkpoint_commit": "12b4221c6630606698b9be9f41c1cfe66ebabf8a",
   "latest_audit": {
-    "name": "HeadRush Prime BBD Delay project-authored Classic/Mod mode",
-    "status": "Verified project-authored Classic/Mod behavior in the existing categorized Delay row. Native, local prerecorded-guitar browser/WASM Play, full browser/native comparison, Windows MinGW build, and separate mode benchmarks pass. HeadRush parity gaps remain explicit; human listening and physical-device comparison are open.",
+    "name": "Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width",
+    "status": "Verified project-authored tone controls on existing Modulation Chorus ID 16. Exact-model guide, native/browser/WASM local-DI playback and parity, Windows cross-build, automated tests, and CPU/memory measurements pass. Human listening and hardware/target-device checks remain open; Fender DSP/settings/sound parity is not claimed.",
     "date": "2026-11-26",
-    "picker_index": 21,
-    "category": "Delay",
+    "picker_index": 16,
+    "category": "Modulation",
     "official_source": {
-      "title": "HeadRush Prime Firmware Update Instructions",
-      "revision": "v5.2.0, released October 2026; PDF p. 5 includes the v5.1.0 BBD Delay Mode notes. The BBD mode was introduced in v5.1.0 (August 2026). Installed firmware is unknown.",
-      "url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-      "qualification": "The notes describe CLASSIC as v5.0-and-earlier behavior and MOD as improving engaged/bypass level consistency, level between repeats, and Feedback linearity/range. They give no numeric mode controls, mapping, or DSP formula."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 41; firmware history through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "Chorus Mono and Chorus Stereo list Low Cut and High Cut; Chorus Stereo also lists Width. No units, bounds, defaults, topology, DSP use, or latency are published."
     },
-    "documented_controls": "The Prime v5.2.0 release history records a BBD Delay Mode parameter added in v5.1.0: CLASSIC performs as v5.0.0 and earlier; MOD is described as improving level consistency when engaged/bypassed and between repeats, plus Feedback linearity and usable range. No ranges, defaults, control curve, or implementation details are stated.",
-    "project_controls": "The existing Delay row at ID 21 keeps Digital as default and exposes project-authored BBD Classic/Mod character choices. Classic retains the previous project BBD curve. Mod changes feedback-path saturation from 0.08 to 0.04 and applies a 2% project repeat-path gain adjustment at a representative 0.5 linear level. It reuses the ring, adds no processor, buffer, fixed latency, or processing allocation; it does not implement Prime's engaged/bypass gain match or Feedback mapping.",
+    "documented_controls": "The exact-model Model Guide v1.1.100 / Rev. A, printed p. 41, lists Low Cut and High Cut for Chorus Mono and Stereo; Width is listed for Stereo only. Firmware history checked through v1.8.87 has no change specific to these controls.",
+    "project_controls": "Project-authored Low Cut 0–1,200 Hz and High Cut 0–20,000 Hz, both off by default, plus Stereo Width 0–200%, default 100%, are added to the existing Chorus row at ID 16. The seven-value legacy preset array is preserved; new values are serialized separately. Filter work is skipped when cuts are off, while histories are seeded dry for smooth activation.",
     "verification": {
-      "native": "make test passes 13 fixture-safety checks and 117/117 CTests, including BBD mode output, repeat decay, smoothing, stereo, and no-allocation tests.",
-      "browser": "make web-browser-test passes the categorized Delay picker and default-off check, Classic/Mod UI-to-WASM serialization, and distinct Play output from the local prerecorded Guitar-TECHS stereo DI. Full native/browser comparison passes at 48 kHz (maximum absolute error 0.0000016113; RMS error 0.0000002985).",
-      "windows": "make windows-cross-build compiles the updated core and offline renderer with MinGW.",
-      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz/128 frames, 2.667 ms callback. BBD Classic mono p50/p95/p99/p99.9/max is 0.0814/0.0821/0.1140/0.2801/0.3124%; stereo is 0.1305/0.1350/0.2449/0.3499/0.3671%. Mod mono is 0.0803/0.0814/0.1320/0.2895/0.3116%; stereo is 0.1309/0.1354/0.2640/0.4298/0.5550%. Native state is unchanged by mode: 384,820 B mono / 768,824 B stereo.",
-      "diff_check": "make diff-check passes git diff --check and reports no workflow changes."
+      "native": "make test passes documentation validation, 13 audio-fixture safety checks, and 117/117 CTests. Focused tests cover bounds, defaults, filter behavior, width, reset, smoothing, and no process-time allocation.",
+      "browser": "make web-test-fractal-chorus-tempo passes UI/category/default/range checks and local prerecorded Guitar-TECHS stereo-DI Play captures. Browser/native parity passes; width-zero side RMS is 0 and doubled width ratio is about 2.016.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer build.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks, 3,000 warm-up and 20,000 measured. Latest run defaults p50/p95/p99/p99.9/max: 0.082/0.083/0.085/0.279/0.900%; both cuts plus Width 200%: 0.145/0.147/0.210/0.449/2.193% of the 2.667 ms deadline. Native state 34,848 B; WASM effect state 34,812 B; zero added fixed latency and process allocation. Percentiles report the full Chorus processor, not marginal control cost.",
+      "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
     },
-    "remaining": "Manual listening, physical Prime comparison, target-device timing, and installed firmware remain open. Exact Prime DSP/settings/sound parity is not established."
+    "remaining": "Human listening, physical Fender comparison, target-device timing/memory, and exact installed firmware remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Finish the existing Chorus Low Cut, High Cut, and stereo Width controls with exact-model documentation, automated tests, browser/WASM local-DI playback, Windows build, CPU/memory measurement, and a committed checkpoint. Then continue the named flagship model inventory in source-backed, non-overlapping categories.",
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Audit and add the documented TAP action that resets LFO-based modulation to the existing categorized Tremolo/Rotary effects. Keep the current effect defaults and stable picker IDs; add native, browser/WASM prerecorded-DI, Windows, latency/CPU/memory tests and commit the checkpoint. Then continue the remaining exact-model effect gaps one at a time.",
     "qualification": "The independent general research cursor and next_research array are preserved. Stadium sidechain remains deferred until an independent key-input route exists. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width",
+      "status": "verified project-authored controls; automated verification complete; manual listening/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 16,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 41; firmware history through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "qualification": "Low/High Cut are listed for Chorus Mono and Stereo; Width is listed for Stereo. Numeric bounds/defaults, units, DSP, latency, and filter design are not published."
+      },
+      "project_controls": "Project-authored Low Cut 0–1,200 Hz and High Cut 0–20,000 Hz are off by default; Stereo Width 0–200% defaults to 100%. Existing seven-value preset array remains compatible; extra controls serialize separately.",
+      "verification": {
+        "native": "make test passes 13 fixture checks and 117/117 CTests, including Chorus tone controls and zero process-time allocations.",
+        "browser": "make web-test-fractal-chorus-tempo passes local prerecorded Guitar-TECHS stereo-DI Play and native/WASM parity; UI category, defaults, and ranges verified.",
+        "windows": "make windows-cross-build passes the MinGW core/offline build.",
+        "benchmark": "Full Chorus measurements at 48 kHz stereo/128 frames: latest defaults p50/p95/p99/p99.9/max 0.082/0.083/0.085/0.279/0.900%; all tone controls 0.145/0.147/0.210/0.449/2.193% of 2.667 ms; 34,848 B native state, 34,812 B WASM effect state, zero fixed latency or process allocation.",
+        "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+      },
+      "remaining": "Human listening, physical Fender comparison, target-device performance, and installed firmware remain open; no Fender DSP/settings/sound parity is claimed."
+    },
     {
       "name": "HeadRush Prime BBD Delay project-authored Classic/Mod mode",
       "status": "verified project mode; HeadRush parity intentionally partial; manual/device checks remain",

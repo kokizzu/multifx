@@ -482,7 +482,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureRockBoxBoost(parameters.rockBoxBoost || [0, 0, 10]);
       this.configurePolySustain(parameters.polySustain || [0, 222, 2000, 1, 0, 0]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3, 0, 120, 1];
-      module._tf_chain_set_chorus(this.chain, ...chorus);
+      const chorusTone = parameters.chorusTone || [0, 0, 1];
+      module._tf_chain_set_chorus(this.chain, ...chorus, ...chorusTone);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
       module._tf_chain_set_dimension_chorus(this.chain, ...dimensionChorus);
       const tripleDoubleChorus = parameters.tripleDoubleChorus ||
@@ -1505,10 +1506,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_auto_swell_delay(this.chain, ...message.value);
     } else if (message.type === "chorus" && this.ready) {
       const [rateHz, centerDelayMs, modulationDepthMs, mix,
-        tempoSync, tempoBpm, numberOfVoices] = message.value;
+        tempoSync, tempoBpm, numberOfVoices, lowCutHz = 0,
+        highCutHz = 0, stereoWidth = 1] = message.value;
       this.module._tf_chain_set_chorus_min_range(
         this.chain, rateHz, centerDelayMs - modulationDepthMs,
         modulationDepthMs * 2, mix, tempoSync, tempoBpm, numberOfVoices,
+        lowCutHz, highCutHz, stereoWidth,
       );
     } else if (message.type === "dimension-chorus" && this.ready) {
       this.module._tf_chain_set_dimension_chorus(this.chain, ...message.value);

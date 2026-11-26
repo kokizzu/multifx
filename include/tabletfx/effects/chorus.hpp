@@ -2,6 +2,7 @@
 
 #include "tabletfx/effect.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -23,6 +24,12 @@ struct ChorusParameters {
     // Project-authored controls using Fractal Audio's documented names/ranges.
     float minimum_delay_ms = 8.0F;
     float delay_range_ms = 14.0F;
+    // Project-authored Tone Master Pro inspired controls. The Fender guide
+    // names Mono Low Cut/High Cut and Stereo Width but does not publish ranges
+    // or defaults. Zero disables either cut; width 1.0 preserves the input.
+    float low_cut_hz = 0.0F;
+    float high_cut_hz = 0.0F;
+    float stereo_width = 1.0F;
 };
 
 // Low-cost sine-LFO modulated delay chorus. The wet path is interpolated
@@ -58,6 +65,9 @@ private:
     static constexpr float kMaximumDelayRangeMs = 40.0F;
     static constexpr float kMaximumDelayMs = 90.0F;
     static constexpr float kStorageDelayMs = kMaximumDelayMs;
+    static constexpr float kMaximumLowCutHz = 1200.0F;
+    static constexpr float kMaximumHighCutHz = 20000.0F;
+    static constexpr float kMaximumStereoWidth = 2.0F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
 
@@ -82,6 +92,21 @@ private:
     float base_delay_step_ = 0.0F;
     float depth_step_ = 0.0F;
     float mix_step_ = 0.0F;
+    float low_cut_alpha_ = 0.0F;
+    float target_low_cut_alpha_ = 0.0F;
+    float low_cut_alpha_step_ = 0.0F;
+    float low_cut_mix_ = 0.0F;
+    float target_low_cut_mix_ = 0.0F;
+    float low_cut_mix_step_ = 0.0F;
+    float high_cut_alpha_ = 0.0F;
+    float target_high_cut_alpha_ = 0.0F;
+    float high_cut_alpha_step_ = 0.0F;
+    float high_cut_mix_ = 0.0F;
+    float target_high_cut_mix_ = 0.0F;
+    float high_cut_mix_step_ = 0.0F;
+    float stereo_width_ = 1.0F;
+    float target_stereo_width_ = 1.0F;
+    float stereo_width_step_ = 0.0F;
     std::size_t ramp_remaining_ = 0;
     float sine_increment_ = 0.0F;
     float cosine_increment_ = 1.0F;
@@ -90,6 +115,9 @@ private:
     float sine_phase_ = 0.0F;
     float cosine_phase_ = 1.0F;
     std::uint32_t normalization_counter_ = 0;
+    std::array<float, 2U> low_cut_previous_input_{};
+    std::array<float, 2U> low_cut_previous_output_{};
+    std::array<float, 2U> high_cut_previous_output_{};
 };
 
 } // namespace tabletfx

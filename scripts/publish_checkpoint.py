@@ -392,7 +392,6 @@ FRACTAL_ROTARY_DEPTH_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "RESEARCH.md",
     "research-state.json",
-    "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
 RING_MOD_CHECKPOINT_PATHS = (
@@ -1343,7 +1342,6 @@ FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS = (
     "web/app.js",
     "web/audio-worklet.js",
     "web/index.html",
-    "make/publish.mk",
     "scripts/publish_checkpoint.py",
 )
 FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS = (
@@ -3093,7 +3091,7 @@ CHECKPOINTS = {
     ),
     "fractal-chorus-tempo": (
         FRACTAL_CHORUS_TEMPO_CHECKPOINT_PATHS,
-        "feat: add Chorus quarter-note tempo sync",
+        "feat: add project-authored Chorus tone controls",
     ),
     "fractal-chorus-voice-count": (
         FRACTAL_CHORUS_VOICE_COUNT_CHECKPOINT_PATHS,

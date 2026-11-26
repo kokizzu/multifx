@@ -2140,7 +2140,8 @@ public:
     void configure_chorus(float rate_hz, float base_delay_ms, float depth_ms,
                           float mix, std::uint32_t tempo_sync,
                           float tempo_bpm,
-                          std::uint32_t number_of_voices) noexcept {
+                          std::uint32_t number_of_voices, float low_cut_hz,
+                          float high_cut_hz, float stereo_width) noexcept {
         tabletfx::ChorusParameters parameters;
         parameters.rate_hz = rate_hz;
         parameters.tempo_sync = tempo_sync != 0U;
@@ -2150,6 +2151,9 @@ public:
         parameters.mix = mix;
         parameters.number_of_voices = static_cast<std::uint8_t>(
             std::clamp(number_of_voices, 1U, 8U));
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.stereo_width = stereo_width;
         static_cast<tabletfx::Chorus*>(effects_[16].effect.get())
             ->set_parameters(parameters);
     }
@@ -2157,7 +2161,8 @@ public:
     void configure_chorus_min_range(
         float rate_hz, float minimum_delay_ms, float delay_range_ms,
         float mix, std::uint32_t tempo_sync, float tempo_bpm,
-        std::uint32_t number_of_voices) noexcept {
+        std::uint32_t number_of_voices, float low_cut_hz,
+        float high_cut_hz, float stereo_width) noexcept {
         tabletfx::ChorusParameters parameters;
         parameters.rate_hz = rate_hz;
         parameters.tempo_sync = tempo_sync != 0U;
@@ -2167,6 +2172,9 @@ public:
         parameters.mix = mix;
         parameters.number_of_voices = static_cast<std::uint8_t>(
             std::clamp(number_of_voices, 1U, 8U));
+        parameters.low_cut_hz = low_cut_hz;
+        parameters.high_cut_hz = high_cut_hz;
+        parameters.stereo_width = stereo_width;
         static_cast<tabletfx::Chorus*>(effects_[16].effect.get())
             ->set_parameters(parameters);
     }
@@ -4680,22 +4688,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_auto_swell_delay(
 TABLETFX_WASM_EXPORT void tf_chain_set_chorus(
     void* opaque, float rate_hz, float base_delay_ms,
     float depth_ms, float mix, std::uint32_t tempo_sync,
-    float tempo_bpm, std::uint32_t number_of_voices) noexcept {
+    float tempo_bpm, std::uint32_t number_of_voices, float low_cut_hz,
+    float high_cut_hz, float stereo_width) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_chorus(rate_hz, base_delay_ms, depth_ms,
                                            mix, tempo_sync, tempo_bpm,
-                                           number_of_voices);
+                                           number_of_voices, low_cut_hz,
+                                           high_cut_hz, stereo_width);
     }
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_chorus_min_range(
     void* opaque, float rate_hz, float minimum_delay_ms,
     float delay_range_ms, float mix, std::uint32_t tempo_sync,
-    float tempo_bpm, std::uint32_t number_of_voices) noexcept {
+    float tempo_bpm, std::uint32_t number_of_voices, float low_cut_hz,
+    float high_cut_hz, float stereo_width) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_chorus_min_range(
             rate_hz, minimum_delay_ms, delay_range_ms, mix, tempo_sync,
-            tempo_bpm, number_of_voices);
+            tempo_bpm, number_of_voices, low_cut_hz, high_cut_hz,
+            stereo_width);
     }
 }
 

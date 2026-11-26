@@ -1,5 +1,21 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width (2026-11-26)
+
+The Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 41, lists Low Cut and High Cut for Chorus Mono and Stereo, with Width only for Stereo. It publishes no units, ranges, defaults, topology, DSP cost, or latency. Fender firmware history was checked through v1.8.87 (2026-11-23); its notes identify no specific change for these controls. Installed firmware is unknown. TabletFX's 0–1,200 Hz Low Cut, 0–20,000 Hz High Cut, and 0–200% Width controls (defaults: both cuts off, Width 100%) and processing are project-authored.
+
+At 48 kHz stereo and 128-frame callbacks, a Ryzen 9 5950X Release run used 3,000 warm-up and 20,000 measured callbacks against a 2.667 ms deadline. Percentages below are complete Chorus callback cost, not marginal control cost:
+
+| Profile | p50 / p95 / p99 / p99.9 / max callback budget (%) | Native state |
+|---|---:|---:|
+| Defaults (cuts off, Width 100%) | 0.082 / 0.083 / 0.085 / 0.279 / 0.900 | 34,848 B |
+| Low Cut 200 Hz | 0.107 / 0.109 / 0.166 / 0.323 / 1.086 | 34,848 B |
+| High Cut 6,000 Hz | 0.108 / 0.108 / 0.165 / 0.347 / 0.551 | 34,848 B |
+| Width 200% | 0.086 / 0.087 / 0.138 / 0.368 / 1.135 | 34,848 B |
+| Both cuts plus Width 200% | 0.145 / 0.147 / 0.210 / 0.449 / 2.193 | 34,848 B |
+
+The benchmark adds no algorithmic delay and the tests confirm no processing allocations. Browser/WASM reports 34,812 B for Chorus effect state. Native tests, CLI compatibility checks, local Guitar-TECHS DI browser/WASM Play, full browser/native comparison, Windows MinGW cross-build, full test suite, and `make diff-check` pass. These are isolated desktop processor timings, not Android or full-chain load. Human listening, physical Fender comparison, and target-device performance remain manual; no Fender settings, DSP, or sound parity is claimed.
+
 ## Fender Tone Master Pro Electric Flanger Filter mode (2026-11-26)
 
 The Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 39, describes Electric Flanger Filter mode as retaining harmonic flanging without frequency modulation; Rate changes its tonality and Color adjusts intensity. It publishes no numeric ranges/defaults, DSP topology, or latency. Firmware history is checked through v1.8.87 (2026-11-23); installed firmware is unknown.

@@ -24,6 +24,37 @@ void require(bool condition, const std::string& message) {
     }
 }
 
+std::vector<float> sine_tone(float frequency_hz, std::size_t frames,
+                             std::uint16_t channels = 1U) {
+    constexpr double sample_rate = 48000.0;
+    constexpr double pi = 3.14159265358979323846;
+    std::vector<float> result(frames * channels);
+    for (std::size_t frame = 0U; frame < frames; ++frame) {
+        const float sample = 0.5F * static_cast<float>(std::sin(
+            2.0 * pi * static_cast<double>(frequency_hz) *
+            static_cast<double>(frame) / sample_rate));
+        for (std::uint16_t channel = 0U; channel < channels; ++channel) {
+            result[frame * channels + channel] = sample;
+        }
+    }
+    return result;
+}
+
+double rms_after(std::span<const float> samples, std::size_t first_frame,
+                 std::uint16_t channels = 1U) {
+    double sum = 0.0;
+    const std::size_t frames = samples.size() / channels;
+    std::size_t count = 0U;
+    for (std::size_t frame = first_frame; frame < frames; ++frame) {
+        for (std::uint16_t channel = 0U; channel < channels; ++channel) {
+            const double value = samples[frame * channels + channel];
+            sum += value * value;
+            ++count;
+        }
+    }
+    return count == 0U ? 0.0 : std::sqrt(sum / static_cast<double>(count));
+}
+
 void test_defaults_bounds_and_memory() {
     tabletfx::Chorus chorus;
     const auto parameters = chorus.parameters();
@@ -34,6 +65,9 @@ void test_defaults_bounds_and_memory() {
                 parameters.tempo_bpm == 120.0F && parameters.number_of_voices == 1U &&
                 parameters.minimum_delay_ms == 8.0F &&
                 parameters.delay_range_ms == 14.0F &&
+                parameters.low_cut_hz == 0.0F &&
+                parameters.high_cut_hz == 0.0F &&
+                parameters.stereo_width == 1.0F &&
                 chorus.effective_rate_hz() == 0.8F,
             "sane chorus defaults changed");
     require(chorus.memory_bytes() == sizeof(chorus) + 8644U * sizeof(float),
@@ -45,11 +79,17 @@ void test_defaults_bounds_and_memory() {
     bounded.depth_ms = 12.0F;
     bounded.mix = -1.0F;
     bounded.smoothing_ms = 2000.0F;
+    bounded.low_cut_hz = -10.0F;
+    bounded.high_cut_hz = 30000.0F;
+    bounded.stereo_width = 5.0F;
     chorus.set_parameters(bounded);
     const auto limits = chorus.parameters();
     require(limits.rate_hz == 8.0F && limits.base_delay_ms == 30.0F &&
                 limits.depth_ms == 0.0F && limits.mix == 0.0F &&
-                limits.smoothing_ms == 1000.0F,
+                limits.smoothing_ms == 1000.0F &&
+                limits.low_cut_hz == 0.0F &&
+                limits.high_cut_hz == 20000.0F &&
+                limits.stereo_width == 2.0F,
             "chorus parameter bounds were not enforced");
 
     bounded.rate_hz = std::numeric_limits<float>::quiet_NaN();
@@ -58,12 +98,75 @@ void test_defaults_bounds_and_memory() {
     bounded.mix = std::numeric_limits<float>::infinity();
     bounded.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
     bounded.tempo_bpm = std::numeric_limits<float>::quiet_NaN();
+    bounded.low_cut_hz = std::numeric_limits<float>::quiet_NaN();
+    bounded.high_cut_hz = std::numeric_limits<float>::infinity();
+    bounded.stereo_width = std::numeric_limits<float>::quiet_NaN();
     chorus.set_parameters(bounded);
     const auto finite = chorus.parameters();
     require(finite.rate_hz == 0.8F && finite.base_delay_ms == 15.0F &&
                 finite.depth_ms <= 7.0F && finite.mix == 0.3F &&
-                finite.smoothing_ms == 10.0F && finite.tempo_bpm == 120.0F,
+                finite.smoothing_ms == 10.0F && finite.tempo_bpm == 120.0F &&
+                finite.low_cut_hz == 0.0F && finite.high_cut_hz == 0.0F &&
+                finite.stereo_width == 1.0F,
             "non-finite chorus parameters did not use safe defaults");
+}
+
+void test_project_authored_tone_master_controls() {
+    constexpr std::size_t frames = 48000U;
+    constexpr std::size_t steady_start = 4800U;
+
+    tabletfx::ChorusParameters low_cut_parameters;
+    low_cut_parameters.mix = 0.0F;
+    low_cut_parameters.smoothing_ms = 0.0F;
+    low_cut_parameters.low_cut_hz = 200.0F;
+    tabletfx::Chorus low_cut(48000.0F, 1U, low_cut_parameters);
+    auto low_tone = sine_tone(40.0F, frames);
+    auto mid_tone = sine_tone(1000.0F, frames);
+    const double low_tone_input = rms_after(low_tone, steady_start);
+    const double mid_tone_input = rms_after(mid_tone, steady_start);
+    low_cut.process(low_tone, 1U);
+    low_cut.reset();
+    low_cut.process(mid_tone, 1U);
+    require(rms_after(low_tone, steady_start) < low_tone_input * 0.4,
+            "project low cut did not attenuate frequencies below its setting");
+    require(rms_after(mid_tone, steady_start) > mid_tone_input * 0.9,
+            "project low cut altered frequencies well above its setting");
+
+    tabletfx::ChorusParameters high_cut_parameters;
+    high_cut_parameters.mix = 0.0F;
+    high_cut_parameters.smoothing_ms = 0.0F;
+    high_cut_parameters.high_cut_hz = 2000.0F;
+    tabletfx::Chorus high_cut(48000.0F, 1U, high_cut_parameters);
+    auto high_tone = sine_tone(10000.0F, frames);
+    auto low_mid_tone = sine_tone(200.0F, frames);
+    const double high_tone_input = rms_after(high_tone, steady_start);
+    const double low_mid_tone_input = rms_after(low_mid_tone, steady_start);
+    high_cut.process(high_tone, 1U);
+    high_cut.reset();
+    high_cut.process(low_mid_tone, 1U);
+    require(rms_after(high_tone, steady_start) < high_tone_input * 0.4,
+            "project high cut did not attenuate frequencies above its setting");
+    require(rms_after(low_mid_tone, steady_start) > low_mid_tone_input * 0.9,
+            "project high cut altered frequencies well below its setting");
+
+    tabletfx::ChorusParameters width_parameters;
+    width_parameters.mix = 0.0F;
+    width_parameters.smoothing_ms = 0.0F;
+    width_parameters.stereo_width = 0.0F;
+    tabletfx::Chorus mono_width(48000.0F, 2U, width_parameters);
+    std::array<float, 2U> collapsed{0.8F, -0.2F};
+    mono_width.process(collapsed, 2U);
+    require(std::abs(collapsed[0] - 0.3F) < 1.0e-6F &&
+                std::abs(collapsed[1] - 0.3F) < 1.0e-6F,
+            "zero stereo width did not collapse the signal to its mid channel");
+
+    width_parameters.stereo_width = 2.0F;
+    tabletfx::Chorus widened(48000.0F, 2U, width_parameters);
+    std::array<float, 2U> wide{0.8F, -0.2F};
+    widened.process(wide, 2U);
+    require(std::abs((wide[0] - wide[1]) - 2.0F) < 1.0e-6F &&
+                std::abs((wide[0] + wide[1]) - 0.6F) < 1.0e-6F,
+            "stereo width must scale only the side signal");
 }
 
 void test_minimum_delay_range_bounds_and_legacy_center_depth() {
@@ -582,6 +685,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_project_authored_tone_master_controls();
         test_minimum_delay_range_bounds_and_legacy_center_depth();
         test_minimum_and_maximum_sweep_timing();
         test_default_is_sample_identical_to_legacy_center_depth_path();

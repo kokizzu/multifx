@@ -74,10 +74,29 @@ void Chorus::set_parameters(ChorusParameters parameters) noexcept {
     parameters.mix = bounded(parameters.mix, 0.3F, 0.0F, 1.0F);
     parameters.smoothing_ms = bounded(parameters.smoothing_ms, 10.0F, 0.0F,
                                       1000.0F);
+    parameters.low_cut_hz = bounded(parameters.low_cut_hz, 0.0F, 0.0F,
+                                    kMaximumLowCutHz);
+    parameters.high_cut_hz = bounded(parameters.high_cut_hz, 0.0F, 0.0F,
+                                     kMaximumHighCutHz);
+    parameters.stereo_width = bounded(parameters.stereo_width, 1.0F, 0.0F,
+                                      kMaximumStereoWidth);
     parameters_ = parameters;
     target_base_delay_ms_ = center_delay_ms;
     target_depth_ms_ = modulation_depth_ms;
     target_mix_ = parameters_.mix;
+    const float safe_low_cut_hz = std::min(parameters_.low_cut_hz,
+                                           sample_rate_ * 0.45F);
+    const float safe_high_cut_hz = std::min(parameters_.high_cut_hz,
+                                            sample_rate_ * 0.45F);
+    target_low_cut_alpha_ = parameters_.low_cut_hz > 0.0F
+        ? std::exp(-kTwoPi * safe_low_cut_hz / sample_rate_)
+        : 0.0F;
+    target_low_cut_mix_ = parameters_.low_cut_hz > 0.0F ? 1.0F : 0.0F;
+    target_high_cut_alpha_ = parameters_.high_cut_hz > 0.0F
+        ? std::exp(-kTwoPi * safe_high_cut_hz / sample_rate_)
+        : 0.0F;
+    target_high_cut_mix_ = parameters_.high_cut_hz > 0.0F ? 1.0F : 0.0F;
+    target_stereo_width_ = parameters_.stereo_width;
     prepare_rate();
     retarget(false);
 }
@@ -95,14 +114,29 @@ void Chorus::process(std::span<float> interleaved,
             current_base_delay_ms_ += base_delay_step_;
             current_depth_ms_ += depth_step_;
             current_mix_ += mix_step_;
+            low_cut_alpha_ += low_cut_alpha_step_;
+            low_cut_mix_ += low_cut_mix_step_;
+            high_cut_alpha_ += high_cut_alpha_step_;
+            high_cut_mix_ += high_cut_mix_step_;
+            stereo_width_ += stereo_width_step_;
             --ramp_remaining_;
             if (ramp_remaining_ == 0) {
                 current_base_delay_ms_ = target_base_delay_ms_;
                 current_depth_ms_ = target_depth_ms_;
                 current_mix_ = target_mix_;
+                low_cut_alpha_ = target_low_cut_alpha_;
+                low_cut_mix_ = target_low_cut_mix_;
+                high_cut_alpha_ = target_high_cut_alpha_;
+                high_cut_mix_ = target_high_cut_mix_;
+                stereo_width_ = target_stereo_width_;
                 base_delay_step_ = 0.0F;
                 depth_step_ = 0.0F;
                 mix_step_ = 0.0F;
+                low_cut_alpha_step_ = 0.0F;
+                low_cut_mix_step_ = 0.0F;
+                high_cut_alpha_step_ = 0.0F;
+                high_cut_mix_step_ = 0.0F;
+                stereo_width_step_ = 0.0F;
             }
         }
 
@@ -110,6 +144,9 @@ void Chorus::process(std::span<float> interleaved,
         const float modulation_depth = current_depth_ms_ * samples_per_ms;
         const std::size_t write_offset = write_frame_ * channels_;
         const std::size_t input_offset = frame * channels_;
+        std::array<float, 2U> frame_output{};
+        const bool low_cut_active = low_cut_mix_ > 0.0F;
+        const bool high_cut_active = high_cut_mix_ > 0.0F;
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t index = input_offset + channel;
             const float input = std::isfinite(interleaved[index])
@@ -172,7 +209,49 @@ void Chorus::process(std::span<float> interleaved,
                 }
             }
             const float output = input * (1.0F - current_mix_) + wet * current_mix_;
-            interleaved[index] = std::isfinite(output) ? output : 0.0F;
+            const float finite_output = std::isfinite(output) ? output : 0.0F;
+
+            // The one-pole cut coefficients are prepared and ramped outside
+            // this loop. Skip their multiply/add paths while the cuts are Off,
+            // but keep the histories seeded for smooth activation. No buffer,
+            // lookahead, or per-sample transcendental work is used.
+            float stage = finite_output;
+            if (low_cut_active) {
+                const float high_pass = low_cut_alpha_ *
+                    (low_cut_previous_output_[channel] + finite_output -
+                     low_cut_previous_input_[channel]);
+                low_cut_previous_input_[channel] = finite_output;
+                low_cut_previous_output_[channel] = std::isfinite(high_pass)
+                    ? high_pass : 0.0F;
+                stage += low_cut_mix_ *
+                    (low_cut_previous_output_[channel] - finite_output);
+            } else {
+                low_cut_previous_input_[channel] = finite_output;
+                low_cut_previous_output_[channel] = finite_output;
+            }
+
+            if (high_cut_active) {
+                const float low_pass = high_cut_previous_output_[channel] +
+                    (1.0F - high_cut_alpha_) *
+                        (stage - high_cut_previous_output_[channel]);
+                high_cut_previous_output_[channel] = std::isfinite(low_pass)
+                    ? low_pass : 0.0F;
+                stage += high_cut_mix_ *
+                    (high_cut_previous_output_[channel] - stage);
+            } else {
+                high_cut_previous_output_[channel] = stage;
+            }
+            frame_output[channel] = std::isfinite(stage) ? stage : 0.0F;
+        }
+        if (channels_ == 2U && stereo_width_ != 1.0F) {
+            const float mid = (frame_output[0U] + frame_output[1U]) * 0.5F;
+            const float side = (frame_output[0U] - frame_output[1U]) *
+                               (0.5F * stereo_width_);
+            frame_output[0U] = mid + side;
+            frame_output[1U] = mid - side;
+        }
+        for (std::uint16_t channel = 0U; channel < channels_; ++channel) {
+            interleaved[input_offset + channel] = frame_output[channel];
         }
 
         ++write_frame_;
@@ -185,6 +264,9 @@ void Chorus::process(std::span<float> interleaved,
 
 void Chorus::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
+    low_cut_previous_input_.fill(0.0F);
+    low_cut_previous_output_.fill(0.0F);
+    high_cut_previous_output_.fill(0.0F);
     write_frame_ = 0;
     sine_phase_ = 0.0F;
     cosine_phase_ = 1.0F;
@@ -208,9 +290,19 @@ void Chorus::retarget(bool immediate) noexcept {
         current_base_delay_ms_ = target_base_delay_ms_;
         current_depth_ms_ = target_depth_ms_;
         current_mix_ = target_mix_;
+        low_cut_alpha_ = target_low_cut_alpha_;
+        low_cut_mix_ = target_low_cut_mix_;
+        high_cut_alpha_ = target_high_cut_alpha_;
+        high_cut_mix_ = target_high_cut_mix_;
+        stereo_width_ = target_stereo_width_;
         base_delay_step_ = 0.0F;
         depth_step_ = 0.0F;
         mix_step_ = 0.0F;
+        low_cut_alpha_step_ = 0.0F;
+        low_cut_mix_step_ = 0.0F;
+        high_cut_alpha_step_ = 0.0F;
+        high_cut_mix_step_ = 0.0F;
+        stereo_width_step_ = 0.0F;
         ramp_remaining_ = 0;
         return;
     }
@@ -225,6 +317,11 @@ void Chorus::retarget(bool immediate) noexcept {
     base_delay_step_ = (target_base_delay_ms_ - current_base_delay_ms_) / denominator;
     depth_step_ = (target_depth_ms_ - current_depth_ms_) / denominator;
     mix_step_ = (target_mix_ - current_mix_) / denominator;
+    low_cut_alpha_step_ = (target_low_cut_alpha_ - low_cut_alpha_) / denominator;
+    low_cut_mix_step_ = (target_low_cut_mix_ - low_cut_mix_) / denominator;
+    high_cut_alpha_step_ = (target_high_cut_alpha_ - high_cut_alpha_) / denominator;
+    high_cut_mix_step_ = (target_high_cut_mix_ - high_cut_mix_) / denominator;
+    stereo_width_step_ = (target_stereo_width_ - stereo_width_) / denominator;
 }
 
 void Chorus::advance_modulator() noexcept {

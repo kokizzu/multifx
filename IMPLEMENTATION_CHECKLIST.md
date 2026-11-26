@@ -1,5 +1,19 @@
 # Implementation checklist
 
+## Fractal Blocks Guide source revision check (2026-11-26)
+
+- [x] Follow the official FM9 Downloads page link and verify the current Blocks Guide has a November 2026 cover and 114 pages. A direct fetch may return a stale June 2023 copy. The current v12.0 download listing names Original/Turbo, not Mark II Turbo.
+- [x] Correct the active Synth source to printed p. 102 and shared Mix/Level controls to p. 4; the guide documents Guitar/Bass tracking range and Quantize. Project detector behavior and values remain separately qualified.
+- [ ] Continue source-by-source review of other Fractal claims against the current download-page PDF; do not infer exact model/firmware applicability from the family guide.
+
+## Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width (2026-11-26)
+
+- [x] Check the exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 41: Chorus Mono and Stereo list Low Cut and High Cut; Chorus Stereo additionally lists Width. The guide publishes no numeric ranges, defaults, units, topology, DSP, or latency. Firmware notes were checked through v1.8.87 (2026-11-23); installed firmware is unknown.
+- [x] Add project-authored Low Cut 0–1,200 Hz and High Cut 0–20,000 Hz, both default off, plus Stereo Width 0–200%, default 100%, to the existing Modulation Chorus picker ID 16. Preserve the legacy seven-value preset array and serialize the added values separately.
+- [x] Verify native response, bounds, smoothing/continuity, stereo width, no-allocation processing, offline CLI compatibility, and browser/WASM local prerecorded-guitar Play behavior.
+- [x] Verify full browser/native comparison, full native test suite, Windows MinGW core/offline-renderer build, CPU/memory benchmark, and `make diff-check`.
+- [ ] Human listening, physical Tone Master Pro comparison, and performance checks on target devices. Manufacturer DSP/settings/sound parity and installed firmware are not established.
+
 ## Fractal FM9-family Synth block output Level (2026-11-26)
 
 - [x] Checked the exact Fractal Audio Blocks Guide with a November 2026 cover, printed pp. 4 and 102. It documents shared Synth block Level and describes block Level as overall output, but gives no numeric bounds/default. FM9 v12.0 downloads list Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.

@@ -88,6 +88,9 @@ bool run_profile(std::string_view name, tabletfx::ChorusParameters parameters) {
               << static_cast<unsigned int>(parameters.number_of_voices)
               << " minimum_delay_ms=" << parameters.minimum_delay_ms
               << " delay_range_ms=" << parameters.delay_range_ms
+              << " low_cut_hz=" << parameters.low_cut_hz
+              << " high_cut_hz=" << parameters.high_cut_hz
+              << " stereo_width=" << parameters.stereo_width
               << " sample_rate_hz=" << static_cast<int>(kSampleRate)
               << " callback_budget_us=" << std::fixed << std::setprecision(3)
               << kCallbackBudgetUs
@@ -131,5 +134,19 @@ int main() {
     maximum_delay.minimum_delay_ms = 50.0F;
     maximum_delay.delay_range_ms = 40.0F;
     passed = run_profile("chorus_maximum_delay_range", maximum_delay) && passed;
+    tabletfx::ChorusParameters low_cut;
+    low_cut.low_cut_hz = 200.0F;
+    passed = run_profile("chorus_low_cut_200_hz", low_cut) && passed;
+    tabletfx::ChorusParameters high_cut;
+    high_cut.high_cut_hz = 6000.0F;
+    passed = run_profile("chorus_high_cut_6000_hz", high_cut) && passed;
+    tabletfx::ChorusParameters wide;
+    wide.stereo_width = 2.0F;
+    passed = run_profile("chorus_stereo_width_200_percent", wide) && passed;
+    tabletfx::ChorusParameters combined_tone;
+    combined_tone.low_cut_hz = 200.0F;
+    combined_tone.high_cut_hz = 6000.0F;
+    combined_tone.stereo_width = 2.0F;
+    passed = run_profile("chorus_tone_all_controls", combined_tone) && passed;
     return passed ? 0 : 1;
 }
