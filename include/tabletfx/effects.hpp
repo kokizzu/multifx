@@ -179,8 +179,9 @@ public:
     // Project-authored BBD-style coloration: bandwidth-limited, mildly saturated
     // repeats. This reuses the existing delay ring and adds no processor stage.
     void configure_bbd_style(bool enabled) noexcept;
-    // Project-authored BBD repeat mode. MOD uses a gentler repeat saturation
-    // curve; it is a qualitative interpretation, not HeadRush DSP or level matching.
+    // Project-authored BBD repeat mode. MOD uses gentler saturation and a
+    // small repeat-path gain match at 0.5 linear level. This does not claim
+    // HeadRush DSP, control-curve, or active/bypass level-matching parity.
     void configure_bbd_mode(bool mod) noexcept;
     // Project-authored tape-style echo with bounded saturation and speed modulation.
     void configure_tape_echo(bool enabled, float saturation, float wow_depth_ms,

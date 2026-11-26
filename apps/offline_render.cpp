@@ -5788,6 +5788,18 @@ void run_bench() {
         delay->configure_bbd_style(true);
         return delay;
     }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-bbd-mod-mono", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
+        delay->configure_bbd_style(true);
+        delay->configure_bbd_mode(true);
+        return delay;
+    }, sample_rate, 1, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("delay-bbd-mod-stereo", [=] {
+        auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 2, 2000.0F);
+        delay->configure_bbd_style(true);
+        delay->configure_bbd_mode(true);
+        return delay;
+    }, sample_rate, 2, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay-tape-mono", [=] {
         auto delay = std::make_unique<tabletfx::Delay>(sample_rate, 1, 2000.0F);
         delay->configure_tape_echo(true, 0.45F, 0.35F, 0.3F, 0.08F, 6.0F);

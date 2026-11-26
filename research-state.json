@@ -4,38 +4,60 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "164e3b81e51e451e9468e69f34ba87fe94db1cb3",
+  "previous_checkpoint_commit": "e755f3c46e2bc735afa81624d230efa84c81b275",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Electric Flanger Filter mode and Tap Division",
-    "status": "The existing categorized Flanger now includes project-authored Free/tempo-sync and static Filter modes without a new picker row. Native/CLI, seven local-guitar browser Play captures, full browser/native checks, Windows cross-build, benchmark, and diff-check pass. Human listening and physical Fender comparison remain open.",
+    "name": "HeadRush Prime BBD Delay project-authored Classic/Mod mode",
+    "status": "Verified project-authored Classic/Mod behavior in the existing categorized Delay row. Native, local prerecorded-guitar browser/WASM Play, full browser/native comparison, Windows MinGW build, and separate mode benchmarks pass. HeadRush parity gaps remain explicit; human listening and physical-device comparison are open.",
     "date": "2026-11-26",
-    "picker_index": 17,
-    "category": "Modulation",
+    "picker_index": 21,
+    "category": "Delay",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed pp. 38–39; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide documents Tap Division and Filter-mode control roles but gives no division list, numeric ranges/defaults, DSP topology, or latency. The implemented Filter mapping, Color interpretation, tempo divisions, and defaults are project-authored and do not claim Fender settings, DSP, or sound parity."
+      "title": "HeadRush Prime Firmware Update Instructions",
+      "revision": "v5.2.0, released October 2026; PDF p. 5 includes the v5.1.0 BBD Delay Mode notes. The BBD mode was introduced in v5.1.0 (August 2026). Installed firmware is unknown.",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+      "qualification": "The notes describe CLASSIC as v5.0-and-earlier behavior and MOD as improving engaged/bypass level consistency, level between repeats, and Feedback linearity/range. They give no numeric mode controls, mapping, or DSP formula."
     },
-    "documented_controls": "Model Guide p. 38 lists Mono/Stereo Flanger Rate, Depth, Resonance, Tap Division, and Manual; Stereo adds L/R Phase. Page 39 lists Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter retains harmonic flanging without frequency modulation; Rate changes tone and Color controls intensity. The guide publishes no division choices, numeric bounds/defaults, DSP, or latency.",
-    "project_controls": "At existing Modulation Flanger ID 17, Free Hz remains default and project tempo sync offers 14 divisions at 20–300 BPM. Filter mode uses a static short comb; project Rate position 0.05–8 maps to 0.5–10 ms and project Color 0–0.9 (default 0.35) sets positive feedback. Flanger remains the default. No new picker row, ring, fixed latency, or process allocation is added. Native state 4,840 B; browser effect state 4,804 B.",
+    "documented_controls": "The Prime v5.2.0 release history records a BBD Delay Mode parameter added in v5.1.0: CLASSIC performs as v5.0.0 and earlier; MOD is described as improving level consistency when engaged/bypassed and between repeats, plus Feedback linearity and usable range. No ranges, defaults, control curve, or implementation details are stated.",
+    "project_controls": "The existing Delay row at ID 21 keeps Digital as default and exposes project-authored BBD Classic/Mod character choices. Classic retains the previous project BBD curve. Mod changes feedback-path saturation from 0.08 to 0.04 and applies a 2% project repeat-path gain adjustment at a representative 0.5 linear level. It reuses the ring, adds no processor, buffer, fixed latency, or processing allocation; it does not implement Prime's engaged/bypass gain match or Feedback mapping.",
     "verification": {
-      "native_cli": "make test-fender-flanger-tap-division passes focused Flanger coverage and offline CLI checks, including Filter Color output changes and invalid mode handling.",
-      "browser": "make web-test-fender-flanger-tap-division passes 117/117 CTests and HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. Seven captures verify default controls, tempo behavior, Filter Color/Rate/mode output differences, and active controls. Full browser/native comparison passes.",
-      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer compile.",
-      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 3,000 warm-up/20,000 measured. Filter mode: p50/p95/p99/p99.9/max 0.0308/0.0311/0.0495/0.0570/0.2291% of callback deadline; native state 4,840 B. This is isolated desktop timing, not Android/tablet performance or a measured CPU reduction.",
-      "diff_check": "make diff-check passes with no whitespace errors; no workflow files are included."
+      "native": "make test passes 13 fixture-safety checks and 117/117 CTests, including BBD mode output, repeat decay, smoothing, stereo, and no-allocation tests.",
+      "browser": "make web-browser-test passes the categorized Delay picker and default-off check, Classic/Mod UI-to-WASM serialization, and distinct Play output from the local prerecorded Guitar-TECHS stereo DI. Full native/browser comparison passes at 48 kHz (maximum absolute error 0.0000016113; RMS error 0.0000002985).",
+      "windows": "make windows-cross-build compiles the updated core and offline renderer with MinGW.",
+      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz/128 frames, 2.667 ms callback. BBD Classic mono p50/p95/p99/p99.9/max is 0.0814/0.0821/0.1140/0.2801/0.3124%; stereo is 0.1305/0.1350/0.2449/0.3499/0.3671%. Mod mono is 0.0803/0.0814/0.1320/0.2895/0.3116%; stereo is 0.1309/0.1354/0.2640/0.4298/0.5550%. Native state is unchanged by mode: 384,820 B mono / 768,824 B stereo.",
+      "diff_check": "make diff-check passes git diff --check and reports no workflow changes."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, target-device timing, and installed firmware remain open. Manufacturer ranges/defaults, DSP topology, and sound parity are not established."
+    "remaining": "Manual listening, physical Prime comparison, target-device timing, and installed firmware remain open. Exact Prime DSP/settings/sound parity is not established."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "HeadRush Prime",
-    "next_feature": "Complete the existing BBD delay's project-authored Classic/Mod refinement from Prime v5.1/v5.2 source notes, including bypass-level behavior only if a safe chain-level implementation is supported. Then finish Fender Tone Master Pro Chorus Low Cut, High Cut, and Width in the existing Chorus. Continue the named flagship model inventory with exact-model documentation and one tested feature per checkpoint.",
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Finish the existing Chorus Low Cut, High Cut, and stereo Width controls with exact-model documentation, automated tests, browser/WASM local-DI playback, Windows build, CPU/memory measurement, and a committed checkpoint. Then continue the named flagship model inventory in source-backed, non-overlapping categories.",
     "qualification": "The independent general research cursor and next_research array are preserved. Stadium sidechain remains deferred until an independent key-input route exists. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
   },
   "completed_checkpoints": [
+    {
+      "name": "HeadRush Prime BBD Delay project-authored Classic/Mod mode",
+      "status": "verified project mode; HeadRush parity intentionally partial; manual/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 21,
+      "category": "Delay",
+      "official_source": {
+        "title": "HeadRush Prime Firmware Update Instructions",
+        "revision": "v5.2.0, released October 2026; PDF p. 5 includes the v5.1.0 BBD mode description. Installed firmware is unknown.",
+        "url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "qualification": "The source names CLASSIC and MOD behavior but gives no numeric controls, feedback mapping, default values, or DSP formula."
+      },
+      "documented_controls": "BBD Delay Mode: CLASSIC retains v5.0-and-earlier behavior; MOD improves engaged/bypassed level consistency, level between repeats, and Feedback linearity/usable range.",
+      "project_controls": "Digital remains the default in Delay ID 21. Classic retains the previous project BBD path. Mod uses gentler feedback saturation plus a 2% repeat-path gain adjustment at a representative 0.5 linear level. No new processor, ring, fixed latency, or processing allocation is added.",
+      "verification": {
+        "native": "make test passes 13 fixture-safety checks and 117/117 CTests, including mode response, repeat decay, smoothing, stereo, and no-allocation coverage.",
+        "browser": "make web-browser-test verifies Delay category, default-off state, Classic/Mod WASM serialization, and distinct local prerecorded guitar-DI Play output. Full native/browser comparison passes (48 kHz, max absolute error 0.0000016113, RMS error 0.0000002985).",
+        "windows": "make windows-cross-build compiles the updated core and offline renderer with MinGW.",
+        "benchmark": "At 48 kHz/128 frames on Ryzen 9 5950X, Classic/Mod stereo p99 is 0.2449/0.2640% of the 2.667 ms callback deadline; both use 768,824 B. Full mono/stereo percentiles are in LATENCY_AND_QUALITY.md.",
+        "diff_check": "Final make diff-check pending before publication."
+      },
+      "remaining": "Prime's active/bypass level matching and Feedback mapping are not implemented. Manual listening, physical-device comparison, target-device timing, and installed firmware remain unknown."
+    },
     {
       "name": "Fractal FM9-family Synth block output Level",
       "status": "verified; full native/browser suites, Windows cross-build, and callback benchmark pass; manual/device checks remain",

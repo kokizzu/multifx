@@ -9305,6 +9305,132 @@ async function runStadiumDelayTrailsBrowserSmokeTest(reference, captureView, cap
   }
 }
 
+async function runHeadRushBbdModeBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousDecodedAudio = decodedAudio;
+  const previousControls = [delayPreset.value, delayMode.value, delayMs.value,
+    delayBpm.value, delayDivision.value, delayFeedback.value, delayMix.value,
+    delayRouting.value, delayCharacter.value, delayTrailsOnBypass.checked];
+  const previousCategory = effectCategoryFilter.value;
+  const defaultOffBeforeTest = !DEFAULT_PARAMETERS.delayBbd &&
+    !DEFAULT_PARAMETERS.delayBbdMode;
+  const postedCharacters = [];
+  const portPrototype = MessagePort.prototype;
+  const originalPost = portPrototype.postMessage;
+  const testEnabled = previousEffectState.map((_, index) => index === 21);
+
+  portPrototype.postMessage = function(message, ...transfer) {
+    if (message?.type === "delay-character") postedCharacters.push(message.value);
+    return originalPost.call(this, message, ...transfer);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !audioContext) {
+      throw new Error("HeadRush BBD smoke requires the ready browser chain.");
+    }
+    await audioContext.resume();
+    const fixtureResponse = await fetch("/__test_input.wav");
+    if (!fixtureResponse.ok) {
+      throw new Error("HeadRush BBD smoke could not load the local guitar fixture.");
+    }
+    decodedAudio = await audioContext.decodeAudioData(await fixtureResponse.arrayBuffer());
+    if (decodedAudio.numberOfChannels !== reference.channels ||
+        decodedAudio.length !== reference.frames) {
+      throw new Error("The local guitar fixture dimensions differ from the BBD browser reference.");
+    }
+    stopSource(false);
+    effectCategoryFilter.value = "delay";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="21"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay") {
+      throw new Error("BBD modes must remain in the categorized Delay picker row.");
+    }
+
+    delayPreset.value = "custom";
+    delayMode.value = "free";
+    delayMs.value = "120";
+    delayFeedback.value = "0.72";
+    delayMix.value = "0.7";
+    delayRouting.value = "normal";
+    updateDelayRouting();
+    const enabled = waitForWorkletState("enabled-state", null);
+    document.querySelectorAll("[data-effect]").forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    workletNode.port.postMessage({ type: "inspect-enabled" });
+    const enabledState = await enabled;
+    if (!enabledState.value.every((value, index) => value === testEnabled[index])) {
+      throw new Error("The BBD smoke could not isolate the Delay picker row.");
+    }
+
+    const captureCharacter = async (character) => {
+      delayCharacter.value = character;
+      updateDelayCharacter();
+      updateDelay(true);
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting BBD guitar playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const classic = await captureCharacter("bbd-classic");
+    const mod = await captureCharacter("bbd-mod");
+    let differenceSquares = 0;
+    let peak = 0;
+    for (let index = 0; index < mod.length; index += 1) {
+      const sample = mod[index];
+      const difference = sample - classic[index];
+      peak = Math.max(peak, Math.abs(sample));
+      differenceSquares += difference * difference;
+    }
+    const differenceRms = Math.sqrt(differenceSquares / Math.max(1, mod.length));
+    if (peak < 1e-5 || differenceRms < 1e-6) {
+      throw new Error(`BBD MOD did not produce measurable local-guitar audio (peak ${peak}, mode difference RMS ${differenceRms}).`);
+    }
+    if (!defaultOffBeforeTest ||
+        !postedCharacters.some((value) => value.bbd && !value.bbdMode) ||
+        !postedCharacters.some((value) => value.bbd && value.bbdMode)) {
+      throw new Error("BBD default-off or Classic/Mod UI-to-WASM serialization failed.");
+    }
+    return { category: "Delay", enabledEffectIndex: 21, modes: ["BBD Classic", "BBD Mod"],
+      defaultOff: true, playOutputCaptured: true, peak, modeDifferenceRms: differenceRms };
+  } finally {
+    stopSource(false);
+    decodedAudio = previousDecodedAudio;
+    portPrototype.postMessage = originalPost;
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [delayPreset.value, delayMode.value, delayMs.value, delayBpm.value,
+        delayDivision.value, delayFeedback.value, delayMix.value,
+        delayRouting.value, delayCharacter.value, delayTrailsOnBypass.checked] = previousControls;
+      updateDelayRouting();
+      updateDelayCharacter();
+      updateDelay(true);
+      effectCategoryFilter.value = previousCategory;
+      updateEffectBrowser();
+      document.querySelectorAll("[data-effect]").forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runPortaPreampBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousControls = portaPreampControls.map((control) => control.value);
@@ -19459,6 +19585,10 @@ async function runBrowserSelfTest() {
     if (!tunerReadingOutput.textContent.startsWith("A4")) {
       throw new Error(`Browser tuner UI did not display A4: ${tunerReadingOutput.textContent}`);
     }
+    testResult.textContent = "Checking HeadRush BBD modes with local guitar playback…";
+    const headRushBbdModeSmoke = await runHeadRushBbdModeBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -19516,6 +19646,7 @@ async function runBrowserSelfTest() {
          octaveFuzz: octaveFuzzSmoke,
       rockBoxBoost: rockBoxBoostSmoke,
       stereoPanner: stereoPannerSmoke,
+      headRushBbdMode: headRushBbdModeSmoke,
       stereoCrossover: stereoCrossoverSmoke,
       ashevillePattrn: ashevillePattrnSmoke,
       sweepDelay: sweepDelaySmoke,

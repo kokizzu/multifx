@@ -2235,16 +2235,16 @@ FENDER_VOLUME_PEDAL_MUTE_CHECKPOINT_PATHS = (
 )
 
 HEADRUSH_BBD_MODE_CHECKPOINT_PATHS = (
+    "LATENCY_AND_QUALITY.md",
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
     "RESEARCH.md",
+    "apps/offline_render.cpp",
     "include/tabletfx/effects.hpp",
-    "make/publish.mk",
     "scripts/publish_checkpoint.py",
-    "scripts/web.py",
+    "research-state.json",
     "src/effects.cpp",
-    "src/web/wasm_chain.cpp",
     "tests/test_delay.cpp",
     "web/app.js",
     "web/audio-worklet.js",

@@ -555,6 +555,53 @@ void test_bbd_mod_mode_changes_repeat_saturation_without_allocating() {
             "BBD MOD's gentler repeat saturation should retain more late-repeat level");
 }
 
+void test_bbd_mod_repeat_gain_match_improves_feedback_linearity() {
+    constexpr std::size_t frames = 1440;
+    constexpr std::size_t delay_frames = 240;
+    constexpr float feedback = 0.82F;
+    tabletfx::Delay classic(48000.0F, 1, 20.0F, 5.0F, feedback, 1.0F);
+    tabletfx::Delay mod(48000.0F, 1, 20.0F, 5.0F, feedback, 1.0F);
+    classic.configure_bbd_style(true);
+    mod.configure_bbd_style(true);
+    mod.configure_bbd_mode(true);
+    classic.reset();
+    mod.reset();
+
+    std::array<float, frames> classic_audio{};
+    std::array<float, frames> mod_audio{};
+    classic_audio[0] = 0.5F;
+    mod_audio[0] = 0.5F;
+    classic.process(classic_audio, 1);
+    mod.process(mod_audio, 1);
+
+    const auto peak = [](const auto& samples, std::size_t begin,
+                         std::size_t end) noexcept {
+        float result = 0.0F;
+        for (std::size_t i = begin; i < end; ++i) {
+            result = std::max(result, std::abs(samples[i]));
+        }
+        return result;
+    };
+    const float classic_first = peak(classic_audio, delay_frames,
+                                     delay_frames * 2U);
+    const float classic_second = peak(classic_audio, delay_frames * 2U,
+                                      delay_frames * 3U);
+    const float mod_first = peak(mod_audio, delay_frames,
+                                 delay_frames * 2U);
+    const float mod_second = peak(mod_audio, delay_frames * 2U,
+                                  delay_frames * 3U);
+    require(classic_first > 0.0F && classic_second > 0.0F &&
+                mod_first > 0.0F && mod_second > 0.0F,
+            "BBD feedback test must produce two measurable repeats");
+
+    const float classic_ratio = classic_second / classic_first;
+    const float mod_ratio = mod_second / mod_first;
+    require(std::abs(mod_ratio - feedback) < std::abs(classic_ratio - feedback),
+            "MOD repeat decay should track the requested feedback more closely");
+    require(mod_first > classic_first,
+            "MOD repeat gain matching should reduce the typical-level loss");
+}
+
 void test_tape_echo_character_changes_are_smoothed() {
     tabletfx::Delay delay(48000.0F, 1, 50.0F, 8.0F, 0.0F, 1.0F);
     std::array<float, 512> steady{};
@@ -1007,6 +1054,7 @@ int main() {
         test_multitap_controls_clamp_and_retarget_safely();
         test_bbd_style_colors_echoes_without_allocating();
         test_bbd_mod_mode_changes_repeat_saturation_without_allocating();
+    test_bbd_mod_repeat_gain_match_improves_feedback_linearity();
         test_tape_echo_modulation_saturation_and_no_allocation();
         test_tape_echo_character_changes_are_smoothed();
         test_tape_heads_select_spacing_and_mono_combinations();

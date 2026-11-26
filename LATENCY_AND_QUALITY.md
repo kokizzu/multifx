@@ -560,8 +560,10 @@ The saved processor rows below are the prior snapshot before DLY-20 and were mea
 | Delay, normal (2 s stereo allocation) | 0.1103 | 0.1155 | 0.2153 | 0.3465 | 0.7313 | 768,720 |
 | Room Reverb (large, 1.2 s decay) | 0.1736 | 0.1796 | 0.3225 | 0.4706 | 0.5430 | 115,688 |
 | Hall Reverb (3.2 s decay) | 0.2213 | 0.2246 | 0.3750 | 0.4538 | 0.7462 | 193,748 |
-| Delay, BBD-style mono | 0.0919 | 0.0938 | 0.0941 | 0.3019 | 0.3124 | 384,716 |
-| Delay, BBD-style stereo | 0.1418 | 0.1493 | 0.1500 | 0.3536 | 0.3683 | 768,720 |
+| Delay, BBD Classic mono | 0.0814 | 0.0821 | 0.1140 | 0.2801 | 0.3124 | 384,820 |
+| Delay, BBD Mod mono | 0.0803 | 0.0814 | 0.1320 | 0.2895 | 0.3116 | 384,820 |
+| Delay, BBD Classic stereo | 0.1305 | 0.1350 | 0.2449 | 0.3499 | 0.3671 | 768,824 |
+| Delay, BBD Mod stereo | 0.1309 | 0.1354 | 0.2640 | 0.4298 | 0.5550 | 768,824 |
 | Delay, Tape mono | 0.1658 | 0.1699 | 0.1714 | 0.3806 | 0.5442 | 384,716 |
 | Delay, Tape stereo | 0.2614 | 0.2771 | 0.2794 | 0.5194 | 0.6420 | 768,720 |
 | Delay, ping-pong (2 s stereo allocation) | 0.1399 | 0.2599 | 0.3105 | 0.6236 | 1.1629 | 768,720 |

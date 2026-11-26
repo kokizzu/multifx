@@ -780,12 +780,18 @@ float Delay::shape_delay_feedback(float value, std::uint16_t channel) noexcept {
             static_cast<double>(std::numeric_limits<float>::max()));
         const float filtered = static_cast<float>(bounded_filter);
         bbd_filter_state_[channel] = filtered;
-        const double saturation_amount = 0.08 -
-            0.04 * static_cast<double>(std::clamp(bbd_mod_mix_, 0.0F, 1.0F));
+        const double mod_amount =
+            static_cast<double>(std::clamp(bbd_mod_mix_, 0.0F, 1.0F));
+        const double saturation_amount = 0.08 - 0.04 * mod_amount;
         const double saturated = static_cast<double>(filtered) /
             (1.0 + saturation_amount * std::abs(static_cast<double>(filtered)));
+        // The project-authored MOD law keeps the feedback path near unity at a
+        // representative 0.5 linear repeat level while retaining soft limiting
+        // above it. Classic remains bit-for-bit on the original curve.
+        const double level_match = 1.0 + mod_amount * 0.02;
         const double blend = static_cast<double>(std::clamp(bbd_mix_, 0.0F, 1.0F));
-        shaped = input + (saturated - input) * blend;
+        const double repeat_level_matched = saturated * level_match;
+        shaped = input + (repeat_level_matched - input) * blend;
     } else {
         bbd_filter_state_[channel] = value;
     }
