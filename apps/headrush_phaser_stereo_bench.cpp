@@ -89,8 +89,10 @@ bool run_profile(bool stereo) {
     const auto percent = [](double microseconds) {
         return microseconds * 100.0 / kCallbackBudgetUs;
     };
-    std::cout << "profile=headrush_prime_orange_phaser_stereo_"
+    std::cout << "profile=phaser_stage_count_" << static_cast<unsigned int>(stages)
+              << "_stereo_"
               << (stereo ? "on" : "off")
+              << " stages=" << static_cast<unsigned int>(stages)
               << " callbacks=" << kMeasuredCallbacks
               << " block_frames=" << kBlockFrames
               << " channels=" << kChannels

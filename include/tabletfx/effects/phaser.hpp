@@ -49,7 +49,7 @@ private:
         float previous_output = 0.0F;
     };
 
-    static constexpr std::size_t kMaximumStages = 8;
+    static constexpr std::size_t kMaximumStages = 12;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumFrequencyHz = 40.0F;

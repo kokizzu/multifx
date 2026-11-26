@@ -4,35 +4,37 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "c10e62fd87908f584112cf52c35df9e7c164a396",
+  "previous_checkpoint_commit": "c6463464671a0a5084fcafdcb766716df7fc76dd",
   "latest_audit": {
-    "name": "HeadRush Prime per-block Phase Invert",
-    "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
+    "name": "Fender Phaser stage choices and HeadRush Prime Orange Phaser Stereo control",
+    "status": "Fender's 4/8/10/12-stage choices and Prime's Orange Phaser Stereo control surface were verified from exact-model documentation. The existing categorized Phaser at Modulation ID 18 now supports 4/6/8/10/12 stages and a project-authored L/R phase-link toggle. Native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks pass; manual/device checks remain. No vendor DSP/settings/sound parity is claimed.",
     "date": "2026-11-27",
-    "picker_index": null,
-    "category": "Utility · per-block control",
+    "picker_index": 18,
+    "category": "Modulation",
     "official_source": {
-      "title": "HeadRush Prime firmware update instructions",
-      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026, reproduces the prior v5.1.0 changelog entry; installed firmware unknown.",
-      "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
-      "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-      "qualification": "The v5.1.0 note says Phase Invert was added to Advanced Block Edit to correct phase cancellations when using Block Mix and other scenarios. Release notes do not specify numeric bounds/defaults, exact insertion point, stereo/split-path behavior, bypass behavior, DSP, or latency. The v5.2.0-specific changes do not discuss the control or explicitly confirm unchanged retention."
+      "title": "Fender Tone Master Pro Model Guide and HeadRush Prime User Guide",
+      "revision": "Fender Model Guide v1.1.100 / Rev. A, printed p. 40; firmware notes through v1.8.87 dated 2026-11-23. Prime User Guide v5.0.0 §4.4.2 printed p. 23/PDF p. 24; current notes v5.2.0 (October 2026). Installed device firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "prime_guide_url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "prime_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+      "qualification": "Fender's Phaser stage diagram displays 4/8/10/12 but no numeric bounds/defaults, DSP, or latency. Prime's example screen displays Rate, Stereo, and Sync but does not define Stereo behavior or ranges/defaults. Current firmware notes do not name Phaser changes; installed firmware and later-guide applicability remain unknown."
     },
-    "documented_controls": "Phase Invert parameter on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and behavior details are not published.",
-    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups). The project flips every channel after the selected enabled stage and is dormant while that stage is bypassed. These signal-path details are project choices, not verified HeadRush semantics.",
+    "documented_controls": "Fender Phaser: Rate, Depth, Resonance, Tap Division, Mode, and Stages; diagram shows 4/8/10/12. Prime Orange Phaser example: Rate, Stereo On/Off, and Sync On/Off; example values do not define limits or defaults.",
+    "project_controls": "Existing Modulation Phaser ID 18 supports 4/6/8/10/12 (4-stage default; 6 is project-only) and clears state on stage changes. Its project-authored Stereo toggle defaults On with opposite L/R LFO phases; Off links them. Maximum fixed state is 360 B native / 344 B browser/WASM; the wider stage bank adds 64 B over prior 8-stage capacity. No buffers, fixed latency, or process allocations are added.",
     "verification": {
-      "native": "make test-headrush-phase-invert passes the focused native PhaseInvert test for sample-wise polarity inversion, double inversion identity, zero channels, empty input, and helper memory reporting.",
-      "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
-      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
-      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+      "native": "make web-test-fender-phaser-90-tap-division passes all 123 CTest cases; Phaser tests cover each supported stage count, distinct responses, fallback/reset, stereo behavior, and zero process allocation.",
+      "browser": "HeadlessChrome 151, local prerecorded stereo Guitar-TECHS DI, categorized Modulation picker ID 18. Six Play captures verify tempo sync, Stereo On/Off RMS difference 0.053119, and 4/12-stage RMS difference 0.085007; browser/native chain comparison passes.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 callbacks/profile. p50/p95 CPU ranges 0.072/0.089% at 4 stages to 0.192/0.192% at 12 stages of the 2.667 ms budget. 360 B native state, zero fixed latency and no process allocation. 12-stage max 8.231% is an OS scheduling outlier; no callback budget was exceeded.",
+      "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
     },
-    "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
+    "remaining": "Human listening, physical Fender/Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Extend the existing categorized Phaser's project-authored stage selector to cover Fender's documented 10- and 12-stage choices, preserving existing 4/6/8 behavior and default. Then continue with Helix Stadium Dynamics Sidechain, Fractal FM9-family Global Mix, and HeadRush Prime Global EQ. Revisit XRecer XR1 global routing only after a real output-routing host exists.",
+    "next_device": "Line 6 Helix Stadium XL",
+    "next_feature": "Implement the project-scoped Dynamics Sidechain detector choice on the existing categorized compressor using preallocated inputs; distinguish Block Input from pre-effect Dry Chain and do not claim Stadium's external Instrument/Mic/Return/USB/S/PDIF buses. Then assess Fractal FM9-family Global Mix only on processors with compatible existing wet/dry controls, HeadRush Prime Global EQ only after independent output routes exist, and XRecer XR1 global routing after a real routing host exists.",
     "qualification": "Preserve the existing manufacturer-versus-project distinction, categorized picker, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; manual hardware/listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
@@ -1418,102 +1420,6 @@
     }
   ],
   "previous_checkpoint": {
-    "name": "Fender Tone Master Pro Modulated Large Hall",
-    "status": "Exact-model controls verified; categorized project-authored Reverb ID 120 passes native/browser/Windows/benchmark checks; human/device checks remain.",
-    "date": "2026-11-27",
-    "picker_index": 120,
-    "category": "Reverb",
-    "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover, but no numeric ranges/defaults, topology, DSP, latency, or memory. Project-authored controls are not Fender settings or parity."
-    },
-    "documented_controls": "The exact-model guide describes Modulated Small Hall as adding modulation to Small Hall and lists Level (wet blend), Decay, Dwell (input level), Diffuse (echo density/reflections), Rate, Depth, high-shelf gain, low-shelf gain, and Spillover. It publishes no numeric ranges/defaults or algorithm DSP/latency.",
-    "project_controls": "Project-authored Modulated Small Hall at Reverb picker ID 119, disabled by default. Defaults: Level 25%, Decay 3.2 s, Dwell 0 dB, Diffuse 60%, Rate 0.3 Hz, Depth 15%, neutral High/Low Cut shelf gains, Spillover off. Bounds: Level 0–100%, Decay 0.25–10 s, Dwell −12…+12 dB, Diffuse/Depth 0–100%, Rate 0.05–6 Hz, shelf gains ±12 dB. Direct dry path is immediate; project values and network are not Fender DSP/settings/sound parity.",
-    "verification": {
-      "native": "make test passes documentation validation, 13 fixture-safety checks, and 120/120 CTests including focused Small Hall coverage.",
-      "browser": "make web-build and make web-browser-test pass; HeadlessChrome 151 full browser/native comparison and local prerecorded stereo Guitar-TECHS DI Play captures respond to input/profile changes.",
-      "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native state 145,368 B; process-time allocations 0. Default p50/p95/p99/max 1.308/1.956/2.055/14.703%; maximum decay/modulation 1.310/1.571/1.934/8.119% of 2.667 ms. No deadline misses.",
-      "diff_check": "make diff-check passes; no workflow changes."
-    },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
-  },
-  "current_checkpoint": {
-    "name": "Line 6 Helix Stadium Pitch Ring Mod",
-    "status": "Current model catalog entry verified; project-authored categorized Modulation ID 121 passes native/browser/WASM/Windows/CPU/memory checks; human/device checks remain.",
-    "date": "2026-11-27",
-    "picker_index": 121,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Line 6 Helix Stadium model catalog and current Effects manual",
-      "revision": "Catalog checked 2026-11-27: Stereo Line 6 Original under Modulation, initial appearance 1.0. Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "No Pitch Ring Mod-specific controls, ranges/defaults, algorithm, DSP, or latency are in the checked manual/catalog references."
-    },
-    "documented_controls": "No model-specific controls verified; generic Modulation category information only.",
-    "project_controls": "Project-authored monophonic pitch-tracked ring modulator at Modulation ID 121, disabled by default. Project controls: Carrier Ratio (0.25–4.0, default 1.0), Fallback Pitch (55–880 Hz, 110 Hz), Tracking Confidence (0.20–0.98, 0.55), Mix (0–1, 0.5), Level (−24…+12 dB, 0 dB). Chords may track inaccurately. Zero fixed audio-path latency; 42.7 ms tracking warm-up and 48 ms measured 220→440 Hz response.",
-    "verification": {
-      "native": "make test-pitch-ring-mod and make test pass; 13 fixture-safety checks and 122/122 CTests.",
-      "browser": "make web-browser-test passes local prerecorded Guitar-TECHS DI playback at Modulation ID 121, two responsive profiles, and full browser/native comparison; 2,148 B browser effect state.",
-      "windows": "make windows-cross-build passes.",
-      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 callbacks: p50/p95/p99/p99.9/max 1.0065/1.0812/1.2739/2.1676/4.3437% of 2.667 ms; 0 misses, 2,176 B native object, about 7,180 B temporary stack scratch, zero process allocations.",
-      "diff_check": "make diff-check passes; no workflow files are included."
-    },
-    "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 settings, DSP, algorithm, or sound parity is claimed."
-  },
-  "current_checkpoint": {
-    "name": "Fractal FM9-family Through-Zero Flanger VCO Response",
-    "status": "Source-backed control roles and project-authored categorized Modulation extension verified; native/offline, browser/WASM local-guitar, Windows, and benchmark checks pass; manual/device checks remain.",
-    "date": "2026-11-27",
-    "picker_index": 81,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover November 2026, 114 pages, printed p. 50; FM9 downloads list v12.0 for Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Guide names Linear, Exponential, Square Law, and Exponent and states Exponent 1.0 yields linear sweep; it does not publish curve laws, bounds/defaults, DSP, or latency. Exact Mark II Turbo applicability is unknown."
-    },
-    "documented_controls": "Linear, Exponential, Square Law and Exponent; the guide states Exponent 1.0 yields linear sweep but does not document the exact curves, bounds/defaults, or DSP.",
-    "project_controls": "Project-authored VCO response curves extend the existing Through-Zero Flanger at Modulation ID 81. Linear is default; Exponential maps normalized sweep to x^Exponent; Square Law maps to x²; Exponent defaults 1.0, project bounds 0.25–4.0. No picker row, delay buffer, or processing allocation is added.",
-    "verification": {
-      "native_cli": "make test-fractal-vco-response passes focused native curve/default/bounds/allocation tests and offline CLI checks.",
-      "browser": "make web-test-fractal-vco-response passes local Guitar-TECHS DI browser/WASM Play and browser/native comparison; three curve profiles have distinct output.",
-      "windows": "make windows-cross-build passes Windows MinGW core/offline-renderer compilation.",
-      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native state 15,672 B; p50/p99.9 for Linear/Exponential 1.5/Exponential 4/Square Law are 0.179/0.296/0.298/0.193% and 0.633/0.939/1.416/0.992% of 2.667 ms; zero observed overruns and no process allocations."
-    },
-    "remaining": "Human listening, physical Fractal comparison, exact Mark II Turbo firmware applicability, installed firmware, and target-device timing remain open. Exact Fractal curves, ranges/defaults, and DSP remain unknown."
-  },
-  "current_checkpoint": {
-    "name": "Fender Tone Master Pro Harmonic Tremolo Mode Switch",
-    "status": "Exact-model control labels and current firmware history verified; project-authored 6G4/6G4A selector integrated into existing Modulation ID 63. Focused native, browser/WASM local-guitar, Windows, and CPU/memory checks pass; only manual listening/device checks remain. No Fender circuit, algorithm, setting, or sound parity is claimed.",
-    "date": "2026-11-27",
-    "picker_index": 63,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 33; current firmware history lists v1.8.87 dated 2026-11-23; preceding v1.8.85 entry dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists Speed, Intensity, Shape, Tap Division, and Mode Switch choices 1960 6G4 / 1963 6G4A, but provides no numeric ranges/defaults or explanation of the circuit difference. The separately introduced Stereo Harmonic Tremolo is not inferred from this mono control table. v1.8.87 notes do not mention Harmonic Tremolo."
-    },
-    "documented_controls": "Speed, Intensity, Shape, Tap Division, and Mode Switch selecting 1960 6G4 or 1963 6G4A. The source does not specify numeric ranges/defaults, mode response, DSP, or latency.",
-    "project_controls": "Existing project-authored Harmonic Tremolo at Modulation picker ID 63. 6G4 is output-identical default. 6G4A applies a smoothed 1.25× effective-crossover shift (700→875 Hz); this project profile does not reconstruct either Fender circuit.",
-    "verification": {
-      "native": "make test-fender-harmonic-tremolo-mode passes default-output compatibility, mode switching, effective crossover, response, bounds/sanitization, stereo/mono, reset, finite output, callback partition, and zero-process-allocation tests plus offline CLI smoke.",
-      "browser": "make web-test-fender-harmonic-tremolo-mode passes categorized picker checks and HeadlessChrome 151 Play captures on local prerecorded Guitar-TECHS DI in both profiles; output-difference RMS 0.00164583899; WASM effect state 112 B.",
-      "windows": "make windows-cross-build passes the MinGW Windows core and offline-renderer build including the new benchmark application.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. 6G4 p50/p95/p99/p99.9/max 0.084/0.087/0.098/0.363/1.720%; project 6G4A 0.084/0.085/0.094/0.318/1.157%. Both use 136 B native state, have zero fixed path latency, zero processing allocations, and zero deadline misses. Browser state is 112 B.",
-      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
-    },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware confirmation, and target-device timing remain manual. The guide does not document 6G4/6G4A circuit differences; no Fender circuit, algorithm, setting, DSP, or sound parity is claimed."
-  },
-  "current_checkpoint": {
     "name": "HeadRush Prime per-block Phase Invert",
     "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
     "date": "2026-11-27",
@@ -1521,21 +1427,45 @@
     "category": "Utility · per-block control",
     "official_source": {
       "title": "HeadRush Prime firmware update instructions",
-      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026, reproduces the prior v5.1.0 changelog entry; installed firmware unknown.",
+      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026; installed firmware unknown.",
       "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
       "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-      "qualification": "The v5.1.0 note says Phase Invert was added to Advanced Block Edit to correct phase cancellations when using Block Mix and other scenarios. Release notes do not specify numeric bounds/defaults, exact insertion point, stereo/split-path behavior, bypass behavior, DSP, or latency. The v5.2.0-specific changes do not discuss the control or explicitly confirm unchanged retention."
+      "qualification": "v5.1.0 added Phase Invert to Advanced Block Edit, but does not document parameter default, insertion point, split-path behavior, bypass behavior, DSP, or latency. v5.2.0 does not discuss the control."
     },
-    "documented_controls": "Phase Invert parameter on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and behavior details are not published.",
-    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups). The project flips every channel after the selected enabled stage and is dormant while that stage is bypassed. These signal-path details are project choices, not verified HeadRush semantics.",
+    "documented_controls": "Phase Invert on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and detailed behavior are unpublished.",
+    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups); project flips every channel after the selected enabled stage and is dormant while bypassed. These are project choices, not verified HeadRush semantics.",
     "verification": {
-      "native": "make test-headrush-phase-invert passes the focused native PhaseInvert test for sample-wise polarity inversion, double inversion identity, zero channels, empty input, and helper memory reporting.",
-      "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
-      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
-      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+      "native": "make test-headrush-phase-invert passes focused sample-wise inversion, double-inversion identity, empty-input, and helper-memory tests.",
+      "browser": "make web-test-headrush-phase-invert verifies the categorized 122-target/17-group selector and local prerecorded Guitar-TECHS stereo DI Play. Active-stage inversion residual 0; bypassed-stage difference 0; default Off; browser state 122 B.",
+      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW; native Windows UI/audio runtime is not verified.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks: helper CPU p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget; 8 B helper plus 16 B packed mask, no allocations or fixed latency.",
+      "diff_check": "make test and make diff-check pass; no workflows changed."
     },
-    "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
+    "remaining": "Human listening, physical Prime comparison, installed firmware, native Windows UI/audio runtime, and target-device timing remain open."
+  },
+  "current_checkpoint": {
+    "name": "Fender Phaser stage choices and HeadRush Prime Orange Phaser Stereo control",
+    "status": "Exact model guide controls verified; 4/8/10/12 stage choices and a project-authored Stereo toggle are implemented on existing Modulation ID 18. Native, browser/WASM local-guitar, Windows MinGW, and CPU/memory checks pass; only manual/device checks remain.",
+    "date": "2026-11-27",
+    "picker_index": 18,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fender Tone Master Pro Model Guide and HeadRush Prime User Guide",
+      "revision": "Fender Model Guide v1.1.100 / Rev. A, p. 40; Prime User Guide v5.0.0 §4.4.2, printed p. 23/PDF p. 24; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "prime_guide_url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+      "qualification": "Fender's stage graphic shows 4/8/10/12 without ranges/defaults/DSP/latency. Prime's screenshot shows Stereo but does not define its semantics or defaults."
+    },
+    "documented_controls": "Fender Phaser lists Rate, Depth, Resonance, Tap Division, Mode, Stages; graphic shows 4/8/10/12. Prime Orange Phaser example shows Rate, Stereo, Sync.",
+    "project_controls": "One Modulation Phaser at ID 18 supports 4/6/8/10/12, default 4, clears state on count change, and offers a project Stereo On/Off LFO-phase mapping. Maximum fixed state 360 B native / 344 B browser/WASM; no added buffer, fixed latency, or process allocation.",
+    "verification": {
+      "native": "All 123 CTest cases pass, including Phaser stage-count, distinct-response, fallback/reset, stereo, and no-allocation coverage.",
+      "browser": "HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI, categorized Modulation ID 18. Stage selector and 12-stage Play pass; 4/12 RMS difference 0.085007, Stereo On/Off difference 0.053119; browser/native comparison passes.",
+      "windows": "make windows-cross-build passes the MinGW core and offline-renderer build.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128-frame: p50/p95 CPU 0.072/0.089% at 4 stages, 0.192/0.192% at 12; fixed state 360 B native / 344 B browser/WASM, no allocations/latency.",
+      "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
+    },
+    "remaining": "Human listening, physical Fender/Prime comparisons, installed firmware confirmation, native Windows UI/audio runtime, and target-device timing remain open. No vendor settings, algorithm, DSP, or sound parity is claimed."
   },
   "next_research": [
     {

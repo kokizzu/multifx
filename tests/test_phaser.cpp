@@ -78,6 +78,12 @@ void test_defaults_bounds_and_stage_choices() {
     parameters.stages = 8;
     phaser.set_parameters(parameters);
     require(phaser.parameters().stages == 8, "phaser rejected eight stages");
+    parameters.stages = 10;
+    phaser.set_parameters(parameters);
+    require(phaser.parameters().stages == 10, "phaser rejected ten stages");
+    parameters.stages = 12;
+    phaser.set_parameters(parameters);
+    require(phaser.parameters().stages == 12, "phaser rejected twelve stages");
 
     parameters = {};
     parameters.rate_hz = std::numeric_limits<float>::quiet_NaN();
@@ -217,10 +223,13 @@ void test_notch_and_selectable_stages() {
     four_effect.process(four, 1);
     six_effect.process(six, 1);
     eight_effect.process(eight, 1);
-    require(four != six && six != eight && four != eight,
-            "selectable 4/6/8-stage phasers did not produce distinct responses");
+    ten_effect.process(ten, 1);
+    twelve_effect.process(twelve, 1);
+    require(four != six && six != eight && four != eight &&
+                eight != ten && ten != twelve && four != twelve,
+            "selectable 4/6/8/10/12-stage phasers did not produce distinct responses");
 
-    parameters.stages = 8;
+    parameters.stages = 12;
     parameters.mix = 1.0F;
     tabletfx::Phaser switching(48000.0F, 1, parameters);
     std::array<float, 1024> prior_tail{};

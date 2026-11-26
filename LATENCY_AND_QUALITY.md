@@ -785,6 +785,23 @@ The sync benchmark uses quarter-note division at 120 BPM, 48 kHz stereo, 128-fra
 
 `make test-fender-phaser-90-tap-division`, `make web-test-fender-phaser-90-tap-division`, `make windows-cross-build`, and `make bench` pass. Browser Play uses the local prerecorded stereo Guitar-TECHS DI. These isolated desktop timings do not predict Android/tablet performance. Manual listening, physical Tone Master Pro comparison, and target-device timing remain open; no Fender DSP, settings, or sound parity is claimed.
 
+## Phaser stage-count and stereo control measurements (2026-11-27)
+
+The project Phaser now allocates a fixed 12-stage all-pass bank, including when the selected count is lower. Expanding capacity from eight to twelve stages adds 64 B of `StageState` storage across two channels. Current object memory is 360 B native and 344 B browser/WASM; its dry path remains immediate, and `process()` allocates nothing. The HeadRush-inspired Stereo On/Off choice changes LFO phase linkage only and adds no delay buffer. These are project costs, not manufacturer DSP figures.
+
+`make bench-headrush-phaser-stereo` measured 20,000 warm-up-excluded stereo callbacks per profile on AMD Ryzen 9 5950X Release: 48 kHz, 128 frames, 2.667 ms callback budget. Percentages are the entire Phaser processor-call duration divided by that callback budget.
+
+| Project profile | p50 | p95 | p99 | p99.9 | Max | Native state | Fixed latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 stages, Stereo On | 0.072% | 0.089% | 0.108% | 0.296% | 0.787% | 360 B | 0 frames | 0/20,000 |
+| 6 stages, Stereo On | 0.099% | 0.123% | 0.149% | 0.321% | 1.033% | 360 B | 0 frames | 0/20,000 |
+| 8 stages, Stereo On | 0.127% | 0.159% | 0.186% | 0.596% | 1.688% | 360 B | 0 frames | 0/20,000 |
+| 10 stages, Stereo On | 0.157% | 0.158% | 0.217% | 0.572% | 2.138% | 360 B | 0 frames | 0/20,000 |
+| 12 stages, Stereo On | 0.192% | 0.192% | 0.245% | 0.464% | 8.231% | 360 B | 0 frames | 0/20,000 |
+| 6 stages, Stereo Off | 0.099% | 0.099% | 0.148% | 0.662% | 1.337% | 360 B | 0 frames | 0/20,000 |
+
+The 12-stage maximum is an OS scheduling outlier; measured callback execution remained below the 2.667 ms budget. `make web-test-fender-phaser-90-tap-division` passed native coverage, all 123 CTest cases, local prerecorded guitar Play in the categorized Modulation Phaser, and browser/native comparison. The 4/12-stage Play output RMS difference was 0.085007. `make windows-cross-build` passed. Human/device listening and target-device timing remain open; desktop processor-call timing is not a tablet performance guarantee.
+
 ## Fender Tone Master Pro Tremolo LFO Clip (2026-11-26)
 
 LFO clipping is applied to the existing normalized oscillator value before tremolo gain is calculated. Zero percent bypasses the clipping math and preserves the previous output exactly. At nonzero amounts, the project maps the selected percentage to a symmetric threshold from 1.0 to 0.5, clamps the bipolar LFO, and normalizes it back to its full range. The clip amount is prepared once per `process()` call; the callback uses no extra buffer, fixed latency, or heap allocation. Native state is 96 B; the browser/WASM effect state is 84 B.

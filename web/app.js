@@ -14103,6 +14103,8 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
         phaserTempoBpm.min !== "20" || phaserTempoBpm.max !== "300" ||
         phaserTempoBpm.value !== "120" || !phaserTempoBpm.disabled ||
         !phaserStereo.checked || phaserStereoValue.value !== "On" ||
+        phaserStages.options.length !== 5 ||
+        [...phaserStages.options].map((option) => option.value).join(",") !== "4,6,8,10,12" ||
         DEFAULT_PARAMETERS.phaser.length !== 10 ||
         DEFAULT_PARAMETERS.phaser[9] !== 1 ||
         !(effectMemory[18] > 0)) {
@@ -14187,6 +14189,7 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
       peaks: [freeRatePeak.peak, quarterAt120Peak.peak, quarterAt60Peak.peak,
         stereoOn.peak, stereoOff.peak],
       projectStereoControl: { on: true, off: false, outputDifferenceRms: stereoDifferenceRms },
+      stageComparison: { referenceStages: 4, comparedStages: 12, outputDifferenceRms: stageDifferenceRms },
       effectMemoryBytes: effectMemory[18],
     };
   } finally {

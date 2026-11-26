@@ -745,6 +745,22 @@ FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+PHASER_STAGE_COUNTS_STEREO_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/headrush_phaser_stereo_bench.cpp",
+    "include/tabletfx/effects/phaser.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "src/effects/phaser.cpp",
+    "tests/test_phaser.cpp",
+    "web/app.js",
+    "web/index.html",
+)
 FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -3237,6 +3253,10 @@ CHECKPOINTS = {
         FENDER_PHASER_90_TAP_DIVISION_CHECKPOINT_PATHS,
         "feat: add Phaser 90 Tap Division tempo sync",
     ),
+    "phaser-stage-controls": (
+        PHASER_STAGE_COUNTS_STEREO_CHECKPOINT_PATHS,
+        "feat: extend Phaser stages and stereo control",
+    ),
     "fender-tremolo-lfo-clip": (
         FENDER_TREMOLO_LFO_CLIP_CHECKPOINT_PATHS,
         "feat: add project-authored Tremolo LFO Clip",
@@ -4081,6 +4101,64 @@ def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
             "Expected at least one checkpoint-specific patch hunk, found none"
         )
     return "".join(header + [line for hunk in selected for line in hunk]), len(hunks), len(selected)
+
+
+PARTIAL_CHECKPOINT_HUNKS["phaser-stage-controls"] = {
+    "EFFECTS_MATRIX.md": ("4/6/8/10/12 stages",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "Phaser stage choices and HeadRush Prime Stereo toggle (2026-11-27)",
+        "4/8/10/12 are available at existing Modulation ID 18",
+        "project-authored Stereo toggle is now in the existing Modulation Phaser",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "six Play captures include Stereo On/Off",
+        "## Fender Tone Master Pro Phaser stage choices (2026-11-27)",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Phaser stage-count and stereo control measurements (2026-11-27)",
+    ),
+    "RESEARCH.md": (
+        "## HeadRush Prime Orange Phaser Stereo control (2026-11-27)",
+        "## Fender Tone Master Pro Phaser stages (2026-11-27)",
+    ),
+    "apps/headrush_phaser_stereo_bench.cpp": ("profile=phaser_stage_count_",),
+    "include/tabletfx/effects/phaser.hpp": (
+        "bool stereo = true;",
+        "kMaximumStages = 12",
+    ),
+    "make/publish.mk": (
+        "phaser-stage-controls",
+        "bench-headrush-phaser-stereo",
+    ),
+    "research-state.json": (
+        '"previous_checkpoint_commit": "c6463464671a0a5084fcafdcb766716df7fc76dd"',
+        '"name": "Fender Phaser stage choices and HeadRush Prime Orange Phaser Stereo control"',
+        '"next_feature": "Implement the project-scoped Dynamics Sidechain detector',
+    ),
+    "scripts/publish_checkpoint.py": (
+        "PHASER_STAGE_COUNTS_STEREO_CHECKPOINT_PATHS",
+        '"phaser-stage-controls": (',
+        'PARTIAL_CHECKPOINT_HUNKS["phaser-stage-controls"]',
+    ),
+    "src/effects/phaser.cpp": (
+        "parameters.stages != 10",
+        "!parameters_.stereo",
+    ),
+    "tests/test_phaser.cpp": (
+        "phaser rejected ten stages",
+        "test_stereo_toggle_and_default_compatibility",
+        "selectable 4/6/8/10/12-stage phasers",
+    ),
+    "web/app.js": (
+        "phaserStages.options.length !== 5",
+        "stageComparison",
+    ),
+    "web/index.html": (
+        "graphic showing 4/8/10/12",
+        'option value="10">10 stages',
+        "phaser-stereo",
+    ),
+}
 
 
 def stage_partial_path(

@@ -26,6 +26,7 @@ PUBLISH_CHECKPOINTS += fractal-source-correction
 PUBLISH_CHECKPOINTS += fractal-chorus-voice-count
 PUBLISH_CHECKPOINTS += fractal-chorus-delay-range
 PUBLISH_CHECKPOINTS += axom-source-audit
+PUBLISH_CHECKPOINTS += phaser-stage-controls
 
 .PHONY: inspect-stadium-delay-trails
 inspect-stadium-delay-trails:

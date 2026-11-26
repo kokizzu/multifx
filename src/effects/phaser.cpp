@@ -33,7 +33,8 @@ void Phaser::set_parameters(PhaserParameters parameters) noexcept {
     if (parameters.minimum_hz > parameters.maximum_hz) {
         std::swap(parameters.minimum_hz, parameters.maximum_hz);
     }
-    if (parameters.stages != 4 && parameters.stages != 6 && parameters.stages != 8) {
+    if (parameters.stages != 4 && parameters.stages != 6 && parameters.stages != 8 &&
+        parameters.stages != 10 && parameters.stages != 12) {
         parameters.stages = 4;
     }
     if (parameters.stages != previous_stages) {
