@@ -571,8 +571,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_convolution_reverb(this.chain, ...convolutionReverb);
       const flanger = parameters.flanger || [0.25, 2, 1, 0.35, 0, 0.35, 180, 0, 120, 4, 0, 0.35];
       module._tf_chain_set_flanger(this.chain, ...flanger);
-      const phaser = parameters.phaser || [0.5, 250, 1600, 0.2, 4, 0.5, 0, 120, 4];
-      module._tf_chain_set_phaser(this.chain, ...phaser);
+      const phaser = Array.from(
+        parameters.phaser || [0.5, 250, 1600, 0.2, 4, 0.5, 0, 120, 4, 1],
+      );
+      const phaserWithStereo = phaser.length === 9 ? [...phaser, 1] : phaser;
+      module._tf_chain_set_phaser(this.chain, ...phaserWithStereo);
       const notchFilter = parameters.notchFilter || [1000, 4, 1];
       module._tf_chain_set_notch_filter(this.chain, ...notchFilter);
       const reverseDelay = parameters.reverseDelay ||

@@ -3024,7 +3024,32 @@ PITCH_RING_MOD_CHECKPOINT_PATHS = (
     "web/index.html",
 )
 
+HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/headrush_phaser_stereo_bench.cpp",
+    "include/tabletfx/effects/phaser.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "src/effects/phaser.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_phaser.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
 CHECKPOINTS = {
+    "headrush-phaser-stereo": (
+        HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS,
+        "feat: add project-authored Phaser stereo spread control",
+    ),
     "pitch-ring-mod": (
         PITCH_RING_MOD_CHECKPOINT_PATHS,
         "feat: add project-authored Pitch Ring Mod effect",
@@ -3498,6 +3523,50 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "headrush-phaser-stereo": {
+        "CMakeLists.txt": ("headrush_phaser_stereo_bench",),
+        "EFFECTS_MATRIX.md": (
+            "Current HeadRush Prime Orange Phaser Stereo checkpoint",
+        ),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "## HeadRush Prime Orange Phaser Stereo control",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## HeadRush Prime Orange Phaser Stereo control",
+        ),
+        "LATENCY_AND_QUALITY.md": (
+            "## HeadRush Prime Orange Phaser Stereo project control",
+        ),
+        "RESEARCH.md": (
+            "## HeadRush Prime Orange Phaser Stereo control",
+        ),
+        "include/tabletfx/effects/phaser.hpp": ("bool stereo = true;",),
+        "make/publish.mk": ("headrush-phaser-stereo",),
+        "research-state.json": (
+            "HeadRush Prime Orange Phaser Stereo control",
+        ),
+        "scripts/publish_checkpoint.py": (
+            "HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS",
+            '"headrush-phaser-stereo": (',
+            '"headrush-phaser-stereo": {',
+        ),
+        "scripts/run_cmake.py": ("bench_headrush_phaser_stereo",),
+        "src/effects/phaser.cpp": ("!parameters_.stereo",),
+        "src/web/wasm_chain.cpp": (
+            "std::uint32_t tap_division, std::uint32_t stereo",
+            "parameters.stereo = stereo != 0U;",
+        ),
+        "tests/test_phaser.cpp": ("test_stereo_toggle_and_default_compatibility",),
+        "web/app.js": (
+            "phaserStereo",
+            "projectStereoControl",
+        ),
+        "web/audio-worklet.js": ("phaserWithStereo",),
+        "web/index.html": (
+            "phaser-stereo",
+            "HeadRush Prime · project-authored control roles",
+        ),
+    },
     "pitch-ring-mod": {
         "CMakeLists.txt": ("pitch_ring_mod",),
         "EFFECTS_MATRIX.md": (

@@ -1,5 +1,11 @@
 # Research and source audit
 
+## HeadRush Prime Orange Phaser Stereo control (2026-11-27)
+
+The official [Prime v5.0.0 User Guide](https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf), §4.4.2, printed p. 23/PDF p. 24, shows Orange Phaser controls Rate, Stereo On/Off, and Sync On/Off. The screenshot displays 0.6 Hz with Stereo On; those are examples, not stated ranges/defaults. The manual does not define the Stereo toggle's signal-flow semantics or persistence scope. Official [v5.2.0 firmware notes](https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf), dated October 2026, do not identify an Orange Phaser change. Whether the older manual fully applies to v5.2.0 and the firmware on any particular unit remain unverified. The [downloads page](https://www.headrushfx.com/downloads) lists the v5.2.0 guide/update materials.
+
+TabletFX adds a project-authored Stereo control to the existing Phaser at Modulation ID 18. On retains the prior opposing L/R LFO phase; Off synchronizes both channels to the same phase. This is not asserted to match Prime's undocumented control semantics, settings, or algorithm. Tests, browser local-DI output comparison, Windows compilation, state, and measured callback percentages are recorded in `IMPLEMENTATION_CHECKLIST.md` and `LATENCY_AND_QUALITY.md`.
+
 ## Line 6 Helix Stadium Pitch Ring Mod source and project implementation (2026-11-27)
 
 The current official [Helix Stadium model catalogue](https://line6.com/helix-stadium-models/) lists Pitch Ring Mod under Modulation as a Stereo Line 6 Original, with initial appearance in firmware 1.0. The live [Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) selector reads v1.4 Rev D / v1.3 Rev B / v1.2. It describes Modulation as a broad category and notes that it does not document every model parameter; the checked Pitch Ring Mod references contain no exact algorithm, control names, parameter ranges/defaults, DSP, or latency. [Hardware v1.4.2 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes), dated 2026-10-27, do not mention this effect. Installed hardware firmware is unknown.

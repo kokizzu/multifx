@@ -261,6 +261,7 @@ PUBLISH_CHECKPOINTS += fractal-surround-delay
 PUBLISH_CHECKPOINTS += tone-master-small-hall
 PUBLISH_CHECKPOINTS += fractal-plex-shift
 PUBLISH_CHECKPOINTS += pitch-ring-mod
+PUBLISH_CHECKPOINTS += headrush-phaser-stereo
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -333,6 +334,10 @@ web-test-fractal-diatonic-harmonizer: web-build
 
 bench-fractal-diatonic-harmonizer:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-diatonic-harmonizer
+
+.PHONY: bench-headrush-phaser-stereo
+bench-headrush-phaser-stereo:
+	$(PYTHON) scripts/run_cmake.py bench-headrush-phaser-stereo
 
 .PHONY: sync-primary-main-plan sync-primary-main-apply
 sync-primary-main-plan:

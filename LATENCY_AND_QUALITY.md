@@ -1,5 +1,18 @@
 # Latency, quality, and DSP-load protocol
 
+## HeadRush Prime Orange Phaser Stereo project control (2026-11-27)
+
+Prime v5.0.0 User Guide §4.4.2, printed p. 23/PDF p. 24, shows an Orange Phaser Stereo toggle but does not define its signal behavior, numeric settings, default, or persistence. The v5.2.0 firmware notes (October 2026) do not mention an Orange Phaser change; installed firmware is unknown. TabletFX adds a project-authored toggle to the existing Phaser: on preserves the processor's previous opposite L/R LFO phases, off links them. It adds no audio delay, buffer, or `process()` allocation. Native state is 296 B; browser/WASM reports 280 B.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks, and 20,000 measured callbacks. Values are full Phaser processor time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Fixed added latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Stereo on (default) | 0.099% | 0.141% | 0.147% | 0.578% | 1.618% | 296 B | 0 frames | 0/20,000 |
+| Stereo off | 0.099% | 0.099% | 0.145% | 0.299% | 1.143% | 296 B | 0 frames | 0/20,000 |
+
+The benchmark profiles include the full Phaser and do not isolate marginal toggle cost; short-run percentile variance is visible in the tail. The local prerecorded Guitar-TECHS DI browser smoke observes output-difference RMS 0.05312 between Stereo on/off. These desktop measurements are not a target-device or full-chain performance guarantee. Native, browser/WASM, and Windows build checks pass; listening and hardware comparison remain manual, and no HeadRush DSP or sound parity is claimed.
+
 ## Line 6 Helix Stadium Pitch Ring Mod project effect (2026-11-27)
 
 The Stadium model catalogue lists Pitch Ring Mod as a Stereo Line 6 Original in Modulation, first appearing in v1.0. The live manual selector is v1.4 Rev D / v1.3 Rev B / v1.2, but no model-specific parameter table was available. The project-authored kernel uses a bounded monophonic autocorrelation tracker on the mono average of the channels. Its carrier is shared across stereo output; chords and noisy/polyphonic input can mislead the tracker. Project defaults are Carrier Ratio 1.0, Fallback Pitch 110 Hz, Tracking Confidence 0.55, Mix 0.5, and Level 0 dB. Project bounds are recorded in `IMPLEMENTATION_CHECKLIST.md`.

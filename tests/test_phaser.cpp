@@ -94,6 +94,62 @@ void test_defaults_bounds_and_stage_choices() {
             "non-finite phaser parameters did not use safe defaults");
 }
 
+void test_stereo_toggle_and_default_compatibility() {
+    // Preserve source compatibility for callers that aggregate-initialize the
+    // previous parameter fields and rely on trailing defaults.
+    const tabletfx::PhaserParameters legacy_parameters{
+        1.3F, false, 120.0F, tabletfx::DelayDivision::quarter,
+        150.0F, 2800.0F, 0.0F, 4, 1.0F, 0.0F};
+    require(legacy_parameters.stereo,
+            "omitting the new trailing stereo field changed legacy defaults");
+
+    auto defaults = legacy_parameters;
+    auto explicit_stereo = legacy_parameters;
+    explicit_stereo.stereo = true;
+    tabletfx::Phaser default_phaser(48000.0F, 2, defaults);
+    tabletfx::Phaser explicit_stereo_phaser(48000.0F, 2, explicit_stereo);
+    std::array<float, 4096> default_output{};
+    for (std::size_t frame = 0; frame < default_output.size() / 2; ++frame) {
+        const float sample = 0.4F * std::sin(
+            2.0F * 3.14159265358979323846F * 437.0F *
+            static_cast<float>(frame) / 48000.0F);
+        default_output[frame * 2] = sample;
+        default_output[frame * 2 + 1] = sample;
+    }
+    auto explicit_output = default_output;
+    default_phaser.process(default_output, 2);
+    explicit_stereo_phaser.process(explicit_output, 2);
+    require(default_output == explicit_output,
+            "default stereo mode differs from explicit legacy stereo behavior");
+    bool stereo_channels_differ = false;
+    for (std::size_t frame = 0; frame < default_output.size() / 2; ++frame) {
+        stereo_channels_differ = stereo_channels_differ ||
+            std::abs(default_output[frame * 2] - default_output[frame * 2 + 1]) > 1.0e-5F;
+    }
+    require(stereo_channels_differ,
+            "stereo-enabled phaser no longer uses opposing L/R LFO sweeps");
+
+    auto linked = legacy_parameters;
+    linked.stereo = false;
+    tabletfx::Phaser linked_phaser(48000.0F, 2, legacy_parameters);
+    linked_phaser.set_parameters(linked);
+    require(!linked_phaser.parameters().stereo,
+            "phaser parameter update did not retain stereo-off state");
+    std::array<float, 4096> linked_output{};
+    for (std::size_t frame = 0; frame < linked_output.size() / 2; ++frame) {
+        const float sample = 0.4F * std::sin(
+            2.0F * 3.14159265358979323846F * 437.0F *
+            static_cast<float>(frame) / 48000.0F);
+        linked_output[frame * 2] = sample;
+        linked_output[frame * 2 + 1] = sample;
+    }
+    linked_phaser.process(linked_output, 2);
+    for (std::size_t frame = 0; frame < linked_output.size() / 2; ++frame) {
+        require(linked_output[frame * 2] == linked_output[frame * 2 + 1],
+                "stereo-off phaser did not link L/R sweep phase");
+    }
+}
+
 void test_tempo_sync_divisions() {
     constexpr std::array<float, 14> expected_rates{
         0.5F, 2.0F / 3.0F, 1.0F, 4.0F / 3.0F, 2.0F, 3.0F,
@@ -344,6 +400,7 @@ int main() {
     try {
         test_defaults_bounds_and_stage_choices();
         test_tempo_sync_divisions();
+        test_stereo_toggle_and_default_compatibility();
         test_notch_and_selectable_stages();
         test_dry_mix_stereo_and_modulation();
         test_smoothing_blocks_reset_and_feedback_stability();

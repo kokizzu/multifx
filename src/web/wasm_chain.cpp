@@ -3227,6 +3227,7 @@ public:
         parameters.feedback = feedback;
         parameters.stages = static_cast<std::uint8_t>(stages);
         parameters.mix = mix;
+        parameters.stereo = stereo != 0U;
         static_cast<tabletfx::Phaser*>(effects_[18].effect.get())
             ->set_parameters(parameters);
     }
@@ -5458,7 +5459,7 @@ TABLETFX_WASM_EXPORT void tf_chain_set_phaser(
     void* opaque, float rate_hz, float minimum_hz, float maximum_hz,
     float feedback, std::uint32_t stages, float mix,
     std::uint32_t tempo_sync, float tempo_bpm,
-    std::uint32_t tap_division) noexcept {
+    std::uint32_t tap_division, std::uint32_t stereo) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_phaser(rate_hz, minimum_hz, maximum_hz,
                                            feedback, stages, mix, tempo_sync,

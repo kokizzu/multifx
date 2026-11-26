@@ -20,6 +20,9 @@ struct PhaserParameters {
     std::uint8_t stages = 4;
     float mix = 0.5F;
     float smoothing_ms = 10.0F;
+    // Project-authored stereo LFO phase spread. Kept last so callers using the
+    // previous aggregate fields retain the default stereo behavior.
+    bool stereo = true;
 };
 
 // Modulated first-order all-pass stages create the moving phaser notches.

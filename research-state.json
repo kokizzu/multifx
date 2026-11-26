@@ -4,31 +4,30 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "430a87ece812590e0b59bd25375907cdb1884914",
+  "previous_checkpoint_commit": "2542f135115bac5c751ee66e469dca725a7df3fa",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium Pitch Ring Mod",
-    "status": "Current model catalog entry verified; project-authored categorized Modulation ID 121 passes native, browser/WASM local-guitar, Windows, and CPU/memory checks; manual/device validation remains. Exact Line 6 algorithm parameters are undocumented in checked sources.",
+    "name": "HeadRush Prime Orange Phaser Stereo control",
+    "status": "Prime manual control documented; project-authored Stereo control integrated into categorized Phaser ID 18 and verified natively, in browser/WASM with local guitar, on Windows cross-build, and with callback CPU/memory measurements. Hardware listening and device validation remain; exact Prime Stereo semantics are undocumented.",
     "date": "2026-11-27",
-    "picker_index": 121,
+    "picker_index": 18,
     "category": "Modulation",
     "official_source": {
-      "title": "Line 6 Helix Stadium model catalog, Effects manual, and hardware release notes",
-      "revision": "Model catalog checked 2026-11-27: Pitch Ring Mod is a Stereo Line 6 Original in Modulation, initial appearance 1.0. Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware v1.4.2 notes dated 2026-10-27; installed firmware unknown.",
-      "url": "https://line6.com/helix-stadium-models/",
-      "manual_url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "firmware_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "The catalog verifies model name, category, stereo format, and first appearance. The checked manual has no model-specific control table; algorithm, ranges/defaults, DSP, latency, and installed firmware remain unknown."
+      "title": "HeadRush Prime User Guide and firmware update notes",
+      "revision": "v5.0.0 User Guide, section 4.4.2, printed p. 23/PDF p. 24; firmware notes checked through v5.2.0, October 2026. Installed Prime firmware unknown.",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+      "firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+      "qualification": "The older manual screenshot shows Orange Phaser Rate, Stereo On/Off, and Sync On/Off. It does not define Stereo semantics, ranges/defaults, or persistence. The v5.2.0 notes do not identify a Phaser change; applicability of v5.0 controls to later firmware is not established."
     },
-    "documented_controls": "No model-specific Pitch Ring Mod controls are listed in the checked manual; generic Modulation category descriptions only.",
-    "project_controls": "Project-authored monophonic pitch-tracked ring modulator at Modulation picker ID 121, disabled by default. Carrier Ratio 0.25–4.0 (1.0); Fallback Pitch 55–880 Hz (110 Hz); Tracking Confidence 0.20–0.98 (0.55); Mix 0–1 (0.5); Level −24…+12 dB (0 dB). Chords/noisy signals can be tracked inaccurately. Zero fixed audio-path latency; tracking warm-up 42.7 ms and 220→440 Hz response 48 ms.",
+    "documented_controls": "Orange Phaser shows Rate, Stereo On/Off, and Sync On/Off. The pictured 0.6 Hz and Stereo On values are examples, not ranges/defaults. Stereo signal behavior is not explained.",
+    "project_controls": "Project-authored Stereo toggle on the existing Phaser at Modulation picker ID 18. Default On preserves prior opposing left/right LFO phases; Off links both channels. This is a useful project stereo spread control, not a verified Prime behavior mapping. It adds no buffer or fixed latency.",
     "verification": {
-      "native": "make test-pitch-ring-mod passes focused defaults/bounds, tracking, fallback, stereo, finite-output, partitioning, reset, and no-allocation checks; make test passes documentation validation, 13 fixture-safety checks, and 122/122 CTests.",
-      "browser": "make web-browser-test passes HeadlessChrome 151, Modulation picker ID 121, two local prerecorded stereo Guitar-TECHS DI Play captures with responsive profiles, and full browser/native comparison. Browser effect state is 2,148 B.",
-      "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
-      "latency_memory": "Native object state 2,176 B; estimator temporary stack scratch about 7,180 B; processing allocations 0. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 measured: p50/p95/p99/p99.9/max 1.0065/1.0812/1.2739/2.1676/4.3437% of 2.667 ms; 0 deadline misses. Tracker warm-up 42.7 ms, 220→440 Hz response 48 ms, silence-to-fallback 26.7 ms. Browser timer granularity is too coarse for isolated CPU reporting; host timings are not tablet predictions.",
-      "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
+      "native": "make test passes documentation validation, 13 fixture-safety tests, and all 122 CTest cases; Phaser tests cover legacy/default output, linked-channel behavior, toggling, and no process-time allocation.",
+      "browser": "make web-test-fender-phaser-90-tap-division passes HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. Five Play captures include Stereo On/Off output difference RMS 0.05312; full browser/native chain comparison passes. WASM Phaser effect state is 280 B.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
+      "latency_memory": "Native state is 296 B; WASM effect state 280 B; no new audio buffer, processing allocation, or fixed latency. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 20,000 callbacks per profile: Stereo On p50/p95/p99/p99.9/max 0.099/0.141/0.147/0.578/1.618%; Off 0.099/0.099/0.145/0.299/1.143% of a 2.667 ms callback. These are whole-Phaser measurements, not marginal toggle cost.",
+      "diff_check": "make test and make diff-check pass; no workflow files are included in this checkpoint."
     },
-    "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 algorithm, settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Prime comparison, installed firmware confirmation, and target-device timing remain open. No HeadRush algorithm, settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",

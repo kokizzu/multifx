@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## HeadRush Prime Orange Phaser Stereo control (2026-11-27)
+
+- [x] Check Prime v5.0.0 User Guide §4.4.2, printed p. 23/PDF p. 24: Orange Phaser displays Rate, Stereo On/Off, and Sync On/Off. The screenshot's 0.6 Hz and Stereo On are examples, not documented ranges/defaults. The guide does not explain Stereo semantics. Current official update notes are v5.2.0 (October 2026) and do not identify a Phaser change; later-manual applicability and installed firmware remain unknown.
+- [x] Add a project-authored Stereo toggle to existing Phaser at Modulation picker ID 18. Default On preserves prior output; On keeps the existing opposite L/R LFO phase, Off links both channels to one phase. This is not a verified Prime behavior match and adds no buffer or fixed delay.
+- [x] `make test` passes documentation validation, 13 fixture-safety checks, and all 122 CTest cases. Phaser tests cover stereo defaults/compatibility, linked-channel output, toggling, and no process-time allocation.
+- [x] `make web-test-fender-phaser-90-tap-division` passes with HeadlessChrome 151 and local prerecorded stereo Guitar-TECHS DI. The categorized Phaser row is Modulation ID 18; five captures include an On/Off comparison (output-difference RMS 0.05312), and the full browser/native chain comparison passes. Browser-reported Phaser effect state is 280 B.
+- [x] `make windows-cross-build` passes the MinGW core and offline-renderer build. `make bench-headrush-phaser-stereo` on Ryzen 9 5950X Release at 48 kHz stereo/128-frame callbacks measures 20,000 blocks per profile: Stereo On p50/p95/p99/p99.9/max 0.099/0.141/0.147/0.578/1.618% of the 2.667 ms callback deadline; Off 0.099/0.099/0.145/0.299/1.143%. Both use 296 B native state, report finite output, have zero fixed path latency, and add no processor allocation. The percentiles measure the whole Phaser, not the marginal toggle cost.
+- [ ] Human listening, Prime hardware comparison, installed-firmware confirmation, and target-device timing remain manual. The guide does not publish Stereo's exact semantics, and desktop CPU results are not tablet guarantees.
+
 ## Line 6 Helix Stadium Pitch Ring Mod (2026-11-27)
 
 - [x] Check the current Stadium model catalogue and live Effects manual. The catalogue lists Pitch Ring Mod as a Stereo Line 6 Original in Modulation, first appearing in v1.0. The manual selector is v1.4 Rev D / v1.3 Rev B / v1.2 but supplies no model-specific parameter table; firmware v1.4.2 notes dated 2026-10-27 do not mention this effect. Exact algorithm/controls/ranges/defaults/DSP/latency and installed device firmware remain unknown.

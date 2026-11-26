@@ -1735,6 +1735,8 @@ const phaserFeedbackValue = document.querySelector("#phaser-feedback-value");
 const phaserStages = document.querySelector("#phaser-stages");
 const phaserMix = document.querySelector("#phaser-mix");
 const phaserMixValue = document.querySelector("#phaser-mix-value");
+const phaserStereo = document.querySelector("#phaser-stereo");
+const phaserStereoValue = document.querySelector("#phaser-stereo-value");
 const vibratoRate = document.querySelector("#vibrato-rate-hz");
 const vibratoRateValue = document.querySelector("#vibrato-rate-value");
 const vibratoDepth = document.querySelector("#vibrato-depth-ms");
@@ -6988,6 +6990,7 @@ function updatePhaser() {
     Number(phaserRate.value), minimumHz, maximumHz,
     Number(phaserFeedback.value), Number(phaserStages.value), Number(phaserMix.value),
     tempoSync ? 1 : 0, tempoBpm, division,
+    phaserStereo.checked ? 1 : 0,
   ];
   DEFAULT_PARAMETERS.phaser = values;
   phaserRateValue.value = tempoSync
@@ -6998,11 +7001,13 @@ function updatePhaser() {
   phaserFeedbackValue.value = `${Number(phaserFeedback.value).toFixed(2)}`;
   phaserMixValue.value = `${Math.round(Number(phaserMix.value) * 100)}%`;
   phaserTempoBpmValue.value = `${tempoBpm.toFixed(0)} BPM`;
+  phaserStereoValue.value = phaserStereo.checked ? "On" : "Off";
   if (workletNode) workletNode.port.postMessage({ type: "phaser", value: values });
 }
 
 for (const control of [phaserRate, phaserMinimum, phaserMaximum,
-  phaserFeedback, phaserStages, phaserMix, phaserTapDivision, phaserTempoBpm]) {
+  phaserFeedback, phaserStages, phaserMix, phaserTapDivision, phaserTempoBpm,
+  phaserStereo]) {
   control.addEventListener("input", updatePhaser);
   control.addEventListener("change", updatePhaser);
 }
@@ -14024,7 +14029,8 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
   const previousCategory = effectCategoryFilter.value;
   const previousControls = [phaserRate.value, phaserTapDivision.value,
     phaserTempoBpm.value, phaserMinimum.value, phaserMaximum.value,
-    phaserFeedback.value, phaserStages.value, phaserMix.value];
+    phaserFeedback.value, phaserStages.value, phaserMix.value,
+    phaserStereo.checked];
   try {
     await processorReady;
     if (!workletNode || !decodedAudio || !audioContext ||
@@ -14042,6 +14048,9 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
         phaserRate.value !== "0.5" || phaserTapDivision.options.length !== 15 ||
         phaserTempoBpm.min !== "20" || phaserTempoBpm.max !== "300" ||
         phaserTempoBpm.value !== "120" || !phaserTempoBpm.disabled ||
+        !phaserStereo.checked || phaserStereoValue.value !== "On" ||
+        DEFAULT_PARAMETERS.phaser.length !== 10 ||
+        DEFAULT_PARAMETERS.phaser[9] !== 1 ||
         !(effectMemory[18] > 0)) {
       throw new Error("Phaser Tap Division controls or unchanged free-rate default are invalid.");
     }
@@ -14061,6 +14070,7 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
       phaserRate.value = String(rateHz);
       phaserTapDivision.value = tapDivision;
       phaserTempoBpm.value = String(bpm);
+      phaserStereo.checked = stereo;
       updatePhaser();
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
@@ -14096,6 +14106,20 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
     if (phaserRateValue.value !== "1.00 Hz · sync") {
       throw new Error("Phaser 90 quarter-note sync did not follow the tempo change to 60 BPM.");
     }
+    const stereoOn = await captureAt("free", 120, 0.5, true);
+    const stereoOff = await captureAt("free", 120, 0.5, false);
+    let stereoDifferenceSquares = 0;
+    for (let index = 0; index < stereoOn.output.length; index += 1) {
+      const difference = stereoOn.output[index] - stereoOff.output[index];
+      stereoDifferenceSquares += difference * difference;
+    }
+    const stereoDifferenceRms = Math.sqrt(
+      stereoDifferenceSquares / Math.max(1, stereoOn.output.length),
+    );
+    if (stereoDifferenceRms < 1e-6 || phaserStereoValue.value !== "Off" ||
+        DEFAULT_PARAMETERS.phaser[9] !== 0) {
+      throw new Error(`Project Phaser Stereo switch did not change local guitar output: RMS=${stereoDifferenceRms}.`);
+    }
     return {
       category: "Modulation",
       effectId: 18,
@@ -14105,15 +14129,17 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
       freeRateDefaultHz: 0.5,
       quarterAt120Hz: 2,
       quarterAt60Hz: 1,
-      playCaptures: 3,
-      peaks: [freeRatePeak, quarterAt120Peak, quarterAt60Peak],
+      playCaptures: 5,
+      peaks: [freeRatePeak.peak, quarterAt120Peak.peak, quarterAt60Peak.peak,
+        stereoOn.peak, stereoOff.peak],
+      projectStereoControl: { on: true, off: false, outputDifferenceRms: stereoDifferenceRms },
       effectMemoryBytes: effectMemory[18],
     };
   } finally {
     stopSource(false);
     [phaserRate.value, phaserTapDivision.value, phaserTempoBpm.value,
       phaserMinimum.value, phaserMaximum.value, phaserFeedback.value,
-      phaserStages.value, phaserMix.value] = previousControls;
+      phaserStages.value, phaserMix.value, phaserStereo.checked] = previousControls;
     updatePhaser();
     [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
       box.checked = previousEffectState[index];

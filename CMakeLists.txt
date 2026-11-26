@@ -159,6 +159,10 @@ add_executable(tabletfx_fender_tremolo_duty_cycle_bench
     apps/fender_tremolo_duty_cycle_bench.cpp)
 target_link_libraries(tabletfx_fender_tremolo_duty_cycle_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_headrush_phaser_stereo_bench
+    apps/headrush_phaser_stereo_bench.cpp)
+target_link_libraries(tabletfx_headrush_phaser_stereo_bench PRIVATE tabletfx_core)
+
 add_executable(tabletfx_tone_master_pro_3d_chorus_bench
     apps/tone_master_pro_3d_chorus_bench.cpp)
 target_link_libraries(tabletfx_tone_master_pro_3d_chorus_bench PRIVATE tabletfx_core)

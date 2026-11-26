@@ -138,7 +138,8 @@ void Phaser::process(std::span<float> interleaved,
         for (std::uint16_t channel = 0; channel < channels_; ++channel) {
             const std::size_t index = input_offset + channel;
             const float dry = std::isfinite(interleaved[index]) ? interleaved[index] : 0.0F;
-            const float phase = channel == 0 ? sine_phase_ : -sine_phase_;
+            const float phase = channel == 0 || !parameters_.stereo
+                ? sine_phase_ : -sine_phase_;
             const float sweep = 0.5F * (phase + 1.0F);
             const float coefficient = current_minimum_coefficient_ +
                 (current_maximum_coefficient_ - current_minimum_coefficient_) * sweep;
