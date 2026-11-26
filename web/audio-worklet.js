@@ -41,6 +41,7 @@ EFFECTS.push("tone-master-pro-3d-chorus");
 EFFECTS.push("fractal-surround-delay");
 EFFECTS.push("fender-memory-delay");
 EFFECTS.push("tone-master-small-hall");
+EFFECTS.push("tone-master-modulated-large-hall");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -605,6 +606,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_limiter(this.chain, ...limiter);
       this.configureToneMasterSmallHall(parameters.toneMasterSmallHall ||
         [0.25, 3.2, 0, 0.6, 0.3, 0.15, 0, 0, 0]);
+      this.configureToneMasterModulatedLargeHall(
+        parameters.toneMasterModulatedLargeHall ||
+        [0.28, 6.5, 1, 0.74, 0.23, 0.2, -1.5, -0.5, 0],
+      );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
         effectMemoryBytes.push(module._tf_chain_effect_memory_bytes(this.chain, i));
@@ -1212,6 +1217,20 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureToneMasterModulatedLargeHall(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        values.length !== 9) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    this.module.HEAPF32.set(values, pointer >>> 2);
+    this.module._tf_chain_set_tone_master_modulated_large_hall(
+      this.chain, pointer, values.length,
+    );
+    this.module._free(pointer);
+  }
+
   configureEnhancer(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
       return;
@@ -1515,6 +1534,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       );
     } else if (message.type === "tone-master-small-hall" && this.ready) {
       this.configureToneMasterSmallHall(message.value);
+    } else if (message.type === "tone-master-modulated-large-hall" && this.ready) {
+      this.configureToneMasterModulatedLargeHall(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

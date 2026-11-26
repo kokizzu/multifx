@@ -1,5 +1,14 @@
 # Implementation checklist
 
+## Fender Tone Master Pro Modulated Large Hall (2026-11-27)
+
+- [x] Verify the exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 55. It lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover; High/Low Cut are post-reverb shelf gains. The guide supplies no numeric ranges/defaults, shelf pivots, modulation topology, DSP, or latency. Fender's current firmware history is v1.8.87 dated 2026-11-23; its notes do not mention this effect, and installed firmware is unknown.
+- [x] Add a project-authored four-line modulated FDN at Reverb picker ID 120, disabled by default. Project defaults: 28% Level, 6.5 s Decay, 1.00× Dwell, 74% Diffuse, 0.23 Hz Rate, 20% Depth, −1.5/−0.5 dB High/Low shelf gains, Spillover off. The control bounds and delay lengths are project choices; the picker does not claim Fender DSP or sound parity.
+- [x] `make test` passes documentation validation, 13 fixture-safety tests, and 121/121 CTests. Focused coverage checks control response, bounds, mono/stereo, finite output, bypass/spillover, memory, and no process-time allocation.
+- [x] `make web-build` and `make web-browser-test` pass. HeadlessChrome 151 runs the categorized Reverb slot and two local prerecorded stereo Guitar-TECHS DI Play captures with different parameter profiles. The full browser/native comparison remains within its existing tolerance.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build. `make bench` measures 0.618/0.773/0.937/1.188/1.847% p50/p95/p99/p99.9/max of a 2.667 ms callback at the project default, with 0/20,000 deadline misses. Native state is 118,184 B by `sizeof` plus vector capacity; browser/WASM reports 117,976 B. Process-time allocations are zero and fixed dry-path latency is zero.
+- [ ] Human listening, Tone Master Pro comparison, and target-device timing remain manual. These desktop measurements are not a tablet DSP guarantee; do not claim Fender DSP, parameter ranges/defaults, or sound parity.
+
 ## Fractal FM9-family Plex Shift (2026-11-26)
 
 - [x] Verify the current official Blocks Guide revision: November 2026 cover, 114 pages, Plex Shift controls on printed pp. 87–90. Keep it separate from Fractal's Plex Delay and Plex Detune algorithms; exact FM9 Mark II Turbo applicability remains unverified.

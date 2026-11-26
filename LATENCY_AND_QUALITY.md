@@ -1,5 +1,18 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Modulated Large Hall project effect (2026-11-27)
+
+The Fender Model Guide v1.1.100 / Rev. A, printed p. 55, lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover. High/Low Cut are shelf gains. It gives no numeric defaults/ranges, shelf pivots, DSP, or latency. TabletFX uses project-chosen controls and a four-line modulated FDN; the immediate dry path has zero added fixed latency. Native tests verify `process()` has no allocations. Native state accounting is `sizeof(object)` plus vector capacity and excludes allocator metadata; WASM effect state uses the chain's `memory_bytes()` report.
+
+Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks and 20,000 measured callbacks. Cost is isolated processor time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Project default | 0.618% | 0.773% | 0.937% | 1.188% | 1.847% | 118,184 B | 0/20,000 |
+| Maximum project decay/modulation | 0.618% | 0.656% | 0.895% | 1.179% | 1.806% | 118,184 B | 0/20,000 |
+
+The browser reports 117,976 B of effect state at 48 kHz stereo. Its HeadlessChrome timing source was millisecond-granularity fallback, so its per-callback CPU readings are too coarse for an isolated effect percentage; the native benchmark above is the reported DSP budget. The browser smoke verifies two project profiles produce finite, different output from local prerecorded stereo Guitar-TECHS DI. These are desktop measurements and are not a tablet or full-chain performance guarantee. Human listening, physical Tone Master Pro comparison, and target-device timing remain manual.
+
 ## Fender Tone Master Pro 3D Chorus project modes (2026-11-26)
 
 The exact-model Model Guide v1.1.100 / Rev. A, printed p. 42, documents four modes described from subtle to extreme; it does not specify their names, curves, numeric controls, stereo behavior, DSP, or latency. TabletFX implements four project-authored choices on one existing Chorus processor, defaulting to Mode 1. The implementation adds no separate fixed-delay stage or process-time allocation. At 48 kHz stereo the native state is 34,864 B and the focused browser/WASM effect state is 34,820 B.

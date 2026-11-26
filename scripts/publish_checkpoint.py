@@ -827,6 +827,28 @@ TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+TONE_MASTER_MODULATED_LARGE_HALL_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/tone_master_modulated_large_hall_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/tone_master_modulated_large_hall.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/tone_master_modulated_large_hall.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_tone_master_modulated_large_hall.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "research-state.json",
@@ -2983,6 +3005,10 @@ CHECKPOINTS = {
         TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS,
         "feat: add project-authored Modulated Small Hall",
     ),
+    "tone-master-modulated-large-hall": (
+        TONE_MASTER_MODULATED_LARGE_HALL_CHECKPOINT_PATHS,
+        "feat: add project-authored Modulated Large Hall",
+    ),
     "fender-3d-chorus": (
         (
             "CMakeLists.txt",
@@ -3444,6 +3470,62 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "tone-master-modulated-large-hall": {
+        "CMakeLists.txt": ("tone_master_modulated_large_hall",),
+        "EFFECTS_MATRIX.md": (
+            "Current Fender Tone Master Pro Modulated Large Hall checkpoint",
+        ),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "Research snapshot: **2026-11-27**",
+            "## Fender Tone Master Pro Modulated Large Hall",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## Fender Tone Master Pro Modulated Large Hall",
+        ),
+        "LATENCY_AND_QUALITY.md": (
+            "## Fender Tone Master Pro Modulated Large Hall project effect",
+        ),
+        "RESEARCH.md": (
+            "## Fender Tone Master Pro Modulated Large Hall source",
+        ),
+        "include/tabletfx/effects.hpp": (
+            "tone_master_modulated_large_hall.hpp",
+        ),
+        "make/publish.mk": (
+            ".PHONY: publish-tone-master-modulated-large-hall-plan stage-tone-master-modulated-large-hall",
+            "publish-tone-master-modulated-large-hall-plan:",
+            "stage-tone-master-modulated-large-hall:",
+        ),
+        "research-state.json": (
+            "Fender Tone Master Pro Modulated Large Hall",
+        ),
+        "scripts/publish_checkpoint.py": (
+            "TONE_MASTER_MODULATED_LARGE_HALL_CHECKPOINT_PATHS",
+            '"tone-master-modulated-large-hall": (',
+            "Minimal-context checkpoint patches",
+            "Keep context lines so Git anchors each selected edit",
+            "Show the exact checkpoint patch before publication",
+            "Validate staged minimal-context hunks",
+        ),
+        "scripts/run_cmake.py": ("tone_master_modulated_large_hall",),
+        "scripts/web.py": ("tone_master_modulated_large_hall",),
+        "src/web/wasm_chain.cpp": (
+            "tone_master_modulated_large_hall",
+            "effects_.size() + 27",
+        ),
+        "web/app.js": (
+            "toneMasterModulatedLargeHall",
+            "Modulated Large Hall",
+        ),
+        "web/audio-worklet.js": (
+            "tone-master-modulated-large-hall",
+            "configureToneMasterModulatedLargeHall",
+        ),
+        "web/index.html": (
+            "tone-master-modulated-large-hall",
+            "Modulated Large Hall",
+        ),
+    },
     "fender-3d-chorus": {
         "make/publish.mk": ("PUBLISH_CHECKPOINTS += fender-3d-chorus",),
     },
@@ -3681,7 +3763,8 @@ def stage_partial_path(
     path: str, markers: tuple[str, ...], *, allow_no_match: bool = False
 ) -> None:
     # Fractal Surround Delay checkpoint recovery reuses the exact marker selection.
-    diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
+    # Minimal-context checkpoint patches keep adjacent, unrelated edits out of the index.
+    diff = git("diff", "--no-ext-diff", "--unified=1", "--", path)
     try:
         patch, _, _ = select_patch_hunks(diff, markers)
     except SystemExit as error:
@@ -3696,6 +3779,7 @@ def stage_partial_path(
         ) as temporary:
             temporary.write(patch)
             temporary_path = Path(temporary.name)
+        # Keep context lines so Git anchors each selected edit at its exact source location.
         git("apply", "--cached", str(temporary_path), capture=False)
     finally:
         if temporary_path is not None:
@@ -3743,7 +3827,8 @@ def verify_partial_staging(
         if staged_paths is not None and path not in staged_paths:
             # Fractal Surround Delay checkpoint recovery validates staged files only.
             continue
-        diff = git("diff", "--cached", "--no-ext-diff", "--unified=3", "--", path)
+        # Validate staged minimal-context hunks with the same selector used during staging.
+        diff = git("diff", "--cached", "--no-ext-diff", "--unified=1", "--", path)
         try:
             _, hunk_count, selected_hunk_count = select_patch_hunks(diff, markers)
         except SystemExit as error:
@@ -3833,11 +3918,19 @@ def plan(checkpoint: str) -> list[str]:
     print(stat.rstrip() or "Untracked files are listed above; no tracked diff stat yet.")
     status = git("status", "--porcelain=v1", "--untracked-files=all")
     untracked = {line[3:] for line in status.splitlines() if line.startswith("?? ")}
-    print("Full reviewed patch:")
+    staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
+    partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
+    # Show the exact checkpoint patch before publication, including partial-file selections.
+    print("Exact patch selected for this checkpoint:")
     for path in paths:
-        staged_diff = git("diff", "--cached", "--", path)
-        unstaged_diff = git("diff", "--", path)
-        diff = staged_diff + unstaged_diff
+        staged_diff = git("diff", "--no-ext-diff", "--unified=1", "--cached", "--", path)
+        unstaged_diff = git("diff", "--no-ext-diff", "--unified=1", "--", path)
+        diff = staged_diff if path in staged_paths else unstaged_diff
+        if path in partial and diff:
+            try:
+                diff, _, _ = select_patch_hunks(diff, partial[path])
+            except SystemExit:
+                diff = ""
         if diff:
             print(diff, end="" if diff.endswith("\n") else "\n")
         elif path in untracked:

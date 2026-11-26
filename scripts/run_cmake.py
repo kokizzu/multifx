@@ -246,6 +246,12 @@ def main() -> None:
             else "tabletfx_tone_master_small_hall_bench"
         )
         run([str(tone_master_small_hall_benchmark)])
+        tone_master_modulated_large_hall_benchmark = BUILD_DIR / (
+            "tabletfx_tone_master_modulated_large_hall_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_tone_master_modulated_large_hall_bench"
+        )
+        run([str(tone_master_modulated_large_hall_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":

@@ -47,6 +47,7 @@
 #include "tabletfx/effects/ducking_delay.hpp"
 #include "tabletfx/effects/modulated_delay.hpp"
 #include "tabletfx/effects/tone_master_small_hall.hpp"
+#include "tabletfx/effects/tone_master_modulated_large_hall.hpp"
 #include "tabletfx/effects/optical_compressor.hpp"
 #include "tabletfx/effects/fet_compressor.hpp"
 #include "tabletfx/effects/five_band_eq.hpp"
@@ -155,6 +156,10 @@ public:
               static_cast<std::uint16_t>(channels), 2000.0F)),
           tone_master_small_hall_(
               std::make_unique<tabletfx::ToneMasterSmallHallReverb>(
+                  static_cast<float>(sample_rate),
+                  static_cast<std::uint16_t>(channels))),
+          tone_master_modulated_large_hall_(
+              std::make_unique<tabletfx::ToneMasterModulatedLargeHallReverb>(
                   static_cast<float>(sample_rate),
                   static_cast<std::uint16_t>(channels))) {
         effects_.reserve(96);
@@ -448,7 +453,7 @@ public:
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept {
-        return effects_.size() + 26;
+        return effects_.size() + 27;
     }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
@@ -595,6 +600,14 @@ public:
                 tone_master_small_hall_->reset();
             }
             tone_master_small_hall_enabled_ = enabled;
+            return true;
+        }
+        if (index == 120U) {
+            if (!enabled &&
+                !tone_master_modulated_large_hall_->parameters().spillover) {
+                tone_master_modulated_large_hall_->reset();
+            }
+            tone_master_modulated_large_hall_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -890,6 +903,16 @@ public:
             }
             return;
         }
+        if (index == 120U) {
+            const auto audio = std::span<float>(output_.data(), samples);
+            if (tone_master_modulated_large_hall_enabled_) {
+                tone_master_modulated_large_hall_->process(audio, channels_);
+            } else {
+                tone_master_modulated_large_hall_->process_bypassed(audio,
+                                                                    channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -955,6 +978,7 @@ public:
         output_gain_.reset();
         output_limiter_.reset();
         tone_master_small_hall_->reset();
+        tone_master_modulated_large_hall_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -3696,6 +3720,22 @@ public:
         tone_master_small_hall_->configure(parameters);
     }
 
+    void configure_tone_master_modulated_large_hall(
+        const float* values, std::uint32_t value_count) noexcept {
+        if (values == nullptr || value_count < 9U) return;
+        auto parameters = tone_master_modulated_large_hall_->parameters();
+        parameters.level = values[0];
+        parameters.decay_seconds = values[1];
+        parameters.dwell = values[2];
+        parameters.diffuse = values[3];
+        parameters.rate_hz = values[4];
+        parameters.depth = values[5];
+        parameters.high_cut_gain_db = values[6];
+        parameters.low_cut_gain_db = values[7];
+        parameters.spillover = values[8] >= 0.5F;
+        tone_master_modulated_large_hall_->configure(parameters);
+    }
+
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -3924,6 +3964,7 @@ public:
         bytes += output_limiter_.memory_bytes();
         bytes += fender_memory_delay_->memory_bytes();
         bytes += tone_master_small_hall_->memory_bytes();
+        bytes += tone_master_modulated_large_hall_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4094,6 +4135,13 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 120U) {
+            const std::size_t bytes =
+                tone_master_modulated_large_hall_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4141,6 +4189,8 @@ private:
     tabletfx::FractalSurroundDelay fractal_surround_delay_;
     std::unique_ptr<tabletfx::ModulatedDelay> fender_memory_delay_;
     std::unique_ptr<tabletfx::ToneMasterSmallHallReverb> tone_master_small_hall_;
+    std::unique_ptr<tabletfx::ToneMasterModulatedLargeHallReverb>
+        tone_master_modulated_large_hall_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4155,6 +4205,7 @@ private:
     bool step_tremolo_enabled_ = false;
     bool deluxe_looper_enabled_ = false;
     bool chromatic_pitch_delay_enabled_ = false;
+    bool tone_master_modulated_large_hall_enabled_ = false;
     bool cabinet_ir_enabled_ = false;
     bool octave_divider_enabled_ = false;
     bool double_take_enabled_ = false;
@@ -6008,4 +6059,11 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tone_master_small_hall(
     }
 }
 
+TABLETFX_WASM_EXPORT void tf_chain_set_tone_master_modulated_large_hall(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_tone_master_modulated_large_hall(
+            values, value_count);
+    }
+}
 } // extern "C"

@@ -4,30 +4,30 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "dae1d7b94381bdfcc5eb46bded00e85125a2ad1e",
+  "previous_checkpoint_commit": "6eb3254487047a36ab70ea5917da1c048253a1fa",
   "latest_audit": {
-    "name": "Fractal FM9-family Plex Shift",
-    "status": "November 2026 FM9-family control names/pages verified; optional project-authored Delay ID 76 subset and native/browser/Windows/CPU checks pass; human/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 76,
-    "category": "Delay",
+    "name": "Fender Tone Master Pro Modulated Large Hall",
+    "status": "Exact-model control roles verified; project-authored categorized Reverb ID 120 passes native, local-guitar browser/WASM, Windows, and isolated CPU/memory checks; only human/device validation remains.",
+    "date": "2026-11-27",
+    "picker_index": 120,
+    "category": "Reverb",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Current guide cover November 2026, 114 pages, printed pp. 87–90; v12.0 dated 2026-07-07 lists FM9 Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide distinguishes Plex Shift from Plex Delay and Plex Detune and documents per-line Shift/Detune, Master Pitch/Detune, and Forward/Reverse. Exact Mark II Turbo applicability is unverified; project bounds, algorithm, latency, CPU, and memory are not Fractal specifications."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history lists v1.8.87 dated 2026-11-23; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide documents control roles and that High/Low Cut adjust post-reverb shelf gains, but no numerical bounds/defaults, shelf pivots, modulation topology, DSP, or latency. Firmware v1.8.87 notes do not mention this effect."
     },
-    "documented_controls": "The November 2026 FM9-family guide (printed pp. 87–90) describes per-line pitch shift/detune, Master Pitch/Detune, and Forward/Reverse direction as controls on a Plex Shift algorithm distinct from Plex Delay and Plex Detune. It does not establish project DSP cost or fixed wet latency.",
-    "project_controls": "Optional project-authored granular pitch-shift subset on the existing Delay picker ID 76, off by default with no new picker row. Per-line Shift −24…+24 semitones and Detune ±50 cents; Master Pitch/Detune 0–200% (100% default); Forward direction default. The 5.333 ms target grain and all numeric bounds/defaults are project choices. Immediate dry path; shift/direction-dependent wet lookback; 256 KiB maximum pitch-history storage.",
+    "documented_controls": "Level wet blend; Decay reverb trail length; Dwell input level; Diffuse echo density/reflections; Rate modulation speed; Depth modulation intensity; High Cut post-reverb high-shelf gain; Low Cut post-reverb low-shelf gain; Spillover continues the tail after bypass.",
+    "project_controls": "Project-authored four-line modulated FDN at Reverb picker ID 120, disabled by default. Defaults: Level 0.28; Decay 6.5 s; Dwell 1.0×; Diffuse 0.74; Rate 0.23 Hz; Depth 0.20; High/Low shelf gains −1.5/−0.5 dB; Spillover off. Project bounds and fixed delay lengths are not Fender values. Immediate dry path; zero fixed added latency.",
     "verification": {
-      "native": "make test passes documentation validation and fixture-safety checks, 120/120 CTests including Plex Shift identity/transposition/master-scale/direction/bounds coverage, and zero process-time allocation coverage.",
-      "browser": "make web-build and make web-browser-test pass full HeadlessChrome 151 browser/native checks and the local prerecorded Guitar-TECHS DI Play path. Plex remains under Delay, defaults off, and a one-line +12-semitone capture differs from the unshifted capture.",
+      "native": "make test passes documentation validation, 13 fixture-safety tests, 121/121 CTests, focused control response/bounds/mono/stereo/finite/bypass/memory checks, and zero process-time allocations.",
+      "browser": "make web-build and make web-browser-test pass HeadlessChrome 151, categorized Reverb ID 120, two local prerecorded stereo Guitar-TECHS DI Play captures responsive to input/profile changes, and the full browser/native comparison. WASM reports 117,976 B effect state.",
       "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
-      "latency_memory": "Native processor state 1,132,152 B at 48 kHz stereo; pitch-history storage capped at 256 KiB; process-time allocations 0; dry path immediate. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured: no-pitch matrix p50/p95/p99/max 0.1324/0.2025/0.2434/4.7803%; one line 0.2145/0.3124/0.3675/1.9463%; four lines 0.4688/0.6945/0.8340/14.9479%; eight Forward 0.7069/0.9803/1.1625/10.3679%; eight Reverse 0.6529/0.9514/1.2019/7.8759% of 2.667 ms. Deadline misses 0/20,000 for all profiles. Host readings are not tablet DSP predictions.",
+      "latency_memory": "Native state is 118,184 B by sizeof(object)+vector-capacity accounting, excluding allocator metadata. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured: project default p50/p95/p99/p99.9/max 0.618/0.773/0.937/1.188/1.847%; maximum project decay/modulation 0.618/0.656/0.895/1.179/1.806% of 2.667 ms; 0 deadline misses in both profiles. The browser timer fell back to millisecond resolution and is too coarse for isolated CPU reporting. Process allocations 0 and fixed dry latency 0. These are host measurements, not tablet DSP predictions.",
       "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
     },
-    "remaining": "Human listening, physical Fractal comparison, exact Mark II firmware applicability, installed device firmware, and target-device timing remain open. No Fractal DSP, preset, fixed wet-latency, or sound parity is claimed."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. No Fender settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
@@ -1295,6 +1295,30 @@
         "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
       },
       "remaining": "Human listening, physical Fractal comparison, exact Mark II firmware applicability, installed device firmware, and target-device timing remain open. No Fractal DSP, preset, fixed wet-latency, or sound parity is claimed."
+    },
+    {
+      "name": "Fender Tone Master Pro Modulated Large Hall",
+      "status": "Exact-model controls verified; categorized project-authored Reverb ID 120 passes native, browser/WASM local-guitar, Windows, and isolated benchmark checks; only manual/device checks remain.",
+      "date": "2026-11-27",
+      "picker_index": 120,
+      "category": "Reverb",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware v1.8.87 dated 2026-11-23; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "Manual lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover. High/Low Cut are post-reverb shelf gains. It gives no numeric ranges/defaults, shelf pivots, modulation topology, DSP, or latency."
+      },
+      "documented_controls": "Level wet blend; Decay reverb trail; Dwell input level; Diffuse echo density/reflections; Rate modulation speed; Depth intensity; High/Low Cut shelf gain; Spillover tail after bypass.",
+      "project_controls": "Project-authored four-line modulated FDN at Reverb ID 120, disabled by default. Defaults: Level 0.28, Decay 6.5 s, Dwell 1.0×, Diffuse 0.74, Rate 0.23 Hz, Depth 0.20, High/Low shelf gains −1.5/−0.5 dB, Spillover off. Bounds and delay lengths are project choices. Immediate dry path; no fixed added latency.",
+      "verification": {
+        "native": "make test passes 13 fixture-safety tests and 121/121 CTests including focused control, bounds, bypass, mono/stereo, memory, and no-allocation checks.",
+        "browser": "make web-build and make web-browser-test pass HeadlessChrome 151, Reverb picker ID 120, two local stereo Guitar-TECHS DI Play captures, and full browser/native comparison. WASM effect memory 117,976 B.",
+        "windows": "make windows-cross-build passes Windows MinGW core/offline-renderer build.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native object+vector memory 118,184 B (allocator metadata excluded); processing allocations 0. Default p50/p95/p99/p99.9/max 0.618/0.773/0.937/1.188/1.847%; max decay/modulation 0.618/0.656/0.895/1.179/1.806% of 2.667 ms; no deadline misses. Browser timer granularity is too coarse for isolated CPU measurement.",
+        "diff_check": "make diff-check passes; no workflow files are included."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device performance remain open; Fender settings/DSP/sound parity are not claimed."
     }
   ],
   "previous_checkpoint": {
@@ -1322,30 +1346,43 @@
     "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Plex Shift",
-    "status": "November 2026 FM9-family control names/pages verified; optional project-authored Delay ID 76 subset and native/browser/Windows/CPU checks pass; human/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 76,
-    "category": "Delay",
+    "name": "Fender Tone Master Pro Modulated Large Hall",
+    "status": "Exact-model controls verified; project-authored categorized Reverb ID 120 passes native/browser/Windows/benchmark checks; human/device checks remain.",
+    "date": "2026-11-27",
+    "picker_index": 120,
+    "category": "Reverb",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Current guide cover November 2026, 114 pages, printed pp. 87–90; v12.0 dated 2026-07-07 lists FM9 Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The guide distinguishes Plex Shift from Plex Delay and Plex Detune and documents per-line Shift/Detune, Master Pitch/Detune, and Forward/Reverse. Exact Mark II Turbo applicability is unverified; project bounds, algorithm, latency, CPU, and memory are not Fractal specifications."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware v1.8.87 dated 2026-11-23; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "Manual lists exact control roles, but no numeric ranges/defaults, shelf pivots, topology, DSP, or latency; checked firmware notes do not mention this effect."
     },
-    "documented_controls": "The November 2026 FM9-family guide (printed pp. 87–90) describes per-line pitch shift/detune, Master Pitch/Detune, and Forward/Reverse direction as controls on a Plex Shift algorithm distinct from Plex Delay and Plex Detune. It does not establish project DSP cost or fixed wet latency.",
-    "project_controls": "Optional project-authored granular pitch-shift subset on the existing Delay picker ID 76, off by default with no new picker row. Per-line Shift −24…+24 semitones and Detune ±50 cents; Master Pitch/Detune 0–200% (100% default); Forward direction default. The 5.333 ms target grain and all numeric bounds/defaults are project choices. Immediate dry path; shift/direction-dependent wet lookback; 256 KiB maximum pitch-history storage.",
+    "documented_controls": "Level, Decay, Dwell, Diffuse, Rate, Depth, high-shelf gain (High Cut), low-shelf gain (Low Cut), and Spillover.",
+    "project_controls": "Project-authored four-line modulated FDN, Reverb ID 120, disabled by default; project-chosen bounds/defaults. Immediate dry path and zero fixed added latency.",
     "verification": {
-      "native": "make test passes documentation validation and fixture-safety checks, 120/120 CTests including Plex Shift identity/transposition/master-scale/direction/bounds coverage, and zero process-time allocation coverage.",
-      "browser": "make web-build and make web-browser-test pass full HeadlessChrome 151 browser/native checks and the local prerecorded Guitar-TECHS DI Play path. Plex remains under Delay, defaults off, and a one-line +12-semitone capture differs from the unshifted capture.",
-      "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
-      "latency_memory": "Native processor state 1,132,152 B at 48 kHz stereo; pitch-history storage capped at 256 KiB; process-time allocations 0; dry path immediate. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured: no-pitch matrix p50/p95/p99/max 0.1324/0.2025/0.2434/4.7803%; one line 0.2145/0.3124/0.3675/1.9463%; four lines 0.4688/0.6945/0.8340/14.9479%; eight Forward 0.7069/0.9803/1.1625/10.3679%; eight Reverse 0.6529/0.9514/1.2019/7.8759% of 2.667 ms. Deadline misses 0/20,000 for all profiles. Host readings are not tablet DSP predictions.",
-      "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
+      "native": "make test passes documentation validation, fixture checks, and 121/121 CTests including focused hall tests.",
+      "browser": "make web-build and make web-browser-test pass local Guitar-TECHS DI captures on Hall ID 120 and full browser/native comparison.",
+      "windows": "make windows-cross-build passes.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default p50/p95/p99/p99.9/max 0.660/0.908/1.140/2.612/17.815%; zero deadline misses, 118,184 B native state, zero process allocations.",
+      "diff_check": "make diff-check passes; no workflow files are included."
     },
-    "remaining": "Human listening, physical Fractal comparison, exact Mark II firmware applicability, installed device firmware, and target-device timing remain open. No Fractal DSP, preset, fixed wet-latency, or sound parity is claimed."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. No Fender settings, DSP, or sound parity is claimed."
   },
   "next_research": [
+    {
+      "device": "Line 6 Helix Stadium XL",
+      "feature": "Pitch Ring Mod catalog entry and project-authored modulation implementation",
+      "source": "Official Helix Stadium model catalog and current manual selector; catalog lists Pitch Ring Mod as a Stereo Line 6 Original, v1.0.",
+      "source_urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+      ],
+      "status": "The manufacturer catalog confirms the model name, category, stereo designation, and v1.0 introduction. No exact model-specific controls, numeric ranges/defaults, topology, DSP, or latency are published in the checked manual selector; the model remains a documentation-limited candidate.",
+      "known_controls": "No model-specific controls or ranges verified. Do not transfer controls from generic Pitch & Synth or similar Ring Mod models.",
+      "qualification": "Any project implementation must use explicit project-authored controls and remain distinct from note-tracked pitch shifting. Preserve the lack of exact manual parameters and make no Line 6 DSP/settings/sound-parity claim."
+    },
     {
       "device": "HeadRush Prime",
       "feature": "Up Tune and remaining Prime effect gaps after Drop Tune workflow",

@@ -268,6 +268,13 @@ publish-plan:
 publish-checkpoint:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "$(CHECKPOINT)"
 
+.PHONY: publish-tone-master-modulated-large-hall-plan stage-tone-master-modulated-large-hall
+publish-tone-master-modulated-large-hall-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "tone-master-modulated-large-hall"
+
+stage-tone-master-modulated-large-hall:
+	$(PYTHON) scripts/publish_checkpoint.py stage --checkpoint "tone-master-modulated-large-hall"
+
 define publish-checkpoint-rules
 publish-$(1)-plan:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "$(1)"
