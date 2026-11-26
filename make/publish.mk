@@ -25,6 +25,20 @@ PUBLISH_CHECKPOINTS += fractal-source-correction
 PUBLISH_CHECKPOINTS += fractal-chorus-voice-count
 PUBLISH_CHECKPOINTS += fractal-chorus-delay-range
 
+.PHONY: inspect-stadium-delay-trails
+inspect-stadium-delay-trails:
+	$(PYTHON) scripts/inspect_delay_trails.py
+PUBLISH_CHECKPOINTS += stadium-delay-trails
+
+.PHONY: test-stadium-delay-trails web-test-stadium-delay-trails
+test-stadium-delay-trails:
+	$(PYTHON) scripts/run_cmake.py build
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_delay_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-stadium-delay-trails: test-stadium-delay-trails web-build
+	$(PYTHON) scripts/web.py test-stadium-delay-trails
+
 .PHONY: test-fender-tremolo-duty-cycle web-test-fender-tremolo-duty-cycle
 test-fender-tremolo-duty-cycle:
 	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_tremolo_tests

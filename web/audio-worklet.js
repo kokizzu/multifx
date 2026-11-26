@@ -311,6 +311,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
        module._tf_chain_set_five_band_eq(this.chain, ...fiveBandEq);
       const delay = parameters.delay || [350, 0.25, 0.25];
       module._tf_chain_set_delay(this.chain, ...delay);
+       module._tf_chain_set_delay_trails_on_bypass(
+         this.chain, parameters.delayTrailsOnBypass ? 1 : 0,
+       );
       module._tf_chain_set_delay_bbd_style(this.chain, parameters.delayBbd ? 1 : 0);
       module._tf_chain_set_delay_bbd_mode(this.chain, parameters.delayBbdMode ? 1 : 0);
       const tape = parameters.delayTape || [0, 0.45, 0.35, 0.3, 0.08, 6];
@@ -1216,6 +1219,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
     if (message.type === "active") {
       this.active = Boolean(message.value);
+    } else if (message.type === "inspect-enabled" && this.ready) {
+      this.port.postMessage({ type: "enabled-state", value: this.enabled.slice() });
     } else if (message.type === "capture-reset") {
       this.captureOffset = 0;
       this.captureComplete = false;
@@ -1229,6 +1234,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         if (!accepted) {
           this.enabled[index] = false;
           this.port.postMessage({ type: "enable-error", index });
+        } else if (index === 21) {
+          this.port.postMessage({
+            type: "delay-enabled-state", index, value: this.enabled[index],
+          });
         } else if (index === EFFECTS.indexOf("fractal-chromatic-harmonizer") ||
                    index === EFFECTS.indexOf("fractal-diatonic-harmonizer")) {
           const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
@@ -1599,6 +1608,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.module._tf_chain_set_delay(this.chain, delay.delayMs,
           delay.feedback, delay.mix);
       }
+      this.module._tf_chain_set_delay_trails_on_bypass(
+        this.chain, delay.trailsOnBypass ? 1 : 0,
+      );
+      this.port.postMessage({
+        type: "delay-trails-state", value: Boolean(delay.trailsOnBypass),
+      });
     } else if (message.type === "delay-bbd" && this.ready) {
       this.module._tf_chain_set_delay_bbd_style(this.chain, message.value ? 1 : 0);
     } else if (message.type === "delay-character" && this.ready) {
@@ -1627,10 +1642,279 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.module._tf_chain_set_vibrato(this.chain, ...message.value);
     } else if (message.type === "limiter" && this.ready) {
       this.module._tf_chain_set_limiter(this.chain, ...message.value);
+    } else if (message.type === "delay-trails-wasm-selftest" && this.ready) {
+      try {
+        this.port.postMessage({
+          type: "delay-trails-wasm-selftest-result",
+          result: this.runDelayTrailsWasmSelfTest(),
+        });
+      } catch (error) {
+        this.port.postMessage({
+          type: "delay-trails-wasm-selftest-result",
+          error: String(error?.message || error),
+        });
+      }
     } else if (message.type === "reset" && this.ready) {
       this.module._tf_chain_reset(this.chain);
       this.tunerGeneration = 0;
       this.tunerReading = { valid: false, midiNote: -1, frequencyHz: 0, cents: 0, confidence: 0 };
+    }
+  }
+
+  runDelayTrailsWasmSelfTest() {
+    const module = this.module;
+    const rate = Math.round(sampleRate);
+    const channels = this.channels;
+    const chainEffectCount = module._tf_chain_effect_count(this.chain);
+    const previousEnabled = this.enabled.slice(0, chainEffectCount);
+    let probeImpulseBufferPeek = null;
+    const schedule = [31, 17, 43, 21, 64, 80];
+    const preBypassCycles = 18;
+    const postBypassCycles = 40;
+    const delayMilliseconds = 40;
+    const delayIndex = EFFECTS.indexOf("delay");
+    if (delayIndex !== 21 || chainEffectCount !== EFFECTS.length) {
+      throw new Error(`Delay slot mismatch: delay=${delayIndex}, chain=${chainEffectCount}, picker=${EFFECTS.length}`);
+    }
+
+    const setupProbe = (trailsOn, delayEnabled) => {
+      const chain = this.chain;
+      module._tf_chain_reset(chain);
+      for (let index = 0; index < chainEffectCount; index += 1) {
+        module._tf_chain_set_enabled(chain, index, 0);
+      }
+      module._tf_chain_set_mix(chain, 1);
+      module._tf_chain_set_global_bypass(chain, 0);
+      module._tf_chain_set_input_mute(chain, 0);
+      module._tf_chain_set_panic_mute(chain, 0);
+      module._tf_chain_set_input_gain(chain, 0);
+      module._tf_chain_set_output_gain(chain, 0);
+      module._tf_chain_set_delay_bbd_style(chain, 0);
+      module._tf_chain_set_delay_bbd_mode(chain, 0);
+      module._tf_chain_set_delay_tape_echo(chain, 0, 0, 0, 0, 0, 0);
+      module._tf_chain_set_delay_tempo(chain, 120, 0, 0, 0);
+      module._tf_chain_set_delay_ping_pong(chain, 0);
+      module._tf_chain_set_delay_dual(chain, delayMilliseconds, 0, 0,
+        delayMilliseconds, 0, 0);
+      module._tf_chain_set_delay_multitap(chain, 0, 0, 0);
+      module._tf_chain_set_delay_tape_heads(chain, 0, delayMilliseconds, 0);
+      module._tf_chain_set_delay(chain, delayMilliseconds, 0.6, 1);
+      const actualDelayMilliseconds = module._tf_chain_delay_time_ms(chain);
+      if (Math.abs(actualDelayMilliseconds - delayMilliseconds) > 0.01) {
+        throw new Error(`WASM Delay setter mismatch: requested ${delayMilliseconds} ms, state is ${actualDelayMilliseconds} ms.`);
+      }
+      module._tf_chain_set_delay_trails_on_bypass(chain, trailsOn ? 1 : 0);
+      if (!module._tf_chain_set_enabled(chain, delayIndex, delayEnabled ? 1 : 0)) {
+        throw new Error(`WASM could not set Delay enabled=${delayEnabled}.`);
+      }
+      return chain;
+    };
+
+    const processBlock = (chain, input) => {
+      if (input.length % channels !== 0) {
+        throw new Error(`WASM probe received ${input.length} interleaved samples for ${channels} channels.`);
+      }
+      const frames = input.length / channels;
+      const inputIndex = module._tf_chain_input_buffer(chain) >>> 2;
+      const workIndex = module._tf_chain_work_buffer(chain) >>> 2;
+      const outputIndex = module._tf_chain_output_buffer(chain) >>> 2;
+      module.HEAPF32.set(input, inputIndex);
+      if (input[0] !== 0) {
+        probeImpulseBufferPeek = {
+          local: Array.from(input.subarray(0, Math.min(input.length, 4))),
+          wasm: Array.from(module.HEAPF32.subarray(inputIndex, inputIndex + Math.min(input.length, 4))),
+        };
+      }
+      if (module._tf_chain_begin(chain, frames) !== frames) {
+        throw new Error(`WASM probe accepted the wrong frame count (${frames}).`);
+      }
+      module._tf_chain_process_tuner(chain);
+      module._tf_chain_process_effect(chain, FOUR_OSC_GENERATOR_INDEX);
+      let delaySlotOutput = null;
+      let delaySlotInput = null;
+      for (let effect = 0; effect < EFFECT_PIPELINE_EFFECT_COUNT; effect += 1) {
+        if (effect === delayIndex) {
+          delaySlotInput = module.HEAPF32.slice(workIndex, workIndex + input.length);
+        }
+        module._tf_chain_process_effect(chain, effect);
+        if (effect === delayIndex) {
+          delaySlotOutput = module.HEAPF32.slice(workIndex, workIndex + input.length);
+        }
+      }
+      module._tf_chain_finish(chain, frames);
+      for (let effect = FIRST_EXTRA_EFFECT_INDEX; effect < chainEffectCount; effect += 1) {
+        if (effect === FOUR_OSC_GENERATOR_INDEX) continue;
+        module._tf_chain_process_effect(chain, effect);
+      }
+      module._tf_chain_process_output_gain(chain);
+      module._tf_chain_process_output_limiter(chain);
+      return {
+        output: module.HEAPF32.slice(outputIndex, outputIndex + input.length),
+        delaySlotInput,
+        delaySlotOutput,
+      };
+    };
+
+    try {
+      const dryChain = setupProbe(false, false);
+      const dryMaxError = (() => {
+      let maximum = 0;
+      let cursor = 0;
+      for (let repeat = 0; repeat < 2; repeat += 1) {
+        for (const frames of schedule) {
+            const input = new Float32Array(frames * channels);
+            for (let frame = 0; frame < frames; frame += 1) {
+              const absolute = cursor + frame;
+              for (let channel = 0; channel < channels; channel += 1) {
+                const sample = absolute === 0 && channel === 0
+                  ? 0.25
+                  : ((((absolute * 37 + channel * 19) % 101) - 50) / 10000);
+                input[frame * channels + channel] = sample;
+              }
+          }
+          const { output } = processBlock(dryChain, input);
+            for (let sample = 0; sample < input.length; sample += 1) {
+              maximum = Math.max(maximum, Math.abs(output[sample] - input[sample]));
+          }
+          cursor += frames;
+        }
+      }
+      return maximum;
+      })();
+
+      const renderTailAfterBypass = (trailsOn) => {
+      const chain = setupProbe(trailsOn, true);
+      const preBypass = [];
+      const preBypassBlocks = [];
+      const echoFrame = Math.round(delayMilliseconds * rate / 1000);
+      let cursor = 0;
+      for (let repeat = 0; repeat < preBypassCycles; repeat += 1) {
+        for (const frames of schedule) {
+          const input = new Float32Array(frames * channels);
+          if (cursor === 0) {
+            input[0] = 0.25;
+            if (channels > 1) input[1] = 0.125;
+          }
+          const { output: blockOutput, delaySlotInput, delaySlotOutput } = processBlock(chain, input);
+          if (cursor === 0 || (cursor + frames >= echoFrame - Math.max(...schedule) &&
+                               cursor <= echoFrame + Math.max(...schedule))) {
+            const inputPeakByChannel = Array(channels).fill(0);
+            const delaySlotInputPeakByChannel = Array(channels).fill(0);
+            const outputPeakByChannel = Array(channels).fill(0);
+            const delaySlotPeakByChannel = Array(channels).fill(0);
+            const delayStoragePeak = module._tf_chain_delay_storage_peak(chain);
+            const delayTapByChannel = Array.from({ length: channels }, (_, channel) =>
+              module._tf_chain_delay_tap_sample(chain, channel));
+            const delayWriteFrame = module._tf_chain_delay_write_frame(chain);
+            const delayEnabled = module._tf_chain_effect_enabled(chain, delayIndex) === 1;
+            for (let sample = 0; sample < input.length; sample += 1) {
+              const channel = sample % channels;
+              inputPeakByChannel[channel] = Math.max(inputPeakByChannel[channel], Math.abs(input[sample]));
+              delaySlotInputPeakByChannel[channel] = Math.max(
+                delaySlotInputPeakByChannel[channel], Math.abs(delaySlotInput[sample]),
+              );
+              outputPeakByChannel[channel] = Math.max(outputPeakByChannel[channel], Math.abs(blockOutput[sample]));
+              delaySlotPeakByChannel[channel] = Math.max(
+                delaySlotPeakByChannel[channel], Math.abs(delaySlotOutput[sample]),
+              );
+            }
+            preBypassBlocks.push({ startFrame: cursor, frames, inputPeakByChannel, delaySlotInputPeakByChannel, delaySlotPeakByChannel, delayStoragePeak, delayTapByChannel, delayWriteFrame, delayEnabled, outputPeakByChannel });
+          }
+          preBypass.push(...blockOutput);
+          cursor += frames;
+        }
+      }
+      const preBypassPeakByChannel = Array(channels).fill(0);
+      for (let sample = 0; sample < preBypass.length; sample += 1) {
+        const channel = sample % channels;
+        preBypassPeakByChannel[channel] = Math.max(
+          preBypassPeakByChannel[channel], Math.abs(preBypass[sample]),
+        );
+      }
+      if (preBypassPeakByChannel.every((peak) => peak < 1e-6)) {
+        throw new Error(`Delay did not produce a pre-bypass impulse echo: dryMaxError=${dryMaxError}, configured=${module._tf_chain_delay_time_ms(chain)} ms, enabled=true, inputImpulse=[0.25,0.125], bufferPeek=${JSON.stringify(probeImpulseBufferPeek)}, per-channel peak=${JSON.stringify(preBypassPeakByChannel)}, early blocks=${JSON.stringify(preBypassBlocks)}.`);
+      }
+      if (!module._tf_chain_set_enabled(chain, delayIndex, 0)) {
+        throw new Error("WASM could not disable Delay for the tail-drain probe.");
+      }
+      const tail = [];
+      for (let repeat = 0; repeat < postBypassCycles; repeat += 1) {
+        for (const frames of schedule) {
+          tail.push(...processBlock(chain, new Float32Array(frames * channels)).output);
+        }
+      }
+      const tailPeakByChannel = Array(channels).fill(0);
+      const tailSquaresByChannel = Array(channels).fill(0);
+      const tailSamplesByChannel = Array(channels).fill(0);
+      for (let sample = 0; sample < tail.length; sample += 1) {
+        const channel = sample % channels;
+        const value = tail[sample];
+        tailPeakByChannel[channel] = Math.max(tailPeakByChannel[channel], Math.abs(value));
+        tailSquaresByChannel[channel] += value * value;
+        tailSamplesByChannel[channel] += 1;
+      }
+      return {
+        preBypassPeakByChannel,
+        preBypassBlocks,
+        tailPeakByChannel,
+        tail,
+        tailRmsByChannel: tailSquaresByChannel.map((squares, channel) =>
+          Math.sqrt(squares / Math.max(1, tailSamplesByChannel[channel]))),
+      };
+      };
+
+      const noTail = renderTailAfterBypass(false);
+      const withTail = renderTailAfterBypass(true);
+      const peak = (values) => values.reduce((maximum, value) => Math.max(maximum, value), 0);
+      const offPeak = peak(noTail.tailPeakByChannel);
+      const prePeak = peak(withTail.preBypassPeakByChannel);
+      const tailPeaksByChannel = Array.from({ length: channels }, (_, channel) => {
+        const windows = [];
+        const framesPerWindow = Math.max(1, Math.round(delayMilliseconds * rate / 1000));
+        const totalFrames = withTail.tail.length / channels;
+        for (let window = 0; window < Math.min(4, Math.ceil(totalFrames / framesPerWindow)); window += 1) {
+          let maximum = 0;
+          const firstFrame = window * framesPerWindow;
+          const lastFrame = Math.min(totalFrames, firstFrame + framesPerWindow);
+          for (let frame = firstFrame; frame < lastFrame; frame += 1) {
+            maximum = Math.max(maximum, Math.abs(withTail.tail[frame * channels + channel]));
+          }
+          windows.push(maximum);
+        }
+        return windows;
+      });
+      const tailRmsByChannel = withTail.tailRmsByChannel;
+      const tailRms = Math.sqrt(tailRmsByChannel.reduce((sum, value) => sum + value * value, 0) / channels);
+      const tailDeltaRms = Math.sqrt(withTail.tail.reduce((sum, value, index) => {
+        const delta = value - noTail.tail[index];
+        return sum + delta * delta;
+      }, 0) / withTail.tail.length);
+      if (dryMaxError > 1e-7) {
+        throw new Error(`Dry bypass identity error ${dryMaxError} exceeds 1e-7.`);
+      }
+      if (offPeak > 1e-7) {
+        throw new Error(`Trails Off emitted bypass audio (${offPeak}).`);
+      }
+      if (prePeak < 1e-4) {
+        throw new Error(`Delay did not produce the pre-bypass impulse echo (peak ${prePeak}).`);
+      }
+      const decaysPerChannel = tailPeaksByChannel.every((peaks) =>
+        peaks[0] > 1e-4 && peaks[1] > 1e-5 && peaks[2] > 1e-6 &&
+        peaks[0] > peaks[1] && peaks[1] > peaks[2]);
+      if (!decaysPerChannel || tailDeltaRms <= 1e-5) {
+        throw new Error(`Trails On did not produce a decaying retained tail: per-channel peaks=${JSON.stringify(tailPeaksByChannel)}, RMS=${tailRms}, delta=${tailDeltaRms}.`);
+      }
+      return {
+        channels, dryMaxError, delayMilliseconds,
+        preBypassPeakByChannel: withTail.preBypassPeakByChannel, preBypassPeak: prePeak,
+        preBypassBlocks: withTail.preBypassBlocks,
+        offPeakByChannel: noTail.tailPeakByChannel, offPeak,
+        tailPeaksByChannel, tailRmsByChannel, tailRms, tailDeltaRms,
+      };
+    } finally {
+      previousEnabled.forEach((enabled, index) => {
+        module._tf_chain_set_enabled(this.chain, index, enabled ? 1 : 0);
+      });
     }
   }
 

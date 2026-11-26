@@ -26,6 +26,36 @@ bool near(float left, float right, float tolerance = 1.0e-5F) {
     return std::abs(left - right) <= tolerance;
 }
 
+void test_trails_runtime_toggle_is_safe_and_allocates_nothing() {
+    tabletfx::Delay delay(1000.0F, 1, 20.0F, 4.0F, 0.5F, 1.0F);
+    delay.configure_trails_on_bypass(true);
+    std::array<float, 4> impulse{1.0F, 0.0F, 0.0F, 0.0F};
+    delay.process(impulse, 1);
+
+    std::array<float, 8> bypass{};
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    delay.process_bypassed(bypass, 1);
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "delay tail draining allocated memory");
+    require(bypass[0] > 0.9F && bypass[4] > 0.4F,
+            "enabled delay trails must drain the stored feedback tail");
+
+    delay.configure_trails_on_bypass(false);
+    std::array<float, 8> cleared{};
+    delay.process_bypassed(cleared, 1);
+    require(std::all_of(cleared.begin(), cleared.end(),
+                        [](float sample) { return sample == 0.0F; }),
+            "turning Trails off while bypassed must clear pending echoes");
+
+    delay.configure_trails_on_bypass(true);
+    std::array<float, 8> dry{};
+    dry.fill(0.2F);
+    delay.process_bypassed(dry, 1);
+    require(std::all_of(dry.begin(), dry.end(),
+                        [](float sample) { return std::abs(sample - 0.2F) < 1.0e-6F; }),
+            "enabled delay trails must preserve dry bypass input when no echoes remain");
+}
+
 } // namespace
 
 void* operator new(std::size_t size) {
@@ -841,6 +871,90 @@ void test_repeat_filters_bypass_stereo_bounds_reset_and_allocations() {
     require(after == before, "repeat-filtered delay processing allocated memory");
 }
 
+void test_trails_on_bypass_default_off_clears_and_preserves_dry_audio() {
+    tabletfx::Delay delay(1000.0F, 1, 100.0F, 4.0F, 0.5F, 1.0F);
+    std::array<float, 1> impulse{1.0F};
+    delay.process(impulse, 1);
+
+    std::array<float, 8> bypassed{};
+    bypassed.fill(0.25F);
+    const auto expected_dry = bypassed;
+    const std::size_t allocations_before = allocation_count.load(std::memory_order_relaxed);
+    delay.process_bypassed(bypassed, 1);
+    const std::size_t allocations_after = allocation_count.load(std::memory_order_relaxed);
+    require(allocations_after == allocations_before,
+            "default-off bypass handling must not allocate");
+    require(bypassed == expected_dry,
+            "default-off bypass must be an identity path for the dry signal");
+
+    delay.configure_trails_on_bypass(true);
+    std::array<float, 12> reenabled{};
+    delay.process(reenabled, 1);
+    require(std::all_of(reenabled.begin(), reenabled.end(),
+                        [](float sample) { return near(sample, 0.0F); }),
+            "default-off bypass must clear stored echoes before re-enable");
+}
+
+void test_trails_on_bypass_drains_wet_without_exciting_delay() {
+    tabletfx::Delay with_dry(1000.0F, 1, 100.0F, 4.0F, 0.5F, 1.0F);
+    tabletfx::Delay without_dry(1000.0F, 1, 100.0F, 4.0F, 0.5F, 1.0F);
+    with_dry.configure_trails_on_bypass(true);
+    without_dry.configure_trails_on_bypass(true);
+    std::array<float, 1> dry_impulse{1.0F};
+    std::array<float, 1> silent_impulse{1.0F};
+    with_dry.process(dry_impulse, 1);
+    without_dry.process(silent_impulse, 1);
+
+    std::array<float, 16> bypass_dry{};
+    bypass_dry.fill(0.25F);
+    std::array<float, 16> bypass_silence{};
+    with_dry.process_bypassed(bypass_dry, 1);
+    without_dry.process_bypassed(bypass_silence, 1);
+
+    require(near(bypass_silence[3], 1.0F) &&
+                near(bypass_silence[7], 0.5F) &&
+                near(bypass_silence[11], 0.25F),
+            "enabled bypass must drain the stored delay tail with feedback decay");
+    for (std::size_t frame = 0; frame < bypass_dry.size(); ++frame) {
+        require(near(bypass_dry[frame] - bypass_silence[frame], 0.25F),
+                "bypassed delay must preserve dry audio without writing it into the delay line");
+    }
+
+    tabletfx::Delay whole(1000.0F, 1, 100.0F, 4.0F, 0.5F, 1.0F);
+    tabletfx::Delay split(1000.0F, 1, 100.0F, 4.0F, 0.5F, 1.0F);
+    whole.configure_trails_on_bypass(true);
+    split.configure_trails_on_bypass(true);
+    std::array<float, 1> whole_impulse{1.0F};
+    std::array<float, 1> split_impulse{1.0F};
+    whole.process(whole_impulse, 1);
+    split.process(split_impulse, 1);
+    std::array<float, 24> whole_bypass{};
+    std::array<float, 24> split_bypass{};
+    whole.process_bypassed(whole_bypass, 1);
+    split.process_bypassed(std::span<float>(split_bypass).first(1), 1);
+    split.process_bypassed(std::span<float>(split_bypass).subspan(1, 7), 1);
+    split.process_bypassed(std::span<float>(split_bypass).subspan(8), 1);
+    require(whole_bypass == split_bypass,
+            "delay tail drain must be independent of bypass callback block partitioning");
+
+    tabletfx::Delay stable(1000.0F, 1, 10.0F, 5.0F, 0.95F, 1.0F);
+    stable.configure_trails_on_bypass(true);
+    std::array<float, 1> stable_impulse{1.0F};
+    stable.process(stable_impulse, 1);
+    std::array<float, 4096> long_tail{};
+    const std::size_t allocations_before = allocation_count.load(std::memory_order_relaxed);
+    stable.process_bypassed(long_tail, 1);
+    const std::size_t allocations_after = allocation_count.load(std::memory_order_relaxed);
+    require(allocations_after == allocations_before,
+            "enabled bypass tail draining must not allocate");
+    require(std::all_of(long_tail.begin(), long_tail.end(), [](float sample) {
+                return std::isfinite(sample) && std::abs(sample) <= 1.0F;
+            }),
+            "delay tail feedback must remain finite and bounded while draining");
+    require(std::abs(long_tail.back()) < 1.0e-8F,
+            "high-feedback tail must decay toward silence during bypass");
+}
+
 void test_layout_invalid_audio_and_process_allocation() {
     tabletfx::Delay delay(1000.0F, 1, 10.0F, 2.0F, 0.95F, 0.5F);
     std::array<float, 2> untouched{0.25F, -0.5F};
@@ -903,7 +1017,10 @@ int main() {
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
         test_repeat_filters_shape_delay_path_and_preserve_dry_audio();
         test_repeat_filters_bypass_stereo_bounds_reset_and_allocations();
+        test_trails_on_bypass_default_off_clears_and_preserves_dry_audio();
+        test_trails_on_bypass_drains_wet_without_exciting_delay();
         test_layout_invalid_audio_and_process_allocation();
+        test_trails_runtime_toggle_is_safe_and_allocates_nothing();
         std::cout << "All digital delay tests passed\n";
     } catch (const std::exception& error) {
         std::cerr << "Digital delay test failure: " << error.what() << '\n';

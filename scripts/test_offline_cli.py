@@ -3535,6 +3535,54 @@ def check_enhancer(executable: Path) -> None:
             raise AssertionError("Enhancer CLI did not produce its configured stereo image")
 
 
+def check_delay_trails_on_bypass(executable: Path) -> None:
+    sample_rate = 48000
+    bypass_frame = 256
+    source_samples = [0] * 2048
+    source_samples[0] = 24000
+    for frame in range(bypass_frame, len(source_samples)):
+        source_samples[frame] = int(7000 * math.sin(frame * 0.071))
+    with tempfile.TemporaryDirectory(prefix="tabletfx-delay-trails-cli-test-") as directory:
+        root = Path(directory)
+        source = root / "guitar.wav"
+        no_trails = root / "no-trails.wav"
+        trails = root / "trails.wav"
+        write_pcm16(source, sample_rate, source_samples)
+
+        def render(destination: Path, trails_on: bool) -> list[float]:
+            result = subprocess.run(
+                [str(executable), "render", str(source), str(destination),
+                 "--delay-ms", "2", "--delay-feedback", "0.5", "--delay-mix", "0.5",
+                 "--delay-trails-on-bypass", "on" if trails_on else "off",
+                 "--delay-bypass-after-frames", str(bypass_frame)],
+                capture_output=True, text=True, check=True,
+            )
+            if "processors=1" not in result.stdout:
+                raise AssertionError(f"Delay Trails CLI did not enable exactly one processor: {result.stdout}")
+            data = destination.read_bytes()
+            if len(data) != 44 + len(source_samples) * 4:
+                raise AssertionError(f"Unexpected Delay Trails WAV size: {len(data)}")
+            return list(struct.unpack("<" + "f" * len(source_samples), data[44:]))
+
+        dry = render(no_trails, False)
+        wet = render(trails, True)
+        tail_start = bypass_frame + 2 * 96
+        tail_end = bypass_frame + 500
+        dry_error = max(
+            abs(dry[frame] - source_samples[frame] / 32768.0)
+            for frame in range(bypass_frame, len(source_samples))
+        )
+        tail_difference_rms = math.sqrt(
+            sum((wet[frame] - dry[frame]) ** 2 for frame in range(tail_start, tail_end))
+            / (tail_end - tail_start)
+        )
+        if dry_error > 1.0e-5:
+            raise AssertionError(f"Trails Off did not pass dry input after bypass: max error {dry_error}")
+        if tail_difference_rms < 1.0e-4:
+            raise AssertionError(f"Trails On produced no measurable bypass tail: RMS difference {tail_difference_rms}")
+        print("Delay Trails CLI passed: dry passthrough, bypass-tail drain, and Off/On settings")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -3620,6 +3668,7 @@ def main() -> None:
     check_pcm24_padding(args.executable.resolve())
     check_malformed_pcm24_rejected(args.executable.resolve())
     check_channel_conversion(args.executable.resolve())
+    check_delay_trails_on_bypass(args.executable.resolve())
     print("Offline render CLI tests passed: PCM16 gain/compressors/gate/clean boost/transparent, mid-focused/high-gain/round fuzz/envelope wah, optical/FET and multiband compressors, three- and five-band parametric, guitar/bass graphic and shelf/tilt EQs, Room/Hall/Plate/Spring/Shimmer/Celestial Reverb, Auto Swell, Rotary Speaker, Ring Modulator, Tape Echo, Octave Fuzz and Octave Divider, Double Take, Rhythmic Slicer, Step Filter, static Notch and Formant Filters, reverse/ducking/modulated/pitch-feedback delay, Feedback Generator, free/tempo-synced/ping-pong/independent dual/multi-tap/tape-head delay, chorus/Dimension Chorus/flanger/manual through-zero flanger/phaser/Tremolo LFO Clip/Duty Cycle/vibrato/pitch shifting, Diatonic Harmonizer, Fractal Diatonic Harmonizer defaults, Pitch Arpeggiator, Mono Guitar Synth, free-running Note Generator, Grain Delay, mono/stereo conversion, padded PCM24 input, and malformed alignment rejection.")
 
 

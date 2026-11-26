@@ -6,35 +6,60 @@
   "workflow": "flagship-effects-categorized",
   "previous_checkpoint_commit": "946e8dc15e61d9e8d9a56bcb254b0b9161d5cbc0",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Tremolo Duty Cycle",
-    "status": "Project-authored 5–95% Square-only Duty control added to the existing Modulation Tremolo with a sample-identical 50% default; full native/browser, Windows cross-build, benchmark, and diff checks pass; manual/device checks remain.",
+    "name": "Line 6 Helix Stadium Delay Trails on bypass",
+    "status": "Project-authored default-off Trails control added to the existing Digital Delay row (ID 21). Native/offline/browser tests, full suites, Windows build, callback benchmark, and diff check pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 15,
-    "category": "Modulation",
+    "picker_index": 21,
+    "category": "Delay",
     "official_source": {
-      "title": "Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 34. Firmware history checked through v1.8.87 dated 2026-11-23; no Tremolo change listed. Installed firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide defines Duty Cycle as percentage of time signal is on, but publishes no numeric range/default or interaction with Shape. The project implementation is Square-only with project-selected bounds. No Fender waveform curve, settings, DSP, or sound parity is claimed."
+      "title": "Helix Stadium Effects manual and firmware release notes",
+      "revision": "Live common-parameter table: selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown.",
+      "url": "https://manuals.line6.com/helix-stadium/live/effect-blocks",
+      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "The common table describes Trails Off/On behavior but gives no default. Applicability to Simple Delay is unresolved. Project snapshot/preset transitions and Line 6 settings, DSP, and sound parity are not claimed."
     },
-    "documented_controls": "The Tremolo page lists Rate, Intensity, Duty Cycle, Tap Division, Shape, and LFO Clip. Duty Cycle is the percentage of time the signal is on. Numeric range/default and interaction with Shape are not specified.",
-    "project_controls": "Existing Modulation Tremolo remains at picker ID 15. Project-authored Duty Cycle is bounded 5–95%, default 50%, and is applied only in Square mode, separate from LFO Clip. At 50% output is sample-for-sample identical to the prior fixed `phase < 0.5` behavior. No new processor stage, buffer, fixed latency, or processing allocation is added.",
+    "documented_controls": "The common parameter table says Trails Off mutes delay repeats/reverb decay after block bypass and Trails On allows the tail to fade after bypass or a snapshot change; it publishes no default.",
+    "project_controls": "The existing Delay row at picker ID 21 has a project-authored, default-off Trails toggle. When enabled, bypass preserves dry input and drains stored wet repeats through the same delay line. This adds no picker row or ring, has zero fixed latency, and allocates nothing in processing. Only block bypass is implemented.",
     "verification": {
-      "native": "make test-fender-tremolo-lfo-clip passed tabletfx_tremolo_tests and the full offline CLI suite; exact 50% Square render matches the pre-change threshold sample-for-sample, and same-frame CLI output at 50%/20% was 0.5/0.0. Final `make test` passed 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests.",
-      "browser": "make web-test-fender-tremolo-duty-cycle passed; local prerecorded Guitar-TECHS stereo DI Play at Square 50% and 20% produced RMS difference 0.03231. The UI exposed 5–95% only for Square; effect state 104 B. Final full `make web-test` passed the browser/native guitar-DI comparison and browser/effect smoke checks.",
-      "windows": "make windows-cross-build passed for the Windows MinGW core and offline renderer.",
-      "benchmark": "make bench-fender-tremolo-duty-cycle passed on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms callback; 3,000 warm-up/20,000 measured). Native state 128 B, fixed latency 0 samples, process allocations 0. Square 50% p50/p95/p99/p99.9/max callback use 0.017/0.028/0.033/0.042/0.486%; Square 20% 0.015/0.017/0.018/0.036/0.358%; Sine control 0.061/0.062/0.065/0.329/0.877%. These isolated desktop timings are not device guarantees."
+      "native": "make test passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests, including default-off clearing, wet-tail decay, dry passthrough, block-partition consistency, feedback stability, and no allocation. The offline CLI suite verifies bypass timing and option parsing.",
+      "browser": "HeadlessChrome 151 with local prerecorded Guitar-TECHS DI verifies Trails Off silence and Trails On decay after bypass; focused tail difference RMS is 0.00891. Full make web-test passes browser/native parity and browser effect checks.",
+      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer; compile-only.",
+      "benchmark": "make bench on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms deadline; 160 seed blocks and 5,000 measured bypass callbacks). Trails Off p50/p95/p99/p99.9/max callback use is 0.0008/0.0011/0.0011/0.0011/0.0030%; Trails On is 0.1350/0.2858/0.3098/0.7028/1.1097%. Both report 768,824 B state. These are isolated desktop timings, not device guarantees.",
+      "diff_check": "make diff-check passed with no workflow changes."
     },
-    "remaining": "Human listening, physical Tone Master Pro behavior, target-device timing, installed firmware, manufacturer duty bounds/defaults, Shape interactions, Fender DSP, and sound parity remain unverified."
+    "remaining": "Human listening, physical Helix Stadium behavior, target-device timing, installed firmware, Trails default, Simple Delay applicability, snapshot/preset behavior, and Line 6 DSP/settings/sound parity remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Audit the common Digital Delay Trails On/Off control as a project-authored bypass tail drain in the existing Delay ID 21. The current live Effects manual common-parameter table documents Trails Off as muting delay repeats/reverb decays after bypass and Trails On as letting tails fade after bypass or a snapshot change; it publishes no default. Preserve unresolved applicability to Simple Delay. The live manual selector/header says v1.4 Rev D, the cover says Firmware 1.4, and the footer says Rev E / Firmware v1.4.1; separate hardware v1.4.2 release notes are dated 2026-10-27. Installed firmware is unknown.",
-    "qualification": "The Fractal Chorus timing checkpoint passed focused native/offline/browser, full native/browser suites, Windows cross-build, diff-check, and dedicated benchmark. Human listening, hardware verification, installed firmware, and exact FM9 Mark II Turbo applicability remain open. For Stadium Trails, treat the manual labels as inconsistent, keep Simple Delay control applicability unresolved, and do not claim Line 6 settings/DSP/sound parity."
+    "next_feature": "Audit the documented Stadium Dynamics Sidechain selector and determine whether TabletFX can route an actual independent key signal before implementing it. The live common-parameter table describes Off/block input plus Instrument, Mic, Return, USB, and S/PDIF sources (Feedbacker excluded); detector response, smoothing, range, and DSP are not documented. Do not add a cosmetic selector without a working key-signal path.",
+    "qualification": "Stadium Delay Trails is implemented and verified; human listening, hardware behavior, installed firmware, Trails default, Simple Delay applicability, and snapshot/preset behavior remain open. Preserve manual revision discrepancies and do not claim Line 6 settings/DSP/sound parity. The broader independent device queue remains in next_research."
   },
   "completed_checkpoints": [
+    {
+      "name": "Line 6 Helix Stadium Delay Trails on bypass",
+      "status": "verified; focused native/offline/browser tests, full suites, Windows cross-build, callback benchmark, and diff check pass; manual/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 21,
+      "category": "Delay",
+      "official_source": {
+        "title": "Helix Stadium Effects manual and v1.4.2 release notes",
+        "revision": "Live common-parameter table: selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27; installed firmware is unknown.",
+        "url": "https://manuals.line6.com/helix-stadium/live/effect-blocks",
+        "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+        "qualification": "No Trails default is stated. Applicability to Simple Delay is unresolved. The project implements block bypass only; it does not claim Line 6 settings/DSP/sound parity or snapshot/preset transitions."
+      },
+      "documented_controls": "The common parameter table says Trails Off mutes delay repeats/reverb decay after block bypass and Trails On allows the tail to fade after bypass or a snapshot change. No default is published.",
+      "project_controls": "Default-off, project-authored toggle on the existing Digital Delay row at picker ID 21. On bypass it preserves dry input while draining stored wet repeats through the existing delay line. No additional row/ring, fixed latency, or processing allocation is added.",
+      "verification": {
+        "native_cli": "Full make test passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests. Focused tests cover immediate default-off clearing, dry passthrough, wet-tail decay, callback partitioning, stable feedback, and no allocation; offline CLI verifies bypass timing and argument validation.",
+        "browser": "Focused HeadlessChrome 151 local prerecorded Guitar-TECHS DI Play verifies Trails Off silence and Trails On decay after bypass; tail difference RMS is 0.00891. Full make web-test passes browser/native parity and effect checks.",
+        "windows": "make windows-cross-build passes for Windows MinGW core and offline renderer; compile-only.",
+        "benchmark": "AMD Ryzen 9 5950X Release; 48 kHz stereo, 128-frame callbacks, 2.667 ms deadline, 160 seed blocks, 5,000 measured bypass callbacks. Trails Off p50/p95/p99/p99.9/max callback use: 0.0008/0.0011/0.0011/0.0011/0.0030%. Trails On: 0.1350/0.2858/0.3098/0.7028/1.1097%. Both profiles report 768,824 B state.",
+        "diff_check": "make diff-check passes; no workflow paths are included."
+      },
+      "remaining": "Human listening, physical device behavior, target-device timing, installed firmware, vendor default, Simple Delay applicability, snapshot/preset transitions, and Line 6 DSP/settings/sound parity remain open."
+    },
     {
       "name": "Fender Tone Master Pro Tremolo Duty Cycle",
       "status": "verified; full native/browser tests, Windows cross-build, and benchmark pass; manual/device checks remain",
@@ -1066,29 +1091,28 @@
     "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Chorus Delay Time/Minimum Delay and Delay Range",
-    "status": "Project-authored Minimum Delay and Delay Range added to existing Modulation Chorus ID 16 with documented 0.1–50 ms / 1–40 ms bounds and 8/14 ms defaults; legacy center/depth paths remain compatible. Focused native/offline/browser and full checks pass; manual/device checks remain.",
+    "name": "Line 6 Helix Stadium Delay Trails on bypass",
+    "status": "Project-authored default-off Trails toggle added to existing Digital Delay ID 21. It preserves dry passthrough and drains existing wet repeats after block bypass. Focused native/offline/browser tests, full suites, Windows build, benchmark, and diff check pass; manual/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 16,
-    "category": "Modulation",
+    "picker_index": 21,
+    "category": "Delay",
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "Cover dated November 2026; printed pp. 25–26. The FM9 downloads page checked 2026-11-26 lists v12.0 for FM9 Original/Turbo, not Mark II Turbo by name. The guide gives Delay Time/Minimum Delay and Delay Range bounds but no defaults; project defaults are independently chosen. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Project ranges/defaults and DSP are not Fractal settings or parity."
+      "title": "Helix Stadium Effects manual and firmware release notes",
+      "revision": "Live common-parameter table: selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27; installed firmware is unknown.",
+      "url": "https://manuals.line6.com/helix-stadium/live/effect-blocks",
+      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
+      "qualification": "No Trails default is stated. Applicability to Simple Delay is unresolved. Project block bypass only; no Line 6 settings/DSP/sound parity or snapshot/preset transitions are claimed."
     },
-    "documented_controls": "The November 2026 guide documents Chorus Delay Time, shown as Minimum Delay on the Expert page, at 0.1–50 ms and Delay Range at 1–40 ms (printed pp. 25–26); it states no defaults. It separately documents Number Of Voices up to eight, with no numeric minimum/default; more than two voices selects SINE and choosing non-SINE resets the count to two. Chorus Tempo sets Rate rhythmically; quarter-note at 120 BPM is 2 Hz and NONE restores manual Rate. LFO1 SYNC is separate.",
-    "project_controls": "Project-authored Minimum Delay 0.1–50 ms and Delay Range 1–40 ms are exposed at the existing Modulation Chorus picker ID 16, with defaults 8/14 ms. Those defaults map the former 15 ms base-delay center / 7 ms depth, preserving one-voice samples. Project voice count remains 1–8/default 1, and Free/quarter-note tempo remains with 0.8 Hz default, 0.05–8 Hz bounds, and project BPM 20–300/default 120. The old C ABI symbol and CLI center/depth flags are retained; the browser's existing [rate, center, depth, mix, sync, bpm, voices] array is converted to the new minimum/range WASM export. A preallocated ring supports the 90 ms maximum tap; native state is 34,752 B and browser/WASM state is 34,716 B at default and endpoint settings. No fixed latency or process-time allocation is added. These are project controls and DSP, not Fractal algorithm parity.",
+    "documented_controls": "The common parameter table says Trails Off mutes delay repeats/reverb decay after block bypass and Trails On allows the tail to fade after bypass or a snapshot change; it gives no default.",
+    "project_controls": "The existing Digital Delay at picker ID 21 has a project-authored default-off toggle. Bypass preserves dry input and drains stored wet repeats through the existing delay line. No new slot or ring, fixed latency, or process-time allocation is added. The 2 s, 48 kHz stereo native effect owns 768,824 B in either toggle state.",
     "verification": {
-      "native": "Focused Chorus tests pass minimum-delay 0.1/50 ms and delay-range 1/40 ms bounds, 8/14 default conversion, legacy one-voice sample identity, sweep timing, block continuity, finite output, and zero process-time allocations. Full make test passes 11/11 fixture checks and 117/117 CTest cases.",
-      "offline_cli": "Offline CLI tests pass exact audio equality for legacy 15/7 and canonical 8/14 defaults, legacy 12/5 versus canonical 7/10, finite endpoint renders, and old CLI flag behavior.",
-      "browser": "HeadlessChrome 151 played local prerecorded Guitar-TECHS DI at 48 kHz stereo and passed the UI/WASM minimum/range endpoint checks at 0.1/1 and 50/40 ms. The full make web-test browser/native suite passed. Browser/WASM effect state was 34,716 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core, offline renderer, and Chorus benchmark.",
-      "diff_check": "make diff-check passed; no workflow paths changed.",
-      "benchmark": "make bench-fractal-chorus-tempo passed on AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state is 34,752 B across default and endpoint profiles; fixed algorithmic latency is 0 samples. p50/p95/p99/p99.9/max callback-budget percentages: Free 0.8 Hz default 8/14 ms 0.060/0.062/0.084/0.249/0.929; quarter-note/120 BPM 0.059/0.061/0.090/0.362/2.554; 1 voice 0.060/0.061/0.092/0.320/2.551; 2 voices 0.099/0.114/0.153/0.680/5.784; 4 voices 0.171/0.174/0.288/1.617/2.333; 8 voices 0.305/0.308/0.502/1.817/2.815; minimum endpoint 0.1/1 ms 0.061/0.061/0.062/0.273/2.432; maximum endpoint 50/40 ms 0.061/0.061/0.095/0.365/3.230. Processing allocates nothing. These are isolated desktop timings, not target-device guarantees."
+      "native": "make test passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests. Focused Delay tests cover default-off clearing, dry passthrough, wet decay, block partitioning, stable feedback, and no allocation; the offline CLI suite verifies bypass behavior and option parsing.",
+      "browser": "HeadlessChrome 151 local Guitar-TECHS DI Play confirms Trails Off silence and Trails On decay after bypass (tail difference RMS 0.00891). Full make web-test passes browser/native parity and browser effect checks.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer; compile-only.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 160 seed blocks/5,000 measured bypass callbacks). Trails Off p50/p95/p99/p99.9/max: 0.0008/0.0011/0.0011/0.0011/0.0030%; Trails On: 0.1350/0.2858/0.3098/0.7028/1.1097%. Both profiles use 768,824 B; no toggle-specific ring is allocated.",
+      "diff_check": "make diff-check passes with no workflow changes."
     },
-    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
+    "remaining": "Human listening, physical Helix Stadium behavior, target-device timing, installed firmware, Trails default, Simple Delay applicability, snapshot/preset transitions, and Line 6 DSP/settings/sound parity remain open."
   },
   "next_research": [
     {
@@ -1124,7 +1148,7 @@
       "device": "Line 6 Helix Stadium XL",
       "feature": "Stadium-specific Synth, Delay, Reverb, Poly Sustain, and Looper algorithm details",
       "source": "Helix Stadium model catalog and Owner's Manual Rev E/v1.4.1; hardware v1.4.2 release notes checked 2026-11-23",
-      "status": "The Stadium Mutant Filter candidate is now implemented as a separate, project-authored Filters & wah row at picker ID 111 and verified with native tests, local guitar-DI browser/WASM Play, full make web-test, Windows cross-build, and benchmark. It reuses the existing envelope/TPT filter core. The catalogue identifies Mono/Stereo, Mu-Tron III basis, and first firmware 1.0; exact Stadium parameter table, ranges/defaults, DSP, and latency remain unpublished. Continue other Stadium-specific synth, delay, reverb, Poly Sustain, looper, and block behavior research; human/device checks remain open.",
+      "status": "The Stadium Mutant Filter candidate is implemented as a project-authored Filters & wah row at picker ID 111; the existing Digital Delay at ID 21 now also has default-off block Trails on bypass. Both have native/browser tests, Windows cross-builds, and callback benchmarks. Trails uses the existing delay line and does not implement snapshot/preset transitions. The catalogue identifies Mono/Stereo, Mu-Tron III basis, and first firmware 1.0; exact effect tables, ranges/defaults, DSP, and latency remain unpublished. Continue remaining Stadium Sidechain, synth, reverb, Poly Sustain, looper, and block behavior research; human/device checks remain open.",
       "known_controls": "Line 6's older Helix notes list Poly Sustain Interval, Attack, Decay, Mod Freq/Depth, FX Level, RandDpth, RandSpeed, Level; v3.10 adds Auto EQ and Operation (Mute All, Dry Kill, Normal). Catalog marks Poly Sustain mono and first appearing in Stadium 1.0. 1 Switch is covered with the same Deluxe Looper buffer and a project-authored 280 ms double-press / 1 s hold controller mapping; physical device verification remains open. The Mutant Filter project's Low/Band/High, sensitivity, sweep, and Peak/Q mappings are project authored and are not verified Stadium controls.",
       "qualification": "Older Helix Poly Sustain controls are not a Stadium parameter table. Mutant Filter source-pedal concepts are not verified Line 6 settings. Current Stadium DSP documentation limits poly/high-DSP effects to two per preset and one per primary path. Retrigger behavior and numeric bounds/defaults remain unknown; do not claim Stadium parity without device verification."
     },

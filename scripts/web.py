@@ -113,7 +113,8 @@ def build_web() -> None:
         "_tf_convert_channels", "_tf_channel_conversion_self_test",
         "_tf_parallel_mixer_self_test",
         "_tf_chain_create", "_tf_chain_destroy", "_tf_chain_effect_count",
-        "_tf_chain_input_buffer", "_tf_chain_output_buffer", "_tf_chain_memory_bytes",
+        "_tf_chain_input_buffer", "_tf_chain_work_buffer",
+        "_tf_chain_output_buffer", "_tf_chain_memory_bytes",
         "_tf_chain_effect_memory_bytes", "_tf_chain_set_enabled", "_tf_chain_set_mix",
         "_tf_chain_begin", "_tf_chain_process_effect", "_tf_chain_finish",
         "_tf_chain_reset", "_tf_chain_set_compressor",
@@ -136,7 +137,12 @@ def build_web() -> None:
         "_tf_chain_set_high_gain_distortion",
         "_tf_chain_set_round_fuzz",
         "_tf_chain_set_eq", "_tf_chain_set_five_band_eq",
-        "_tf_chain_set_delay", "_tf_chain_set_delay_tempo",
+        "_tf_chain_set_delay", "_tf_chain_delay_time_ms",
+        "_tf_chain_delay_storage_peak",
+        "_tf_chain_delay_tap_sample",
+        "_tf_chain_delay_write_frame", "_tf_chain_effect_enabled",
+        "_tf_chain_set_delay_trails_on_bypass",
+        "_tf_chain_set_delay_tempo",
         "_tf_chain_set_delay_bbd_style", "_tf_chain_set_delay_bbd_mode",
         "_tf_chain_set_delay_tape_echo",
         "_tf_chain_set_delay_ping_pong",
@@ -742,6 +748,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  volume_pedal_only: bool = False,
                  formant_control_lfo_only: bool = False,
                  headrush_drop_tune_only: bool = False,
+                 stadium_delay_trails_only: bool = False,
                  fender_stereo_flanger_phase_only: bool = False,
                  fender_flanger_tap_division_only: bool = False,
                  fender_phaser_90_tap_division_only: bool = False,
@@ -778,6 +785,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         temp_dir = Path(temp_name)
         input_path = temp_dir / "guitar-fixture.wav"
         reference_path = temp_dir / "native-reference.wav"
+        delay_trails_dry_reference_path = temp_dir / "delay-trails-dry-reference.wav"
         stereo_crossover_reference_path = temp_dir / "stereo-crossover-reference.wav"
         stereo_tape_echo_input_path = temp_dir / "stereo-tape-echo-input.wav"
         stereo_tape_echo_reference_path = temp_dir / "stereo-tape-echo-reference.wav"
@@ -1213,6 +1221,18 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
              "--fractal-diatonic-harmonizer",
         ]
         run(renderer_command, cwd=ROOT)
+        if stadium_delay_trails_only:
+            run([
+                str(native_renderer), "render", str(input_path),
+                str(delay_trails_dry_reference_path),
+                "--gain-db", "2", "--output-gain-db", "-1",
+                "--volume-position", "0.92", "--volume-min-db", "-96",
+                "--volume-max-db", "0", "--volume-curve", "audio",
+                "--gate-threshold-db", "-60", "--gate-attenuation-db", "-72",
+                "--gate-hysteresis-db", "3", "--gate-attack-ms", "2",
+                "--gate-hold-ms", "20", "--gate-release-ms", "80",
+                "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
+            ], cwd=ROOT)
         stereo_crossover_command = [
             str(native_renderer), "render", str(input_path),
             str(stereo_crossover_reference_path),
@@ -1260,6 +1280,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "/__test_cabinet_ir.wav": cabinet_ir_path,
             "/__test_convolution_ir_10s.wav": long_convolution_ir_path,
         }
+        if stadium_delay_trails_only:
+            LocalWebHandler.test_files["/__test_delay_trails_dry.wav"] = delay_trails_dry_reference_path
         server = ThreadingHTTPServer(("127.0.0.1", 0), LocalWebHandler)
         server.daemon_threads = True
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -1272,7 +1294,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         with urllib.request.urlopen(base_url + "/web/worklet-smoke.js", timeout=5) as response:
             print(f"Served /web/worklet-smoke.js: HTTP {response.status}, {response.headers.get('Content-Type')}")
         LocalWebHandler.request_paths = []
-        if formant_control_lfo_only:
+        if stadium_delay_trails_only:
+            url = base_url + "/web/index.html?selftest=stadium-delay-trails"
+        elif formant_control_lfo_only:
             url = base_url + "/web/index.html?selftest=formant-control-lfo"
         elif volume_pedal_only:
             url = base_url + "/web/index.html?selftest=volume-pedal"
@@ -1643,6 +1667,7 @@ def main() -> None:
     parser.add_argument("action", choices=(
         "bootstrap-toolchain", "verify-toolchain", "build", "serve", "test",
         "test-volume-pan", "test-volume-pedal", "test-stereo-filter", "test-stereo-panner",
+        "test-stadium-delay-trails",
         "test-formant-control-lfo",
         "test-headrush-drop-tune",
         "test-fender-stereo-flanger-phase",
@@ -1678,6 +1703,8 @@ def main() -> None:
         browser_test()
     elif action == "test-volume-pedal":
         browser_test(volume_pedal_only=True)
+    elif action == "test-stadium-delay-trails":
+        browser_test(stadium_delay_trails_only=True)
     elif action == "test-formant-control-lfo":
         browser_test(formant_control_lfo_only=True)
     elif action == "test-headrush-drop-tune":

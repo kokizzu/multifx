@@ -162,6 +162,9 @@ public:
         return static_cast<float>(static_cast<double>(delay_samples_) * 1000.0 /
                                   static_cast<double>(sample_rate_));
     }
+    [[nodiscard]] float storage_peak() const noexcept;
+    [[nodiscard]] float tap_sample(std::uint16_t channel) const noexcept;
+    [[nodiscard]] std::size_t write_frame() const noexcept { return write_frame_; }
     [[nodiscard]] float feedback() const noexcept { return target_feedback_; }
     [[nodiscard]] float mix() const noexcept { return target_mix_; }
     [[nodiscard]] bool ping_pong_enabled() const noexcept { return target_ping_pong_; }
@@ -170,6 +173,9 @@ public:
     [[nodiscard]] DelayDivision division() const noexcept { return division_; }
     [[nodiscard]] DelayTimeMode time_mode() const noexcept { return time_mode_; }
     void configure(float delay_ms, float feedback, float mix) noexcept;
+    // Project-authored Trails on bypass. Disabled by default; when enabled, the
+    // existing delay line drains its stored repeats under dry input passthrough.
+    void configure_trails_on_bypass(bool enabled) noexcept;
     // Project-authored BBD-style coloration: bandwidth-limited, mildly saturated
     // repeats. This reuses the existing delay ring and adds no processor stage.
     void configure_bbd_style(bool enabled) noexcept;
@@ -209,6 +215,8 @@ public:
     void configure_tempo(float bpm, DelayDivision division, float feedback,
                          float mix) noexcept;
     void process(std::span<float> interleaved, std::uint16_t channels) noexcept override;
+    void process_bypassed(std::span<float> interleaved,
+                          std::uint16_t channels) noexcept override;
     void reset() noexcept override;
 
 private:
@@ -328,6 +336,8 @@ private:
     float dual_routing_mix_ = 0.0F;
     float dual_routing_step_ = 0.0F;
     std::size_t dual_routing_ramp_remaining_ = 0;
+    bool trails_on_bypass_ = false;
+    bool bypassed_cleared_ = false;
 };
 
 struct FilteredDelayParameters {

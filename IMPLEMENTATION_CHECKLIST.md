@@ -1,5 +1,13 @@
 # Implementation checklist
 
+## Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
+
+- [x] Checked the live Helix Stadium Effects manual's common-parameter table: Trails Off mutes delay repeats/reverb decay after bypass; Trails On allows the tail to fade after bypass or a snapshot change. No default is stated. Manual labels conflict (selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1); separate v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown, and Simple Delay applicability remains unresolved.
+- [x] Added a project-authored, default-off toggle to the existing Digital Delay row (picker ID 21). On bypass it keeps dry input unchanged and drains existing wet repeats without new excitation. Off retains immediate clearing. It adds no picker row or delay buffer; fixed latency remains zero and processing allocates nothing. Snapshot/preset transitions are not implemented.
+- [x] Focused native and offline CLI tests cover default-off clearing, wet-tail decay, dry passthrough, callback partitioning, high-feedback stability, and no processing allocation. HeadlessChrome 151 local Guitar-TECHS DI Play confirms Trails Off emits no post-bypass wet output and Trails On produces a decaying tail (tail difference RMS 0.00891). `make test` passes 117/117 CTests; full `make web-test` passes browser/native parity and browser effect checks. `make windows-cross-build` and `make diff-check` pass.
+- [x] `make bench` on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback; 160 seed blocks and 5,000 measured bypass callbacks) reports 768,824 B state in both toggle states and no added delay buffer. Trails Off p50/p95/p99/p99.9/max is 0.0008/0.0011/0.0011/0.0011/0.0030% of callback budget; Trails On is 0.1350/0.2858/0.3098/0.7028/1.1097%. The difference is the active wet-tail drain path, not a new effect slot. These isolated desktop results do not predict tablet/device load. See [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
+- [ ] Human listening, physical Helix Stadium behavior, target-device timing, installed firmware, Trails default, Simple Delay applicability, snapshot behavior, and Line 6 DSP/settings/sound parity remain unverified.
+
 ## Fender Tone Master Pro Tremolo Duty Cycle (2026-11-26)
 
 - [x] Checked the exact Model Guide v1.1.100 / Rev. A, printed p. 34: Duty Cycle is the percentage of time signal is on, separately listed from Shape and LFO Clip. The guide gives no range/default or Shape interaction. Firmware history lists v1.8.87 (2026-11-23) and no Tremolo change; installed firmware is unknown.

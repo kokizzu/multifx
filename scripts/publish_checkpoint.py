@@ -8,6 +8,7 @@ from difflib import unified_diff
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -2831,6 +2832,27 @@ AXOM_SOURCE_AUDIT_CHECKPOINT_PATHS = (
     "scripts/publish_checkpoint.py",
 )
 
+STADIUM_DELAY_TRAILS_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "make/publish.mk",
+    "research-state.json",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects.hpp",
+    "src/effects.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_delay.cpp",
+    "scripts/test_offline_cli.py",
+    "scripts/web.py",
+    "scripts/inspect_delay_trails.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "scripts/publish_checkpoint.py",
+)
+
 PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
@@ -3238,6 +3260,10 @@ CHECKPOINTS = {
         FRACTAL_DIATONIC_HARMONIZER_CHECKPOINT_PATHS,
         "feat: add project-authored diatonic harmonizer",
     ),
+    "stadium-delay-trails": (
+        STADIUM_DELAY_TRAILS_CHECKPOINT_PATHS,
+        "feat: add optional delay tails on bypass",
+    ),
     "line6-stadium-3osc-research": (
         LINE6_STADIUM_3OSC_RESEARCH_CHECKPOINT_PATHS,
         "docs: audit Stadium 3 OSC Synth model controls",
@@ -3252,6 +3278,12 @@ CHECKPOINTS = {
     ),
 }
 
+PARTIAL_CHECKPOINT_HUNKS = {
+    "stadium-delay-trails": {
+        "make/publish.mk": ("PUBLISH_CHECKPOINTS += stadium-delay-trails",),
+    },
+}
+
 
 def git(*args: str, capture: bool = True) -> str:
     result = subprocess.run(
@@ -3261,6 +3293,86 @@ def git(*args: str, capture: bool = True) -> str:
         detail = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
         raise SystemExit(detail or f"git {' '.join(args)} failed with status {result.returncode}")
     return result.stdout if capture else ""
+
+
+def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
+    lines = diff.splitlines(keepends=True)
+    header: list[str] = []
+    hunks: list[list[str]] = []
+    current: list[str] | None = None
+    for line in lines:
+        if line.startswith("@@"):
+            if current is not None:
+                hunks.append(current)
+            current = [line]
+        elif current is None:
+            header.append(line)
+        else:
+            current.append(line)
+    if current is not None:
+        hunks.append(current)
+
+    selected = [
+        hunk for hunk in hunks
+        if any(
+            line.startswith("+") and not line.startswith("+++") and marker in line
+            for line in hunk for marker in markers
+        )
+    ]
+    if len(selected) != 1:
+        raise SystemExit(
+            f"Expected one checkpoint-specific patch hunk, found {len(selected)}"
+        )
+    return "".join(header + selected[0]), len(hunks)
+
+
+def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
+    pre_staged = set(git("diff", "--cached", "--name-only").splitlines())
+    if pre_staged:
+        if pre_staged != set(paths):
+            raise SystemExit(
+                "Refusing to stage over existing index changes: " + ", ".join(sorted(pre_staged))
+            )
+        # Recover an interrupted staging attempt only when the index contains
+        # exactly this checkpoint. Keep its reviewed partial hunks intact.
+        verify_partial_staging(checkpoint)
+        partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
+        for path in paths:
+            if path not in partial:
+                git("add", "--", path, capture=False)
+        return
+
+    partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
+    for path in paths:
+        markers = partial.get(path)
+        if markers is None:
+            git("add", "--", path, capture=False)
+            continue
+
+        diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
+        patch, _ = select_patch_hunks(diff, markers)
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", prefix="multifx-checkpoint-", suffix=".patch",
+                delete=False,
+            ) as temporary:
+                temporary.write(patch)
+                temporary_path = Path(temporary.name)
+            git("apply", "--cached", str(temporary_path), capture=False)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+
+
+def verify_partial_staging(checkpoint: str) -> None:
+    for path, markers in PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {}).items():
+        diff = git("diff", "--cached", "--no-ext-diff", "--unified=3", "--", path)
+        _, hunk_count = select_patch_hunks(diff, markers)
+        if hunk_count != 1:
+            raise SystemExit(
+                f"Refusing to publish extra staged hunks in {path}: found {hunk_count}"
+            )
 
 
 def inspect(checkpoint: str) -> tuple[list[str], list[str], str, str]:
@@ -3360,7 +3472,13 @@ def plan(checkpoint: str) -> list[str]:
 
 def publish(checkpoint: str) -> None:
     paths, _, _, _ = inspect(checkpoint)
-    git("add", "--", *paths, capture=False)
+    staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
+    if not staged_paths:
+        stage_checkpoint_paths(checkpoint, paths)
+        staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
+    if staged_paths != set(paths):
+        raise SystemExit("Staged paths differ from the reviewed checkpoint; refusing to publish")
+    verify_partial_staging(checkpoint)
     planned_paths = plan(checkpoint)
     if planned_paths != paths:
         raise SystemExit("Checkpoint paths changed while preparing publication; stopping before commit")
@@ -3384,13 +3502,14 @@ def publish(checkpoint: str) -> None:
 
 def stage(checkpoint: str) -> None:
     paths, deferred, branch, remote_url = inspect(checkpoint)
-    git("add", "--", *paths, capture=False)
+    stage_checkpoint_paths(checkpoint, paths)
     staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
     if staged_paths != set(paths):
         raise SystemExit(
             "Staged paths differ from the selected checkpoint; "
             "review the index and stop before commit"
         )
+    verify_partial_staging(checkpoint)
     git("diff", "--cached", "--check")
     print(f"Repository: {remote_url}")
     print(f"Branch: {branch} (verified upstream default; local HEAD matches origin/main)")

@@ -438,6 +438,7 @@ public:
     [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 22; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
+    [[nodiscard]] float* work_data() noexcept { return work_.data(); }
     [[nodiscard]] float* output_data() noexcept { return output_.data(); }
 
     void process_tuner() noexcept {
@@ -1864,6 +1865,35 @@ public:
     void configure_delay(float delay_ms, float feedback, float mix) noexcept {
         static_cast<tabletfx::Delay*>(effects_[21].effect.get())
             ->configure(delay_ms, feedback, mix);
+    }
+
+    [[nodiscard]] float delay_time_ms() const noexcept {
+        return static_cast<const tabletfx::Delay*>(effects_[21].effect.get())
+            ->delay_time_ms();
+    }
+
+    [[nodiscard]] float delay_storage_peak() const noexcept {
+        return static_cast<const tabletfx::Delay*>(effects_[21].effect.get())
+            ->storage_peak();
+    }
+
+    [[nodiscard]] float delay_tap_sample(std::uint16_t channel) const noexcept {
+        return static_cast<const tabletfx::Delay*>(effects_[21].effect.get())
+            ->tap_sample(channel);
+    }
+
+    [[nodiscard]] std::uint32_t delay_write_frame() const noexcept {
+        return static_cast<std::uint32_t>(
+            static_cast<const tabletfx::Delay*>(effects_[21].effect.get())->write_frame());
+    }
+
+    [[nodiscard]] bool effect_enabled(std::uint32_t index) const noexcept {
+        return index < effects_.size() && effects_[index].enabled;
+    }
+
+    void configure_delay_trails_on_bypass(bool enabled) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_trails_on_bypass(enabled);
     }
 
     void configure_delay_bbd_style(bool enabled) noexcept {
@@ -4020,6 +4050,10 @@ TABLETFX_WASM_EXPORT std::uintptr_t tf_chain_input_buffer(void* opaque) noexcept
     return opaque == nullptr ? 0U : reinterpret_cast<std::uintptr_t>(as_chain(opaque)->input_data());
 }
 
+TABLETFX_WASM_EXPORT std::uintptr_t tf_chain_work_buffer(void* opaque) noexcept {
+    return opaque == nullptr ? 0U : reinterpret_cast<std::uintptr_t>(as_chain(opaque)->work_data());
+}
+
 TABLETFX_WASM_EXPORT std::uintptr_t tf_chain_output_buffer(void* opaque) noexcept {
     return opaque == nullptr ? 0U : reinterpret_cast<std::uintptr_t>(as_chain(opaque)->output_data());
 }
@@ -5566,6 +5600,37 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay(void* opaque, float delay_ms,
                                              float feedback, float mix) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay(delay_ms, feedback, mix);
+    }
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_delay_time_ms(void* opaque) noexcept {
+    return opaque != nullptr ? as_chain(opaque)->delay_time_ms() : 0.0F;
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_delay_storage_peak(void* opaque) noexcept {
+    return opaque != nullptr ? as_chain(opaque)->delay_storage_peak() : 0.0F;
+}
+
+TABLETFX_WASM_EXPORT float tf_chain_delay_tap_sample(
+    void* opaque, std::uint32_t channel) noexcept {
+    return opaque != nullptr && channel <= 65535U
+        ? as_chain(opaque)->delay_tap_sample(static_cast<std::uint16_t>(channel))
+        : 0.0F;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_delay_write_frame(void* opaque) noexcept {
+    return opaque != nullptr ? as_chain(opaque)->delay_write_frame() : 0U;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_effect_enabled(
+    void* opaque, std::uint32_t index) noexcept {
+    return opaque != nullptr && as_chain(opaque)->effect_enabled(index) ? 1U : 0U;
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_trails_on_bypass(
+    void* opaque, std::uint32_t enabled) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_trails_on_bypass(enabled != 0U);
     }
 }
 

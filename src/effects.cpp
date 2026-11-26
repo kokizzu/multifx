@@ -294,6 +294,17 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
     retarget_parameters();
 }
 
+float Delay::storage_peak() const noexcept {
+    float peak = 0.0F;
+    for (float sample : storage_) peak = std::max(peak, std::abs(sample));
+    return peak;
+}
+
+float Delay::tap_sample(std::uint16_t channel) const noexcept {
+    if (channel >= channels_) return 0.0F;
+    return read_delay(delay_samples_, channel);
+}
+
 void Delay::configure_bbd_style(bool enabled) noexcept {
     if (enabled) {
         target_tape_mix_ = 0.0F;
@@ -647,6 +658,11 @@ void Delay::configure_tempo(float bpm, DelayDivision division, float feedback,
     retarget_parameters();
 }
 
+void Delay::configure_trails_on_bypass(bool enabled) noexcept {
+    trails_on_bypass_ = enabled;
+    if (enabled) bypassed_cleared_ = false;
+}
+
 std::size_t Delay::samples_for_ms(float delay_ms) const noexcept {
     const std::size_t maximum_samples = capacity_frames_ - 1;
     const double minimum_ms_samples = std::ceil(static_cast<double>(sample_rate_) / 1000.0);
@@ -890,6 +906,7 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
     if (channels != channels_ || channels == 0) {
         return;
     }
+    bypassed_cleared_ = false;
     const std::size_t frames = interleaved.size() / channels;
     const float maximum = std::numeric_limits<float>::max();
     const bool routed_path = ping_pong_mix_ != 0.0F || dual_routing_mix_ != 0.0F ||
@@ -1179,9 +1196,49 @@ void Delay::process(std::span<float> interleaved, std::uint16_t channels) noexce
     }
 }
 
+void Delay::process_bypassed(std::span<float> interleaved,
+                             std::uint16_t channels) noexcept {
+    if (channels != channels_ || channels == 0) return;
+
+    if (!trails_on_bypass_) {
+        if (!bypassed_cleared_) {
+            reset();
+            bypassed_cleared_ = true;
+        }
+        return;
+    }
+
+    const std::size_t frames = interleaved.size() / channels;
+    const float maximum = std::numeric_limits<float>::max();
+    std::array<float, 2> dry{};
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+        const std::size_t offset = frame * channels;
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            dry[channel] = interleaved[offset + channel];
+            interleaved[offset + channel] = 0.0F;
+        }
+
+        process(interleaved.subspan(offset, channels), channels);
+
+        for (std::uint16_t channel = 0; channel < channels; ++channel) {
+            const std::size_t index = offset + channel;
+            if (!std::isfinite(dry[channel])) {
+                interleaved[index] = dry[channel];
+                continue;
+            }
+            const double combined = static_cast<double>(dry[channel]) +
+                                    static_cast<double>(interleaved[index]);
+            interleaved[index] = static_cast<float>(std::clamp(
+                combined, -static_cast<double>(maximum),
+                static_cast<double>(maximum)));
+        }
+    }
+}
+
 void Delay::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
     write_frame_ = 0;
+    bypassed_cleared_ = false;
     feedback_ = target_feedback_;
     mix_ = target_mix_;
     feedback_step_ = 0.0F;

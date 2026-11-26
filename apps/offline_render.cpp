@@ -182,6 +182,9 @@ struct Options {
     float delay_ms = 0.0F;
     float delay_feedback = 0.25F;
     float delay_mix = 0.0F;
+    bool delay_trails_on_bypass = false;
+    bool delay_bypass_after_frames_enabled = false;
+    std::uint32_t delay_bypass_after_frames = 0;
     bool delay_tempo_enabled = false;
     float delay_tempo_bpm = 120.0F;
     tabletfx::DelayDivision delay_division = tabletfx::DelayDivision::quarter;
@@ -1998,6 +2001,24 @@ Options parse_options(int argc, char** argv, int first) {
             else if (value == "off") options.reverse_delay_running = false;
             else throw std::invalid_argument("Reverse-delay Run must be on or off");
             options.reverse_delay_enabled = true;
+            continue;
+        }
+        if (key == "--delay-trails-on-bypass") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --delay-trails-on-bypass");
+            }
+            const std::string_view value(argv[++i]);
+            if (value == "on") options.delay_trails_on_bypass = true;
+            else if (value == "off") options.delay_trails_on_bypass = false;
+            else throw std::invalid_argument("Delay Trails on bypass must be on or off");
+            continue;
+        }
+        if (key == "--delay-bypass-after-frames") {
+            if (i + 1 >= argc) {
+                throw std::invalid_argument("Missing value for --delay-bypass-after-frames");
+            }
+            options.delay_bypass_after_frames = parse_unsigned_integer(key, argv[++i]);
+            options.delay_bypass_after_frames_enabled = true;
             continue;
         }
         if (key == "--reverse-delay-time-mode") {
@@ -4125,6 +4146,7 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
             static_cast<float>(sample_rate), channels, 5000.0F,
             options.delay_ms > 0.0F ? options.delay_ms : 350.0F,
             options.delay_feedback, options.delay_mix, options.delay_dual_enabled);
+        delay->configure_trails_on_bypass(options.delay_trails_on_bypass);
         if (options.delay_tempo_enabled) {
             delay->configure_tempo(options.delay_tempo_bpm, options.delay_division,
                                    options.delay_feedback, options.delay_mix);
@@ -4457,13 +4479,40 @@ std::vector<std::unique_ptr<tabletfx::Effect>> make_effects(const Options& optio
 
 void process_in_blocks(tabletfx::AudioBuffer& audio,
                        std::vector<std::unique_ptr<tabletfx::Effect>>& effects,
-                       std::size_t block_frames) {
+                       std::size_t block_frames,
+                       bool delay_bypass_after_frames_enabled,
+                       std::uint32_t delay_bypass_after_frames) {
     const std::size_t channels = audio.channels;
+    tabletfx::Delay* delay_effect = nullptr;
+    if (delay_bypass_after_frames_enabled) {
+        for (const auto& effect : effects) {
+            delay_effect = dynamic_cast<tabletfx::Delay*>(effect.get());
+            if (delay_effect != nullptr) break;
+        }
+        if (delay_effect == nullptr) {
+            throw std::invalid_argument(
+                "--delay-bypass-after-frames requires a configured digital delay");
+        }
+    }
     for (std::size_t offset = 0; offset < audio.frames(); offset += block_frames) {
         const std::size_t frames = std::min(block_frames, audio.frames() - offset);
         std::span<float> block(audio.interleaved.data() + offset * channels, frames * channels);
         for (const auto& effect : effects) {
-            effect->process(block, audio.channels);
+            if (effect.get() == delay_effect && delay_bypass_after_frames_enabled &&
+                offset + frames > delay_bypass_after_frames) {
+                const std::size_t active_frames = offset < delay_bypass_after_frames
+                    ? static_cast<std::size_t>(delay_bypass_after_frames - offset)
+                    : 0U;
+                if (active_frames > 0U) {
+                    effect->process(block.first(active_frames * channels), audio.channels);
+                }
+                if (active_frames < frames) {
+                    effect->process_bypassed(
+                        block.subspan(active_frames * channels), audio.channels);
+                }
+            } else {
+                effect->process(block, audio.channels);
+            }
         }
     }
 }
@@ -4535,11 +4584,12 @@ void benchmark_one(std::string_view name, Factory make_effect, std::uint32_t sam
 template <typename Factory>
 void benchmark_reverb_tail_drain(std::string_view name, Factory make_effect,
                                 std::uint32_t sample_rate, std::uint16_t channels,
-                                std::size_t block_frames, std::size_t measured_blocks) {
+                                 std::size_t block_frames, std::size_t measured_blocks,
+                                 std::size_t seed_blocks = 96) {
     auto effect = make_effect();
     std::vector<float> buffer(block_frames * channels);
     std::uint32_t noise = 0x7654321U;
-    for (std::size_t block = 0; block < 96; ++block) {
+    for (std::size_t block = 0; block < seed_blocks; ++block) {
         for (float& sample : buffer) {
             noise = noise * 1664525U + 1013904223U;
             sample = static_cast<float>((noise >> 8U) & 0xffffU) / 32768.0F - 1.0F;
@@ -5293,6 +5343,14 @@ void run_bench() {
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("delay", [=] { return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F); },
                   sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_reverb_tail_drain("delay-trails-off-bypassed", [=] {
+        return std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
+    }, sample_rate, channels, block_frames, measured_blocks, 160);
+    benchmark_reverb_tail_drain("delay-trails-on-bypassed", [=] {
+        auto effect = std::make_unique<tabletfx::Delay>(sample_rate, channels, 2000.0F);
+        effect->configure_trails_on_bypass(true);
+        return effect;
+    }, sample_rate, channels, block_frames, measured_blocks, 160);
     benchmark_one("ducking-delay", [=] {
         tabletfx::DuckingDelayParameters parameters;
         parameters.threshold_db = -30.0F;
@@ -6222,6 +6280,7 @@ void print_usage() {
                     " [--delay-dual-b-feedback 0..0.95] [--delay-dual-b-mix 0..1]"
                    " [--delay-division whole|dotted-half|half|dotted-quarter|quarter|quarter-triplet|dotted-eighth|eighth|eighth-triplet|dotted-sixteenth|sixteenth|sixteenth-triplet]"
                   " [--delay-feedback 0..0.95] [--delay-mix 0..1]"
+                  " [--delay-trails-on-bypass on|off] [--delay-bypass-after-frames frames]"
                   " [--pitch-semitones -24..24]\n"
               << "                 [--pedal-compressor-sensitivity 0..1] [--pedal-compressor-sustain 0..1]"
                  " [--pedal-compressor-attack 0..1] [--pedal-compressor-level-db -12..12]\n"
@@ -6417,7 +6476,9 @@ int main(int argc, char** argv) {
             input.channels = options.output_channels;
         }
         auto effects = make_effects(options, input.sample_rate, input.channels);
-        process_in_blocks(input, effects, 256);
+        process_in_blocks(input, effects, 256,
+                          options.delay_bypass_after_frames_enabled,
+                          options.delay_bypass_after_frames);
         const Metrics output_metrics = metrics(input.interleaved);
         tabletfx::write_wav_float32(argv[3], input);
         std::cout << "rendered frames=" << input.frames() << " sample_rate_hz=" << input.sample_rate

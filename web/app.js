@@ -340,6 +340,7 @@ const DEFAULT_PARAMETERS = {
     1000, 0, 0.707, 0, 12, 3500, 0, 0.707, 0, 12,
     8000, 0, 0.707, 0, 12, 0],
   delay: [350, 0.25, 0.25],
+  delayTrailsOnBypass: false,
   delayBbd: false,
   delayBbdMode: false,
   delayTape: [0, 0.45, 0.35, 0.3, 0.08, 6],
@@ -1723,6 +1724,7 @@ const delayFeedback = document.querySelector("#delay-feedback");
 const delayFeedbackValue = document.querySelector("#delay-feedback-value");
 const delayMix = document.querySelector("#delay-mix");
 const delayMixValue = document.querySelector("#delay-mix-value");
+const delayTrailsOnBypass = document.querySelector("#delay-trails-on-bypass");
 const opticalCompressorControls = [
   "optical-threshold-db", "optical-ratio", "optical-knee-db", "optical-attack-ms",
   "optical-release-ms", "optical-program-release-ms", "optical-rms-window-ms",
@@ -6806,7 +6808,9 @@ function updateDelay(keepPreset = false) {
   const division = Number(delayDivision.value);
   const feedback = Number(delayFeedback.value);
   const mix = Number(delayMix.value);
+  const trailsOnBypass = delayTrailsOnBypass.checked;
   DEFAULT_PARAMETERS.delay = [delayMsNumber, feedback, mix];
+  DEFAULT_PARAMETERS.delayTrailsOnBypass = trailsOnBypass;
   DEFAULT_PARAMETERS.delayTempo = [tempoSync ? 1 : 0, bpm, division];
   delayMsValue.value = `${delayMsNumber.toFixed(0)} ms`;
   delayBpmValue.value = `${bpm.toFixed(0)} BPM`;
@@ -6815,7 +6819,8 @@ function updateDelay(keepPreset = false) {
   if (workletNode) {
     workletNode.port.postMessage({
       type: "delay",
-      value: { tempoSync, delayMs: delayMsNumber, bpm, division, feedback, mix },
+      value: { tempoSync, delayMs: delayMsNumber, bpm, division, feedback, mix,
+        trailsOnBypass },
     });
   }
 }
@@ -6854,6 +6859,7 @@ function applyDelayPreset() {
 }
 
 delayPreset.addEventListener("change", applyDelayPreset);
+delayTrailsOnBypass.addEventListener("change", () => updateDelay(true));
 function updateDelayCharacter() {
   const bbd = delayCharacter.value === "bbd-classic" ||
     delayCharacter.value === "bbd-mod";
@@ -7978,6 +7984,23 @@ async function waitForCapture(control, expectedSamples) {
   }
 }
 
+function waitForWorkletState(type, value) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      workletNode.port.removeEventListener("message", onMessage);
+      reject(new Error(`Timed out waiting for worklet ${type}=${value}.`));
+    }, 3000);
+    const onMessage = (event) => {
+      if (event.data?.type !== type ||
+          (value !== null && event.data?.value !== value)) return;
+      clearTimeout(timeout);
+      workletNode.port.removeEventListener("message", onMessage);
+      resolve(event.data);
+    };
+    workletNode.port.addEventListener("message", onMessage);
+  });
+}
+
 async function waitForLooperStatus(prefix) {
   const started = performance.now();
   while (!looperStatus.value.startsWith(prefix)) {
@@ -8961,6 +8984,11 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
       updateMultiDelayOptions();
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
+      const delayReapplied = waitForWorkletState(
+        "delay-trails-state", delayTrailsOnBypass.checked,
+      );
+      updateDelay(true);
+      await delayReapplied;
       Atomics.store(captureView, 0, 0);
       Atomics.store(captureView, 1, 0);
       playbackOffset = 0;
@@ -8995,6 +9023,234 @@ async function runMultiDelayBrowserSmokeTest(reference, captureView, captureBuff
       workletNode.port.postMessage({ type: "active", value: false });
       multiDelayControls.forEach((control, index) => { control.value = previousControls[index]; });
       updateMultiDelayOptions();
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
+function runDelayTrailsWasmSelfTest() {
+  if (!workletNode) {
+    return Promise.reject(new Error("Delay Trails WASM test requires the ready browser worklet."));
+  }
+  return new Promise((resolve, reject) => {
+    const port = workletNode.port;
+    const timeout = window.setTimeout(() => {
+      port.removeEventListener("message", onMessage);
+      reject(new Error("Timed out waiting for the deterministic Delay Trails WASM result."));
+    }, 10000);
+    const onMessage = (event) => {
+      if (event.data?.type !== "delay-trails-wasm-selftest-result") return;
+      window.clearTimeout(timeout);
+      port.removeEventListener("message", onMessage);
+      if (event.data.error) {
+        reject(new Error(`Deterministic Delay Trails WASM test failed: ${event.data.error}`));
+      } else {
+        resolve(event.data.result);
+      }
+    };
+    port.addEventListener("message", onMessage);
+    port.postMessage({ type: "delay-trails-wasm-selftest" });
+  });
+}
+
+async function runStadiumDelayTrailsBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousControls = [delayPreset.value, delayMode.value, delayMs.value,
+    delayBpm.value, delayDivision.value, delayFeedback.value, delayMix.value,
+    delayCharacter.value, delayTrailsOnBypass.checked];
+  const trailsDefaultBeforeTest = DEFAULT_PARAMETERS.delayTrailsOnBypass;
+  const postedDelayMessages = [];
+  const portPrototype = MessagePort.prototype;
+  const originalPost = portPrototype.postMessage;
+  const duration = reference.frames / reference.sampleRate;
+  if (duration < 0.8) {
+    throw new Error(`Delay Trails browser test needs at least 0.8 seconds of local guitar audio; found ${duration.toFixed(3)} seconds.`);
+  }
+  const bypassAt = Math.min(0.45, duration * 0.35);
+  const delayMsForTest = 100;
+  const testEnabled = previousEffectState.map((_, index) => index === 21);
+  portPrototype.postMessage = function(message, ...transfer) {
+    if (message?.type === "delay") postedDelayMessages.push(message.value);
+    return originalPost.call(this, message, ...transfer);
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== reference.channels ||
+        decodedAudio.length !== reference.frames) {
+      throw new Error("Stadium Delay Trails smoke requires the ready browser chain and local guitar fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    delayPreset.value = "custom";
+    delayMode.value = "free";
+    delayMs.value = String(delayMsForTest);
+    delayFeedback.value = "0.5";
+    delayMix.value = "0.5";
+    delayCharacter.value = "digital";
+    updateDelayCharacter();
+
+    const captureWithBypass = async (trailsOnBypass) => {
+      delayTrailsOnBypass.checked = trailsOnBypass;
+      const trailsConfigured = waitForWorkletState("delay-trails-state", trailsOnBypass);
+      updateDelay(true);
+      await trailsConfigured;
+      const checkboxes = [...document.querySelectorAll("[data-effect]")];
+      const delayEnabled = waitForWorkletState("delay-enabled-state", true);
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = testEnabled[index];
+        workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+      });
+      await delayEnabled;
+      const stateSnapshot = waitForWorkletState("enabled-state", null);
+      workletNode.port.postMessage({ type: "inspect-enabled" });
+      const enabledSnapshot = await stateSnapshot;
+      if (!enabledSnapshot.value.every((enabled, index) => enabled === testEnabled[index])) {
+        const activeIndices = enabledSnapshot.value
+          .map((enabled, index) => enabled ? index : -1)
+          .filter((index) => index >= 0);
+        throw new Error(`Unexpected live browser effect states: ${activeIndices.join(",")}.`);
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Delay Trails guitar playback.")), 5000,
+        )),
+      ]);
+      const bypassSample = Math.floor(bypassAt * reference.sampleRate) * reference.channels;
+      const bypassDeadline = performance.now() + Math.max(2000, bypassAt * 4000);
+      while (Atomics.load(captureView, 0) < bypassSample) {
+        if (performance.now() > bypassDeadline) {
+          throw new Error("Delay Trails smoke did not reach the scheduled guitar bypass point.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 4));
+      }
+      const bypassRequestedSamples = Atomics.load(captureView, 0);
+      const delayBypassed = waitForWorkletState("delay-enabled-state", false);
+      workletNode.port.postMessage({ type: "enable", index: 21, value: false });
+      await delayBypassed;
+      const bypassAckSamples = Atomics.load(captureView, 0);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const captured = new Float32Array(captureBuffer).slice();
+      captured.bypassTiming = { requestedSamples: bypassRequestedSamples, ackSamples: bypassAckSamples };
+      return captured;
+    };
+
+    const withoutTrails = await captureWithBypass(false);
+    const withTrails = await captureWithBypass(true);
+    let wasmParity = null;
+    let wasmParityError = null;
+    try {
+      wasmParity = await runDelayTrailsWasmSelfTest();
+    } catch (error) {
+      wasmParityError = String(error?.message || error);
+    }
+    const channels = reference.channels;
+    const frameStart = Math.min(reference.frames - 1,
+      Math.floor((bypassAt + delayMsForTest / 1000 + 0.12) * reference.sampleRate));
+    const frameEnd = Math.max(frameStart + 1,
+      Math.floor(Math.min(duration - 0.05, bypassAt + 0.8) * reference.sampleRate));
+    let wetDifferenceSquares = 0;
+    let guitarPeakBeforeBypass = 0;
+    for (let frame = frameStart; frame < frameEnd; frame += 1) {
+      for (let channel = 0; channel < channels; channel += 1) {
+        const sampleIndex = frame * channels + channel;
+        const wetDifference = withTrails[sampleIndex] - withoutTrails[sampleIndex];
+        wetDifferenceSquares += wetDifference * wetDifference;
+      }
+    }
+    const sampleCount = Math.max(1, (frameEnd - frameStart) * channels);
+    const tailDifferenceRms = Math.sqrt(wetDifferenceSquares / sampleCount);
+    const guitarPreBypassFrames = Math.max(1, Math.floor(bypassAt * reference.sampleRate));
+    for (let frame = 0; frame < guitarPreBypassFrames; frame += 1) {
+      for (let channel = 0; channel < channels; channel += 1) {
+        guitarPeakBeforeBypass = Math.max(
+          guitarPeakBeforeBypass,
+          Math.abs(withoutTrails[frame * channels + channel]),
+        );
+      }
+    }
+    const uiFailures = [];
+    if (guitarPeakBeforeBypass < 1e-5) {
+      uiFailures.push(`local guitar Play peak ${guitarPeakBeforeBypass} < 1e-5`);
+    }
+    if (tailDifferenceRms < 1e-5) {
+      uiFailures.push(`On/Off tail difference RMS ${tailDifferenceRms} < 1e-5`);
+    }
+    if (!postedDelayMessages.some((value) => value.trailsOnBypass === false) ||
+        !postedDelayMessages.some((value) => value.trailsOnBypass === true) ||
+        delayTrailsOnBypass.checked !== true ||
+        trailsDefaultBeforeTest !== false) {
+      uiFailures.push("control serialization/default-off check failed");
+    }
+    const captureMetrics = (() => {
+      const measure = (samples, startSeconds, endSeconds) => {
+        const channels = reference.channels;
+        const start = Math.max(0, Math.floor(startSeconds * reference.sampleRate));
+        const end = Math.min(reference.frames, Math.floor(endSeconds * reference.sampleRate));
+        let squareSum = 0;
+        let peak = 0;
+        let count = 0;
+        for (let frame = start; frame < end; ++frame) {
+          for (let channel = 0; channel < channels; ++channel) {
+            const sample = samples[frame * channels + channel] || 0;
+            squareSum += sample * sample;
+            peak = Math.max(peak, Math.abs(sample));
+            count += 1;
+          }
+        }
+        return { startFrame: start, endFrame: end, peak,
+          rms: Math.sqrt(squareSum / Math.max(1, count)) };
+      };
+      const windows = {
+        beforeBypass: [0, bypassAt],
+        immediatelyAfterBypass: [bypassAt, Math.min(duration, bypassAt + 0.25)],
+        tailComparison: [frameStart / reference.sampleRate, frameEnd / reference.sampleRate],
+        finalSegment: [Math.max(0, duration - 0.25), duration],
+      };
+      const result = {};
+      for (const [name, [start, end]] of Object.entries(windows)) {
+        result[name] = {
+          off: measure(withoutTrails, start, end),
+          on: measure(withTrails, start, end),
+        };
+      }
+      return { windows: result, bypassTiming: {
+        off: withoutTrails.bypassTiming, on: withTrails.bypassTiming,
+      } };
+    })();
+    if (wasmParityError || uiFailures.length > 0) {
+      throw new Error(JSON.stringify({
+        uiFailures, guitarPeakBeforeBypass, tailDifferenceRms, captureMetrics,
+        wasmParity, wasmParityError,
+      }));
+    }
+    return { enabledEffectIndex: 21, delayMs: delayMsForTest, bypassAtSeconds: bypassAt,
+      wasmParity, guitarPeakBeforeBypass, tailDifferenceRms, captureMetrics,
+      serializedOffAndOn: true, fixtureFrames: reference.frames, trailsDefault: false };
+  } finally {
+    stopSource(false);
+    portPrototype.postMessage = originalPost;
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      [delayPreset.value, delayMode.value, delayMs.value, delayBpm.value,
+        delayDivision.value, delayFeedback.value, delayMix.value,
+        delayCharacter.value, delayTrailsOnBypass.checked] = previousControls;
+      updateDelayCharacter();
+      updateDelay(true);
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
       checkboxes.forEach((checkbox, index) => {
         checkbox.checked = previousEffectState[index];
@@ -18168,6 +18424,24 @@ async function runBrowserSelfTest() {
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "stadium-delay-trails") {
+          testResult.textContent = "Checking Digital Delay Trails On/Off bypass with local guitar Play…";
+          const delayTrailsSmoke = await runStadiumDelayTrailsBrowserSmokeTest(
+             reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            delayTrails: delayTrailsSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Delay Trails browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "volume-pedal") {
           testResult.textContent = "Checking exact Volume Pedal heel mute and toe playback on local guitar audio…";
           const volumePedalSmoke = await runVolumePedalBrowserSmokeTest(

@@ -1,5 +1,20 @@
 # Latency, quality, and DSP-load protocol
 
+## Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
+
+The live Helix Stadium Effects manual's common-parameter table says Trails Off mutes delay repeats/reverb decay after bypass, while Trails On allows the tail to fade after bypass or a snapshot change. No default is stated. Manual labels are inconsistent: the selector/header says v1.4 Rev D, the cover says Firmware 1.4, and the footer says Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown, and Simple Delay applicability remains unresolved.
+
+TabletFX adds a default-off, project-authored Trails toggle to the existing Delay row at picker ID 21. Enabled bypass preserves the incoming dry signal and drains wet repeats through the existing Delay state without new excitation. It adds no slot, delay ring, or fixed algorithmic latency. The 48 kHz stereo, 2 s Delay state is 768,824 B whether the toggle is on or off; `process()` and the bypass drain path allocate no memory. Snapshot/preset changes are not implemented.
+
+The isolated Release benchmark used an AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame blocks (2.667 ms deadline), 160 blocks of excitation, and 5,000 measured bypass callbacks. Values are elapsed processor time divided by the callback deadline:
+
+| Profile | p50 / p95 / p99 / p99.9 / max callback budget (%) | Native state |
+|---|---:|---:|
+| Trails Off, bypassed | 0.0008 / 0.0011 / 0.0011 / 0.0011 / 0.0030 | 768,824 B |
+| Trails On, draining | 0.1350 / 0.2858 / 0.3098 / 0.7028 / 1.1097 | 768,824 B |
+
+The active drain adds 0.3087 percentage points at p99 and 0.6998 points at p99.9 compared with the bypassed/off path. It retains the zero-frame dry path and processes stored repeats until they decay. These processor-call timings are isolated desktop measurements, not live audio, Android/tablet, or hardware DSP estimates. The full native CTest suite, offline CLI regression, local prerecorded Guitar-TECHS browser/WASM Play test, full browser/native comparison, and Windows MinGW compile pass. Manual listening, device timing, physical behavior, and Line 6 DSP/sound parity remain open.
+
 ## Fractal FM9-family Chorus Delay Time/Minimum Delay and Delay Range (2026-11-26)
 
 The November 2026 Fractal Audio Blocks Guide, printed pp. 25–26, documents Chorus Delay Time (shown as Minimum Delay on the Expert page) at 0.1–50 ms and Delay Range at 1–40 ms. It does not state defaults. The source is family-level; FM9 downloads list v12.0 for FM9 Original/Turbo, not Mark II Turbo by name. Exact applicability and installed firmware remain unconfirmed.
