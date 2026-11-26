@@ -12,6 +12,7 @@ add_library(tabletfx_core
     src/tuner.cpp
     src/effects/clean_boost.cpp
     src/effects/chorus.cpp
+    src/effects/tone_master_pro_3d_chorus.cpp
     src/effects/triple_double_chorus.cpp
     src/effects/dimension_chorus.cpp
     src/effects/poly_detune.cpp
@@ -154,6 +155,10 @@ add_executable(tabletfx_fender_tremolo_duty_cycle_bench
     apps/fender_tremolo_duty_cycle_bench.cpp)
 target_link_libraries(tabletfx_fender_tremolo_duty_cycle_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_tone_master_pro_3d_chorus_bench
+    apps/tone_master_pro_3d_chorus_bench.cpp)
+target_link_libraries(tabletfx_tone_master_pro_3d_chorus_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
@@ -221,6 +226,12 @@ if(BUILD_TESTING)
     add_executable(tabletfx_chorus_tests tests/test_chorus.cpp)
     target_link_libraries(tabletfx_chorus_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_chorus_tests COMMAND tabletfx_chorus_tests)
+
+    add_executable(tabletfx_tone_master_pro_3d_chorus_tests
+        tests/test_tone_master_pro_3d_chorus.cpp)
+    target_link_libraries(tabletfx_tone_master_pro_3d_chorus_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_tone_master_pro_3d_chorus_tests
+        COMMAND tabletfx_tone_master_pro_3d_chorus_tests)
 
     add_executable(tabletfx_dimension_chorus_tests tests/test_dimension_chorus.cpp)
     target_link_libraries(tabletfx_dimension_chorus_tests PRIVATE tabletfx_core)

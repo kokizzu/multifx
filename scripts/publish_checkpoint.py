@@ -2895,6 +2895,31 @@ PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
 )
 
 CHECKPOINTS = {
+    "fender-3d-chorus": (
+        (
+            "CMakeLists.txt",
+            "EFFECTS_MATRIX.md",
+            "FLAGSHIP_EFFECT_COMPARISON.md",
+            "IMPLEMENTATION_CHECKLIST.md",
+            "LATENCY_AND_QUALITY.md",
+            "apps/tone_master_pro_3d_chorus_bench.cpp",
+            "include/tabletfx/effects.hpp",
+            "include/tabletfx/effects/tone_master_pro_3d_chorus.hpp",
+            "make/publish.mk",
+            "RESEARCH.md",
+            "research-state.json",
+            "scripts/publish_checkpoint.py",
+            "scripts/run_cmake.py",
+            "scripts/web.py",
+            "src/effects/tone_master_pro_3d_chorus.cpp",
+            "src/web/wasm_chain.cpp",
+            "tests/test_tone_master_pro_3d_chorus.cpp",
+            "web/app.js",
+            "web/audio-worklet.js",
+            "web/index.html",
+        ),
+        "feat: add project-authored 3D Chorus modes",
+    ),
     "axom-source-audit": (
         AXOM_SOURCE_AUDIT_CHECKPOINT_PATHS,
         "docs: audit Melofty Axom Max effect sources",
@@ -3319,6 +3344,9 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "fender-3d-chorus": {
+        "make/publish.mk": ("PUBLISH_CHECKPOINTS += fender-3d-chorus",),
+    },
     "stadium-delay-trails": {
         "make/publish.mk": ("PUBLISH_CHECKPOINTS += stadium-delay-trails",),
     },

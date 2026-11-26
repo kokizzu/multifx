@@ -216,6 +216,12 @@ def main() -> None:
             else "tabletfx_stereo_panner_bench"
         )
         run([str(panner_benchmark)])
+        tone_master_3d_benchmark = BUILD_DIR / (
+            "tabletfx_tone_master_pro_3d_chorus_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_tone_master_pro_3d_chorus_bench"
+        )
+        run([str(tone_master_3d_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":

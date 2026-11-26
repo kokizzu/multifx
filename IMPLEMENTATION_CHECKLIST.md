@@ -15,6 +15,14 @@
 - [x] Correct the active Synth source to printed p. 102 and shared Mix/Level controls to p. 4; the guide documents Guitar/Bass tracking range and Quantize. Project detector behavior and values remain separately qualified.
 - [ ] Continue source-by-source review of other Fractal claims against the current download-page PDF; do not infer exact model/firmware applicability from the family guide.
 
+## Fender Tone Master Pro 3D Chorus (2026-11-26)
+
+- [x] Verify the exact-model Model Guide v1.1.100 / Rev. A, printed p. 42: the 3D Chorus has four Mode buttons, described as distinctive modulations from subtle to extreme. The guide does not name the modes or publish curves, numeric controls, stereo behavior, DSP, or latency. Firmware history was checked through v1.8.87 (2026-11-23); installed firmware is unknown.
+- [x] Add a categorized, project-authored four-mode Chorus at Modulation picker ID 116, default Mode 1. The four modes are ordered subtle-to-pronounced UI choices and reuse one existing Chorus processor; they do not claim Fender's mode identities, curves, settings, or sound.
+- [x] `make test` and `make web-test` pass, including local prerecorded stereo Guitar-TECHS DI Play captures for all four modes and the full browser/native comparison. Native state is 34,864 B; WASM effect state is 34,820 B at 48 kHz stereo. Processing allocates nothing and adds no separate fixed-delay stage.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build. `make bench` measures isolated callback CPU and all mode memory; full percentiles are in `LATENCY_AND_QUALITY.md`.
+- [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP, mode curves, settings, or sound parity.
+
 ## Fender Tone Master Pro Chorus Low Cut, High Cut, and Stereo Width (2026-11-26)
 
 - [x] Check the exact-model Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 41: Chorus Mono and Stereo list Low Cut and High Cut; Chorus Stereo additionally lists Width. The guide publishes no numeric ranges, defaults, units, topology, DSP, or latency. Firmware notes were checked through v1.8.87 (2026-11-23); installed firmware is unknown.

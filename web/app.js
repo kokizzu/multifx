@@ -117,6 +117,7 @@ const EFFECT_NAMES = [
   "Global EQ · project-authored XR1-inspired five-band in-chain EQ",
   "7-Band Parametric EQ · project-authored Helix Stadium-inspired",
   "Fractal Diatonic Harmony · project-authored monophonic multi-voice pitch",
+  "3D Chorus · project-authored four-mode chorus",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -179,6 +180,7 @@ const DEFAULT_PARAMETERS = {
   chorus: [0.8, 15, 7, 0.3, 0, 120, 1],
   chorusTone: [0, 0, 1],
   dimensionChorus: [0, 0, 0.5, 0],
+  toneMasterPro3DChorus: 0,
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
@@ -1646,6 +1648,7 @@ const dimensionChorusMix = document.querySelector("#dimension-chorus-mix");
 const dimensionChorusMixValue = document.querySelector("#dimension-chorus-mix-value");
 const dimensionChorusLevel = document.querySelector("#dimension-chorus-level-db");
 const dimensionChorusLevelValue = document.querySelector("#dimension-chorus-level-value");
+const toneMasterPro3DChorusMode = document.querySelector("#tone-master-pro-3d-chorus-mode");
 const tripleDoubleChorusPresetSwitch = document.querySelector("#triple-double-chorus-preset-switch");
 const tripleDoubleChorusManualSwitch = document.querySelector("#triple-double-chorus-manual-switch");
 const tripleDoubleChorusRate = document.querySelector("#triple-double-chorus-rate-hz");
@@ -6075,6 +6078,17 @@ for (const control of [dimensionChorusVersion, dimensionChorusMode,
   control.addEventListener("input", updateDimensionChorus);
   control.addEventListener("change", updateDimensionChorus);
 }
+
+function updateToneMasterPro3DChorus() {
+  const mode = Math.max(0, Math.min(3, Number(toneMasterPro3DChorusMode.value) || 0));
+  DEFAULT_PARAMETERS.toneMasterPro3DChorus = mode;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "tone-master-pro-3d-chorus", value: mode });
+  }
+}
+
+toneMasterPro3DChorusMode.addEventListener("input", updateToneMasterPro3DChorus);
+toneMasterPro3DChorusMode.addEventListener("change", updateToneMasterPro3DChorus);
 
 function updateTripleDoubleChorus() {
   const values = [
@@ -16423,11 +16437,131 @@ async function runMonoModernEnhancerBrowserSmokeTest(sourceAudio, restoreOptions
   }
 }
 
+async function runToneMasterPro3DChorusBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const effectIndex = 116;
+  const previousEffectState = enabledEffects();
+  const previousMode = toneMasterPro3DChorusMode.value;
+  const previousModeParameter = DEFAULT_PARAMETERS.toneMasterPro3DChorus;
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Tone Master Pro 3D Chorus smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const modeOptions = [...toneMasterPro3DChorusMode.options].map((option) => option.value);
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !row.querySelector(".effect-name")?.textContent.includes("3D Chorus") ||
+        !checkbox || checkbox.checked || modeOptions.join(",") !== "0,1,2,3" ||
+        toneMasterPro3DChorusMode.value !== "0" ||
+        DEFAULT_PARAMETERS.toneMasterPro3DChorus !== 0 ||
+        effectMemory.length !== EFFECT_NAMES.length || !(effectMemory[effectIndex] > 0)) {
+      throw new Error(`Tone Master Pro 3D Chorus picker/default/memory check failed: category=${row?.dataset.category}, options=${modeOptions.join(",")}, mode=${toneMasterPro3DChorusMode.value}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    checkbox.checked = true;
+
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.35) * reference.channels),
+    );
+    const captures = [];
+    for (let mode = 0; mode < 4; mode += 1) {
+      toneMasterPro3DChorusMode.value = String(mode);
+      updateToneMasterPro3DChorus();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      captures.push(new Float32Array(captureBuffer).slice(0, samplesToCapture));
+    }
+
+    const source = decodedAudio;
+    let peak = 0;
+    let guitarDifferenceSquares = 0;
+    for (let index = 0; index < captures[0].length; index += 1) {
+      const output = captures[3][index];
+      const channel = index % reference.channels;
+      const frame = Math.floor(index / reference.channels);
+      const input = source.getChannelData(channel)[frame];
+      if (!Number.isFinite(output)) {
+        throw new Error("Tone Master Pro 3D Chorus produced non-finite browser output.");
+      }
+      peak = Math.max(peak, Math.abs(output));
+      const difference = output - input;
+      guitarDifferenceSquares += difference * difference;
+    }
+    const guitarDifferenceRms = Math.sqrt(
+      guitarDifferenceSquares / Math.max(1, captures[3].length),
+    );
+    const pairwiseDifferenceRms = [];
+    for (let left = 0; left < captures.length; left += 1) {
+      for (let right = left + 1; right < captures.length; right += 1) {
+        let squares = 0;
+        for (let index = 0; index < captures[left].length; index += 1) {
+          const delta = captures[left][index] - captures[right][index];
+          squares += delta * delta;
+        }
+        pairwiseDifferenceRms.push(Math.sqrt(squares / captures[left].length));
+      }
+    }
+    if (peak < 1.0e-5 || guitarDifferenceRms < 1.0e-4 ||
+        pairwiseDifferenceRms.some((difference) => difference < 1.0e-6) ||
+        !(effectMemory[effectIndex] > 0)) {
+      throw new Error(`Tone Master Pro 3D Chorus Play captures failed: peak=${peak}, inputDiff=${guitarDifferenceRms}, modeDiffs=${pairwiseDifferenceRms.join(",")}, memory=${effectMemory[effectIndex]}.`);
+    }
+    return {
+      category: "Modulation",
+      effectIndex,
+      modeCount: captures.length,
+      playCaptures: captures.length,
+      pairwiseDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      guitarDifferenceRms,
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    toneMasterPro3DChorusMode.value = previousMode;
+    DEFAULT_PARAMETERS.toneMasterPro3DChorus = previousModeParameter;
+    updateToneMasterPro3DChorus();
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
   testResult.textContent = "Running browser audio test…";
   let stadiumTapResetSmoke = null;
+  let toneMasterPro3DChorusSmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -16436,8 +16570,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 116 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 116 || effectRows.length !== 116 ||
+    const expectedEffectIds = Array.from({ length: 117 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 117 || effectRows.length !== 117 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -16539,8 +16673,12 @@ async function runBrowserSelfTest() {
                !EFFECT_NAMES[114]?.startsWith("7-Band Parametric EQ · project-authored Helix Stadium-inspired") ||
                effectRows[114]?.dataset.category !== "eq" ||
                effectRows[114]?.querySelector(".effect-category-tag")?.textContent !== "Equalizer" ||
+                EFFECT_NAMES[116] !== "3D Chorus · project-authored four-mode chorus" ||
+                effectRows[116]?.dataset.category !== "modulation" ||
+                effectRows[116]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+                toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
-               initialEffectState[114] ||
+                initialEffectState[114] || initialEffectState[116] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -16577,7 +16715,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-               throw new Error(`The effect picker must list 116 ordered, categorized effects (IDs 0–115), including Fractal Diatonic Harmony; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[115]}, row115=${effectRows[115]?.dataset.category}/${effectRows[115]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[115]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                throw new Error(`The effect picker must list 117 ordered, categorized effects (IDs 0–116), including Fractal Diatonic Harmony and 3D Chorus; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[116]}, row116=${effectRows[116]?.dataset.category}/${effectRows[116]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[116]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -18288,6 +18426,8 @@ async function runBrowserSelfTest() {
     parityEnabled[106] = true;
     // Uni-Verse Vibe has a focused browser Play test, but no offline CLI stage.
     parityEnabled[107] = false;
+    // 3D Chorus has its own four-mode local Play smoke; no offline CLI stage is exposed.
+    parityEnabled[116] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -19685,6 +19825,10 @@ async function runBrowserSelfTest() {
     const headRushBbdModeSmoke = await runHeadRushBbdModeBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Fender 3D Chorus modes with local guitar playback…";
+    toneMasterPro3DChorusSmoke = await runToneMasterPro3DChorusBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -19757,6 +19901,7 @@ async function runBrowserSelfTest() {
       volumePan: volumePanSmoke,
       stepTremolo: stepTremoloSmoke,
       stadiumTapReset: stadiumTapResetSmoke,
+      toneMasterPro3DChorus: toneMasterPro3DChorusSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

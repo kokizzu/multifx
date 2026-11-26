@@ -4,35 +4,35 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "c43bab54793f041e4a01605143cdcecb3e384fdc",
+  "previous_checkpoint_commit": "6fd152f9052c15a9defc269a4d3df85332e40925",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium TAP modulation reset",
-    "status": "Verified the live Stadium TAP semantics and implemented a global phase-reset action for the existing Tremolo and Rotary Speaker. Native and local-DI browser/WASM tests plus the Windows MinGW build pass. This is not tempo entry, targets only these two processors, and does not claim Line 6 settings, DSP, exact phase, or sound parity.",
+    "name": "Fender Tone Master Pro 3D Chorus",
+    "status": "Exact-model Mode behavior verified and a categorized project-authored four-mode Chorus is implemented. Native, local-DI browser/WASM, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
     "date": "2026-11-26",
-    "category": "global performance control",
+    "category": "Modulation",
     "official_source": {
-      "title": "Line 6 Helix Stadium Effects manual and hardware release notes",
-      "revision": "Live Effects manual selector lists v1.4 Rev D, v1.3 Rev B, and v1.2; hardware release notes list v1.4.2 dated 2026-10-27. Installed device firmware is unknown.",
-      "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "The common Speed/Rate entry says one TAP press resets modulation for LFO-based effects, including tremolos and rotary speakers. It does not specify exact phase semantics or tempo capture."
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 42; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide describes four Mode buttons and distinctive modulations from subtle to extreme, but publishes no mode names, curves, numeric settings, stereo behavior, DSP, or latency. The checked release notes do not identify a 3D Chorus change."
     },
-    "documented_controls": "One global TAP press resets LFO-based modulation. The manual names tremolos and rotary speakers as examples; the exact reset phase is not stated.",
-    "project_controls": "A global TAP button calls Effect::reset_modulation_phase() on the existing processor list. Only standard Tremolo and Rotary Speaker currently override the hook. Tremolo phase restarts without clearing depth/duty ramps; Rotary horn/drum phase restarts while motor rates, delay history, and crossover state remain. No picker ID or default changes, tempo measurement, or new processor is added.",
+    "documented_controls": "Four 3D Chorus Mode buttons; manufacturer-described range from subtle to extreme.",
+    "project_controls": "A new Modulation picker entry at ID 116 offers project-authored Mode 1–4 choices, default Mode 1. The choices progressively increase voicing depth/mix and reuse one existing Chorus processor. They are not Fender mode identities, curves, parameter values, or sound parity.",
     "verification": {
-      "native": "make test passes documentation validation (333 source requirements/346 tracked rows), 13 audio-fixture safety checks, and 117/117 CTests, including Tremolo and Rotary phase-only reset/state-preservation tests.",
-      "browser": "make web-test passes local prerecorded Guitar-TECHS DI playback, full browser/native chain comparison (maximum absolute error 0.0000016614208462; RMS error 0.0000003308441757), and HeadlessChrome 151 UI-to-WASM TAP acknowledgement. Full chain: 79 optional processors; 80,644,616 B processor state, 10,364 B tuner state, and 100,663,296 B WASM memory.",
-      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer build.",
-      "latency_memory": "No per-sample work, added processor state, fixed latency, or allocation. The one-shot TAP handler CPU time was not separately benchmarked; no DSP percent is claimed for this event.",
-      "diff_check": "make diff-check passes; working and staged diffs have no whitespace errors or workflow changes."
+      "native": "make test passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety tests, and 118/118 CTests, including the new 3D Chorus tests.",
+      "browser": "make web-test passes local prerecorded stereo Guitar-TECHS DI Play captures for all four modes and full browser/native comparison in HeadlessChrome 151: maximum absolute error 0.0000017128113; RMS error 0.0000003281177. The effect is categorized Modulation at index 116; focused WASM state is 34,820 B.",
+      "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
+      "latency_memory": "Native effect state is 34,864 B; browser effect state is 34,820 B. Processing allocates nothing and adds no separate fixed-delay stage. Latest Ryzen 9 5950X Release benchmark: 48 kHz stereo, 128 frames, 3,000 warm-up / 20,000 measured. Mode 1 p50/p95/p99/p99.9/max 0.0859/0.1354/0.1436/0.3536/6.5184%; Mode 2 0.0859/0.1354/0.1470/0.4271/4.4090%; Mode 3 0.0859/0.1073/0.1706/0.3649/4.1919%; Mode 4 0.0859/0.1073/0.1500/0.3326/0.7031% of the 2.6667 ms callback. No deadline misses; these isolated desktop figures do not guarantee tablet performance.",
+      "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
     },
-    "remaining": "Human listening, target-device timing, device behavior, installed firmware, and TAP coverage for other project LFO processors remain open; no Line 6 phase/settings/DSP/sound parity is claimed."
+    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain. Fender mode names, curves, numeric settings, stereo behavior, DSP, latency, and installed firmware remain unknown; no Fender settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Verify the exact-model v1.1.100 / Rev. A Model Guide and current firmware notes for 3D Chorus (printed p. 42), then add a separate Modulation picker feature with the four documented Mode choices if the project-authored behavior can be kept clearly distinct from Fender DSP/settings/sound. Record missing mode names, response curves, numeric values, stereo behavior, and device applicability as unknown; test native/browser/WASM local-DI, Windows, CPU, and memory before committing.",
-    "qualification": "Preserve the independent general research cursor, expression-volume queue, footswitch-display queue, and remaining source audits. Stadium TAP coverage is currently limited to standard Tremolo and Rotary Speaker; other LFO stages remain open. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Integrate the isolated project-authored Fractal FM9 Surround Delay processor from the current November 2026 Blocks Guide evidence; test native and browser/WASM, categorized picker behavior with local prerecorded guitar DI, Windows, bounded memory, and per-callback DSP. Preserve the qualification that the guide is FM9-family evidence and the v12.0 download listing names Original/Turbo rather than Mark II Turbo; exact applicability and installed firmware remain unknown.",
+    "qualification": "Preserve the independent general research cursor, expression-volume queue, footswitch-display queue, and remaining source audits. Axom Max, HeadRush Prime, and XR1 remain limited by inaccessible exact algorithm/control tables; continue recording the source gap and do not invent model names or parameters."
   },
   "completed_checkpoints": [
     {
@@ -1112,7 +1112,7 @@
         "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
         "qualification": "Family-level Blocks Guide evidence. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Do not claim Fractal controls, ranges, DSP, phase behavior, latency, or sound parity."
       },
-    "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. The Expert-page Number Of Voices control increases delay-line count up to eight; the guide suggests two for vintage chorus and up to eight for a lush ensemble but states no numeric minimum/default. Above two voices the LFO changes to SINE; selecting a non-SINE LFO resets the count to two. Separate Delay Time/Minimum Delay is 0.1–50 ms and Delay Range is 1–40 ms.",
+      "documented_controls": "Chorus Rate controls modulation speed; Tempo sets Rate rhythmically. A quarter-note at 120 BPM is 2 Hz; NONE restores manual Rate. The separate LFO1 SYNC controller source is not implemented. The Expert-page Number Of Voices control increases delay-line count up to eight; the guide suggests two for vintage chorus and up to eight for a lush ensemble but states no numeric minimum/default. Above two voices the LFO changes to SINE; selecting a non-SINE LFO resets the count to two. Separate Delay Time/Minimum Delay is 0.1–50 ms and Delay Range is 1–40 ms.",
       "project_controls": "Existing categorized Chorus remains at picker ID 16. Project-authored Rate mode is Free or Quarter-note; free Rate keeps its 0.8 Hz default and 0.05–8 Hz bounds. Tempo BPM is project-authored, default 120 BPM, bounded 20–300 BPM, and quarter-note Rate is BPM/60. Free mode restores the manual rate. No new picker slot, buffer, allocation, or fixed latency is added.",
       "verification": {
         "native": "make test-fractal-chorus-tempo passed focused tabletfx_chorus_tests, including tempo mapping, clamping, manual-rate restoration, changed output, and no process-time allocation.",
@@ -1175,6 +1175,30 @@
         "diff_check": "make diff-check passes; workflow files are excluded."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, target-device timing, and manufacturer DSP/settings/sound parity remain open."
+    },
+    {
+      "name": "Fender Tone Master Pro 3D Chorus",
+      "status": "verified project-authored effect; automated verification complete; human listening/device checks remain",
+      "date": "2026-11-26",
+      "category": "Modulation",
+      "picker_index": 116,
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 42; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "Four Mode buttons are described as distinctive modulations from subtle to extreme. The manual and checked firmware notes do not provide mode names, curves, values, stereo behavior, DSP, latency, or installed firmware."
+      },
+      "documented_controls": "Four 3D Chorus Mode buttons with manufacturer-described subtle-to-extreme character.",
+      "project_controls": "Project-authored Mode 1–4, default Mode 1, at Modulation picker index 116; reuses one existing Chorus processor. No Fender mode identity, settings, DSP, or sound parity is claimed.",
+      "verification": {
+        "native": "make test: 333 documentation requirements/346 tracked rows, 13 fixture-safety tests, 118/118 CTests.",
+        "browser": "make web-test: HeadlessChrome 151, local prerecorded 48 kHz stereo Guitar-TECHS DI, four captured mode outputs, categorized picker, browser/native maximum absolute error 0.0000017128113 and RMS error 0.0000003281177.",
+        "windows": "make windows-cross-build passes MinGW core/offline renderer.",
+        "latency_memory": "Native effect state is 34,864 B; browser effect state is 34,820 B. Processing allocates nothing and adds no separate fixed-delay stage. Latest Ryzen 9 5950X Release benchmark: 48 kHz stereo, 128 frames, 3,000 warm-up / 20,000 measured. Mode 1 p50/p95/p99/p99.9/max 0.0859/0.1354/0.1436/0.3536/6.5184%; Mode 2 0.0859/0.1354/0.1470/0.4271/4.4090%; Mode 3 0.0859/0.1073/0.1706/0.3649/4.1919%; Mode 4 0.0859/0.1073/0.1500/0.3326/0.7031% of the 2.6667 ms callback. No deadline misses; these isolated desktop figures do not guarantee tablet performance.",
+        "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+      },
+      "remaining": "Human listening, physical-device comparison, target-device timing, and exact installed firmware remain open."
     }
   ],
   "previous_checkpoint": {

@@ -55,6 +55,7 @@
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
+#include "tabletfx/effects/tone_master_pro_3d_chorus.hpp"
 #include "tabletfx/effects/poly_detune.hpp"
 #include "tabletfx/effects/fractal_chromatic_harmonizer.hpp"
 #include "tabletfx/effects/triple_double_chorus.hpp"

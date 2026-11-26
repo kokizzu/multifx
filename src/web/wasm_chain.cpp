@@ -4,6 +4,7 @@
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
+#include "tabletfx/effects/tone_master_pro_3d_chorus.hpp"
 #include "tabletfx/effects/compressor.hpp"
 #include "tabletfx/effects/envelope_wah.hpp"
 #include "tabletfx/effects/flanger.hpp"
@@ -144,7 +145,9 @@ public:
           pedal_detune_(static_cast<float>(sample_rate),
                         static_cast<std::uint16_t>(channels)),
           mutant_filter_(static_cast<float>(sample_rate),
-                         static_cast<std::uint16_t>(channels)) {
+                         static_cast<std::uint16_t>(channels)),
+          tone_master_pro_3d_chorus_(static_cast<float>(sample_rate),
+                                     static_cast<std::uint16_t>(channels)) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
@@ -435,7 +438,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 22; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 23; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* work_data() noexcept { return work_.data(); }
@@ -557,6 +560,11 @@ public:
             if (fractal_diatonic_harmonizer_) {
                 fractal_diatonic_harmonizer_->set_enabled(enabled);
             }
+            return true;
+        }
+        if (index == 116U) {
+            tone_master_pro_3d_chorus_enabled_ = enabled;
+            if (!enabled) tone_master_pro_3d_chorus_.reset();
             return true;
         }
         if (index >= effects_.size()) {
@@ -820,6 +828,13 @@ public:
             }
             return;
         }
+        if (index == 116U) {
+            if (tone_master_pro_3d_chorus_enabled_) {
+                tone_master_pro_3d_chorus_.process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -906,6 +921,7 @@ public:
         if (fractal_diatonic_harmonizer_) {
             fractal_diatonic_harmonizer_->reset();
         }
+        tone_master_pro_3d_chorus_.reset();
         signal_controls_.reset();
         tuner_.reset();
         input_meter_.reset();
@@ -2194,6 +2210,11 @@ public:
         parameters.level_db = level_db;
         static_cast<tabletfx::DimensionChorus*>(effects_[47].effect.get())
             ->set_parameters(parameters);
+    }
+
+    void configure_tone_master_pro_3d_chorus(std::uint32_t mode) noexcept {
+        tone_master_pro_3d_chorus_.set_mode(static_cast<
+            tabletfx::ToneMasterPro3DChorusMode>(std::min(mode, 3U)));
     }
 
     void configure_triple_double_chorus(
@@ -3908,6 +3929,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 116U) {
+            const std::size_t bytes = tone_master_pro_3d_chorus_.memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -3951,6 +3978,7 @@ private:
     tabletfx::PolyDetune poly_detune_;
     tabletfx::PedalDetune pedal_detune_;
     tabletfx::MutantFilter mutant_filter_;
+    tabletfx::ToneMasterPro3DChorus tone_master_pro_3d_chorus_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -3978,6 +4006,7 @@ private:
     bool poly_detune_enabled_ = false;
     bool pedal_detune_enabled_ = false;
     bool mutant_filter_enabled_ = false;
+    bool tone_master_pro_3d_chorus_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -4728,6 +4757,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_dimension_chorus(
     float mix, float level_db) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_dimension_chorus(version, mode, mix, level_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_tone_master_pro_3d_chorus(
+    void* opaque, std::uint32_t mode) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_tone_master_pro_3d_chorus(mode);
     }
 }
 

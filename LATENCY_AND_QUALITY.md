@@ -1,5 +1,20 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro 3D Chorus project modes (2026-11-26)
+
+The exact-model Model Guide v1.1.100 / Rev. A, printed p. 42, documents four modes described from subtle to extreme; it does not specify their names, curves, numeric controls, stereo behavior, DSP, or latency. TabletFX implements four project-authored choices on one existing Chorus processor, defaulting to Mode 1. The implementation adds no separate fixed-delay stage or process-time allocation. At 48 kHz stereo the native state is 34,864 B and the focused browser/WASM effect state is 34,820 B.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks, and 20,000 measured callbacks. Values are elapsed processor time as a percentage of one callback deadline:
+
+| Project mode | p50 | p95 | p99 | p99.9 | Max | Native state | Fixed added latency | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Mode 1 (subtle default) | 0.0859% | 0.1354% | 0.1436% | 0.3536% | 6.5184% | 34,864 B | 0 frames | 0/20,000 |
+| Mode 2 | 0.0859% | 0.1354% | 0.1470% | 0.4271% | 4.4090% | 34,864 B | 0 frames | 0/20,000 |
+| Mode 3 | 0.0859% | 0.1073% | 0.1706% | 0.3649% | 4.1919% | 34,864 B | 0 frames | 0/20,000 |
+| Mode 4 (most pronounced) | 0.0859% | 0.1073% | 0.1500% | 0.3326% | 0.7031% | 34,864 B | 0 frames | 0/20,000 |
+
+Mode 1's maximum is an outlier relative to its p99.9; the measured maximum across all four modes remained below 6.52% of the callback deadline, with no deadline misses. These are isolated desktop processor timings, not whole-chain cost or an Android/tablet guarantee. `make test`, `make web-test`, `make windows-cross-build`, and `make bench` pass; the browser test checks all four categorized local Guitar-TECHS DI Play outputs. Manual listening and physical-device comparison remain open. No Fender DSP, settings, or sound parity is claimed.
+
 ## Line 6 Helix Stadium global TAP modulation reset (2026-11-26)
 
 The live Helix Stadium Effects manual (selector v1.4 Rev D / v1.3 Rev B / v1.2) says one TAP press resets LFO-based modulation, with tremolos and rotary speakers as examples. It does not specify exact phase semantics. TabletFX routes a global UI action to the existing Tremolo and Rotary Speaker processors only. This is a user event, not a new audio effect: it adds no processor state, buffer, fixed latency, or work inside the per-sample processing loop. The worklet performs one virtual phase-reset dispatch across the existing processor list on a TAP press; its isolated event-handler CPU time is not separately benchmarked, so no callback percentage is claimed for that one-shot action.

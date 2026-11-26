@@ -209,6 +209,7 @@
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="113"><span class="effect-number">114</span><span class="effect-name">Global EQ · project-authored XR1-inspired in-chain EQ</span><span class="effect-default">5 assignable filters · project L/R assignment</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="eq"><input type="checkbox" data-effect="114"><span class="effect-number">115</span><span class="effect-name">7-Band Parametric EQ · project-authored Helix Stadium-inspired</span><span class="effect-default">Neutral seven-band curve · disabled by default</span><span class="effect-category-tag">Equalizer</span></label>
         <label class="effect-row" data-category="pitch"><input type="checkbox" data-effect="115"><span class="effect-number">116</span><span class="effect-name">Diatonic Harmony · project-authored Fractal FM9-family controls</span><span class="effect-default">Two voices · +third / +fifth scale steps · disabled by default</span><span class="effect-category-tag">Pitch</span></label>
+         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="116"><span class="effect-number">117</span><span class="effect-name">3D Chorus · project-authored four-mode chorus</span><span class="effect-default">Mode 1 · subtle · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -1470,6 +1471,19 @@
           <span>Level · project-authored range</span><output id="dimension-chorus-level-value" for="dimension-chorus-level-db">0.0 dB</output>
           <input id="dimension-chorus-level-db" type="range" min="-24" max="12" step="0.5" value="0">
         </label>
+      </div>
+      <div class="effect-parameter-group" aria-label="Tone Master Pro 3D Chorus controls">
+        <h3>3D Chorus · project-authored modes</h3>
+        <label class="mix-control" for="tone-master-pro-3d-chorus-mode">
+          <span>Mode · project-authored voicing</span>
+          <select id="tone-master-pro-3d-chorus-mode">
+            <option value="0" selected>Mode 1 · subtle</option>
+            <option value="1">Mode 2</option>
+            <option value="2">Mode 3</option>
+            <option value="3">Mode 4 · pronounced</option>
+          </select>
+        </label>
+        <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 / Rev. A, printed p. 42, describes four Mode buttons ranging from subtle to extreme but does not publish mode names, response curves, numeric values, stereo behavior, DSP, or latency. These four project-authored chorus voicings use one modulated delay voice with increasing depth and mix; Mode 1 is the conservative default. This is not Fender’s mode mapping or sound parity.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Triple-Double Chorus controls">
         <h3>Triple-Double Chorus · project-authored DSP</h3>

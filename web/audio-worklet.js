@@ -37,6 +37,7 @@ EFFECTS.push("fractal-chromatic-harmonizer");
 EFFECTS.push("xr1-global-eq");
 EFFECTS.push("stadium-seven-band-peq");
 EFFECTS.push("fractal-diatonic-harmonizer");
+EFFECTS.push("tone-master-pro-3d-chorus");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -486,6 +487,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_chorus(this.chain, ...chorus, ...chorusTone);
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
       module._tf_chain_set_dimension_chorus(this.chain, ...dimensionChorus);
+       module._tf_chain_set_tone_master_pro_3d_chorus(
+         this.chain, parameters.toneMasterPro3DChorus ?? 0,
+       );
       const tripleDoubleChorus = parameters.tripleDoubleChorus ||
         [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1];
       module._tf_chain_set_triple_double_chorus(this.chain, ...tripleDoubleChorus);
@@ -1515,6 +1519,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       );
     } else if (message.type === "dimension-chorus" && this.ready) {
       this.module._tf_chain_set_dimension_chorus(this.chain, ...message.value);
+    } else if (message.type === "tone-master-pro-3d-chorus" && this.ready) {
+      this.module._tf_chain_set_tone_master_pro_3d_chorus(
+        this.chain, message.value,
+      );
     } else if (message.type === "triple-double-chorus" && this.ready) {
       this.module._tf_chain_set_triple_double_chorus(this.chain, ...message.value);
     } else if (message.type === "four-band-resonator" && this.ready) {
