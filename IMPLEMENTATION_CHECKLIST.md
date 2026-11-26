@@ -765,6 +765,14 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core and offline renderer build. `make bench` includes a separate Tap Division sync row: 4,832 B native state; p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of a 2.667 ms callback on Ryzen 9 5950X Release. Dry path has no fixed algorithmic delay; `process()` allocates nothing.
 - [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP or sound parity.
 
+## Fractal FM9-family Surround Delay (2026-11-26)
+
+- [x] Verify the current November 2026 Blocks Guide, printed pp. 31–34: Surround Delay rotates echoes; Rotation reverses direction with negative values; stereo L/R ratio, independent feedback, Width/Spread, Master Time 25–400%, and Master Feedback 0–200% are documented. Most bounds/defaults and the Rotation mapping are unspecified. The firmware page lists v12.0 for Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.
+- [x] Add a project-authored Delay picker entry at ID 117 with project controls/defaults, stereo rotation, independent feedback, and 10 ms parameter ramps. The four-second cap is a project choice; tempo sync and Fractal DSP/settings/sound parity are not implemented.
+- [x] `make test` passes all native tests and fixture checks. `make web-test` passes browser/native comparison for the existing offline-renderable stages and the focused HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play smoke for this new effect; the new stage itself is excluded from parity because the offline CLI has no matching stage.
+- [x] `make windows-cross-build` passes the Windows MinGW core and offline-renderer build. `make bench` reports 144,168 B default native state / 144,124 B browser state and no `process()` allocation. At 48 kHz stereo/128 frames, default p50/p95/p99/p99.9/max is 0.0649/0.0803/0.0979/0.2606/1.4629% of the 2.667 ms callback deadline; the 1,536,168 B maximum-time profile is 0.1324/0.1537/0.1609/0.3559/0.4740%. The dry path adds no fixed latency; wet echoes follow the selected time.
+- [ ] Human listening, physical Fractal comparison, installed firmware, exact Mark II Turbo applicability, and target-device timing remain manual. Do not claim Fractal DSP, settings, or sound parity.
+
 ## Fender Tone Master Pro — Electric Flanger Filter mode (2026-11-26)
 
 - [x] Verify the exact Model Guide v1.1.100 / Rev. A, printed p. 39: Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter keeps harmonic flanging without frequency modulation; Rate changes tone and Color adjusts intensity. The guide gives no ranges/defaults, DSP, or latency. Firmware history checked through v1.8.87 dated 2026-11-23; installed firmware is unknown.

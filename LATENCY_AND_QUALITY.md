@@ -743,3 +743,16 @@ The benchmark measures 100% clip on a sine LFO at the default 5 Hz/50% depth, 48
 | Full LFO Clip | 0.0743% | 0.0750% | 0.0765% | 0.5374% | 2.0974% | 96 B | 0 frames | 0/5,000 |
 
 The unmodified tremolo benchmark in the same run measured p50/p95/p99/p99.9/max 0.0645/0.0803/0.0806/0.5798/1.8045%, also with 96 B state. `make test-fender-tremolo-lfo-clip`, `make web-test-fender-tremolo-lfo-clip`, `make windows-cross-build`, and `make bench` pass. Browser Play uses local prerecorded stereo guitar DI. These isolated desktop timings do not predict Android/tablet load. Manual listening and target-device timing remain open; the project curve is not Fender DSP parity.
+
+## Fractal FM9-family Surround Delay (2026-11-26)
+
+The isolated benchmark uses an AMD Ryzen 9 5950X Release build, 48 kHz, stereo, 128-frame callbacks (2.667 ms deadline), 3,000 warm-up callbacks and 20,000 measured callbacks. The processor grows delay history only during parameter updates, not in `process()`. Default stereo owns 144,168 B natively; the browser/WASM smoke reports 144,124 B. The project caps each selected delay at four seconds; maximum-time stereo owns 1,536,168 B at 48 kHz. Dry audio has no fixed algorithmic latency; wet echoes follow their selected time.
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default stereo | 0.0649% | 0.0803% | 0.0979% | 0.2606% | 1.4629% | 144,168 B | 0/20,000 |
+| Short, rotating, high-feedback stereo | 0.0641% | 0.0668% | 0.0694% | 0.2445% | 1.0065% | 9,768 B | 0/20,000 |
+| Maximum-time / ratio stereo | 0.1324% | 0.1537% | 0.1609% | 0.3559% | 0.4740% | 1,536,168 B | 0/20,000 |
+| Default mono | 0.0244% | 0.0315% | 0.0323% | 0.0435% | 0.2385% | 144,168 B | 0/20,000 |
+
+`make test`, `make web-test`, `make windows-cross-build`, and `make bench` pass. These are isolated processor-call measurements, not total-chain or device latency; the new effect's native/WASM parity remains untested because the offline CLI does not expose it. Manual listening and target-device timing remain open.

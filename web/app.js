@@ -118,6 +118,7 @@ const EFFECT_NAMES = [
   "7-Band Parametric EQ · project-authored Helix Stadium-inspired",
   "Fractal Diatonic Harmony · project-authored monophonic multi-voice pitch",
   "3D Chorus · project-authored four-mode chorus",
+  "Surround Delay · project-authored Fractal FM9-family control concept",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -181,6 +182,7 @@ const DEFAULT_PARAMETERS = {
   chorusTone: [0, 0, 1],
   dimensionChorus: [0, 0, 0.5, 0],
   toneMasterPro3DChorus: 0,
+  fractalSurroundDelay: [375, 100, 100, 35, 35, 100, 50, 100, 25, 0],
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
@@ -1649,6 +1651,30 @@ const dimensionChorusMixValue = document.querySelector("#dimension-chorus-mix-va
 const dimensionChorusLevel = document.querySelector("#dimension-chorus-level-db");
 const dimensionChorusLevelValue = document.querySelector("#dimension-chorus-level-value");
 const toneMasterPro3DChorusMode = document.querySelector("#tone-master-pro-3d-chorus-mode");
+const fractalSurroundDelayControls = [
+  document.querySelector("#fractal-surround-time-ms"),
+  document.querySelector("#fractal-surround-master-time-percent"),
+  document.querySelector("#fractal-surround-right-ratio-percent"),
+  document.querySelector("#fractal-surround-feedback-left-percent"),
+  document.querySelector("#fractal-surround-feedback-right-percent"),
+  document.querySelector("#fractal-surround-master-feedback-percent"),
+  document.querySelector("#fractal-surround-rotation-percent"),
+  document.querySelector("#fractal-surround-width-percent"),
+  document.querySelector("#fractal-surround-mix-percent"),
+  document.querySelector("#fractal-surround-level-db"),
+];
+const fractalSurroundDelayValueOutputs = [
+  document.querySelector("#fractal-surround-time-value"),
+  document.querySelector("#fractal-surround-master-time-value"),
+  document.querySelector("#fractal-surround-right-ratio-value"),
+  document.querySelector("#fractal-surround-feedback-left-value"),
+  document.querySelector("#fractal-surround-feedback-right-value"),
+  document.querySelector("#fractal-surround-master-feedback-value"),
+  document.querySelector("#fractal-surround-rotation-value"),
+  document.querySelector("#fractal-surround-width-value"),
+  document.querySelector("#fractal-surround-mix-value"),
+  document.querySelector("#fractal-surround-level-value"),
+];
 const tripleDoubleChorusPresetSwitch = document.querySelector("#triple-double-chorus-preset-switch");
 const tripleDoubleChorusManualSwitch = document.querySelector("#triple-double-chorus-manual-switch");
 const tripleDoubleChorusRate = document.querySelector("#triple-double-chorus-rate-hz");
@@ -6089,6 +6115,32 @@ function updateToneMasterPro3DChorus() {
 
 toneMasterPro3DChorusMode.addEventListener("input", updateToneMasterPro3DChorus);
 toneMasterPro3DChorusMode.addEventListener("change", updateToneMasterPro3DChorus);
+
+function updateFractalSurroundDelay() {
+  const values = fractalSurroundDelayControls.map((control) => Number(control.value));
+  const [time, masterTime, ratio, feedbackLeft, feedbackRight,
+    masterFeedback, rotation, width, mix, level] = values;
+  fractalSurroundDelayValueOutputs[0].textContent = `${time.toFixed(0)} ms`;
+  fractalSurroundDelayValueOutputs[1].textContent = `${masterTime.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[2].textContent = `${ratio.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[3].textContent = `${feedbackLeft.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[4].textContent = `${feedbackRight.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[5].textContent = `${masterFeedback.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[6].textContent = `${rotation.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[7].textContent = `${width.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[8].textContent = `${mix.toFixed(0)}%`;
+  fractalSurroundDelayValueOutputs[9].textContent = `${level.toFixed(1)} dB`;
+  DEFAULT_PARAMETERS.fractalSurroundDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "fractal-surround-delay", value: values });
+  }
+}
+
+for (const control of fractalSurroundDelayControls) {
+  control.addEventListener("input", updateFractalSurroundDelay);
+  control.addEventListener("change", updateFractalSurroundDelay);
+}
+updateFractalSurroundDelay();
 
 function updateTripleDoubleChorus() {
   const values = [
@@ -16556,12 +16608,152 @@ async function runToneMasterPro3DChorusBrowserSmokeTest(reference, captureView, 
   }
 }
 
+async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const effectIndex = 117;
+  const previousEffectState = enabledEffects();
+  const previousValues = fractalSurroundDelayControls.map((control) => control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.fractalSurroundDelay];
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Fractal Surround Delay smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const expectedMemory = Math.round(audioContext.sampleRate * 0.375) *
+      2 * Float32Array.BYTES_PER_ELEMENT;
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Surround Delay") ||
+        !checkbox || checkbox.checked || fractalSurroundDelayControls.length !== 10 ||
+        fractalSurroundDelayControls[0].value !== "375" ||
+        DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0" ||
+        effectMemory.length !== EFFECT_NAMES.length ||
+        effectMemory[effectIndex] < expectedMemory ||
+        effectMemory[effectIndex] >= expectedMemory + 10_000) {
+      throw new Error(`Fractal Surround Delay picker/default/memory check failed: category=${row?.dataset.category}, time=${fractalSurroundDelayControls[0].value}, parameters=${DEFAULT_PARAMETERS.fractalSurroundDelay.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}/${expectedMemory}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [fractalSurroundDelayControls[0], "5", "500"],
+      [fractalSurroundDelayControls[1], "25", "400"],
+      [fractalSurroundDelayControls[2], "25", "200"],
+      [fractalSurroundDelayControls[3], "0", "100"],
+      [fractalSurroundDelayControls[4], "0", "100"],
+      [fractalSurroundDelayControls[5], "0", "200"],
+      [fractalSurroundDelayControls[6], "-200", "200"],
+      [fractalSurroundDelayControls[7], "-100", "100"],
+      [fractalSurroundDelayControls[8], "0", "100"],
+      [fractalSurroundDelayControls[9], "-24", "12"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Fractal Surround Delay project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "delay";
+    updateEffectBrowser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    checkbox.checked = true;
+
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.3) * reference.channels),
+    );
+    const captures = [];
+    for (const rotation of [-25, 25]) {
+      const values = [20, 100, 100, 70, 70, 100, rotation, 100, 100, 0];
+      fractalSurroundDelayControls.forEach((control, index) => {
+        control.value = String(values[index]);
+      });
+      updateFractalSurroundDelay();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      captures.push(new Float32Array(captureBuffer).slice(0, samplesToCapture));
+    }
+
+    let peak = 0;
+    let guitarDifferenceSquares = 0;
+    let rotationDifferenceSquares = 0;
+    const source = decodedAudio;
+    for (let index = 0; index < captures[0].length; index += 1) {
+      const first = captures[0][index];
+      const second = captures[1][index];
+      const channel = index % reference.channels;
+      const frame = Math.floor(index / reference.channels);
+      const input = source.getChannelData(channel)[frame];
+      if (!Number.isFinite(first) || !Number.isFinite(second)) {
+        throw new Error("Fractal Surround Delay produced non-finite browser output.");
+      }
+      peak = Math.max(peak, Math.abs(first), Math.abs(second));
+      const guitarDifference = first - input;
+      guitarDifferenceSquares += guitarDifference * guitarDifference;
+      const rotationDifference = first - second;
+      rotationDifferenceSquares += rotationDifference * rotationDifference;
+    }
+    const guitarDifferenceRms = Math.sqrt(
+      guitarDifferenceSquares / Math.max(1, captures[0].length),
+    );
+    const rotationDifferenceRms = Math.sqrt(
+      rotationDifferenceSquares / Math.max(1, captures[0].length),
+    );
+    if (peak < 1.0e-5 || guitarDifferenceRms < 1.0e-4 ||
+        rotationDifferenceRms < 1.0e-7 ||
+        DEFAULT_PARAMETERS.fractalSurroundDelay[6] !== 25) {
+      throw new Error(`Fractal Surround Delay Play captures failed: peak=${peak}, inputDiff=${guitarDifferenceRms}, rotationDiff=${rotationDifferenceRms}, memory=${effectMemory[effectIndex]}.`);
+    }
+    return {
+      category: "Delay",
+      effectIndex,
+      playCaptures: captures.length,
+      rotationDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      expectedRingBytes: expectedMemory,
+      guitarDifferenceRms,
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    fractalSurroundDelayControls.forEach((control, index) => {
+      control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.fractalSurroundDelay = previousParameters;
+    updateFractalSurroundDelay();
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
   testResult.textContent = "Running browser audio test…";
   let stadiumTapResetSmoke = null;
   let toneMasterPro3DChorusSmoke = null;
+  let fractalSurroundDelaySmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -16676,9 +16868,14 @@ async function runBrowserSelfTest() {
                 EFFECT_NAMES[116] !== "3D Chorus · project-authored four-mode chorus" ||
                 effectRows[116]?.dataset.category !== "modulation" ||
                 effectRows[116]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
+                EFFECT_NAMES[117] !== "Surround Delay · project-authored Fractal FM9-family control concept" ||
+                effectRows[117]?.dataset.category !== "delay" ||
+                effectRows[117]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+                fractalSurroundDelayControls.length !== 10 ||
+                DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
-                initialEffectState[114] || initialEffectState[116] ||
+                initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -16715,7 +16912,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                throw new Error(`The effect picker must list 117 ordered, categorized effects (IDs 0–116), including Fractal Diatonic Harmony and 3D Chorus; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[116]}, row116=${effectRows[116]?.dataset.category}/${effectRows[116]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[116]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                 throw new Error(`The effect picker must list 118 ordered, categorized effects (IDs 0–117), including Fractal Diatonic Harmony, 3D Chorus, and Surround Delay; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[117]}, row117=${effectRows[117]?.dataset.category}/${effectRows[117]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[117]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -18084,7 +18281,7 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const delayIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91,92" || effectCount.value !== `18 of ${effectRows.length}` ||
+     if (delayIds.join(",") !== "21,38,39,40,41,42,54,55,62,64,66,68,72,75,76,84,91,92,117" || effectCount.value !== `19 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Delay category must include Auto-Swell, Resonant, Digital, Grain, Pitch Feedback, Reverse, Ducking, Modulated, Filtered, and Sweep Delay and preserve the current chain state.");
     }
@@ -18428,6 +18625,8 @@ async function runBrowserSelfTest() {
     parityEnabled[107] = false;
     // 3D Chorus has its own four-mode local Play smoke; no offline CLI stage is exposed.
     parityEnabled[116] = false;
+    // Surround Delay has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[117] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -19829,6 +20028,10 @@ async function runBrowserSelfTest() {
     toneMasterPro3DChorusSmoke = await runToneMasterPro3DChorusBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Fractal Surround Delay with local guitar playback…";
+    fractalSurroundDelaySmoke = await runFractalSurroundDelayBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -19902,6 +20105,7 @@ async function runBrowserSelfTest() {
       stepTremolo: stepTremoloSmoke,
       stadiumTapReset: stadiumTapResetSmoke,
       toneMasterPro3DChorus: toneMasterPro3DChorusSmoke,
+      fractalSurroundDelay: fractalSurroundDelaySmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

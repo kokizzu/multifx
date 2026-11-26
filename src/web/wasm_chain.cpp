@@ -438,7 +438,7 @@ public:
                 static_cast<float>(sample_rate), channels);
     }
 
-    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 23; }
+    [[nodiscard]] std::size_t effect_count() const noexcept { return effects_.size() + 24; }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* work_data() noexcept { return work_.data(); }
@@ -2217,6 +2217,26 @@ public:
             tabletfx::ToneMasterPro3DChorusMode>(std::min(mode, 3U)));
     }
 
+    void configure_fractal_surround_delay(
+        float time_ms, float master_time_percent,
+        float right_time_ratio_percent, float feedback_left_percent,
+        float feedback_right_percent, float master_feedback_percent,
+        float rotation_percent, float width_percent, float mix_percent,
+        float level_db) noexcept {
+        tabletfx::FractalSurroundDelayParameters parameters;
+        parameters.time_ms = time_ms;
+        parameters.master_time_percent = master_time_percent;
+        parameters.right_time_ratio_percent = right_time_ratio_percent;
+        parameters.feedback_left_percent = feedback_left_percent;
+        parameters.feedback_right_percent = feedback_right_percent;
+        parameters.master_feedback_percent = master_feedback_percent;
+        parameters.rotation_percent = rotation_percent;
+        parameters.width_percent = width_percent;
+        parameters.mix_percent = mix_percent;
+        parameters.level_db = level_db;
+        fractal_surround_delay_.set_parameters(parameters);
+    }
+
     void configure_triple_double_chorus(
         std::uint32_t preset_switch, std::uint32_t manual_switch,
         float rate_hz, float left_depth_ms, float center_depth_ms,
@@ -3979,6 +3999,7 @@ private:
     tabletfx::PedalDetune pedal_detune_;
     tabletfx::MutantFilter mutant_filter_;
     tabletfx::ToneMasterPro3DChorus tone_master_pro_3d_chorus_;
+    tabletfx::FractalSurroundDelay fractal_surround_delay_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>

@@ -4,37 +4,62 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6fd152f9052c15a9defc269a4d3df85332e40925",
+  "previous_checkpoint_commit": "6843e38d7fa8c4d69110f50712d3d4e8deb7e87a",
   "latest_audit": {
-    "name": "Fender Tone Master Pro 3D Chorus",
-    "status": "Exact-model Mode behavior verified and a categorized project-authored four-mode Chorus is implemented. Native, local-DI browser/WASM, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
+    "name": "Fractal FM9-family Surround Delay",
+    "status": "Current FM9-family controls verified and a project-authored rotating stereo delay is implemented in the categorized Delay picker. Native, local-DI browser/WASM smoke, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
     "date": "2026-11-26",
-    "category": "Modulation",
+    "picker_index": 117,
+    "category": "Delay",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 42; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "release_notes_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide describes four Mode buttons and distinctive modulations from subtle to extreme, but publishes no mode names, curves, numeric settings, stereo behavior, DSP, or latency. The checked release notes do not identify a 3D Chorus change."
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide, November 2026 cover, printed pp. 31–34; FM9 firmware v12.0 dated 2026-07-07 lists FM9 Original and Turbo, not Mark II Turbo separately. Installed firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The family guide describes Surround Delay, Rotation direction, stereo L/R Time Ratio, independent L/R feedback, Width/Spread, Master Time 25–400%, and Master Feedback 0–200%. Most bounds/defaults and Rotation's numeric range/curve are unpublished. Exact Mark II Turbo applicability is unverified."
     },
-    "documented_controls": "Four 3D Chorus Mode buttons; manufacturer-described range from subtle to extreme.",
-    "project_controls": "A new Modulation picker entry at ID 116 offers project-authored Mode 1–4 choices, default Mode 1. The choices progressively increase voicing depth/mix and reuse one existing Chorus processor. They are not Fender mode identities, curves, parameter values, or sound parity.",
+    "documented_controls": "Time/Tempo, Master Time, Master Feedback, L/R Time Ratio, Feedback L/R, Width/Spread, and Surround Delay Rotation; negative Rotation reverses direction. Manufacturer numeric Rotation range/default and most other bounds/defaults are unspecified.",
+    "project_controls": "Delay picker ID 117; project-authored defaults: Time 375 ms, Master Time 100%, Right Time Ratio 100%, Feedback L/R 35%, Master Feedback 100%, Rotation 50%, Width 100%, Mix 25%, Level 0 dB. Project ranges: 5–500 ms, 25–400%, 25–200%, feedback 0–100%, Master Feedback 0–200%, Rotation −200…+200%, Width −100…+100%, Mix 0–100%, Level −24…+12 dB. Tempo sync is not implemented. No Fractal settings, DSP, or sound parity is claimed.",
     "verification": {
-      "native": "make test passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety tests, and 118/118 CTests, including the new 3D Chorus tests.",
-      "browser": "make web-test passes local prerecorded stereo Guitar-TECHS DI Play captures for all four modes and full browser/native comparison in HeadlessChrome 151: maximum absolute error 0.0000017128113; RMS error 0.0000003281177. The effect is categorized Modulation at index 116; focused WASM state is 34,820 B.",
+      "native": "make test passes documentation validation, 13 fixture-safety checks, and 119/119 CTests, including the Surround Delay tests.",
+      "browser": "make web-test passes local prerecorded stereo Guitar-TECHS DI Play smoke for picker category, defaults, bounded memory, finite output, and changes under Rotation. Full HeadlessChrome 151 browser/native parity passes for the existing offline-renderable stages (maximum absolute error 0.000001661420846; RMS error 0.0000003308441757); this new effect is excluded because the offline CLI does not expose a matching stage. Browser state for the effect is 144,124 B.",
       "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
-      "latency_memory": "Native effect state is 34,864 B; browser effect state is 34,820 B. Processing allocates nothing and adds no separate fixed-delay stage. Latest Ryzen 9 5950X Release benchmark: 48 kHz stereo, 128 frames, 3,000 warm-up / 20,000 measured. Mode 1 p50/p95/p99/p99.9/max 0.0859/0.1354/0.1436/0.3536/6.5184%; Mode 2 0.0859/0.1354/0.1470/0.4271/4.4090%; Mode 3 0.0859/0.1073/0.1706/0.3649/4.1919%; Mode 4 0.0859/0.1073/0.1500/0.3326/0.7031% of the 2.6667 ms callback. No deadline misses; these isolated desktop figures do not guarantee tablet performance.",
+      "latency_memory": "Native state is 144,168 B at default stereo settings and 1,536,168 B at maximum-time settings at 48 kHz. Processing allocates nothing; storage grows only during control updates. Dry audio has zero fixed algorithmic latency; wet echoes follow selected time. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up / 20,000 measured: default p50/p95/p99/p99.9/max 0.0649/0.0803/0.0979/0.2606/1.4629%; maximum-time p50/p95/p99/p99.9/max 0.1324/0.1537/0.1609/0.3559/0.4740% of the 2.667 ms callback. No deadline misses in either profile; these isolated desktop figures do not guarantee tablet performance.",
       "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, and target-device timing remain. Fender mode names, curves, numeric settings, stereo behavior, DSP, latency, and installed firmware remain unknown; no Fender settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. Tempo sync is not implemented. No Fractal settings, DSP, or sound parity is claimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Integrate the isolated project-authored Fractal FM9 Surround Delay processor from the current November 2026 Blocks Guide evidence; test native and browser/WASM, categorized picker behavior with local prerecorded guitar DI, Windows, bounded memory, and per-callback DSP. Preserve the qualification that the guide is FM9-family evidence and the v12.0 download listing names Original/Turbo rather than Mark II Turbo; exact applicability and installed firmware remain unknown.",
-    "qualification": "Preserve the independent general research cursor, expression-volume queue, footswitch-display queue, and remaining source audits. Axom Max, HeadRush Prime, and XR1 remain limited by inaccessible exact algorithm/control tables; continue recording the source gap and do not invent model names or parameters."
+    "next_feature": "Integrate a bounded project-authored subset of the Fractal FM9-family Plex Delay feedback matrix and Stack/Hold behavior, with native automated tests, local prerecorded-guitar browser/WASM playback, Windows, memory, allocation, and callback CPU checks. Track omitted tempo, filters, modulation, envelope, and vendor-specific behavior separately.",
+    "qualification": "Preserve the independent general research cursor, expression-volume queue, and footswitch-display queue. The November 2026 Blocks Guide is FM9-family evidence; the v12.0 download listing names Original/Turbo, not Mark II Turbo separately, and exact applicability/installed firmware remain unknown. Axom Max, HeadRush Prime, and XR1 remain limited by inaccessible exact algorithm/control tables; continue recording gaps without inventing settings."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fractal FM9-family Surround Delay",
+      "status": "FM9-family controls verified; project-authored categorized implementation and automated checks complete; human listening/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 117,
+      "category": "Delay",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide, November 2026, and FM9 downloads",
+        "revision": "Blocks Guide printed pp. 31–34; firmware v12.0 dated 2026-07-07 lists Original/Turbo only, not Mark II Turbo separately; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The guide documents rotation direction and relevant stereo Delay controls but leaves most ranges/defaults and Rotation mapping unspecified. Exact Mark II Turbo applicability is unverified."
+      },
+      "documented_controls": "Surround Delay rotation, L/R time ratio, independent L/R feedback, Width/Spread, Master Time 25–400%, Master Feedback 0–200%; tempo controls are part of the generic Delay context but are not implemented in this project effect.",
+      "project_controls": "Picker ID 117 under Delay. Project defaults and bounds are recorded in EFFECTS_MATRIX.md; delay history grows on control updates up to a four-second project cap, and process() allocates nothing.",
+      "verification": {
+        "native": "make test passes all 119 CTest cases, 13 fixture-safety checks, and documentation validation.",
+        "browser": "make web-test passes full browser/native parity for existing offline-renderable stages and focused local Guitar-TECHS DI Play smoke for picker/defaults/output/Rotation. New effect is not in parity because offline CLI has no corresponding stage.",
+        "windows": "make windows-cross-build passes Windows MinGW core and offline-renderer build.",
+        "latency_memory": "48 kHz stereo default native state 144,168 B; browser 144,124 B. Default CPU p50/p95/p99/p99.9/max 0.0649/0.0803/0.0979/0.2606/1.4629%; maximum-time profile 1,536,168 B and 0.1324/0.1537/0.1609/0.3559/0.4740% of a 2.667 ms callback deadline. No fixed dry-path latency or process-time allocations.",
+        "diff_check": "make diff-check passes with no workflow changes."
+      },
+      "remaining": "Human listening, physical Fractal comparison, installed firmware, exact Mark II Turbo applicability, and target-device timing remain open. No manufacturer DSP/settings/sound parity is claimed."
+    },
     {
       "name": "Line 6 Helix Stadium TAP modulation reset",
       "status": "verified project control; automated verification complete; human listening/device checks remain",

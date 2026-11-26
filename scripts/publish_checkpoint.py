@@ -2014,6 +2014,28 @@ FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS = (
     "README.md",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS = (
+    "make/publish.mk",
+    "CMakeLists.txt",
+    "apps/fractal_surround_delay_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/fractal_surround_delay.hpp",
+    "src/effects/fractal_surround_delay.cpp",
+    "tests/test_fractal_surround_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+)
 OCTOBOT_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "include/tabletfx/effects.hpp",
@@ -3165,6 +3187,10 @@ CHECKPOINTS = {
         FRACTAL_THREE_VOICE_SYNTH_CHECKPOINT_PATHS,
         "test: verify three-voice synth browser and Bass paths",
     ),
+    "fractal-surround-delay": (
+        FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS,
+        "feat: add project-authored Fractal Surround Delay",
+    ),
     "fractal-ring-mod-tracking": (
         FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS,
         "feat: add project-authored ring mod pitch tracking",
@@ -3353,6 +3379,46 @@ PARTIAL_CHECKPOINT_HUNKS = {
     "fractal-synth-output-level": {
         "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-synth-output-level",),
     },
+    "fractal-surround-delay": {
+        "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-surround-delay",),
+        "scripts/publish_checkpoint.py": (
+            "FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS",
+            '"fractal-surround-delay": (',
+            "Fractal Surround Delay wires",
+            "Fractal Surround Delay checkpoint recovery",
+        ),
+        "CMakeLists.txt": ("fractal_surround_delay",),
+        "include/tabletfx/effects.hpp": ("fractal_surround_delay.hpp",),
+        "src/web/wasm_chain.cpp": (
+            "FractalSurroundDelay",
+            "effects_.size() + 24",
+        ),
+        "scripts/run_cmake.py": ("fractal-surround-delay",),
+        "scripts/web.py": ("fractal-surround-delay",),
+        "web/app.js": (
+            "fractalSurroundDelay",
+            "Surround Delay",
+            "19 of ${effectRows.length}",
+        ),
+        "web/audio-worklet.js": ("fractal-surround-delay",),
+        "web/index.html": (
+            "fractal-surround-time-ms",
+            "Fractal FM9-family Surround Delay controls",
+        ),
+        "EFFECTS_MATRIX.md": ("## Fractal FM9-family Surround Delay",),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "## Flagship effect implementation checklist",
+            "## Fractal FM9-family Surround Delay",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## Fractal FM9-family Surround Delay",
+        ),
+        "LATENCY_AND_QUALITY.md": (
+            "## Fractal FM9-family Surround Delay",
+        ),
+        "RESEARCH.md": ("## Fractal FM9-family Surround Delay",),
+        "research-state.json": ("Fractal FM9-family Surround Delay",),
+    },
 }
 
 
@@ -3383,6 +3449,7 @@ def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
     if current is not None:
         hunks.append(current)
 
+    # Fractal Surround Delay wires the picker across several separate file regions.
     selected = [
         hunk for hunk in hunks
         if any(
@@ -3390,27 +3457,53 @@ def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
             for line in hunk for marker in markers
         )
     ]
-    if len(selected) != 1:
+    if not selected:
         raise SystemExit(
-            f"Expected one checkpoint-specific patch hunk, found {len(selected)}"
+            "Expected at least one checkpoint-specific patch hunk, found none"
         )
-    return "".join(header + selected[0]), len(hunks)
+    return "".join(header + [line for hunk in selected for line in hunk]), len(hunks), len(selected)
+
+
+def stage_partial_path(path: str, markers: tuple[str, ...]) -> None:
+    # Fractal Surround Delay checkpoint recovery reuses the exact marker selection.
+    diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
+    try:
+        patch, _, _ = select_patch_hunks(diff, markers)
+    except SystemExit as error:
+        raise SystemExit(f"Cannot stage {path}: {error}") from error
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix="multifx-checkpoint-", suffix=".patch",
+            delete=False,
+        ) as temporary:
+            temporary.write(patch)
+            temporary_path = Path(temporary.name)
+        git("apply", "--cached", str(temporary_path), capture=False)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
     pre_staged = set(git("diff", "--cached", "--name-only").splitlines())
     if pre_staged:
-        if pre_staged != set(paths):
+        if not pre_staged.issubset(set(paths)):
             raise SystemExit(
-                "Refusing to stage over existing index changes: " + ", ".join(sorted(pre_staged))
+                "Refusing to stage over unrelated index changes: " + ", ".join(sorted(pre_staged))
             )
-        # Recover an interrupted staging attempt only when the index contains
-        # exactly this checkpoint. Keep its reviewed partial hunks intact.
-        verify_partial_staging(checkpoint)
+        # Fractal Surround Delay checkpoint recovery may resume after a partial
+        # attempt, but only when each staged partial file still matches markers.
+        verify_partial_staging(checkpoint, pre_staged)
         partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
         for path in paths:
-            if path not in partial:
+            if path in pre_staged:
+                continue
+            markers = partial.get(path)
+            if markers is None:
                 git("add", "--", path, capture=False)
+            else:
+                stage_partial_path(path, markers)
         return
 
     partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
@@ -3420,29 +3513,26 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
             git("add", "--", path, capture=False)
             continue
 
-        diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
-        patch, _ = select_patch_hunks(diff, markers)
-        temporary_path: Path | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", prefix="multifx-checkpoint-", suffix=".patch",
-                delete=False,
-            ) as temporary:
-                temporary.write(patch)
-                temporary_path = Path(temporary.name)
-            git("apply", "--cached", str(temporary_path), capture=False)
-        finally:
-            if temporary_path is not None:
-                temporary_path.unlink(missing_ok=True)
+        stage_partial_path(path, markers)
 
 
-def verify_partial_staging(checkpoint: str) -> None:
+def verify_partial_staging(
+    checkpoint: str, staged_paths: set[str] | None = None
+) -> None:
     for path, markers in PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {}).items():
+        if staged_paths is not None and path not in staged_paths:
+            # Fractal Surround Delay checkpoint recovery validates staged files only.
+            continue
         diff = git("diff", "--cached", "--no-ext-diff", "--unified=3", "--", path)
-        _, hunk_count = select_patch_hunks(diff, markers)
-        if hunk_count != 1:
+        try:
+            _, hunk_count, selected_hunk_count = select_patch_hunks(diff, markers)
+        except SystemExit as error:
+            # Fractal Surround Delay checkpoint recovery identifies a bad staged file.
+            raise SystemExit(f"Invalid staged hunks in {path}: {error}") from error
+        if selected_hunk_count != hunk_count:
             raise SystemExit(
-                f"Refusing to publish extra staged hunks in {path}: found {hunk_count}"
+                f"Refusing to publish unmarked staged hunks in {path}: "
+                f"selected {selected_hunk_count} of {hunk_count}"
             )
 
 

@@ -13,6 +13,7 @@ add_library(tabletfx_core
     src/effects/clean_boost.cpp
     src/effects/chorus.cpp
     src/effects/tone_master_pro_3d_chorus.cpp
+    src/effects/fractal_surround_delay.cpp
     src/effects/triple_double_chorus.cpp
     src/effects/dimension_chorus.cpp
     src/effects/poly_detune.cpp
@@ -159,6 +160,10 @@ add_executable(tabletfx_tone_master_pro_3d_chorus_bench
     apps/tone_master_pro_3d_chorus_bench.cpp)
 target_link_libraries(tabletfx_tone_master_pro_3d_chorus_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_fractal_surround_delay_bench
+    apps/fractal_surround_delay_bench.cpp)
+target_link_libraries(tabletfx_fractal_surround_delay_bench PRIVATE tabletfx_core)
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
@@ -232,6 +237,12 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_tone_master_pro_3d_chorus_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tone_master_pro_3d_chorus_tests
         COMMAND tabletfx_tone_master_pro_3d_chorus_tests)
+
+    add_executable(tabletfx_fractal_surround_delay_tests
+        tests/test_fractal_surround_delay.cpp)
+    target_link_libraries(tabletfx_fractal_surround_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_fractal_surround_delay_tests
+        COMMAND tabletfx_fractal_surround_delay_tests)
 
     add_executable(tabletfx_dimension_chorus_tests tests/test_dimension_chorus.cpp)
     target_link_libraries(tabletfx_dimension_chorus_tests PRIVATE tabletfx_core)

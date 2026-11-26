@@ -222,6 +222,12 @@ def main() -> None:
             else "tabletfx_tone_master_pro_3d_chorus_bench"
         )
         run([str(tone_master_3d_benchmark)])
+        fractal_surround_delay_benchmark = BUILD_DIR / (
+            "tabletfx_fractal_surround_delay_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_fractal_surround_delay_bench"
+        )
+        run([str(fractal_surround_delay_benchmark)])
     elif action == "bench-fractal-diatonic-harmonizer":
         bench_fractal_diatonic_harmonizer(cmake)
     elif action == "bench-feedback-generator":

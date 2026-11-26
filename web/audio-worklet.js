@@ -38,6 +38,7 @@ EFFECTS.push("xr1-global-eq");
 EFFECTS.push("stadium-seven-band-peq");
 EFFECTS.push("fractal-diatonic-harmonizer");
 EFFECTS.push("tone-master-pro-3d-chorus");
+EFFECTS.push("fractal-surround-delay");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -1522,6 +1523,11 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "tone-master-pro-3d-chorus" && this.ready) {
       this.module._tf_chain_set_tone_master_pro_3d_chorus(
         this.chain, message.value,
+      );
+    } else if (message.type === "fractal-surround-delay" && this.ready &&
+        Array.isArray(message.value) && message.value.length === 10) {
+      this.module._tf_chain_set_fractal_surround_delay(
+        this.chain, ...message.value,
       );
     } else if (message.type === "triple-double-chorus" && this.ready) {
       this.module._tf_chain_set_triple_double_chorus(this.chain, ...message.value);
