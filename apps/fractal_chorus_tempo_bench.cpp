@@ -86,6 +86,14 @@ bool run_profile(std::string_view name, tabletfx::ChorusParameters parameters) {
               << " channels=" << kChannels
               << " number_of_voices="
               << static_cast<unsigned int>(parameters.number_of_voices)
+              << " base_mix=" << parameters.mix
+              << " global_mix_enabled=" << (parameters.global_mix_enabled ? "true" : "false")
+              << " global_mix_offset=" << parameters.global_mix_offset
+              << " effective_mix="
+              << (parameters.global_mix_enabled
+                      ? std::clamp(parameters.mix + parameters.global_mix_offset,
+                                   0.0F, 1.0F)
+                      : parameters.mix)
               << " minimum_delay_ms=" << parameters.minimum_delay_ms
               << " delay_range_ms=" << parameters.delay_range_ms
               << " low_cut_hz=" << parameters.low_cut_hz
@@ -148,5 +156,12 @@ int main() {
     combined_tone.high_cut_hz = 6000.0F;
     combined_tone.stereo_width = 2.0F;
     passed = run_profile("chorus_tone_all_controls", combined_tone) && passed;
+    tabletfx::ChorusParameters global_mix_disabled;
+    global_mix_disabled.mix = 0.3F;
+    global_mix_disabled.global_mix_offset = 0.2F;
+    passed = run_profile("chorus_global_mix_disabled", global_mix_disabled) && passed;
+    global_mix_disabled.global_mix_enabled = true;
+    passed = run_profile("chorus_global_mix_enabled_plus_20pp",
+                         global_mix_disabled) && passed;
     return passed ? 0 : 1;
 }

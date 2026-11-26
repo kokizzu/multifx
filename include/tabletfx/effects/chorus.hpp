@@ -30,6 +30,11 @@ struct ChorusParameters {
     float low_cut_hz = 0.0F;
     float high_cut_hz = 0.0F;
     float stereo_width = 1.0F;
+    // Project-authored opt-in to adding a shared mix adjustment in percentage
+    // points. The base mix remains unchanged; the effective mix is clamped to
+    // [0, 1]. The offset is bounded to [-0.5, +0.5] and disabled by default.
+    bool global_mix_enabled = false;
+    float global_mix_offset = 0.0F;
 };
 
 // Low-cost sine-LFO modulated delay chorus. The wet path is interpolated
@@ -68,6 +73,8 @@ private:
     static constexpr float kMaximumLowCutHz = 1200.0F;
     static constexpr float kMaximumHighCutHz = 20000.0F;
     static constexpr float kMaximumStereoWidth = 2.0F;
+    static constexpr float kMinimumGlobalMixOffset = -0.5F;
+    static constexpr float kMaximumGlobalMixOffset = 0.5F;
     static constexpr float kPi = 3.14159265358979323846F;
     static constexpr float kTwoPi = 2.0F * kPi;
 

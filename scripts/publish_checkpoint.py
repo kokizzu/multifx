@@ -4095,8 +4095,20 @@ PARTIAL_CHECKPOINT_HUNKS["headrush-phase-invert"] = {
     "web/index.html": ("HeadRush Prime Advanced Block Edit", "phase-invert-target"),
 }
 
+def git(*args: str, capture: bool = True) -> str:
+    result = subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=capture, text=True, check=False
+    )
+    if result.returncode != 0:
+        detail = "\n".join(
+            part.strip() for part in (result.stdout, result.stderr)
+            if part and part.strip()
+        )
+        raise SystemExit(detail or f"git {' '.join(args)} failed with status {result.returncode}")
+    return result.stdout if capture else ""
 
-def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:
+
+def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int, int]:
     lines = diff.splitlines(keepends=True)
     header: list[str] = []
     hunks: list[list[str]] = []
@@ -4206,8 +4218,12 @@ def stage_partial_path(
         ) as temporary:
             temporary.write(patch)
             temporary_path = Path(temporary.name)
-        # Keep context lines so Git anchors each selected edit at its exact source location.
-        git("apply", "--cached", str(temporary_path), capture=False)
+        # Minimal-context hunks are used to isolate adjacent user work. Git
+        # requires --unidiff-zero to apply a patch with no context lines.
+        apply_args = ["apply", "--cached"]
+        if context == 0:
+            apply_args.append("--unidiff-zero")
+        git(*apply_args, str(temporary_path), capture=False)
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
@@ -4562,6 +4578,81 @@ PARTIAL_CHECKPOINT_CONTEXT = {
 
 def partial_checkpoint_context(checkpoint: str, path: str) -> int:
     return PARTIAL_CHECKPOINT_CONTEXT.get(checkpoint, {}).get(path, 1)
+
+
+FRACTAL_GLOBAL_MIX_CHORUS_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_chorus_tempo_bench.cpp",
+    "include/tabletfx/effects/chorus.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/web.py",
+    "src/effects/chorus.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_chorus.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-global-mix-chorus"] = (
+    FRACTAL_GLOBAL_MIX_CHORUS_CHECKPOINT_PATHS,
+    "feat: add project Global Mix offset to Chorus",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-chorus"] = {
+    "EFFECTS_MATRIX.md": ("## Fractal FM9-family Global Mix — Chorus subset",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "## Fractal FM9-family Global Mix — initial Chorus coverage",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Global Mix — Chorus subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Global Mix — Chorus subset",
+    ),
+    "RESEARCH.md": ("## Fractal FM9-family Global Mix source comparison",),
+    "research-state.json": (
+        "Fractal FM9-family Global Mix — Chorus subset",
+        "Complete and publish the Chorus Global Mix subset",
+    ),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += fractal-global-mix-chorus",
+        "test-fractal-global-mix-chorus",
+        "publish-plan-fractal-global-mix-chorus",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_GLOBAL_MIX_CHORUS_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-global-mix-chorus"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-chorus"]',
+        "Minimal-context hunks are used to isolate adjacent user work",
+        "part and part.strip()",
+    ),
+    "scripts/web.py": (
+        "fractal_global_mix_chorus_only",
+        "test-fractal-global-mix-chorus",
+    ),
+    "src/web/wasm_chain.cpp": (
+        "global_mix_enabled",
+        "global_mix_offset = global_mix_offset",
+    ),
+    "web/app.js": ("chorusGlobalMix", "runFractalGlobalMixChorusBrowserSmokeTest"),
+    "web/audio-worklet.js": ("chorusGlobalMix", "globalMixEnabled"),
+    "web/index.html": ("chorus-global-mix-enabled", "project Global Effects Mix offset"),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-chorus"] = {
+    "make/publish.mk": 0,
+    "scripts/publish_checkpoint.py": 0,
+    "scripts/web.py": 0,
+    "src/web/wasm_chain.cpp": 0,
+    "web/app.js": 0,
+    "web/audio-worklet.js": 0,
+    "web/index.html": 0,
+    "scripts/publish_checkpoint.py": 1,
+}
 
 if __name__ == "__main__":
     main()

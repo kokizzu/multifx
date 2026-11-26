@@ -4,38 +4,61 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "c6463464671a0a5084fcafdcb766716df7fc76dd",
+  "previous_checkpoint_commit": "6eef29188bad9eb398bd663c4099b4f62e1933ed",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium Dynamics Sidechain project mode",
-    "status": "The current Stadium Effects manual documents a Sidechain selector for Dynamics except Feedbacker, defaulting to Off/block input, with external input-level examples. TabletFX implements only a project-limited Block Input or Pre-effect Dry Chain detector on its existing Dynamics Studio Compressor. Native, browser/local-guitar, Windows MinGW, and CPU/memory checks pass; manual/device checks remain. No Stadium DSP, routing, setting, or sound parity is claimed.",
+    "name": "Fractal FM9-family Global Mix — Chorus subset",
+    "status": "Verified the November 2026 Blocks Guide and August 2022 FM9 manual; their eligible-block lists differ and neither publishes the exact Global Mix equation. TabletFX implements only a project-authored opt-in additive percentage-point offset on existing Chorus at Modulation ID 16. Focused native, browser/local-guitar, Windows MinGW, and callback/memory checks pass. No Fractal setting, formula, DSP, or sound parity is claimed.",
     "date": "2026-11-27",
-    "picker_index": 6,
-    "category": "Dynamics",
+    "picker_index": 16,
+    "category": "Modulation",
     "official_source": {
-      "title": "Line 6 Helix Stadium Effects manual and hardware v1.4 release notes",
-      "revision": "Live manual selector v1.4 Rev D / v1.3 Rev B / v1.2; hardware notes list v1.4.2 dated 2026-10-27; installed firmware unknown.",
-      "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
-      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "Manual common parameter table says Sidechain applies to Dynamics except Feedbacker, defaults Off/block input, and lists Instrument, Mic, Return, USB, and S/PDIF as examples. It does not publish the complete source list or selector ranges. The v1.4.2 notes do not mention Sidechain; that does not establish unchanged behavior."
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover dated November 2026, 114 pages; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The current guide lists Chorus among optional Global Mix blocks and states an offset up to ±50 but omits the exact combination equation. The August 2022 FM9 v3.x manual has a different eligible-block list. FM9 Mark II Turbo is not named separately on the v12.0 downloads page; exact SKU and installed firmware applicability remain unknown."
     },
-    "documented_controls": "Sidechain selects the signal level that triggers compressor/limiter/gate Threshold. Off uses the block input. Examples of other input levels are Instrument, Mic, Return, USB, and S/PDIF. It is documented for all Dynamics except Feedbacker; numeric ranges and complete source list are unknown.",
-    "project_controls": "Existing Studio Compressor at Dynamics picker ID 6 exposes project-authored Threshold, Ratio, Knee, Attack, Release, and Makeup, plus a detector choice: Block Input (default) or Pre-effect Dry Chain. The dry-chain buffer is reused; no separate external buses, detector filter, extra audio buffer, fixed latency, or process allocation is added. Settings/ranges are project-authored, not Stadium settings or sound parity.",
+    "documented_controls": "Global Mix is a block-level opt-in to a shared global Effects Mix offset, up to ±50. Current guide-listed families are Chorus, Delay, Flanger, Megatap Delay, Multitap Delay, Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay. The guide does not define the exact equation or all Mix laws.",
+    "project_controls": "Existing Chorus at Modulation picker ID 16 has a default-off per-block opt-in and project offset slider −50…+50 percentage points (default 0). When enabled, effective mix is clamp(base Mix + offset, 0, 1); base Mix stays stored. Other documented block families remain pending. This is an explicit project interpretation.",
     "verification": {
-      "native": "make test passes all 123 CTest cases and 13 fixture-safety checks. Focused compressor tests cover external detector response, aliased Block Input identity, bounds, variable blocks, non-finite handling, and no allocation.",
-      "browser": "make web-test-stadium-dynamics-sidechain passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI, verifies the Dynamics picker and source control, and observes relative output-difference RMS 0.777148. Effect memory is 60 B; the whole chain is 81,694,296 B; no new audio buffers.",
+      "native": "Focused Chorus CTest and offline-renderer CLI checks pass; core tests cover disabled identity, ± offsets, endpoint clamping, non-finite fallback, smooth retargeting, unchanged delay-buffer memory, and zero process allocations.",
+      "browser": "make web-test-fractal-global-mix-chorus passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It verifies Modulation picker ID 16, default off/0 pp and bounds, disabled-offset RMS 0, enabled +20 pp RMS difference 0.0411525468, and endpoint-clamp RMS 0. Browser effect memory is 34,820 B; no added audio buffers.",
       "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured calls. Block Input p50/p95/p99/p99.9/max is 0.1069/0.1283/0.1511/0.5272/6.3564%; Pre-effect Dry Chain is 0.1046/0.1069/0.1485/0.3492/0.8010% of the 2.6667 ms deadline. Zero deadline misses; 64 B native state and zero allocations. Block Input's maximum is an OS scheduling outlier.",
-      "diff_check": "make test-docs and make diff-check pass; no GitHub workflow files changed."
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured calls. Offset +20 pp disabled p50/p95/p99/p99.9/max is 0.076/0.096/0.114/0.268/0.502%; enabled is 0.076/0.101/0.128/0.264/2.111% of the 2.6667 ms budget. Both finite, 0/20,000 deadline misses, 34,856 B native state; no new buffer, fixed latency, or process allocation.",
+      "diff_check": "make test-docs passes 333 source requirements/346 tracked rows; make diff-check passes with no workflow changes."
     },
-    "remaining": "Human listening, physical Stadium comparison, external-bus routing and filtering, installed firmware confirmation, native Windows UI/audio runtime, and target-device timing remain open."
+    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and all other guide-listed block families remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Verify the November 2026 Blocks Guide Global Mix block list, FM9 availability and formula. Apply only a project-scoped global wet/dry offset to compatible existing mix controls, keeping each block's regular Mix setting separate and recording the exact formula, bounds, defaults, categories, CPU, and memory. Then return to model-specific gaps; do not start HeadRush Prime Global EQ before independent output routes exist or XRecer XR1 FX loops before a real routing host exists.",
+    "next_feature": "Complete and publish the Chorus Global Mix subset, then continue the November 2026 guide-listed Global Mix block families with exact per-block compatibility and controls. The manufacturer formula remains unknown; keep the project additive interpretation labeled. After the Fractal block audit, return to Prime documented effect gaps and XR1 routing dependencies. Do not add Prime Global EQ before independent output routes exist or XR1 FX loops before a real routing host exists.",
     "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fractal FM9-family Global Mix — Chorus subset",
+      "status": "Current and older manufacturer block lists recorded; project-only Modulation ID 16 opt-in implemented and automated native, browser, Windows, and callback checks pass. Manual checks and other eligible blocks remain.",
+      "date": "2026-11-27",
+      "picker_index": 16,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "November 2026 Blocks Guide; August 2022 FM9 Owner Manual for firmware 3.x; FM9 firmware v12.0 dated 2026-07-07 names Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "older_manual_url": "https://www.fractalaudio.com/downloads/manuals/FM9/FM9-Owners-Manual.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Current guide and older manual publish different Global Mix eligible-block lists; the manufacturer equation is unspecified. Exact Mark II Turbo applicability and installed firmware are unknown."
+      },
+      "project_controls": "Optional Chorus-only Global Mix opt-in, disabled by default, with project offset −50…+50 percentage points (default 0). Effective mix is clamp(base Mix + offset, 0, 1); base Mix remains separately stored. Project-authored interpretation, not Fractal formula/settings/sound parity.",
+      "verification": {
+        "native": "Focused tabletfx_chorus_tests and offline renderer CLI checks pass; core tests cover defaults, offset direction/bounds, effective-mix clamps, non-finite handling, smoothing, equal buffer memory, and no process allocations.",
+        "browser": "HeadlessChrome 151 on local prerecorded Guitar-TECHS stereo DI: disabled +20 pp RMS difference 0, enabled difference 0.0411525468, upper/lower clamp difference 0; 34,820 B browser effect state.",
+        "windows": "make windows-cross-build passes MinGW core/offline-renderer build.",
+        "latency_memory": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: disabled p50/p95/p99/p99.9/max 0.076/0.096/0.114/0.268/0.502%; enabled 0.076/0.101/0.128/0.264/2.111% of 2.6667 ms. 0/20,000 deadline misses; 34,856 B native state; no added buffers, latency, or allocations."
+      },
+      "remaining": "Human listening, physical exact-SKU comparison, installed firmware applicability, target-device performance, and all other guide-listed Global Mix block families remain open."
+    },
     {
       "name": "Fractal FM9-family Surround Delay",
       "status": "FM9-family controls verified; project-authored categorized implementation and automated checks complete; human listening/device checks remain",

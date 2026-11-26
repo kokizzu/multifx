@@ -787,6 +787,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_diatonic_harmonizer_only: bool = False,
                   fractal_resonator_input_gain_only: bool = False) -> None:
     compiler = emscripten_cpp()
+                 fractal_global_mix_chorus_only: bool = False,
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
     chrome = shutil.which("google-chrome")
@@ -1366,6 +1367,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif stereo_panner_only:
             url = base_url + "/web/index.html?selftest=stereo-panner"
         elif mutant_filter_only:
+        elif fractal_global_mix_chorus_only:
+            url = base_url + "/web/index.html?selftest=fractal-global-mix-chorus"
             url = base_url + "/web/index.html?selftest=mutant-filter"
         elif stereo_filter_only:
             url = base_url + "/web/index.html?selftest=stereo-filter"
@@ -1723,6 +1726,7 @@ def main() -> None:
     if action == "bootstrap-toolchain":
         bootstrap_toolchain()
     elif action == "verify-toolchain":
+        "test-fractal-global-mix-chorus",
         verify_toolchain()
     elif action == "serve":
         serve_web()
@@ -1771,6 +1775,8 @@ def main() -> None:
     elif action == "test-fender-vibratone":
         browser_test(vibratone_only=True)
     elif action == "test-fender-universe-vibe":
+    elif action == "test-fractal-global-mix-chorus":
+        browser_test(fractal_global_mix_chorus_only=True)
         browser_test(uni_verse_vibe_only=True)
     elif action == "test-line6-four-osc-generator":
         browser_test(four_osc_only=True)

@@ -506,7 +506,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePolySustain(parameters.polySustain || [0, 222, 2000, 1, 0, 0]);
       const chorus = parameters.chorus || [0.8, 15, 7, 0.3, 0, 120, 1];
       const chorusTone = parameters.chorusTone || [0, 0, 1];
-      module._tf_chain_set_chorus(this.chain, ...chorus, ...chorusTone);
+      const chorusGlobalMix = parameters.chorusGlobalMix || [0, 0];
+      module._tf_chain_set_chorus(
+        this.chain, ...chorus, ...chorusTone, ...chorusGlobalMix,
+      );
       const dimensionChorus = parameters.dimensionChorus || [0, 0, 0.5, 0];
       module._tf_chain_set_dimension_chorus(this.chain, ...dimensionChorus);
        module._tf_chain_set_tone_master_pro_3d_chorus(
@@ -1609,11 +1612,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "chorus" && this.ready) {
       const [rateHz, centerDelayMs, modulationDepthMs, mix,
         tempoSync, tempoBpm, numberOfVoices, lowCutHz = 0,
-        highCutHz = 0, stereoWidth = 1] = message.value;
+        highCutHz = 0, stereoWidth = 1, globalMixEnabled = 0,
+        globalMixOffset = 0] = message.value;
       this.module._tf_chain_set_chorus_min_range(
         this.chain, rateHz, centerDelayMs - modulationDepthMs,
         modulationDepthMs * 2, mix, tempoSync, tempoBpm, numberOfVoices,
-        lowCutHz, highCutHz, stereoWidth,
+        lowCutHz, highCutHz, stereoWidth, globalMixEnabled, globalMixOffset,
       );
     } else if (message.type === "dimension-chorus" && this.ready) {
       this.module._tf_chain_set_dimension_chorus(this.chain, ...message.value);

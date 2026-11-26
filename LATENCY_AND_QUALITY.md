@@ -909,3 +909,16 @@ Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.
 | Sample-wise polarity inversion | 0.001500% | 0.001875% | 0.002625% | 0.003375% | 0.324750% | 8 B | 0 | 0/20,000 |
 
 The maximum is a scheduler outlier. This isolated helper benchmark excludes UI, the full processor chain, and host scheduling; these desktop measurements do not predict target-device cost. Focused native, browser/WASM Play on local prerecorded guitar, and Windows MinGW core/offline-renderer checks pass. The Windows desktop UI/audio path is not yet integrated. Listening and Prime hardware comparison remain manual.
+
+## Fractal FM9-family Global Mix — Chorus subset (2026-11-27)
+
+The project offset is clamped and applied while Chorus parameters are configured; the audio callback continues using the existing smoothed wet/dry mix. It adds no `process()` allocation, audio buffer, or fixed path latency. The native Chorus instance is 34,856 B including its existing delay storage; enabling/disabling Global Mix does not change that memory. The focused browser/WASM chain reports 34,820 B for this effect.
+
+Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.6667 ms budget), 3,000 warm-up and 20,000 measured callbacks. These values are processor-call elapsed time as a percentage of one callback budget:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Offset +20 pp stored, opt-in Off | 0.076% | 0.096% | 0.114% | 0.268% | 0.502% | 34,856 B | 0/20,000 |
+| Offset +20 pp, opt-in On (effective Mix 50%) | 0.076% | 0.101% | 0.128% | 0.264% | 2.111% | 34,856 B | 0/20,000 |
+
+The enabled maximum is a scheduling outlier; all measured calls remained under the 2.6667 ms budget. The comparison is an isolated Chorus processor benchmark on this desktop, not a full-chain, tablet, or Fractal DSP estimate. Focused native and browser tests confirm defaults, the enabled signal change, endpoint clamps, smooth retargeting, and no process allocations. Human listening and device timing remain manual.

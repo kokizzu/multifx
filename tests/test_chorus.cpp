@@ -68,10 +68,18 @@ void test_defaults_bounds_and_memory() {
                 parameters.low_cut_hz == 0.0F &&
                 parameters.high_cut_hz == 0.0F &&
                 parameters.stereo_width == 1.0F &&
+                !parameters.global_mix_enabled &&
+                parameters.global_mix_offset == 0.0F &&
                 chorus.effective_rate_hz() == 0.8F,
             "sane chorus defaults changed");
     require(chorus.memory_bytes() == sizeof(chorus) + 8644U * sizeof(float),
             "stereo chorus storage estimate is inaccurate at 48 kHz");
+    auto global_enabled_parameters = parameters;
+    global_enabled_parameters.global_mix_enabled = true;
+    global_enabled_parameters.global_mix_offset = 0.25F;
+    tabletfx::Chorus global_enabled(48000.0F, 2, global_enabled_parameters);
+    require(global_enabled.memory_bytes() == chorus.memory_bytes(),
+            "global chorus mix allocated additional audio storage");
 
     tabletfx::ChorusParameters bounded;
     bounded.rate_hz = 100.0F;
@@ -109,6 +117,88 @@ void test_defaults_bounds_and_memory() {
                 finite.low_cut_hz == 0.0F && finite.high_cut_hz == 0.0F &&
                 finite.stereo_width == 1.0F,
             "non-finite chorus parameters did not use safe defaults");
+}
+
+void test_global_mix_offset_bounds_and_base_preservation() {
+    tabletfx::ChorusParameters parameters;
+    parameters.mix = 0.3F;
+    parameters.smoothing_ms = 0.0F;
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 0.2F;
+    tabletfx::Chorus adjusted(48000.0F, 1U, parameters);
+    require(adjusted.parameters().mix == 0.3F &&
+                adjusted.parameters().global_mix_offset == 0.2F &&
+                adjusted.current_mix() == 0.5F,
+            "global mix offset was not added as percentage points to the base mix");
+
+    parameters.mix = 0.8F;
+    parameters.global_mix_offset = 4.0F;
+    tabletfx::Chorus upper(48000.0F, 1U, parameters);
+    require(upper.parameters().mix == 0.8F &&
+                upper.parameters().global_mix_offset == 0.5F &&
+                upper.current_mix() == 1.0F,
+            "global mix did not clamp the offset to +0.5 and effective mix to 1");
+
+    parameters.mix = 0.2F;
+    parameters.global_mix_offset = -4.0F;
+    tabletfx::Chorus lower(48000.0F, 1U, parameters);
+    require(lower.parameters().mix == 0.2F &&
+                lower.parameters().global_mix_offset == -0.5F &&
+                lower.current_mix() == 0.0F,
+            "global mix did not clamp the offset to -0.5 and effective mix to 0");
+
+    parameters.global_mix_offset = std::numeric_limits<float>::quiet_NaN();
+    tabletfx::Chorus non_finite(48000.0F, 1U, parameters);
+    require(non_finite.parameters().mix == 0.2F &&
+                non_finite.parameters().global_mix_offset == 0.0F &&
+                non_finite.current_mix() == 0.2F,
+            "non-finite global mix offset did not fall back to zero");
+
+    parameters.global_mix_enabled = false;
+    parameters.global_mix_offset = 0.5F;
+    tabletfx::Chorus disabled(48000.0F, 1U, parameters);
+    require(disabled.parameters().global_mix_offset == 0.5F &&
+                disabled.parameters().mix == 0.2F &&
+                disabled.current_mix() == 0.2F,
+            "disabled global mix offset changed the stored or effective base mix");
+}
+
+void test_global_mix_offset_smooth_retarget() {
+    tabletfx::ChorusParameters parameters;
+    parameters.mix = 0.3F;
+    parameters.smoothing_ms = 10.0F;
+    tabletfx::Chorus chorus(48000.0F, 1U, parameters);
+
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 0.2F;
+    chorus.set_parameters(parameters);
+    require(chorus.parameters().mix == 0.3F &&
+                std::abs(chorus.current_mix() - 0.3F) < 1.0e-7F,
+            "global mix setting jumped instead of starting a smoothed ramp");
+    std::array<float, 240U> silence{};
+    chorus.process(silence, 1U);
+    require(std::abs(chorus.current_mix() - 0.4F) < 2.0e-5F,
+            "global mix offset did not ramp toward the effective target");
+
+    parameters.global_mix_offset = 0.4F;
+    chorus.set_parameters(parameters);
+    require(std::abs(chorus.current_mix() - 0.4F) < 2.0e-5F,
+            "retargeting a global mix ramp caused an immediate level jump");
+    chorus.process(silence, 1U);
+    require(std::abs(chorus.current_mix() - 0.55F) < 2.0e-5F,
+            "mid-ramp global mix retarget did not ramp from its current value");
+    chorus.process(silence, 1U);
+    require(std::abs(chorus.current_mix() - 0.7F) < 2.0e-5F,
+            "retargeted global mix did not reach base plus offset");
+
+    parameters.global_mix_enabled = false;
+    chorus.set_parameters(parameters);
+    require(std::abs(chorus.current_mix() - 0.7F) < 2.0e-5F,
+            "disabling global mix changed the level before its smoothing ramp");
+    std::array<float, 480U> full_ramp{};
+    chorus.process(full_ramp, 1U);
+    require(std::abs(chorus.current_mix() - 0.3F) < 2.0e-5F,
+            "disabling global mix did not smoothly return to the stored base mix");
 }
 
 void test_project_authored_tone_master_controls() {
@@ -633,6 +723,8 @@ void test_invalid_samples_and_zero_process_allocations() {
     synced_parameters.tempo_sync = true;
     synced_parameters.tempo_bpm = 120.0F;
     synced_parameters.number_of_voices = 8U;
+    synced_parameters.global_mix_enabled = true;
+    synced_parameters.global_mix_offset = 0.2F;
     tabletfx::Chorus stereo(48000.0F, 2, synced_parameters);
     const std::size_t before = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
@@ -685,6 +777,8 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_global_mix_offset_bounds_and_base_preservation();
+        test_global_mix_offset_smooth_retarget();
         test_project_authored_tone_master_controls();
         test_minimum_delay_range_bounds_and_legacy_center_depth();
         test_minimum_and_maximum_sweep_timing();

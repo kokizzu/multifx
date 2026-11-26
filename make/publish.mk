@@ -154,6 +154,7 @@ PUBLISH_CHECKPOINTS += line6-stadium-3osc-research
 PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 PUBLISH_CHECKPOINTS += stadium-seven-band-peq
 PUBLISH_CHECKPOINTS += fractal-chorus-tempo
+PUBLISH_CHECKPOINTS += fractal-global-mix-chorus
 
 .PHONY: test-fractal-chorus-tempo web-test-fractal-chorus-tempo bench-fractal-chorus-tempo
 test-fractal-chorus-tempo:
@@ -165,6 +166,21 @@ web-test-fractal-chorus-tempo: test-fractal-chorus-tempo web-build
 
 bench-fractal-chorus-tempo:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-chorus-tempo
+
+.PHONY: test-fractal-global-mix-chorus web-test-fractal-global-mix-chorus bench-fractal-global-mix-chorus
+test-fractal-global-mix-chorus:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_chorus_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-global-mix-chorus: test-fractal-global-mix-chorus web-build
+	$(PYTHON) scripts/web.py test-fractal-global-mix-chorus
+
+bench-fractal-global-mix-chorus:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-chorus-tempo
+
+.PHONY: publish-plan-fractal-global-mix-chorus
+publish-plan-fractal-global-mix-chorus:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-chorus
 
 .PHONY: publish-volume-pan-plan publish-volume-pan
 

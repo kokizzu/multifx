@@ -72,6 +72,9 @@ void Chorus::set_parameters(ChorusParameters parameters) noexcept {
     parameters.base_delay_ms = center_delay_ms;
     parameters.depth_ms = modulation_depth_ms;
     parameters.mix = bounded(parameters.mix, 0.3F, 0.0F, 1.0F);
+    parameters.global_mix_offset = bounded(
+        parameters.global_mix_offset, 0.0F, kMinimumGlobalMixOffset,
+        kMaximumGlobalMixOffset);
     parameters.smoothing_ms = bounded(parameters.smoothing_ms, 10.0F, 0.0F,
                                       1000.0F);
     parameters.low_cut_hz = bounded(parameters.low_cut_hz, 0.0F, 0.0F,
@@ -83,7 +86,10 @@ void Chorus::set_parameters(ChorusParameters parameters) noexcept {
     parameters_ = parameters;
     target_base_delay_ms_ = center_delay_ms;
     target_depth_ms_ = modulation_depth_ms;
-    target_mix_ = parameters_.mix;
+    target_mix_ = parameters_.global_mix_enabled
+        ? std::clamp(parameters_.mix + parameters_.global_mix_offset,
+                     0.0F, 1.0F)
+        : parameters_.mix;
     const float safe_low_cut_hz = std::min(parameters_.low_cut_hz,
                                            sample_rate_ * 0.45F);
     const float safe_high_cut_hz = std::min(parameters_.high_cut_hz,

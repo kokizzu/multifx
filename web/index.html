@@ -1532,6 +1532,15 @@
           <span>Chorus wet mix</span><output id="chorus-mix-value" for="chorus-mix">30%</output>
           <input id="chorus-mix" type="range" min="0" max="1" step="0.01" value="0.3">
         </label>
+        <label class="mix-control" for="chorus-global-mix-enabled">
+          <span>Global Mix opt-in · Chorus ID 16</span>
+          <input id="chorus-global-mix-enabled" type="checkbox">
+        </label>
+        <label class="mix-control" for="chorus-global-mix-offset">
+          <span>Project Global Effects Mix offset</span>
+          <output id="chorus-global-mix-offset-value" for="chorus-global-mix-offset">0 pp</output>
+          <input id="chorus-global-mix-offset" type="range" min="-50" max="50" step="1" value="0">
+        </label>
         <label class="mix-control" for="chorus-number-of-voices">
           <span>Number of voices · project-authored</span><output id="chorus-number-of-voices-value" for="chorus-number-of-voices">1</output>
           <input id="chorus-number-of-voices" type="range" min="1" max="8" step="1" value="1">
@@ -1549,7 +1558,7 @@
           <input id="chorus-stereo-width" type="range" min="0" max="2" step="0.01" value="1">
         </label>
       </div>
-      <p class="hint">Project-authored controls: Minimum Delay 0.1–50 ms and Delay Range 1–40 ms (defaults 8/14 ms, preserving the previous 15±7 ms sweep); 1–8 voices defaults to 1, and higher counts average additional phase-spread delay voices. Quarter-note tempo uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Low Cut (0–1,200 Hz) and High Cut (0–20 kHz) default Off; Stereo Width (0–200%) defaults to 100% and is ignored in mono. The Tone Master Pro guide names both cuts for Mono and Stereo Chorus and Width for Stereo Chorus, but publishes no ranges or defaults. The sum of Minimum Delay and Delay Range can reach 90 ms. Fractal’s separate LFO1 SYNC source is not implemented; this DSP is not a hardware parity claim.</p>
+      <p class="hint">Project-authored controls: Minimum Delay 0.1–50 ms and Delay Range 1–40 ms (defaults 8/14 ms, preserving the previous 15±7 ms sweep); 1–8 voices defaults to 1, and higher counts average additional phase-spread delay voices. Quarter-note tempo uses BPM ÷ 60 Hz (120 BPM = 2 Hz); Free Hz restores the manual rate. Low Cut (0–1,200 Hz) and High Cut (0–20 kHz) default Off; Stereo Width (0–200%) defaults to 100% and is ignored in mono. The Tone Master Pro guide names both cuts for Mono and Stereo Chorus and Width for Stereo Chorus, but publishes no ranges or defaults. The sum of Minimum Delay and Delay Range can reach 90 ms. Fractal’s separate LFO1 SYNC source is not implemented; this DSP is not a hardware parity claim. The project Global Effects Mix offset is an optional additive percentage-point adjustment (−50 to +50 pp, default 0) and affects Chorus only when the per-block opt-in is checked. Fractal documents an opt-in Global Mix offset but not its exact equation; this project interpretation is not a settings or sound match.</p>
       <div class="gain-controls" aria-label="Dimension Chorus controls">
         <h3>Dimension Chorus · project-authored DSP</h3>
         <label class="mix-control" for="dimension-chorus-version">

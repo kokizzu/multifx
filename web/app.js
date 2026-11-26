@@ -185,6 +185,7 @@ const DEFAULT_PARAMETERS = {
   harmonicTremolo: [3, 0.65, 700, 0, 0, 120, 1, 1, 10],
   chorus: [0.8, 15, 7, 0.3, 0, 120, 1],
   chorusTone: [0, 0, 1],
+  chorusGlobalMix: [0, 0],
   dimensionChorus: [0, 0, 0.5, 0],
   toneMasterPro3DChorus: 0,
   fractalSurroundDelay: [375, 100, 100, 35, 35, 100, 50, 100, 25, 0],
@@ -1651,6 +1652,9 @@ const chorusMixValue = document.querySelector("#chorus-mix-value");
 const chorusNumberOfVoices = document.querySelector("#chorus-number-of-voices");
 const chorusNumberOfVoicesValue = document.querySelector("#chorus-number-of-voices-value");
 const chorusLowCut = document.querySelector("#chorus-low-cut-hz");
+const chorusGlobalMixEnabled = document.querySelector("#chorus-global-mix-enabled");
+const chorusGlobalMixOffset = document.querySelector("#chorus-global-mix-offset");
+const chorusGlobalMixOffsetValue = document.querySelector("#chorus-global-mix-offset-value");
 const chorusLowCutValue = document.querySelector("#chorus-low-cut-value");
 const chorusHighCut = document.querySelector("#chorus-high-cut-hz");
 const chorusHighCutValue = document.querySelector("#chorus-high-cut-value");
@@ -6193,6 +6197,8 @@ function updateChorus() {
     Number(chorusNumberOfVoices.value),
   ];
   const toneValues = [
+  const globalMixEnabled = chorusGlobalMixEnabled.checked;
+  const globalMixOffset = Number(chorusGlobalMixOffset.value) / 100;
     Number(chorusLowCut.value),
     Number(chorusHighCut.value),
     Number(chorusStereoWidth.value),
@@ -6209,6 +6215,10 @@ function updateChorus() {
   chorusMixValue.value = `${Math.round(Number(chorusMix.value) * 100)}%`;
   chorusNumberOfVoicesValue.value = String(Number(chorusNumberOfVoices.value));
   chorusLowCutValue.value = toneValues[0] === 0 ? "Off" : `${toneValues[0]} Hz`;
+  DEFAULT_PARAMETERS.chorusGlobalMix = [
+    globalMixEnabled ? 1 : 0,
+    globalMixOffset,
+  ];
   chorusHighCutValue.value = toneValues[1] === 0 ? "Off" : `${toneValues[1]} Hz`;
   chorusStereoWidthValue.value = `${Math.round(toneValues[2] * 100)}%`;
   if (workletNode) {
@@ -6217,8 +6227,11 @@ function updateChorus() {
 }
 
 for (const control of [chorusRate, chorusTempoMode, chorusTempoBpm,
+  const globalMixOffsetPoints = Math.round(globalMixOffset * 100);
+  chorusGlobalMixOffsetValue.value = `${globalMixOffsetPoints > 0 ? "+" : ""}${globalMixOffsetPoints} pp`;
   chorusMinimumDelay, chorusDelayRange, chorusMix, chorusNumberOfVoices,
-  chorusLowCut, chorusHighCut, chorusStereoWidth]) {
+  chorusLowCut, chorusHighCut, chorusStereoWidth,
+  chorusGlobalMixEnabled, chorusGlobalMixOffset]) {
   control.addEventListener("input", updateChorus);
   control.addEventListener("change", updateChorus);
 }
@@ -14492,6 +14505,128 @@ async function runFenderTremoloLfoClipBrowserSmokeTest(reference, captureView, c
       (sum, sample, index) => sum + (sample - right[index]) ** 2, 0,
     ) / left.length);
     const partialDifference = rmsDifference(unmodified, partial);
+async function runFractalGlobalMixChorusBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [chorusMix.value, chorusGlobalMixEnabled.checked,
+    chorusGlobalMixOffset.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Global Mix browser test requires local stereo guitar DI audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="16"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        chorusGlobalMixEnabled.checked || chorusGlobalMixOffset.value !== "0" ||
+        chorusGlobalMixOffset.min !== "-50" || chorusGlobalMixOffset.max !== "50" ||
+        chorusGlobalMixOffsetValue.value !== "0 pp" ||
+        JSON.stringify(DEFAULT_PARAMETERS.chorusGlobalMix) !== "[0,0]" ||
+        !(effectMemory[16] > 0)) {
+      throw new Error("Chorus Global Mix defaults, bounds, or Modulation picker category are invalid.");
+    }
+
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 16;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (baseMix, enabled, offsetPoints) => {
+      chorusMix.value = String(baseMix);
+      chorusGlobalMixEnabled.checked = enabled;
+      chorusGlobalMixOffset.value = String(offsetPoints);
+      updateChorus();
+      const expected = [enabled ? 1 : 0, offsetPoints / 100];
+      if (JSON.stringify(DEFAULT_PARAMETERS.chorusGlobalMix) !==
+          JSON.stringify(expected) ||
+          chorusGlobalMixOffsetValue.value !==
+            `${offsetPoints > 0 ? "+" : ""}${offsetPoints} pp`) {
+        throw new Error("Global Mix controls did not update the project offset and opt-in state.");
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Global Mix Chorus playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) {
+          throw new Error(`Global Mix Chorus output is not finite at sample ${i}.`);
+        }
+      }
+      return output;
+    };
+
+    const rmsDifference = (left, right) => {
+      let squared = 0;
+      for (let i = 0; i < left.length; i += 1) {
+        const difference = left[i] - right[i];
+        squared += difference * difference;
+      }
+      return Math.sqrt(squared / Math.max(1, left.length));
+    };
+    const noOffset = await captureAt(0.3, false, 0);
+    const disabledOffset = await captureAt(0.3, false, 20);
+    const enabledOffset = await captureAt(0.3, true, 20);
+    const upperOffset = await captureAt(0.9, true, 50);
+    const upperClamped = await captureAt(1.0, true, 50);
+    const lowerOffset = await captureAt(0.1, true, -50);
+    const lowerClamped = await captureAt(0.0, true, -50);
+    const disabledDifference = rmsDifference(noOffset, disabledOffset);
+    const enabledDifference = rmsDifference(noOffset, enabledOffset);
+    const upperClampDifference = rmsDifference(upperOffset, upperClamped);
+    const lowerClampDifference = rmsDifference(lowerOffset, lowerClamped);
+    if (disabledDifference > 1e-7 || enabledDifference < 1e-4 ||
+        upperClampDifference > 1e-7 || lowerClampDifference > 1e-7) {
+      throw new Error(`Global Mix behavior failed: disabled RMS ${disabledDifference}, enabled RMS ${enabledDifference}, upper clamp RMS ${upperClampDifference}, lower clamp RMS ${lowerClampDifference}.`);
+    }
+    return {
+      category: "Modulation",
+      effectId: 16,
+      baseMix: 0.3,
+      offsetPoints: 20,
+      defaultEnabled: false,
+      projectOffsetBoundsPoints: [-50, 50],
+      disabledOffsetRms: disabledDifference,
+      enabledOffsetRms: enabledDifference,
+      upperClampRms: upperClampDifference,
+      lowerClampRms: lowerClampDifference,
+      effectMemoryBytes: effectMemory[16],
+      addedAudioBuffers: 0,
+    };
+  } finally {
+    stopSource(false);
+    [chorusMix.value, chorusGlobalMixEnabled.checked,
+      chorusGlobalMixOffset.value] = previousControls;
+    updateChorus();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
     const maximumDifference = rmsDifference(unmodified, clipped);
     if (tremoloLfoClipValue.value !== "100%" ||
         partialDifference < 1e-5 || maximumDifference <= partialDifference) {
@@ -20728,6 +20863,24 @@ async function runBrowserSelfTest() {
            frames: reference.frames,
            stepTremolo: stepTremoloSmoke,
          };
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-global-mix-chorus") {
+          testResult.textContent = "Checking project Global Mix opt-in on categorized Chorus with local guitar audio…";
+          const globalMixSmoke = await runFractalGlobalMixChorusBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            fractalGlobalMixChorus: globalMixSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Global Mix Chorus browser test";
+          return;
+        }
          testResult.dataset.status = "passed";
          testResult.textContent = JSON.stringify(focusedReport);
          document.title = "PASS · TabletFX Step Tremolo browser test";
