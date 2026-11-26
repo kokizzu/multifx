@@ -70,6 +70,15 @@ void ManualThruZeroFlanger::set_parameters(
         parameters.lfo_waveform = ThruZeroLfoWaveform::Sine;
         break;
     }
+    switch (parameters.vco_response) {
+    case FlangerVcoResponse::Linear:
+    case FlangerVcoResponse::Exponential:
+    case FlangerVcoResponse::SquareLaw:
+        break;
+    default:
+        parameters.vco_response = FlangerVcoResponse::Linear;
+        break;
+    }
     parameters.lfo_rate_hz = bounded(parameters.lfo_rate_hz, 0.25F, 0.05F, 8.0F);
     parameters.lfo_depth = bounded(parameters.lfo_depth, 5.0F, 0.0F, 10.0F);
     parameters.lfo_phase_degrees = bounded(
@@ -101,7 +110,9 @@ float ManualThruZeroFlanger::current_wet_time_ms() const noexcept {
     const float manual_position =
         std::clamp(current_manual_ / 10.0F, 0.0F, 1.0F);
     const float depth = std::clamp(current_lfo_depth_ / 10.0F, 0.0F, 1.0F);
-    const float lfo = lfo_value(parameters_.lfo_waveform, lfo_phase_cycles_);
+    const float lfo = apply_vco_response(
+        parameters_.vco_response, parameters_.vco_exponent,
+        lfo_value(parameters_.lfo_waveform, lfo_phase_cycles_));
     const float lfo_center = 0.5F + (manual_position - 0.5F) * (1.0F - depth);
     const float lfo_position = std::clamp(
         lfo_center + lfo * 0.5F * depth, 0.0F, 1.0F);
@@ -174,7 +185,9 @@ void ManualThruZeroFlanger::process(std::span<float> interleaved,
             }
             float wet_position = manual_position;
             if (current_lfo_mix_ > 0.0F && depth > 0.0F) {
-                const float lfo = lfo_value(parameters_.lfo_waveform, phase_cycles);
+                const float lfo = apply_vco_response(
+                    parameters_.vco_response, parameters_.vco_exponent,
+                    lfo_value(parameters_.lfo_waveform, phase_cycles));
                 // Project mapping: Depth=0 follows Manual; at Depth=10 the
                 // LFO determines the full sweep. This is not Fractal's law.
                 const float lfo_center =
@@ -272,6 +285,31 @@ float ManualThruZeroFlanger::lfo_value(ThruZeroLfoWaveform waveform,
     }
     constexpr float kTwoPi = 6.28318530717958647692F;
     return std::sin(phase * kTwoPi);
+}
+
+float ManualThruZeroFlanger::apply_vco_response(
+    FlangerVcoResponse response, float exponent, float lfo) noexcept {
+    if (response == FlangerVcoResponse::Linear ||
+        (response == FlangerVcoResponse::Exponential && exponent == 1.0F)) {
+        return lfo;
+    }
+
+    // Project-authored transfer curves act on the unipolar sweep coordinate.
+    // Exponents above one pull positions toward the shorter-delay end; values
+    // below one favor the longer-delay end. No vendor DSP law is asserted.
+    const float sweep_position = std::clamp(0.5F + 0.5F * lfo, 0.0F, 1.0F);
+    float shaped_position = sweep_position;
+    switch (response) {
+    case FlangerVcoResponse::Linear:
+        return lfo;
+    case FlangerVcoResponse::Exponential:
+        shaped_position = std::pow(sweep_position, exponent);
+        break;
+    case FlangerVcoResponse::SquareLaw:
+        shaped_position = sweep_position * sweep_position;
+        break;
+    }
+    return 2.0F * shaped_position - 1.0F;
 }
 
 void ManualThruZeroFlanger::retarget(bool immediate) noexcept {

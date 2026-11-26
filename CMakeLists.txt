@@ -190,6 +190,11 @@ target_link_libraries(tabletfx_tone_master_modulated_large_hall_bench PRIVATE ta
 add_executable(tabletfx_pitch_ring_mod_bench apps/pitch_ring_mod_bench.cpp)
 target_link_libraries(tabletfx_pitch_ring_mod_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_fractal_flanger_vco_bench
+    apps/fractal_flanger_vco_bench.cpp)
+target_link_libraries(tabletfx_fractal_flanger_vco_bench PRIVATE tabletfx_core)
+
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)

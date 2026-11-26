@@ -94,6 +94,19 @@ test-fractal-tzf-auto:
 web-test-fractal-tzf-auto: test web-build
 	$(PYTHON) scripts/web.py test-fractal-tzf-auto
 
+PUBLISH_CHECKPOINTS += fractal-vco-response
+
+.PHONY: test-fractal-vco-response web-test-fractal-vco-response bench-fractal-flanger-vco
+test-fractal-vco-response:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_manual_thru_zero_flanger_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-vco-response: test-fractal-vco-response web-build
+	$(PYTHON) scripts/web.py test-fractal-tzf-auto
+
+bench-fractal-flanger-vco:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-flanger-vco
+
 .PHONY: publish-plan publish-checkpoint
 PUBLISH_CHECKPOINTS += volume-pan
 PUBLISH_CHECKPOINTS += stereo-filter

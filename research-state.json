@@ -4,7 +4,7 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "2542f135115bac5c751ee66e469dca725a7df3fa",
+  "previous_checkpoint_commit": "0356aa96e83c691bf24925905d65590254cf05b1",
   "latest_audit": {
     "name": "HeadRush Prime Orange Phaser Stereo control",
     "status": "Prime manual control documented; project-authored Stereo control integrated into categorized Phaser ID 18 and verified natively, in browser/WASM with local guitar, on Windows cross-build, and with callback CPU/memory measurements. Hardware listening and device validation remain; exact Prime Stereo semantics are undocumented.",
@@ -31,9 +31,9 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "HeadRush Prime",
-    "next_feature": "Continue with the next exact-documented effect/control gap after Fractal Plex Shift. Prime Phase Invert is a documented candidate; do not treat it as a sound effect or add it to the effect picker unless it belongs there. Continue the AXOM MAX, Stadium Pitch Ring Mod, XR1, and other flagship queues only when exact controls are documented.",
-    "qualification": "Fractal evidence is from the November 2026 FM9-family Blocks Guide; exact FM9 Mark II Turbo applicability and installed firmware remain unknown. Preserve independent device, expression-volume, and footswitch-display queues; continue after this commit until only manual listening/device checks remain."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Audit and implement the Harmonic Tremolo Mode Switch control (1960 6G4 / 1963 6G4A) in the existing categorized Modulation effect if a project-authored mode is supportable. Keep the guide's Mono Harmonic Tremolo control table separate from the later Stereo Harmonic Tremolo. Then continue with XR1 FX Loop host-routing feasibility, Prime Phase Invert block control behavior, AXOM MAX looper/resource scope, and uncovered Stadium effects.",
+    "qualification": "The Fractal VCO feature is implemented in the existing Modulation row, but its curve laws remain undocumented by Fractal and the guide is family-level; v12.0 downloads name FM9 Original/Turbo, not Mark II Turbo separately, and installed firmware is unknown. Fender's 6G4/6G4A names are documented but exact response curves, numeric defaults/ranges, DSP, latency, and Stereo model applicability are not. XR1 FX Loop needs real external send/return host routing; do not present a pass-through placeholder as an implemented loop. AXOM public docs still do not expose a specific missing effect algorithm or complete parameters; do not copy its long looper capacity into project memory limits. Preserve unknowns about installed firmware, device performance, and parity, and preserve independent expression-volume and footswitch-display queues. Continue until only manual listening/device checks remain."
   },
   "completed_checkpoints": [
     {
@@ -1344,6 +1344,29 @@
         "diff_check": "make diff-check passes; no workflow files are part of this checkpoint."
       },
       "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 algorithm, settings, DSP, or sound parity is claimed."
+    },
+    {
+      "name": "Fractal FM9-family Through-Zero Flanger VCO Response",
+      "status": "Source-backed control roles and project-authored categorized Modulation extension verified; native/offline, browser/WASM local-guitar, Windows, and benchmark checks pass; manual/device checks remain.",
+      "date": "2026-11-27",
+      "picker_index": 81,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "Blocks Guide cover November 2026, 114 pages, printed p. 50; FM9 downloads list v12.0 for Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Guide names Linear, Exponential, Square Law, and Exponent and states Exponent 1.0 yields linear sweep; it does not publish curve laws, bounds/defaults, DSP, or latency. Exact Mark II Turbo applicability is unknown."
+      },
+      "documented_controls": "VCO Response: Linear, Exponential, Square Law; Exponent. The guide describes curve/dwell behavior but provides no transfer functions, numeric bounds, or defaults.",
+      "project_controls": "Project-authored controls extend existing Through-Zero Flanger at Modulation ID 81. Linear is default; Exponential maps normalized sweep position to x^Exponent; Square Law maps to x²; Exponent defaults to 1.0 and is bounded 0.25–4.0. No new picker row, delay buffer, or process allocation is added. These are not Fractal settings or DSP/sound parity.",
+      "verification": {
+        "native_cli": "make test-fractal-vco-response passes focused curve/default/bounds/allocation tests and offline CLI checks.",
+        "browser": "make web-test-fractal-vco-response passes categorized browser/WASM local Guitar-TECHS DI Play, distinct Linear/Exponential 1.5/Square Law output profiles (pairwise RMS differences 0.022921/0.031661/0.016971), and browser/native chain comparison.",
+        "windows": "make windows-cross-build passes Windows MinGW core/offline-renderer compilation.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native state 15,672 B. Linear/Exponential 1.5/Exponential 4/Square Law p50 0.179/0.296/0.298/0.193% and p99.9 0.633/0.939/1.416/0.992% of 2.667 ms; all observed maxima below 18.6%, no callback deadline overruns in the sample; no processing allocations."
+      },
+      "remaining": "Human listening, physical Fractal comparison, exact Mark II Turbo firmware applicability, installed firmware, and target-device timing remain open. Fractal curve laws, ranges/defaults, and DSP behavior are still unknown."
     }
   ],
   "previous_checkpoint": {
@@ -1394,6 +1417,29 @@
       "diff_check": "make diff-check passes; no workflow files are included."
     },
     "remaining": "Human listening, physical Stadium comparison, installed firmware, and target-device timing remain open. No Line 6 settings, DSP, algorithm, or sound parity is claimed."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Through-Zero Flanger VCO Response",
+    "status": "Source-backed control roles and project-authored categorized Modulation extension verified; native/offline, browser/WASM local-guitar, Windows, and benchmark checks pass; manual/device checks remain.",
+    "date": "2026-11-27",
+    "picker_index": 81,
+    "category": "Modulation",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover November 2026, 114 pages, printed p. 50; FM9 downloads list v12.0 for Original/Turbo, not Mark II Turbo separately; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "Guide names Linear, Exponential, Square Law, and Exponent and states Exponent 1.0 yields linear sweep; it does not publish curve laws, bounds/defaults, DSP, or latency. Exact Mark II Turbo applicability is unknown."
+    },
+    "documented_controls": "Linear, Exponential, Square Law and Exponent; the guide states Exponent 1.0 yields linear sweep but does not document the exact curves, bounds/defaults, or DSP.",
+    "project_controls": "Project-authored VCO response curves extend the existing Through-Zero Flanger at Modulation ID 81. Linear is default; Exponential maps normalized sweep to x^Exponent; Square Law maps to x²; Exponent defaults 1.0, project bounds 0.25–4.0. No picker row, delay buffer, or processing allocation is added.",
+    "verification": {
+      "native_cli": "make test-fractal-vco-response passes focused native curve/default/bounds/allocation tests and offline CLI checks.",
+      "browser": "make web-test-fractal-vco-response passes local Guitar-TECHS DI browser/WASM Play and browser/native comparison; three curve profiles have distinct output.",
+      "windows": "make windows-cross-build passes Windows MinGW core/offline-renderer compilation.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured. Native state 15,672 B; p50/p99.9 for Linear/Exponential 1.5/Exponential 4/Square Law are 0.179/0.296/0.298/0.193% and 0.633/0.939/1.416/0.992% of 2.667 ms; zero observed overruns and no process allocations."
+    },
+    "remaining": "Human listening, physical Fractal comparison, exact Mark II Turbo firmware applicability, installed firmware, and target-device timing remain open. Exact Fractal curves, ranges/defaults, and DSP remain unknown."
   },
   "next_research": [
     {

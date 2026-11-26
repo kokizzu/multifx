@@ -451,7 +451,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureMercatorDistortion(parameters.mercatorDistortion ||
         [0.45, 0.45, 0, 0, 0, 0, 0, 0]);
       this.configureManualThruZeroFlanger(parameters.manualThruZeroFlanger ||
-        [0.34, 8, 5, 0.5, 0, 3, 0.5, 10, 2, 0.25, 5, 0, 180]);
+        [0.34, 8, 5, 0.5, 0, 3, 0.5, 10, 2, 0.25, 5, 0, 180, 0, 1]);
       this.configureOctobot(parameters.octobot || [0.65, 0.2, 0.25]);
       this.configureAmRingMod(parameters.amRingMod || [440, 0.5, 1, 0]);
       this.configureTapeEcho(parameters.tapeEcho ||

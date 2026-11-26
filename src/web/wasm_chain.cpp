@@ -2998,6 +2998,12 @@ public:
             ? tabletfx::ThruZeroLfoWaveform::Triangle
             : tabletfx::ThruZeroLfoWaveform::Sine;
         parameters.lfo_phase_degrees = values[12];
+        const auto vco_response = static_cast<int>(values[13]);
+        parameters.vco_response = vco_response == 1
+            ? tabletfx::FlangerVcoResponse::Exponential
+            : vco_response == 2 ? tabletfx::FlangerVcoResponse::SquareLaw
+                                : tabletfx::FlangerVcoResponse::Linear;
+        parameters.vco_exponent = values[14];
         static_cast<tabletfx::ManualThruZeroFlanger*>(effects_[81].effect.get())
             ->set_parameters(parameters);
     }

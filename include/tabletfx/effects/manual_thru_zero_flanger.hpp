@@ -35,6 +35,12 @@ enum class ThruZeroLfoWaveform : std::uint8_t {
     Triangle,
 };
 
+enum class FlangerVcoResponse : std::uint8_t {
+    Linear,
+    Exponential,
+    SquareLaw,
+};
+
 struct ManualThruZeroFlangerParameters {
     // Delay endpoints follow the documented FM9-family extrema (0.340–20 ms).
     // The exact Manual TZF seeds are not published; defaults and the 0.010 ms
@@ -62,6 +68,12 @@ struct ManualThruZeroFlangerParameters {
     float lfo_depth = 5.0F;
     ThruZeroLfoWaveform lfo_waveform = ThruZeroLfoWaveform::Sine;
     float lfo_phase_degrees = 180.0F;
+    // Project-authored curve over the normalized LFO sweep position. The
+    // Fractal guide names Linear, Exponential, Square Law, and Exponent, but
+    // does not publish the transfer function, exponent range, or default.
+    // Exponent is project-bounded to 0.25–4.0; 1.0 is exactly neutral.
+    FlangerVcoResponse vco_response = FlangerVcoResponse::Linear;
+    float vco_exponent = 1.0F;
     // These are project-authored linear wet/dry and smoothing controls; their
     // ranges are not presented as Fractal parameter ranges.
     float mix = 0.5F;
@@ -117,6 +129,8 @@ private:
                                    float delay_frames) const noexcept;
     [[nodiscard]] static float lfo_value(ThruZeroLfoWaveform waveform,
                                          float phase_cycles) noexcept;
+    [[nodiscard]] static float apply_vco_response(
+        FlangerVcoResponse response, float exponent, float lfo_value) noexcept;
     void retarget(bool immediate) noexcept;
     void advance_ramps() noexcept;
 

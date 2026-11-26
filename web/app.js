@@ -5962,6 +5962,8 @@ function updateManualThruZeroFlanger(event) {
     Number(manualThruZeroFlangerControls[10].value),
     Number(manualThruZeroFlangerControls[11].value),
     Number(manualThruZeroFlangerControls[12].value),
+    Number(manualThruZeroFlangerControls[13].value),
+    Number(manualThruZeroFlangerControls[14].value),
   ];
   DEFAULT_PARAMETERS.manualThruZeroFlanger = values;
   const formats = [
@@ -10954,6 +10956,12 @@ async function runManualThruZeroFlangerBrowserSmokeTest(reference, captureView, 
       phaseReverse: "Left",
       mix: 0.55,
       modesCompared: ["Auto", "Manual", "Off"],
+      vcoResponsesCompared: ["Linear", "Exponential 1.5", "Square Law"],
+      vcoResponseRms: {
+        linearExponential: linearExponentialRms,
+        linearSquareLaw: linearSquareLawRms,
+        exponentialSquareLaw: exponentialSquareLawRms,
+      },
       lfo: { waveform: "Triangle", rateHz: 0.8, depth: 10, phaseDegrees: 180 },
       smoothingMs: 0,
     };
@@ -18970,7 +18978,7 @@ async function runBrowserSelfTest() {
     const manualTzfHint = document.querySelector(
       '.gain-controls[aria-label="Manual Through-Zero Flanger project-authored controls"] .hint',
     ).textContent;
-    if (manualThruZeroFlangerControls.length !== 13 ||
+    if (manualThruZeroFlangerControls.length !== 15 ||
         manualThruZeroFlangerControls[0].min !== "0.34" ||
         Math.abs(Number(manualThruZeroFlangerControls[0].max) -
           (Number(manualThruZeroFlangerControls[1].value) - 0.01)) > 0.0001 ||
@@ -18987,10 +18995,17 @@ async function runBrowserSelfTest() {
         manualThruZeroFlangerControls[10].max !== "10" ||
         manualThruZeroFlangerControls[11].value !== "0" ||
         manualThruZeroFlangerControls[12].value !== "180" ||
+        manualThruZeroFlangerControls[13].value !== "0" ||
+        manualThruZeroFlangerControls[13].options.length !== 3 ||
+        manualThruZeroFlangerControls[14].min !== "0.25" ||
+        manualThruZeroFlangerControls[14].max !== "4" ||
+        manualThruZeroFlangerControls[14].value !== "1" ||
         manualTzfHint.includes("Fractal DSP") ||
         !manualTzfHint.includes("project choices") ||
+        !manualTzfHint.includes("Square Law") ||
+        !manualTzfHint.includes("x^Exponent") ||
         !manualTzfHint.includes("not milliseconds") ||
-        !manualTzfHint.includes("384 frames at 48 kHz")) {
+        !manualTzfHint.includes("384 frames of path latency at 48 kHz")) {
       throw new Error("Manual Through-Zero Flanger controls or source/latency qualifications are missing or incorrect.");
     }
     manualThruZeroFlangerControls[2].value = "6.25";
@@ -18998,6 +19013,16 @@ async function runBrowserSelfTest() {
     if (DEFAULT_PARAMETERS.manualThruZeroFlanger[2] !== 6.25 ||
         manualThruZeroFlangerControls[2].parentElement.querySelector("output").value !== "6.25") {
       throw new Error("Manual Through-Zero Flanger controls must update their displayed and chain parameters.");
+    }
+    manualThruZeroFlangerControls[13].value = "1";
+    manualThruZeroFlangerControls[14].value = "1.5";
+    manualThruZeroFlangerControls[13].dispatchEvent(new Event("input", { bubbles: true }));
+    manualThruZeroFlangerControls[14].dispatchEvent(new Event("input", { bubbles: true }));
+    if (DEFAULT_PARAMETERS.manualThruZeroFlanger[13] !== 1 ||
+        DEFAULT_PARAMETERS.manualThruZeroFlanger[14] !== 1.5 ||
+        manualThruZeroFlangerControls[13].parentElement.querySelector("output").value !== "Exponential" ||
+        manualThruZeroFlangerControls[14].parentElement.querySelector("output").value !== "1.50") {
+      throw new Error("Manual Through-Zero Flanger VCO response/exponent controls must update display and chain parameters.");
     }
     originalManualTzfParameters.forEach((value, index) => {
       manualThruZeroFlangerControls[index].value = String(value);

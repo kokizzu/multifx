@@ -35,6 +35,8 @@ void test_documented_controls_and_project_bounds() {
                 defaults.lfo_rate_hz == 0.25F && defaults.lfo_depth == 5.0F &&
                 defaults.lfo_waveform == tabletfx::ThruZeroLfoWaveform::Sine &&
                 defaults.lfo_phase_degrees == 180.0F &&
+                defaults.vco_response == tabletfx::FlangerVcoResponse::Linear &&
+                defaults.vco_exponent == 1.0F &&
                 defaults.mix == 0.5F && defaults.smoothing_ms == 10.0F,
             "project-authored through-zero defaults changed");
     require(flanger.current_wet_time_ms() == flanger.current_dry_time_ms(),
@@ -54,6 +56,8 @@ void test_documented_controls_and_project_bounds() {
     parameters.lfo_rate_hz = 99.0F;
     parameters.lfo_depth = -1.0F;
     parameters.lfo_phase_degrees = 400.0F;
+    parameters.vco_response = static_cast<tabletfx::FlangerVcoResponse>(99);
+    parameters.vco_exponent = 99.0F;
     parameters.mix = -1.0F;
     parameters.smoothing_ms = 2000.0F;
     flanger.set_parameters(parameters);
@@ -66,6 +70,8 @@ void test_documented_controls_and_project_bounds() {
                 bounded.lfo_waveform == tabletfx::ThruZeroLfoWaveform::Sine &&
                 bounded.lfo_rate_hz == 8.0F && bounded.lfo_depth == 0.0F &&
                 bounded.lfo_phase_degrees == 360.0F &&
+                bounded.vco_response == tabletfx::FlangerVcoResponse::Linear &&
+                bounded.vco_exponent == 4.0F &&
                 bounded.mix == 0.0F && bounded.smoothing_ms == 1000.0F,
             "through-zero parameter bounds or invalid enum fallback changed");
 
@@ -79,6 +85,8 @@ void test_documented_controls_and_project_bounds() {
     parameters.lfo_rate_hz = std::numeric_limits<float>::quiet_NaN();
     parameters.lfo_depth = std::numeric_limits<float>::infinity();
     parameters.lfo_phase_degrees = -std::numeric_limits<float>::infinity();
+    parameters.vco_response = tabletfx::FlangerVcoResponse::Exponential;
+    parameters.vco_exponent = std::numeric_limits<float>::quiet_NaN();
     parameters.mix = std::numeric_limits<float>::quiet_NaN();
     parameters.smoothing_ms = std::numeric_limits<float>::quiet_NaN();
     flanger.set_parameters(parameters);
@@ -89,8 +97,79 @@ void test_documented_controls_and_project_bounds() {
                 finite.mode == tabletfx::ThruZeroMode::Auto &&
                 finite.lfo_rate_hz == 0.25F && finite.lfo_depth == 5.0F &&
                 finite.lfo_phase_degrees == 180.0F && finite.mix == 0.5F &&
+                finite.vco_response == tabletfx::FlangerVcoResponse::Exponential &&
+                finite.vco_exponent == 1.0F &&
                 finite.smoothing_ms == 10.0F,
             "invalid through-zero parameters did not fall back to bounded values");
+
+    parameters.vco_exponent = 0.0F;
+    flanger.set_parameters(parameters);
+    require(flanger.parameters().vco_exponent == 0.25F,
+            "VCO exponent lower project bound changed");
+}
+
+void test_vco_response_curves_and_neutral_exponent() {
+    const auto sweep_time = [](tabletfx::FlangerVcoResponse response,
+                               float exponent) {
+        tabletfx::ManualThruZeroFlangerParameters parameters;
+        parameters.minimum_time_ms = 2.0F;
+        parameters.maximum_time_ms = 6.0F;
+        parameters.manual = 5.0F;
+        parameters.mode = tabletfx::ThruZeroMode::Auto;
+        parameters.lfo_rate_hz = 1.0F;
+        parameters.lfo_depth = 10.0F;
+        parameters.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Sine;
+        parameters.vco_response = response;
+        parameters.vco_exponent = exponent;
+        parameters.mix = 0.0F;
+        parameters.smoothing_ms = 0.0F;
+        tabletfx::ManualThruZeroFlanger flanger(8000.0F, 1, parameters);
+        std::array<float, 1000> phase_advance{};
+        flanger.process(phase_advance, 1);
+        return flanger.current_wet_time_ms();
+    };
+
+    constexpr float kPi = 3.14159265358979323846F;
+    const float linear_position = 0.5F + 0.5F * std::sin(kPi * 0.25F);
+    const float linear_time = 2.0F + 4.0F * linear_position;
+    const float square_time = 2.0F + 4.0F * linear_position * linear_position;
+    const float exponential_lower_time = 2.0F + 4.0F * std::sqrt(linear_position);
+    require(std::abs(sweep_time(tabletfx::FlangerVcoResponse::Linear, 1.0F) -
+                     linear_time) < 1.0e-4F,
+            "Linear VCO response changed the normalized sweep mapping");
+    require(std::abs(sweep_time(tabletfx::FlangerVcoResponse::Exponential, 2.0F) -
+                     square_time) < 1.0e-4F,
+            "Exponential VCO response does not apply the project exponent");
+    require(std::abs(sweep_time(tabletfx::FlangerVcoResponse::Exponential, 0.5F) -
+                     exponential_lower_time) < 1.0e-4F,
+            "Exponent below one should favor longer-delay sweep positions");
+    require(std::abs(sweep_time(tabletfx::FlangerVcoResponse::SquareLaw, 1.0F) -
+                     square_time) < 1.0e-4F &&
+                std::abs(sweep_time(tabletfx::FlangerVcoResponse::SquareLaw, 4.0F) -
+                         square_time) < 1.0e-4F,
+            "Square-Law must square the sweep position and ignore Exponent");
+
+    tabletfx::ManualThruZeroFlangerParameters linear_parameters;
+    linear_parameters.mode = tabletfx::ThruZeroMode::Auto;
+    linear_parameters.lfo_rate_hz = 1.3F;
+    linear_parameters.lfo_depth = 8.0F;
+    linear_parameters.vco_response = tabletfx::FlangerVcoResponse::Linear;
+    tabletfx::ManualThruZeroFlangerParameters neutral_parameters = linear_parameters;
+    neutral_parameters.vco_response = tabletfx::FlangerVcoResponse::Exponential;
+    neutral_parameters.vco_exponent = 1.0F;
+    tabletfx::ManualThruZeroFlanger linear(48000.0F, 1, linear_parameters);
+    tabletfx::ManualThruZeroFlanger neutral(48000.0F, 1, neutral_parameters);
+    std::array<float, 2048> source{};
+    for (std::size_t frame = 0; frame < source.size(); ++frame) {
+        source[frame] = 0.3F * std::sin(
+            6.28318530717958647692F * 317.0F * static_cast<float>(frame) / 48000.0F);
+    }
+    auto linear_output = source;
+    auto neutral_output = source;
+    linear.process(linear_output, 1);
+    neutral.process(neutral_output, 1);
+    require(linear_output == neutral_output,
+            "Exponential Exponent=1.0 must preserve the linear samples exactly");
 }
 
 void test_off_auto_and_lfo_waveforms() {
@@ -158,6 +237,8 @@ void test_off_auto_and_lfo_waveforms() {
     tabletfx::ManualThruZeroFlangerParameters stereo_parameters = parameters;
     stereo_parameters.lfo_waveform = tabletfx::ThruZeroLfoWaveform::Sine;
     stereo_parameters.lfo_phase_degrees = 0.0F;
+    stereo_parameters.vco_response = tabletfx::FlangerVcoResponse::Exponential;
+    stereo_parameters.vco_exponent = 2.0F;
     tabletfx::ManualThruZeroFlanger in_phase(8000.0F, 2, stereo_parameters);
     stereo_parameters.lfo_phase_degrees = 180.0F;
     tabletfx::ManualThruZeroFlanger opposite_phase(8000.0F, 2, stereo_parameters);
@@ -344,6 +425,8 @@ void test_finite_recovery_layout_and_no_process_allocations() {
     block.fill(0.25F);
     tabletfx::ManualThruZeroFlangerParameters auto_parameters;
     auto_parameters.mode = tabletfx::ThruZeroMode::Auto;
+    auto_parameters.vco_response = tabletfx::FlangerVcoResponse::Exponential;
+    auto_parameters.vco_exponent = 2.0F;
     tabletfx::ManualThruZeroFlanger auto_flanger(48000.0F, 1, auto_parameters);
     const std::size_t before_allocations = allocation_count.load(std::memory_order_relaxed);
     for (int iteration = 0; iteration < 100; ++iteration) {
@@ -389,6 +472,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_documented_controls_and_project_bounds();
+        test_vco_response_curves_and_neutral_exponent();
         test_off_auto_and_lfo_waveforms();
         test_manual_sweep_crosses_delayed_dry_path();
         test_zero_point_cancellation_and_phase_choices();

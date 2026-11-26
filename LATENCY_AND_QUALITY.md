@@ -839,3 +839,18 @@ The Release benchmark ran on an AMD Ryzen 9 5950X at 48 kHz stereo with 128-fram
 | Eight shifted lines, Reverse | 0.6529% | 0.9514% | 1.2019% | 3.5836% | 7.8759% | 1,132,152 B | 0/20,000 |
 
 These are isolated desktop CPU readings, not total-chain cost or Android/tablet performance. The maxima are occasional host outliers. `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench` pass. Browser validation uses local prerecorded Guitar-TECHS DI. Human listening, physical Fractal comparison, firmware applicability, and target-device timing remain open; no manufacturer DSP or sound parity is claimed.
+
+## Fractal FM9-family Flanger VCO Response project control (2026-11-27)
+
+The VCO selector extends the existing Modulation Through-Zero Flanger at ID 81 and adds no new delay storage. Native state is 15,672 B at 48 kHz stereo, including the processor and its existing delay buffers. Processing has no heap allocation. The supported 8 ms maximum range means up to 384 frames of path latency at 48 kHz; this is unchanged by the VCO curve. Host/graph latency compensation is not implemented.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks, and 20,000 measured callbacks per profile. Percentages are isolated processor-call time relative to one callback deadline:
+
+| Project profile | p50 | p95 | p99 | p99.9 | Max | Native state | Observed deadline overruns |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Linear | 0.179% | 0.264% | 0.282% | 0.633% | 18.595% | 15,672 B | 0/20,000 |
+| Exponential, 1.5 | 0.296% | 0.489% | 0.561% | 0.939% | 9.319% | 15,672 B | 0/20,000 |
+| Exponential, 4.0 | 0.298% | 0.440% | 0.711% | 1.416% | 2.500% | 15,672 B | 0/20,000 |
+| Square Law | 0.193% | 0.283% | 0.405% | 0.992% | 1.993% | 15,672 B | 0/20,000 |
+
+The Linear maximum is a scheduler outlier; every observed maximum was below one callback deadline. The exponential curve uses `std::pow` once per frame when selected; its p50 cost is approximately 0.12 percentage points above the Linear profile at the tested 1.5 exponent. This is a host-only benchmark, not a tablet, Windows runtime, or full-chain estimate. The browser/WASM local-DI test confirms distinct output profiles, but its timer resolution is not used for an isolated CPU percentage. The manufacturer does not document the curves or their CPU cost, and no Fractal DSP/settings/sound parity is claimed.

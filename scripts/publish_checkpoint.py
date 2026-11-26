@@ -3044,11 +3044,35 @@ HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/fractal_flanger_vco_bench.cpp",
+    "include/tabletfx/effects/manual_thru_zero_flanger.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "src/effects/manual_thru_zero_flanger.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_manual_thru_zero_flanger.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 CHECKPOINTS = {
     "headrush-phaser-stereo": (
         HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS,
         "feat: add project-authored Phaser stereo spread control",
+    ),
+    "fractal-vco-response": (
+        FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS,
+        "feat: add project-authored flanger VCO response controls",
     ),
     "pitch-ring-mod": (
         PITCH_RING_MOD_CHECKPOINT_PATHS,
@@ -3523,6 +3547,36 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "fractal-vco-response": {
+        "CMakeLists.txt": ("fractal_flanger_vco_bench",),
+        "EFFECTS_MATRIX.md": ("Fractal FM9-family Flanger VCO Response checkpoint",),
+        "FLAGSHIP_EFFECT_COMPARISON.md": ("## Fractal FM9-family Through-Zero Flanger VCO Response comparison",),
+        "IMPLEMENTATION_CHECKLIST.md": ("## Fractal FM9-family Flanger VCO Response",),
+        "LATENCY_AND_QUALITY.md": ("## Fractal FM9-family Flanger VCO Response",),
+        "RESEARCH.md": ("## Fractal FM9-family Through-Zero Flanger VCO Response",),
+        "include/tabletfx/effects/manual_thru_zero_flanger.hpp": ("FlangerVcoResponse", "vco_exponent"),
+        "make/publish.mk": ("fractal-vco-response", "bench-fractal-flanger-vco"),
+        "research-state.json": (
+            "Fractal FM9-family Through-Zero Flanger VCO Response",
+            '"next_device": "Fender Tone Master Pro"',
+            '"previous_checkpoint_commit": "0356aa96e83c691bf24925905d65590254cf05b1"',
+        ),
+        "scripts/publish_checkpoint.py": (
+            "FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS",
+            '"fractal-vco-response": (',
+            '"fractal-vco-response": {',
+            "Checkpoint-untracked-recovery",
+        ),
+        "scripts/run_cmake.py": ("bench_fractal_flanger_vco", "bench-fractal-flanger-vco"),
+        "src/effects/manual_thru_zero_flanger.cpp": ("apply_vco_response", "vco_response"),
+        "src/web/wasm_chain.cpp": ("configure_manual_thru_zero_flanger", "parameters.vco_exponent"),
+        "tests/test_manual_thru_zero_flanger.cpp": ("test_vco_response_curves_and_neutral_exponent", "vco_exponent"),
+        "web/app.js": ("manualThruZeroFlangerControls", "vcoResponseRms"),
+        "web/audio-worklet.js": (
+            "0.34, 8, 5, 0.5, 0, 3, 0.5, 10, 2, 0.25, 5, 0, 180, 0, 1",
+        ),
+        "web/index.html": ("manual-tzf-vco-response", "VCO Response · project curve mapping"),
+    },
     "headrush-phaser-stereo": {
         "CMakeLists.txt": ("headrush_phaser_stereo_bench",),
         "EFFECTS_MATRIX.md": (
@@ -3937,7 +3991,16 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
         # attempt, but only when each staged partial file still matches markers.
         verify_partial_staging(checkpoint, pre_staged)
         partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
+        # Checkpoint-untracked-recovery: git diff omits untracked files, so stage
+        # an explicitly listed new checkpoint file before inspecting its diff.
+        status = git("status", "--porcelain=v1", "--untracked-files=all")
+        untracked = {
+            line[3:] for line in status.splitlines() if line.startswith("?? ")
+        }
         for path in paths:
+            if path in untracked:
+                git("add", "--", path, capture=False)
+                continue
             remaining_diff = git("diff", "--no-ext-diff", "--unified=3", "--", path)
             if not remaining_diff:
                 continue
