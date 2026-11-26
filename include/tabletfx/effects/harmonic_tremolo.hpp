@@ -15,10 +15,16 @@ enum class HarmonicTremoloWaveform : std::uint8_t {
     Square,
 };
 
+enum class HarmonicTremoloMode : std::uint8_t {
+    SixG4,
+    SixG4A,
+};
+
 struct HarmonicTremoloParameters {
     float rate_hz = 3.0F;
     float depth = 0.65F;
     float crossover_hz = 700.0F;
+    HarmonicTremoloMode mode = HarmonicTremoloMode::SixG4;
     HarmonicTremoloWaveform waveform = HarmonicTremoloWaveform::Sine;
     bool tempo_sync = false;
     float tempo_bpm = 120.0F;
@@ -32,9 +38,11 @@ struct HarmonicTremoloParameters {
 
 // Project-authored harmonic tremolo using a complementary one-pole frequency
 // split and opposing low/high amplitude modulation. Stereo alternation is a
-// project design choice; this processor does not claim Fender algorithm,
-// parameter-range, or sound parity. All state is fixed-size and process()
-// performs no allocation or per-sample trigonometric calls.
+// project design choice. The 6G4A selector applies a project-authored 1.25x
+// crossover shift; the source guide names both models but publishes no circuit
+// differences. This processor does not claim Fender algorithm, parameter-range,
+// or sound parity. All state is fixed-size and process() performs no allocation
+// or per-sample trigonometric calls.
 class HarmonicTremolo final : public Effect {
 public:
     explicit HarmonicTremolo(float sample_rate = 48000.0F,
@@ -52,6 +60,7 @@ public:
     void set_rate_hz(float rate_hz) noexcept;
     void set_depth(float depth) noexcept;
     void set_crossover_hz(float frequency_hz) noexcept;
+    void set_mode(HarmonicTremoloMode mode) noexcept;
     void set_waveform(HarmonicTremoloWaveform waveform) noexcept;
     void set_tempo_sync(bool enabled, float bpm,
                         float beats_per_cycle) noexcept;
@@ -91,7 +100,10 @@ private:
                                        float minimum, float maximum) noexcept;
     [[nodiscard]] static HarmonicTremoloWaveform sanitize_waveform(
         HarmonicTremoloWaveform waveform) noexcept;
+    [[nodiscard]] static HarmonicTremoloMode sanitize_mode(
+        HarmonicTremoloMode mode) noexcept;
     [[nodiscard]] float maximum_crossover_hz() const noexcept;
+    [[nodiscard]] float effective_crossover_hz() const noexcept;
     [[nodiscard]] float alpha_for_crossover(float frequency_hz) const noexcept;
     [[nodiscard]] float modulation_value() const noexcept;
     void prepare_oscillator() noexcept;

@@ -1154,6 +1154,7 @@ const harmonicTremoloBpm = document.querySelector("#harmonic-tremolo-tempo-bpm")
 const harmonicTremoloDivision = document.querySelector("#harmonic-tremolo-beats-per-cycle");
 const harmonicTremoloStereo = document.querySelector("#harmonic-tremolo-stereo-alternation");
 const harmonicTremoloSmoothing = document.querySelector("#harmonic-tremolo-smoothing-ms");
+const harmonicTremoloMode = document.querySelector("#harmonic-tremolo-mode");
 const autoSwellDelayTime = document.querySelector("#auto-swell-delay-time-ms");
 const autoSwellDelayFeedback = document.querySelector("#auto-swell-delay-feedback");
 const autoSwellDelayMix = document.querySelector("#auto-swell-delay-mix");
@@ -6052,6 +6053,7 @@ function updateHarmonicTremolo() {
     Number(harmonicTremoloDivision.value),
     harmonicTremoloStereo.value === "on" ? 1 : 0,
     Number(harmonicTremoloSmoothing.value),
+    Number(harmonicTremoloMode.value),
   ];
   DEFAULT_PARAMETERS.harmonicTremolo = values;
   harmonicTremoloRate.parentElement.querySelector("output").value =
@@ -6072,7 +6074,7 @@ function updateHarmonicTremolo() {
 for (const control of [harmonicTremoloRate, harmonicTremoloDepth,
   harmonicTremoloCrossover, harmonicTremoloWaveform, harmonicTremoloSync,
   harmonicTremoloBpm, harmonicTremoloDivision, harmonicTremoloStereo,
-  harmonicTremoloSmoothing]) {
+  harmonicTremoloSmoothing, harmonicTremoloMode]) {
   control.addEventListener("input", updateHarmonicTremolo);
   control.addEventListener("change", updateHarmonicTremolo);
 }
@@ -14587,6 +14589,120 @@ async function runFenderTremoloDutyCycleBrowserSmokeTest(reference, captureView,
   }
 }
 
+async function runFenderHarmonicTremoloModeBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [harmonicTremoloRate.value, harmonicTremoloDepth.value,
+    harmonicTremoloCrossover.value, harmonicTremoloWaveform.value,
+    harmonicTremoloSync.value, harmonicTremoloBpm.value,
+    harmonicTremoloDivision.value, harmonicTremoloStereo.value,
+    harmonicTremoloSmoothing.value, harmonicTremoloMode.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Harmonic Tremolo mode smoke requires the local stereo guitar DI fixture.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="63"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        harmonicTremoloMode.options.length !== 2 ||
+        harmonicTremoloMode.value !== "0" || !(effectMemory[63] > 0)) {
+      throw new Error("Harmonic Tremolo must keep its Modulation category and default to the 6G4 profile.");
+    }
+
+    const captureMode = async (mode) => {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        const enabled = index === 0 || index === 63;
+        box.checked = enabled;
+        workletNode.port.postMessage({ type: "enable", index, value: enabled });
+      });
+      harmonicTremoloRate.value = "1.8";
+      harmonicTremoloDepth.value = "0.9";
+      harmonicTremoloCrossover.value = "800";
+      harmonicTremoloWaveform.value = "sine";
+      harmonicTremoloSync.value = "off";
+      harmonicTremoloBpm.value = "120";
+      harmonicTremoloDivision.value = "1";
+      harmonicTremoloStereo.value = "off";
+      harmonicTremoloSmoothing.value = "0";
+      harmonicTremoloMode.value = String(mode);
+      updateHarmonicTremolo();
+      if (DEFAULT_PARAMETERS.harmonicTremolo[9] !== mode) {
+        throw new Error("Harmonic Tremolo mode selection was not passed to the audio chain.");
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Harmonic Tremolo mode playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      let peak = 0;
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) {
+          throw new Error(`Harmonic Tremolo produced a non-finite sample at ${i}.`);
+        }
+        peak = Math.max(peak, Math.abs(output[i]));
+      }
+      if (peak < 1e-5) throw new Error("Harmonic Tremolo mode output is silent.");
+      return output;
+    };
+
+    const sixG4 = await captureMode(0);
+    const sixG4a = await captureMode(1);
+    let squaredDifference = 0;
+    for (let i = 0; i < sixG4.length; i += 1) {
+      const difference = sixG4[i] - sixG4a[i];
+      squaredDifference += difference * difference;
+    }
+    const differenceRms = Math.sqrt(squaredDifference / sixG4.length);
+    if (differenceRms < 1e-5) {
+      throw new Error("The 6G4A project profile did not change the captured local guitar output.");
+    }
+    return {
+      category: "Modulation",
+      effectId: 63,
+      modes: ["1960 6G4 baseline", "1963 6G4A project alternate split"],
+      projectCrossoverMultiplier: 1.25,
+      defaultMode: "1960 6G4 baseline",
+      playCaptures: 2,
+      modeDifferenceRms: differenceRms,
+      effectMemoryBytes: effectMemory[63],
+    };
+  } finally {
+    stopSource(false);
+    [harmonicTremoloRate.value, harmonicTremoloDepth.value,
+      harmonicTremoloCrossover.value, harmonicTremoloWaveform.value,
+      harmonicTremoloSync.value, harmonicTremoloBpm.value,
+      harmonicTremoloDivision.value, harmonicTremoloStereo.value,
+      harmonicTremoloSmoothing.value, harmonicTremoloMode.value] = previousControls;
+    updateHarmonicTremolo();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -18014,9 +18130,10 @@ async function runBrowserSelfTest() {
     harmonicTremoloDivision.value = "0.5";
     harmonicTremoloStereo.value = "off";
     harmonicTremoloSmoothing.value = "25";
+    harmonicTremoloMode.value = "1";
     harmonicTremoloCrossover.dispatchEvent(new Event("input", { bubbles: true }));
     if (DEFAULT_PARAMETERS.harmonicTremolo.join(",") !==
-          "4.25,0.8,950,1,1,96,0.5,0,25" ||
+          "4.25,0.8,950,1,1,96,0.5,0,25,1" ||
         harmonicTremoloCrossover.parentElement.querySelector("output").value !== "950 Hz" ||
         harmonicTremoloSmoothing.parentElement.querySelector("output").value !== "25.0 ms") {
       throw new Error("Harmonic Tremolo controls must update the project-owned processor settings and readouts.");
@@ -18030,6 +18147,7 @@ async function runBrowserSelfTest() {
     harmonicTremoloDivision.value = String(defaultHarmonicTremolo[6]);
     harmonicTremoloStereo.value = defaultHarmonicTremolo[7] === 0 ? "off" : "on";
     harmonicTremoloSmoothing.value = String(defaultHarmonicTremolo[8]);
+    harmonicTremoloMode.value = String(defaultHarmonicTremolo[9]);
     harmonicTremoloCrossover.dispatchEvent(new Event("input", { bubbles: true }));
      const autoSwellDelayDefaults = [...DEFAULT_PARAMETERS.autoSwellDelay];
      const autoSwellDelayRanges = [
@@ -20253,6 +20371,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Tremolo Duty Cycle browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fender-harmonic-tremolo-mode") {
+          testResult.textContent = "Checking the 6G4/6G4A project switch with local guitar audio…";
+          const harmonicTremoloModeSmoke = await runFenderHarmonicTremoloModeBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            harmonicTremoloMode: harmonicTremoloModeSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Harmonic Tremolo mode browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-tzf-auto") {

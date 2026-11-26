@@ -1,5 +1,18 @@
 # Latency, quality, and DSP-load protocol
 
+## Fender Tone Master Pro Harmonic Tremolo mode switch (2026-11-27)
+
+The Model Guide v1.1.100 / Rev. A, printed p. 33, names 1960 6G4 and 1963 6G4A but does not describe their circuit differences or publish numeric bounds/defaults. TabletFX preserves the existing 6G4 output and applies a smoothed, project-authored 1.25× effective-crossover shift for 6G4A (700→875 Hz); it does not claim to reproduce either historic circuit. The existing one-pole split and LFO remain in place. Native state is 136 B, browser/WASM effect state is 112 B, and the mode adds no fixed audio-path latency or process allocation.
+
+Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks and 20,000 measured callbacks. Values are processor time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Fixed added latency | Process allocations | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1960 6G4 (default) | 0.084% | 0.087% | 0.098% | 0.363% | 1.720% | 136 B | 0 frames | 0 | 0/20,000 |
+| 1963 6G4A (project profile) | 0.084% | 0.085% | 0.094% | 0.318% | 1.157% | 136 B | 0 frames | 0 | 0/20,000 |
+
+The focused browser test uses local prerecorded Guitar-TECHS DI and observes output-difference RMS 0.00164583899 between profiles. Browser timer granularity is insufficient for isolated CPU reporting, so the native benchmark provides the percentage figures. These desktop processor timings are not whole-chain or tablet guarantees. The focused native tests, browser/WASM playback, and MinGW Windows core/offline-renderer build pass. Human listening, physical Tone Master Pro comparison, and target-device timing remain manual.
+
 ## HeadRush Prime Orange Phaser Stereo project control (2026-11-27)
 
 Prime v5.0.0 User Guide §4.4.2, printed p. 23/PDF p. 24, shows an Orange Phaser Stereo toggle but does not define its signal behavior, numeric settings, default, or persistence. The v5.2.0 firmware notes (October 2026) do not mention an Orange Phaser change; installed firmware is unknown. TabletFX adds a project-authored toggle to the existing Phaser: on preserves the processor's previous opposite L/R LFO phases, off links them. It adds no audio delay, buffer, or `process()` allocation. Native state is 296 B; browser/WASM reports 280 B.

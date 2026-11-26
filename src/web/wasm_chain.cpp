@@ -2231,9 +2231,14 @@ public:
                                     std::uint32_t tempo_sync,
                                     float tempo_bpm, float beats_per_cycle,
                                     std::uint32_t stereo_alternation,
-                                    float smoothing_ms) noexcept {
+                                    float smoothing_ms,
+                                    std::uint32_t mode) noexcept {
         auto* tremolo = static_cast<tabletfx::HarmonicTremolo*>(
             effects_[63].effect.get());
+        tremolo->set_smoothing_ms(smoothing_ms);
+        tremolo->set_mode(mode == 1U
+                              ? tabletfx::HarmonicTremoloMode::SixG4A
+                              : tabletfx::HarmonicTremoloMode::SixG4);
         tremolo->set_rate_hz(rate_hz);
         tremolo->set_depth(depth);
         tremolo->set_crossover_hz(crossover_hz);

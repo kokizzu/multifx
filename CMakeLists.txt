@@ -194,6 +194,10 @@ add_executable(tabletfx_fractal_flanger_vco_bench
     apps/fractal_flanger_vco_bench.cpp)
 target_link_libraries(tabletfx_fractal_flanger_vco_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_fender_harmonic_tremolo_mode_bench
+    apps/fender_harmonic_tremolo_mode_bench.cpp)
+target_link_libraries(tabletfx_fender_harmonic_tremolo_mode_bench PRIVATE tabletfx_core)
+
 
 include(CTest)
 if(BUILD_TESTING)

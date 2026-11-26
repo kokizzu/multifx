@@ -59,6 +59,7 @@ void test_defaults_bounds_and_memory() {
             "harmonic tremolo stable ID changed");
     require(parameters.rate_hz == 3.0F && parameters.depth == 0.65F &&
                 parameters.crossover_hz == 700.0F &&
+                parameters.mode == tabletfx::HarmonicTremoloMode::SixG4 &&
                 parameters.waveform ==
                     tabletfx::HarmonicTremoloWaveform::Sine &&
                 !parameters.tempo_sync && parameters.tempo_bpm == 120.0F &&
@@ -220,6 +221,73 @@ void test_stereo_alternation_and_mono_policy() {
             "unsupported multichannel layout should remain untouched");
 }
 
+void test_mode_switch_keeps_default_and_changes_alternate_profile() {
+    constexpr float sample_rate = 48000.0F;
+    tabletfx::HarmonicTremoloParameters parameters;
+    parameters.rate_hz = 1.0F;
+    parameters.depth = 1.0F;
+    parameters.crossover_hz = 700.0F;
+    parameters.smoothing_ms = 0.0F;
+
+    tabletfx::HarmonicTremolo baseline(sample_rate, parameters);
+    tabletfx::HarmonicTremolo explicit_baseline(sample_rate, parameters);
+    explicit_baseline.set_mode(tabletfx::HarmonicTremoloMode::SixG4);
+    std::vector<float> baseline_input(48000);
+    for (std::size_t i = 0; i < baseline_input.size(); ++i) {
+        baseline_input[i] = std::sin(
+            2.0F * 3.14159265358979323846F * 523.25F *
+            static_cast<float>(i) / sample_rate);
+    }
+    auto explicit_input = baseline_input;
+    baseline.process(baseline_input, 1);
+    explicit_baseline.process(explicit_input, 1);
+    require(baseline_input == explicit_input,
+            "default 6G4 mode must preserve the existing harmonic-tremolo output");
+
+    tabletfx::HarmonicTremolo alternate(sample_rate, parameters);
+    alternate.set_mode(tabletfx::HarmonicTremoloMode::SixG4A);
+    require(alternate.parameters().mode ==
+                tabletfx::HarmonicTremoloMode::SixG4A &&
+                alternate.parameters().crossover_hz == 700.0F &&
+                std::abs(alternate.current_crossover_hz() - 875.0F) < 0.1F,
+            "project 6G4A mode should apply its documented 1.25x split while preserving the base control");
+    alternate.reset();
+    std::vector<float> alternate_input(48000);
+    for (std::size_t i = 0; i < alternate_input.size(); ++i) {
+        alternate_input[i] = std::sin(
+            2.0F * 3.14159265358979323846F * 523.25F *
+            static_cast<float>(i) / sample_rate);
+    }
+    alternate.process(alternate_input, 1);
+    double squared_difference = 0.0;
+    for (std::size_t i = 0; i < baseline_input.size(); ++i) {
+        const double difference = static_cast<double>(baseline_input[i]) -
+                                  static_cast<double>(alternate_input[i]);
+        squared_difference += difference * difference;
+    }
+    const double difference_rms = std::sqrt(
+        squared_difference / static_cast<double>(baseline_input.size()));
+    require(difference_rms > 1.0e-3,
+            "6G4A project mode did not produce a distinct output profile");
+
+    alternate.set_mode(tabletfx::HarmonicTremoloMode::SixG4);
+    require(alternate.parameters().crossover_hz == 700.0F &&
+                std::abs(alternate.current_crossover_hz() - 700.0F) < 0.1F,
+            "returning to 6G4 should restore the unshifted base crossover");
+    alternate.set_mode(static_cast<tabletfx::HarmonicTremoloMode>(255));
+    require(alternate.parameters().mode ==
+                tabletfx::HarmonicTremoloMode::SixG4,
+            "invalid mode values should safely fall back to 6G4");
+
+    tabletfx::HarmonicTremoloParameters bounded_parameters = parameters;
+    bounded_parameters.mode = tabletfx::HarmonicTremoloMode::SixG4A;
+    bounded_parameters.crossover_hz = 8000.0F;
+    tabletfx::HarmonicTremolo bounded(sample_rate, bounded_parameters);
+    require(bounded.parameters().crossover_hz == 8000.0F &&
+                std::abs(bounded.current_crossover_hz() - 8000.0F) < 0.1F,
+            "alternate-mode crossover should remain bounded to the project maximum");
+}
+
 void test_tempo_sync_reset_and_variable_blocks() {
     tabletfx::HarmonicTremolo effect;
     effect.set_tempo_sync(true, 120.0F, 1.0F);
@@ -334,6 +402,7 @@ int main() {
         test_complementary_modulation_direction();
         test_crossover_changes_band_assignment();
         test_stereo_alternation_and_mono_policy();
+        test_mode_switch_keeps_default_and_changes_alternate_profile();
         test_tempo_sync_reset_and_variable_blocks();
         test_invalid_audio_and_zero_process_allocations();
         std::cout << "All TabletFX harmonic tremolo tests passed.\n";

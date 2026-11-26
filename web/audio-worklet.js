@@ -398,7 +398,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       const tremolo = parameters.tremolo || [5, 0.5, 0, 0, 120, 1, 0, 50];
       module._tf_chain_set_tremolo(this.chain, ...tremolo);
       const harmonicTremolo = parameters.harmonicTremolo ||
-        [3, 0.65, 700, 0, 0, 120, 1, 1, 10];
+        [3, 0.65, 700, 0, 0, 120, 1, 1, 10, 0];
       module._tf_chain_set_harmonic_tremolo(this.chain, ...harmonicTremolo);
       const autoSwellDelay = parameters.autoSwellDelay ||
         [350, 0.25, 0.25, 0, 4, 120, 300, 0.15, 0.7, -36, 1, 0, 0];

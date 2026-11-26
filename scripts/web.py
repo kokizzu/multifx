@@ -1689,6 +1689,7 @@ def main() -> None:
         "test-fractal-chorus-tempo",
         "test-fender-tremolo-lfo-clip",
         "test-fender-tremolo-duty-cycle",
+        "test-fender-harmonic-tremolo-mode",
         "test-fractal-tzf-auto",
         "test-mutant-filter", "test-step-tremolo",
         "test-fractal-bias-trem",
@@ -1734,6 +1735,8 @@ def main() -> None:
         browser_test(fender_tremolo_lfo_clip_only=True)
     elif action == "test-fender-tremolo-duty-cycle":
         browser_test(fender_tremolo_duty_cycle_only=True)
+    elif action == "test-fender-harmonic-tremolo-mode":
+        browser_test(fender_harmonic_tremolo_mode_only=True)
     elif action == "test-fractal-tzf-auto":
         browser_test(fractal_tzf_auto_only=True)
     elif action == "test-volume-pan":

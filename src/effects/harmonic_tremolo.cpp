@@ -30,6 +30,7 @@ void HarmonicTremolo::configure(
     parameters.crossover_hz = bounded(parameters.crossover_hz, 700.0F,
                                       kMinimumCrossoverHz,
                                       maximum_crossover_hz());
+    parameters.mode = sanitize_mode(parameters.mode);
     parameters.waveform = sanitize_waveform(parameters.waveform);
     parameters.tempo_bpm = bounded(parameters.tempo_bpm, 120.0F,
                                    kMinimumBpm, kMaximumBpm);
@@ -45,7 +46,7 @@ void HarmonicTremolo::configure(
     depth_step_ = 0.0F;
     depth_frames_remaining_ = 0;
 
-    current_alpha_ = alpha_for_crossover(parameters_.crossover_hz);
+    current_alpha_ = alpha_for_crossover(effective_crossover_hz());
     target_alpha_ = current_alpha_;
     alpha_step_ = 0.0F;
     alpha_frames_remaining_ = 0;
@@ -67,9 +68,19 @@ void HarmonicTremolo::set_depth(float depth) noexcept {
 }
 
 void HarmonicTremolo::set_crossover_hz(float frequency_hz) noexcept {
-    retarget_crossover(bounded(frequency_hz, parameters_.crossover_hz,
-                               kMinimumCrossoverHz,
-                               maximum_crossover_hz()));
+    parameters_.crossover_hz = bounded(
+        frequency_hz, parameters_.crossover_hz, kMinimumCrossoverHz,
+        maximum_crossover_hz());
+    retarget_crossover(effective_crossover_hz());
+}
+
+void HarmonicTremolo::set_mode(HarmonicTremoloMode mode) noexcept {
+    const HarmonicTremoloMode selected = sanitize_mode(mode);
+    if (selected == parameters_.mode) {
+        return;
+    }
+    parameters_.mode = selected;
+    retarget_crossover(effective_crossover_hz());
 }
 
 void HarmonicTremolo::set_waveform(
@@ -221,8 +232,25 @@ HarmonicTremoloWaveform HarmonicTremolo::sanitize_waveform(
     return HarmonicTremoloWaveform::Sine;
 }
 
+HarmonicTremoloMode HarmonicTremolo::sanitize_mode(
+    HarmonicTremoloMode mode) noexcept {
+    switch (mode) {
+    case HarmonicTremoloMode::SixG4:
+    case HarmonicTremoloMode::SixG4A:
+        return mode;
+    }
+    return HarmonicTremoloMode::SixG4;
+}
+
 float HarmonicTremolo::maximum_crossover_hz() const noexcept {
     return std::min(kMaximumCrossoverHz, sample_rate_ * 0.45F);
+}
+
+float HarmonicTremolo::effective_crossover_hz() const noexcept {
+    const float mode_scale =
+        parameters_.mode == HarmonicTremoloMode::SixG4A ? 1.25F : 1.0F;
+    return std::clamp(parameters_.crossover_hz * mode_scale,
+                      kMinimumCrossoverHz, maximum_crossover_hz());
 }
 
 float HarmonicTremolo::alpha_for_crossover(float frequency_hz) const noexcept {
@@ -284,7 +312,6 @@ void HarmonicTremolo::retarget_depth(float depth) noexcept {
 }
 
 void HarmonicTremolo::retarget_crossover(float frequency_hz) noexcept {
-    parameters_.crossover_hz = frequency_hz;
     target_alpha_ = alpha_for_crossover(frequency_hz);
     const auto frames = static_cast<std::size_t>(std::llround(
         static_cast<double>(sample_rate_) *

@@ -3064,6 +3064,27 @@ FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+FENDER_HARMONIC_TREMOLO_MODE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/fender_harmonic_tremolo_mode_bench.cpp",
+    "include/tabletfx/effects/harmonic_tremolo.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/harmonic_tremolo.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_harmonic_tremolo.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 
 CHECKPOINTS = {
     "headrush-phaser-stereo": (
@@ -3073,6 +3094,10 @@ CHECKPOINTS = {
     "fractal-vco-response": (
         FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS,
         "feat: add project-authored flanger VCO response controls",
+    ),
+    "fender-harmonic-tremolo-mode": (
+        FENDER_HARMONIC_TREMOLO_MODE_CHECKPOINT_PATHS,
+        "feat: add Harmonic Tremolo mode selector",
     ),
     "pitch-ring-mod": (
         PITCH_RING_MOD_CHECKPOINT_PATHS,
@@ -3547,6 +3572,37 @@ CHECKPOINTS = {
 }
 
 PARTIAL_CHECKPOINT_HUNKS = {
+    "fender-harmonic-tremolo-mode": {
+        "CMakeLists.txt": ("fender_harmonic_tremolo_mode_bench",),
+        "EFFECTS_MATRIX.md": ("Current Fender Tone Master Pro Harmonic Tremolo Mode Switch checkpoint",),
+        "FLAGSHIP_EFFECT_COMPARISON.md": ("Modulation / harmonic tremolo",),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "Fender Tone Master Pro Harmonic Tremolo Mode Switch",
+            "6G4/6G4A selector",
+        ),
+        "LATENCY_AND_QUALITY.md": ("Fender Tone Master Pro Harmonic Tremolo mode switch",),
+        "RESEARCH.md": ("Mode Switch integration (2026-11-27)",),
+        "make/publish.mk": ("test-fender-harmonic-tremolo-mode", "fender-harmonic-tremolo-mode"),
+        "research-state.json": (
+            "Fender Tone Master Pro Harmonic Tremolo Mode Switch",
+            '"next_device": "XRecer XR1"',
+            '"previous_checkpoint_commit": "a38ed39233d7aa27b45174110b1de8fe7bfe9944"',
+        ),
+        "scripts/publish_checkpoint.py": (
+            "FENDER_HARMONIC_TREMOLO_MODE_CHECKPOINT_PATHS",
+            '"fender-harmonic-tremolo-mode": (',
+            '"fender-harmonic-tremolo-mode": {',
+        ),
+        "scripts/run_cmake.py": ("bench_fender_harmonic_tremolo_mode", "bench-fender-harmonic-tremolo-mode"),
+        "scripts/web.py": ("test_fender_harmonic_tremolo_mode", "test-fender-harmonic-tremolo-mode"),
+        "src/web/wasm_chain.cpp": (
+            "configure_harmonic_tremolo",
+            "parameters.mode",
+        ),
+        "web/app.js": ("runFenderHarmonicTremoloModeBrowserSmokeTest", "harmonicTremoloMode"),
+        "web/audio-worklet.js": ("0.5, 120, 2, 0, 1, 0",),
+        "web/index.html": ("harmonic-tremolo-mode", "1963 6G4A"),
+    },
     "fractal-vco-response": {
         "CMakeLists.txt": ("fractal_flanger_vco_bench",),
         "EFFECTS_MATRIX.md": ("Fractal FM9-family Flanger VCO Response checkpoint",),

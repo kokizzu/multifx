@@ -533,11 +533,19 @@ TabletFX adds a separate project-authored five-band peaking EQ in the Equalizer 
 
 ## Fender Tone Master Pro Harmonic Tremolo research (2026-11-22)
 
-Fender’s official Tone Master Pro Model Guide v1.1.100 names Harmonic Tremolo controls Speed, Intensity, Shape, Tap Division, and 1960/1963 Mode. The guide does not publish numeric ranges or describe its internal signal path. It is an older guide than the currently listed firmware v1.8.85 (2026-11-18). Fender’s firmware history lists Stereo Harmonic Tremolo among additions in v1.4.71 (2024-11-20), but the checked sources do not provide that later algorithm’s exact parameters or confirm which guide controls apply to it. App versions are not firmware versions.
+Fender’s official Tone Master Pro Model Guide v1.1.100 names Harmonic Tremolo controls Speed, Intensity, Shape, Tap Division, and 1960/1963 Mode. The guide does not publish numeric ranges or describe its internal signal path. At the original 2026-11-22 check, the current page entry was v1.8.85 (2026-11-18); the page now lists v1.8.87 (2026-11-23), whose note fixes a Virtual Capo pitch issue and does not mention Harmonic Tremolo. Fender’s firmware history lists Stereo Harmonic Tremolo among additions in v1.4.71 (2024-11-20), but the checked sources do not provide that later algorithm’s exact parameters or confirm which guide controls apply to it. App versions are not firmware versions, and the unit-installed firmware is unknown.
 
 TabletFX MOD-12 is an independently authored harmonic tremolo: a complementary one-pole low/high split receives opposing project LFOs. Project controls are Rate 0.05–20 Hz, Depth 0–1, Crossover 80–min(8 kHz, 0.45×sample rate), Sine/Triangle/Square, optional 30–300 BPM synchronization with 1/16–16 beats per cycle, stereo band alternation, and 0–1,000 ms parameter smoothing. These values and DSP are not copied Fender settings. CTest, offline CLI, categorized browser control, Play/native parity, five-pickup plus stereo/mono DI regression, and a 48 kHz Linux benchmark passed; listening and device-route checks remain open.
 
 Sources: [Tone Master Pro Model Guide v1.1.100](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf); [Fender Tone Master Pro firmware and Pro Control release history](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates).
+
+### Mode Switch integration (2026-11-27)
+
+The exact-model guide's printed p. 33 labels the two Harmonic Tremolo modes 1960 6G4 and 1963 6G4A. It does not document their circuit differences, numeric bounds/defaults, relative crossover, DSP, or latency. The separate Stereo Harmonic Tremolo was introduced in firmware v1.4.71 and is not assumed to share the mono model's controls. Fender's current update page lists v1.8.87 dated 2026-11-23; those notes do not mention this effect, and installed device firmware is unknown.
+
+TabletFX adds the mode selector to the existing project-authored Modulation effect at picker ID 63. 6G4 is the unchanged default. The 6G4A option shifts the effective project crossover by 1.25× with the existing parameter smoothing (700→875 Hz); this is a project-authored contrast and not an estimate of Fender's original circuit response. Native tests verify default bit-compatible output, mode switching, bounds, and distinct response. HeadlessChrome browser/WASM playback on local Guitar-TECHS DI verifies both modes produce different output; Windows cross-build and the isolated CPU/memory benchmark pass. Manual listening and device performance are open.
+
+Sources: [Tone Master Pro Model Guide v1.1.100 / Rev. A](https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf), printed p. 33; [Fender firmware and Pro Control updates](https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates).
 
 ## Fender Tone Master Pro Auto-Swell Delay research (2026-11-22)
 

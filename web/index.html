@@ -1466,7 +1466,7 @@
       </div>
       <div class="effect-parameter-group" aria-label="Harmonic Tremolo controls">
         <h3>Harmonic Tremolo · project-authored</h3>
-        <p class="hint">A complementary low/high frequency split uses opposing amplitude modulation; optional stereo alternation swaps the band assignment in the right channel. These controls and ranges are project choices. Fender’s older Model Guide names Speed, Intensity, Shape, Tap Division, and 1960/1963 mode; the current guide does not establish the newer stereo model’s full parameter table. No Fender algorithm, settings, or sound parity is claimed.</p>
+        <p class="hint">A complementary low/high frequency split uses opposing amplitude modulation; optional stereo alternation swaps the band assignment in the right channel. Fender’s Tone Master Pro Model Guide v1.1.100 / Rev. A (printed p. 33) lists Speed, Intensity, Shape, Tap Division, and a switch between the 1960 6G4 and 1963 6G4A versions, but does not describe their circuit differences or numeric values. This project keeps its existing output as 6G4; 6G4A applies a project-authored 1.25× crossover shift, bounded by the project maximum. The mapping is an audible project choice, not a Fender circuit model, setting, or sound match. The guide’s table is for Harmonic Tremolo; it does not establish the Stereo Harmonic Tremolo added in firmware 1.4.71.</p>
         <div class="gain-controls">
           <label class="mix-control" for="harmonic-tremolo-rate-hz"><span>Rate</span><output for="harmonic-tremolo-rate-hz">3.00 Hz</output><input id="harmonic-tremolo-rate-hz" type="range" min="0.05" max="20" step="0.01" value="3"></label>
           <label class="mix-control" for="harmonic-tremolo-depth"><span>Depth</span><output for="harmonic-tremolo-depth">65%</output><input id="harmonic-tremolo-depth" type="range" min="0" max="1" step="0.01" value="0.65"></label>
@@ -1477,6 +1477,7 @@
           <label class="mix-control" for="harmonic-tremolo-beats-per-cycle"><span>Beats per cycle</span><select id="harmonic-tremolo-beats-per-cycle"><option value="0.0625">1/64</option><option value="0.125">1/32</option><option value="0.25">1/16</option><option value="0.5">1/8</option><option value="1" selected>Quarter</option><option value="2">Half</option><option value="4">Whole</option><option value="8">2 bars</option><option value="16">4 bars</option></select></label>
           <label class="mix-control" for="harmonic-tremolo-stereo-alternation"><span>Stereo band alternation</span><select id="harmonic-tremolo-stereo-alternation"><option value="on" selected>On</option><option value="off">Off</option></select></label>
           <label class="mix-control" for="harmonic-tremolo-smoothing-ms"><span>Parameter smoothing</span><output for="harmonic-tremolo-smoothing-ms">10.0 ms</output><input id="harmonic-tremolo-smoothing-ms" type="range" min="0" max="1000" step="1" value="10"></label>
+          <label class="mix-control" for="harmonic-tremolo-mode"><span>Version switch · project profile</span><select id="harmonic-tremolo-mode"><option value="0" selected>1960 6G4 · baseline</option><option value="1">1963 6G4A · alternate split</option></select></label>
         </div>
       </div>
       <div class="gain-controls" aria-label="Chorus controls">
