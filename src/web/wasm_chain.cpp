@@ -2601,8 +2601,13 @@ public:
 
     void configure_fractal_three_voice_synth(
         const float* values, std::uint32_t value_count) noexcept {
-        constexpr std::uint32_t kParameterCount = 33U;
-        if (values == nullptr || value_count != kParameterCount) return;
+        constexpr std::uint32_t kLegacyParameterCount = 34U;
+        constexpr std::uint32_t kParameterCount = 35U;
+        if (values == nullptr ||
+            (value_count != kLegacyParameterCount &&
+             value_count != kParameterCount)) {
+            return;
+        }
         const auto selector = [](float value, std::uint32_t maximum) noexcept {
             if (!std::isfinite(value)) return 0U;
             return static_cast<std::uint32_t>(
@@ -2615,6 +2620,9 @@ public:
                 value, static_cast<float>(minimum), static_cast<float>(maximum))));
         };
         tabletfx::effects::FractalThreeVoiceSynthConfig config;
+        config.output_level_db = value_count == kParameterCount
+            ? values[34U]
+            : 0.0F;
         config.tracking_mode =
             static_cast<tabletfx::effects::FractalSynthTrackingMode>(
                 selector(values[33U], 1U));

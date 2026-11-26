@@ -4,38 +4,62 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "946e8dc15e61d9e8d9a56bcb254b0b9161d5cbc0",
+  "previous_checkpoint_commit": "b207dc85312ac32dac674b4d94803b795af15f3b",
   "latest_audit": {
-    "name": "Line 6 Helix Stadium Delay Trails on bypass",
-    "status": "Project-authored default-off Trails control added to the existing Digital Delay row (ID 21). Native/offline/browser tests, full suites, Windows build, callback benchmark, and diff check pass; manual/device checks remain.",
+    "name": "Fractal FM9-family Synth block output Level",
+    "status": "Project-authored block output Level added to the existing Three-Voice Tracked Synth at picker ID 78; native, browser/WASM, Windows, and benchmark checks pass. Human/device checks and firmware applicability remain open.",
     "date": "2026-11-26",
-    "picker_index": 21,
-    "category": "Delay",
+    "picker_index": 78,
+    "category": "Synth",
     "official_source": {
-      "title": "Helix Stadium Effects manual and firmware release notes",
-      "revision": "Live common-parameter table: selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown.",
-      "url": "https://manuals.line6.com/helix-stadium/live/effect-blocks",
-      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "The common table describes Trails Off/On behavior but gives no default. Applicability to Simple Delay is unresolved. Project snapshot/preset transitions and Line 6 settings, DSP, and sound parity are not claimed."
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 102. FM9 downloads page lists firmware v12.0 as compatible with FM9 Original and FM9 Turbo (2026-07-07), not Mark II Turbo by name. Installed firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "release_notes_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide documents a Synth block Level but no numeric range/default. The block is explicitly monophonic; three oscillators do not mean polyphonic input tracking. Firmware applicability to Mark II Turbo is not explicit. Project control bounds/defaults and DSP are not Fractal parity."
     },
-    "documented_controls": "The common parameter table says Trails Off mutes delay repeats/reverb decay after block bypass and Trails On allows the tail to fade after bypass or a snapshot change; it publishes no default.",
-    "project_controls": "The existing Delay row at picker ID 21 has a project-authored, default-off Trails toggle. When enabled, bypass preserves dry input and drains stored wet repeats through the same delay line. This adds no picker row or ring, has zero fixed latency, and allocates nothing in processing. Only block bypass is implemented.",
+    "documented_controls": "The November 2026 Blocks Guide, pp. 4 and 102, describes shared block Level as overall output and lists Synth Mix, Level, Balance, Bypass, Bypass Mode, and Global Mix. It separately documents three oscillators with single-note input tracking and per-voice controls. No numeric block-Level bounds/default are provided.",
+    "project_controls": "Added project-authored −24…+12 dB output Level, default 0 dB, with a 10 ms linear gain ramp. It affects the complete dry-plus-synth output. The browser/WASM bridge accepts legacy 34-value arrays at 0 dB and the new 35-value array. Native state grows by 16 B to 1,031,360 B; no additional audio buffer, fixed latency, or process-time allocation.",
     "verification": {
-      "native": "make test passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests, including default-off clearing, wet-tail decay, dry passthrough, block-partition consistency, feedback stability, and no allocation. The offline CLI suite verifies bypass timing and option parsing.",
-      "browser": "HeadlessChrome 151 with local prerecorded Guitar-TECHS DI verifies Trails Off silence and Trails On decay after bypass; focused tail difference RMS is 0.00891. Full make web-test passes browser/native parity and browser effect checks.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer; compile-only.",
-      "benchmark": "make bench on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms deadline; 160 seed blocks and 5,000 measured bypass callbacks). Trails Off p50/p95/p99/p99.9/max callback use is 0.0008/0.0011/0.0011/0.0011/0.0030%; Trails On is 0.1350/0.2858/0.3098/0.7028/1.1097%. Both report 768,824 B state. These are isolated desktop timings, not device guarantees.",
-      "diff_check": "make diff-check passed with no workflow changes."
+      "native": "make test passed: 333 source requirements/346 tracked rows, 13/13 fixture-safety tests, and 117/117 CTests. Focused Synth tests cover unity identity, −12 dB ramp endpoints, partition invariance, clamping, NaN fallback, finite output, and no process-time allocation.",
+      "browser": "Full make web-test passed. HeadlessChrome 151 uses local prerecorded Guitar-TECHS direct-input guitar; the Synth Play smoke confirms changed output, then measures −12 dB Level using repeatable oscillator captures. Browser/native full-chain comparison passed (maximum absolute error 1.6113e−6, RMS 2.9850e−7).",
+      "windows": "make windows-cross-build passed for the MinGW core and offline renderer; compile-only.",
+      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 2,000 warm-up and 5,000 measured blocks. Full three-voice tracked Synth at 0 dB: p50/p95/p99/p99.9/max 11.4427/12.0082/12.3555/18.2566/19.9783%. At −12 dB: 9.0295/12.0416/12.4717/15.0525/21.1311%. Both report 1,031,360 B native state. This measures the whole Synth; noisy run-to-run differences do not isolate marginal Level CPU.",
+      "diff_check": "make diff-check passed with no whitespace errors; no workflow paths are included."
     },
-    "remaining": "Human listening, physical Helix Stadium behavior, target-device timing, installed firmware, Trails default, Simple Delay applicability, snapshot/preset behavior, and Line 6 DSP/settings/sound parity remain unverified."
+    "remaining": "Human listening, physical Fractal device behavior, target tablet CPU/memory, Mark II Turbo firmware applicability, manufacturer numeric Level bounds/default, and all Fractal settings/DSP/sound parity remain unverified."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Line 6 Helix Stadium XL",
-    "next_feature": "Audit the documented Stadium Dynamics Sidechain selector and determine whether TabletFX can route an actual independent key signal before implementing it. The live common-parameter table describes Off/block input plus Instrument, Mic, Return, USB, and S/PDIF sources (Feedbacker excluded); detector response, smoothing, range, and DSP are not documented. Do not add a cosmetic selector without a working key-signal path.",
-    "qualification": "Stadium Delay Trails is implemented and verified; human listening, hardware behavior, installed firmware, Trails default, Simple Delay applicability, and snapshot/preset behavior remain open. Preserve manual revision discrepancies and do not claim Line 6 settings/DSP/sound parity. The broader independent device queue remains in next_research."
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Review and complete the existing local Flanger Filter-mode draft against Model Guide v1.1.100 / Rev. A, printed p. 39. The guide says Filter mode retains harmonic flanging while removing frequency modulation, and Rate affects tone; it gives no ranges/defaults. Inspect all current dirty Flanger files first, preserve unrelated changes, then finish the native/CLI/WASM/browser/Windows path and benchmark if the draft is sound. After that, continue the source-backed HeadRush Prime BBD Classic/Mod refinement and the documented Fender Chorus Low Cut/High Cut/Width controls.",
+    "qualification": "Fractal Synth output Level is verified locally and is ready for checkpoint publication. The broader independent research queue in next_research is preserved. Stadium sidechain remains deferred until an actual independent key-input route exists; do not let that block other source-backed effect work. Manufacturer settings, DSP, sound, and firmware applicability are not inferred from project choices."
   },
   "completed_checkpoints": [
+    {
+      "name": "Fractal FM9-family Synth block output Level",
+      "status": "verified; full native/browser suites, Windows cross-build, and callback benchmark pass; manual/device checks remain",
+      "date": "2026-11-26",
+      "picker_index": 78,
+      "category": "Synth",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 102. FM9 v12.0 lists Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "release_notes_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The manual lists shared Synth block Level but gives no numeric range/default. Project ranges and DSP are not Fractal parity."
+      },
+      "documented_controls": "Printed p. 4 defines shared block Level as overall output; p. 102 lists Level among Synth Mix-page controls. No Level bounds/default are stated.",
+      "project_controls": "Project-authored −24…+12 dB output Level, default 0 dB, 10 ms ramp; applies to the full dry-plus-synth output. Legacy 34-value WASM presets remain compatible at 0 dB; the new array has 35 values. Native state grows by 16 B to 1,031,360 B, with no extra buffer, fixed latency, or processing allocation.",
+      "verification": {
+        "native": "make test passes 333 source requirements/346 rows, 13 fixture tests, and 117/117 CTests; focused tests cover level identity, ramp, bounds, partitioning, NaN, and allocation.",
+        "browser": "make web-test passes with HeadlessChrome 151 and local Guitar-TECHS DI. Synth Play smoke and −12 dB Level measurement pass; browser/native max absolute error 1.6113e−6 and RMS 2.9850e−7.",
+        "windows": "make windows-cross-build passes for MinGW core and offline renderer; compile-only.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: 0 dB profile p99/p99.9/max 12.3555/18.2566/19.9783%; −12 dB profile 12.4717/15.0525/21.1311%; each reports 1,031,360 B. These are full Synth measurements, not marginal Level cost.",
+        "diff_check": "make diff-check passed with no whitespace errors; no workflow paths are included."
+      },
+      "remaining": "Human listening, physical-device behavior, target tablet timing/memory, exact Mark II Turbo applicability, and Fractal settings/DSP/sound parity remain open."
+    },
     {
       "name": "Line 6 Helix Stadium Delay Trails on bypass",
       "status": "verified; focused native/offline/browser tests, full suites, Windows cross-build, callback benchmark, and diff check pass; manual/device checks remain",
@@ -1091,28 +1115,28 @@
     "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
   },
   "current_checkpoint": {
-    "name": "Line 6 Helix Stadium Delay Trails on bypass",
-    "status": "Project-authored default-off Trails toggle added to existing Digital Delay ID 21. It preserves dry passthrough and drains existing wet repeats after block bypass. Focused native/offline/browser tests, full suites, Windows build, benchmark, and diff check pass; manual/device checks remain.",
+    "name": "Fractal FM9-family Synth block output Level",
+    "status": "Project-authored block output Level added to existing Synth ID 78. Full native/browser verification, Windows cross-build, benchmark, and diff review are recorded; manual/device listening remains.",
     "date": "2026-11-26",
-    "picker_index": 21,
-    "category": "Delay",
+    "picker_index": 78,
+    "category": "Synth",
     "official_source": {
-      "title": "Helix Stadium Effects manual and firmware release notes",
-      "revision": "Live common-parameter table: selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27; installed firmware is unknown.",
-      "url": "https://manuals.line6.com/helix-stadium/live/effect-blocks",
-      "release_notes_url": "https://kb.line6.com/helix-stadium-1-4-release-notes",
-      "qualification": "No Trails default is stated. Applicability to Simple Delay is unresolved. Project block bypass only; no Line 6 settings/DSP/sound parity or snapshot/preset transitions are claimed."
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 102. FM9 downloads page lists firmware v12.0 as compatible with FM9 Original and FM9 Turbo (2026-07-07), not Mark II Turbo by name. Installed firmware is unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "release_notes_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The guide documents a Synth block Level but no numeric range/default. The block is explicitly monophonic; three oscillators do not mean polyphonic input tracking. Firmware applicability to Mark II Turbo is not explicit. Project control bounds/defaults and DSP are not Fractal parity."
     },
-    "documented_controls": "The common parameter table says Trails Off mutes delay repeats/reverb decay after block bypass and Trails On allows the tail to fade after bypass or a snapshot change; it gives no default.",
-    "project_controls": "The existing Digital Delay at picker ID 21 has a project-authored default-off toggle. Bypass preserves dry input and drains stored wet repeats through the existing delay line. No new slot or ring, fixed latency, or process-time allocation is added. The 2 s, 48 kHz stereo native effect owns 768,824 B in either toggle state.",
+    "documented_controls": "November 2026 Blocks Guide, printed pp. 4 and 102: Synth has shared Level; block Level means overall output. The guide supplies no numeric Level range/default. FM9 v12.0 is listed for Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.",
+    "project_controls": "Project-authored −24…+12 dB block output Level, default 0 dB, 10 ms ramp, applied to complete dry-plus-synth output. Legacy 34-value WASM presets still map to 0 dB; new control extends the array to 35. Adds 16 B state (1,031,360 B total), no new buffer, fixed latency, or process allocation.",
     "verification": {
-      "native": "make test passes 333 source requirements/346 tracked rows, 11/11 fixture checks, and 117/117 CTests. Focused Delay tests cover default-off clearing, dry passthrough, wet decay, block partitioning, stable feedback, and no allocation; the offline CLI suite verifies bypass behavior and option parsing.",
-      "browser": "HeadlessChrome 151 local Guitar-TECHS DI Play confirms Trails Off silence and Trails On decay after bypass (tail difference RMS 0.00891). Full make web-test passes browser/native parity and browser effect checks.",
-      "windows": "make windows-cross-build passes the Windows MinGW core and offline renderer; compile-only.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 160 seed blocks/5,000 measured bypass callbacks). Trails Off p50/p95/p99/p99.9/max: 0.0008/0.0011/0.0011/0.0011/0.0030%; Trails On: 0.1350/0.2858/0.3098/0.7028/1.1097%. Both profiles use 768,824 B; no toggle-specific ring is allocated.",
-      "diff_check": "make diff-check passes with no workflow changes."
+      "native": "make test passed: 333 source requirements/346 tracked rows, 13/13 fixture-safety tests, and 117/117 CTests. Focused Synth tests cover unity identity, −12 dB ramp endpoints, partition invariance, clamping, NaN fallback, finite output, and no process-time allocation.",
+      "browser": "Full make web-test passed. HeadlessChrome 151 uses local prerecorded Guitar-TECHS direct-input guitar; the Synth Play smoke confirms changed output, then measures −12 dB Level using repeatable oscillator captures. Browser/native full-chain comparison passed (maximum absolute error 1.6113e−6, RMS 2.9850e−7).",
+      "windows": "make windows-cross-build passed for the MinGW core and offline renderer; compile-only.",
+      "benchmark": "make bench, AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.667 ms callback, 2,000 warm-up and 5,000 measured blocks. Full three-voice tracked Synth at 0 dB: p50/p95/p99/p99.9/max 11.4427/12.0082/12.3555/18.2566/19.9783%. At −12 dB: 9.0295/12.0416/12.4717/15.0525/21.1311%. Both report 1,031,360 B native state. This measures the whole Synth; noisy run-to-run differences do not isolate marginal Level CPU.",
+      "diff_check": "make diff-check passed with no whitespace errors; no workflow paths are included."
     },
-    "remaining": "Human listening, physical Helix Stadium behavior, target-device timing, installed firmware, Trails default, Simple Delay applicability, snapshot/preset transitions, and Line 6 DSP/settings/sound parity remain open."
+    "remaining": "Human listening, physical-device behavior, target-device timing/memory, exact Mark II Turbo firmware applicability, and Fractal numeric settings/DSP/sound parity remain open."
   },
   "next_research": [
     {

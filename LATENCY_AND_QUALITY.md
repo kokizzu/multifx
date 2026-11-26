@@ -1,6 +1,21 @@
 # Latency, quality, and DSP-load protocol
 
-## Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
+## Fractal FM9-family Synth block output Level (2026-11-26)
+
+The November 2026 Fractal Audio Blocks Guide, printed pp. 4 and 102, documents the Synth block's shared Level and describes block Level as overall output. It does not publish a numeric Level range/default. FM9 v12.0 downloads list FM9 Original and Turbo, not Mark II Turbo by name; installed firmware is unknown.
+
+TabletFX adds a project-authored −24…+12 dB Level, default 0 dB, with a 10 ms linear gain ramp. The scalar is applied to complete dry-plus-synth output. `pow()` runs during configuration, not in the audio callback. Processing adds one gain multiply per sample and no allocation, buffer, or fixed algorithmic latency. Native object state is 1,031,360 B, 16 B larger than before. This is total Synth state, including the tracker and its fixed analysis buffers.
+
+The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks (2.667 ms deadline), 2,000 warm-up blocks, and 5,000 measured blocks. Elapsed processor time is shown as a percentage of one callback deadline:
+
+| Profile | p50 / p95 / p99 / p99.9 / max callback budget (%) | Native state |
+|---|---:|---:|
+| Three-voice tracked Synth, Level 0 dB | 11.4427 / 12.0082 / 12.3555 / 18.2566 / 19.9783 | 1,031,360 B |
+| Three-voice tracked Synth, Level −12 dB | 9.0295 / 12.0416 / 12.4717 / 15.0525 / 21.1311 | 1,031,360 B |
+
+The percentile spread and run-to-run variation do not isolate the extra gain multiply; these rows report full Synth usage, not marginal Level cost. No additional note-detection or synthesis work is introduced by the control. Native gain/ramp/bounds/allocation tests, HeadlessChrome local prerecorded Guitar-TECHS DI Play, browser/native comparison, and the Windows MinGW core/offline build pass. Manual listening, target-device timing/memory, and Fractal settings/DSP/sound parity remain open.
+
+## Previous checkpoint — Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
 
 The live Helix Stadium Effects manual's common-parameter table says Trails Off mutes delay repeats/reverb decay after bypass, while Trails On allows the tail to fade after bypass or a snapshot change. No default is stated. Manual labels are inconsistent: the selector/header says v1.4 Rev D, the cover says Firmware 1.4, and the footer says Rev E / v1.4.1. Separate hardware v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown, and Simple Delay applicability remains unresolved.
 

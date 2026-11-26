@@ -255,6 +255,7 @@ inspect-web-build-path:
 inspect-web-smoke-path:
 	$(PYTHON) scripts/web.py inspect-smoke-path
 PUBLISH_CHECKPOINTS += prime-reverb-tails
+PUBLISH_CHECKPOINTS += fractal-synth-output-level
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:

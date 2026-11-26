@@ -793,6 +793,22 @@ FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS = (
     "research-state.json",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_SYNTH_OUTPUT_LEVEL_CHECKPOINT_PATHS = (
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/offline_render.cpp",
+    "include/tabletfx/effects/fractal_three_voice_synth.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "src/effects/fractal_three_voice_synth.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_fractal_three_voice_synth.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+)
 HARMONIC_RESONATOR_CHECKPOINT_PATHS = (
     "Makefile",
     "README.md",
@@ -2966,6 +2982,10 @@ CHECKPOINTS = {
         FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS,
         "docs: correct Fractal Chorus source notes",
     ),
+    "fractal-synth-output-level": (
+        FRACTAL_SYNTH_OUTPUT_LEVEL_CHECKPOINT_PATHS,
+        "feat: add Fractal Synth block output Level",
+    ),
     "harmonic-resonator": (HARMONIC_RESONATOR_CHECKPOINT_PATHS,
                            "feat: add project-authored harmonic resonator"),
     "multiband-compressor": (MULTIBAND_COMPRESSOR_CHECKPOINT_PATHS,
@@ -3281,6 +3301,9 @@ CHECKPOINTS = {
 PARTIAL_CHECKPOINT_HUNKS = {
     "stadium-delay-trails": {
         "make/publish.mk": ("PUBLISH_CHECKPOINTS += stadium-delay-trails",),
+    },
+    "fractal-synth-output-level": {
+        "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-synth-output-level",),
     },
 }
 

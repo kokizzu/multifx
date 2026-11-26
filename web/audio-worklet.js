@@ -534,7 +534,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureFractalThreeVoiceSynth(parameters.fractalThreeVoiceSynth ||
         [3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
           3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
-          3, 2, 440, -12, 0, 0.5, 0.35, 12000, 0.707, 20, 0.2, 0]);
+          3, 2, 440, -12, 0, 0.5, 0.35, 12000, 0.707, 20, 0.2, 0, 0]);
       this.configureEnhancer(parameters.enhancer ||
         [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1]);
       this.configureResonantDelay(parameters.resonantDelay ||
@@ -1165,7 +1165,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
   }
 
   configureFractalThreeVoiceSynth(values) {
-    if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 34) {
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        (values.length !== 34 && values.length !== 35)) {
       return;
     }
     const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);

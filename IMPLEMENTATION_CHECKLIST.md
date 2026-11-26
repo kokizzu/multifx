@@ -1,6 +1,15 @@
 # Implementation checklist
 
-## Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
+## Fractal FM9-family Synth block output Level (2026-11-26)
+
+- [x] Checked the exact Fractal Audio Blocks Guide with a November 2026 cover, printed pp. 4 and 102. It documents shared Synth block Level and describes block Level as overall output, but gives no numeric bounds/default. FM9 v12.0 downloads list Original/Turbo, not Mark II Turbo by name; installed firmware is unknown.
+- [x] Added a project-authored −24…+12 dB output Level, default 0 dB, with a 10 ms ramp, to the existing Synth at picker ID 78. It scales complete dry-plus-synth output. Existing 34-value browser arrays remain compatible at 0 dB; the updated browser/WASM path sends 35 values. No new audio buffer, fixed latency, or processing allocation; native state increases by 16 B.
+- [x] Focused native tests cover unity identity, −12 dB ramp endpoints, partition invariance, bounds, NaN fallback, and no process-time allocation. `make test` passes 333 source requirements/346 rows, 13 fixture safety tests, and 117/117 CTests.
+- [x] `make web-browser-test` passes HeadlessChrome 151 using local prerecorded Guitar-TECHS direct-input guitar. It checks tracked-synth output changes on Play and measures −12 dB Level with repeatable oscillator captures. Browser/native chain comparison passes. `make windows-cross-build` passes for MinGW core and offline renderer.
+- [x] `make bench` on AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms callback) reports 1,031,360 B Synth state. The three-voice tracked profile at −12 dB measured p50/p95/p99/p99.9/max of 9.0295/12.0416/12.4717/15.0525/21.1311% of callback budget. The 0 dB comparison profile measured 11.4427/12.0082/12.3555/18.2566/19.9783%; run-to-run variation means these values are not a marginal Level CPU estimate. See [`LATENCY_AND_QUALITY.md`](LATENCY_AND_QUALITY.md).
+- [ ] Human listening, physical-device behavior, target tablet timing/memory, Mark II Turbo firmware applicability, and Fractal numeric Level bounds/default remain unverified. Project controls and sound are not Fractal parity.
+
+## Previous checkpoint — Line 6 Helix Stadium Delay Trails on bypass (2026-11-26)
 
 - [x] Checked the live Helix Stadium Effects manual's common-parameter table: Trails Off mutes delay repeats/reverb decay after bypass; Trails On allows the tail to fade after bypass or a snapshot change. No default is stated. Manual labels conflict (selector/header v1.4 Rev D, cover Firmware 1.4, footer Rev E / v1.4.1); separate v1.4.2 notes are dated 2026-10-27. Installed firmware is unknown, and Simple Delay applicability remains unresolved.
 - [x] Added a project-authored, default-off toggle to the existing Digital Delay row (picker ID 21). On bypass it keeps dry input unchanged and drains existing wet repeats without new excitation. Off retains immediate clearing. It adds no picker row or delay buffer; fixed latency remains zero and processing allocates nothing. Snapshot/preset transitions are not implemented.

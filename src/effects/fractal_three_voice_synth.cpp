@@ -102,6 +102,20 @@ void FractalThreeVoiceSynth::configure(
     if (!valid_tracking_mode(config_.tracking_mode)) {
         config_.tracking_mode = FractalSynthTrackingMode::Guitar;
     }
+    config_.output_level_db = bounded(
+        config_.output_level_db, 0.0F,
+        kMinimumOutputLevelDb, kMaximumOutputLevelDb);
+    const float requested_output_gain = std::pow(
+        10.0F, config_.output_level_db / 20.0F);
+    if (requested_output_gain != output_level_target_gain_) {
+        output_level_target_gain_ = requested_output_gain;
+        output_level_ramp_frames_remaining_ = static_cast<std::uint32_t>(
+            std::max(1L, std::lround(sample_rate_ *
+                                     kOutputLevelSmoothingMs / 1000.0F)));
+        output_level_gain_step_ =
+            (output_level_target_gain_ - output_level_gain_) /
+            static_cast<float>(output_level_ramp_frames_remaining_);
+    }
     if (config_.tracking_mode != old_tracking_mode) {
         reset_bass_detector();
     }
@@ -513,6 +527,9 @@ void FractalThreeVoiceSynth::reset() noexcept {
     tracker_.reset();
     reset_bass_detector();
     detected_input_frequency_hz_ = 0.0F;
+    output_level_gain_ = output_level_target_gain_;
+    output_level_gain_step_ = 0.0F;
+    output_level_ramp_frames_remaining_ = 0U;
     for (std::size_t voice = 0U; voice < kVoiceCount; ++voice) {
         auto& state = state_[voice];
         state.phase = 0.0;
@@ -627,15 +644,27 @@ void FractalThreeVoiceSynth::process(
             wet_right += sample * state.pan_right;
         }
 
+        if (output_level_ramp_frames_remaining_ > 0U) {
+            output_level_gain_ += output_level_gain_step_;
+            --output_level_ramp_frames_remaining_;
+            if (output_level_ramp_frames_remaining_ == 0U) {
+                output_level_gain_ = output_level_target_gain_;
+                output_level_gain_step_ = 0.0F;
+            }
+        }
+
         if (channels == 1U) {
             interleaved[offset] = finite_output(
-                static_cast<double>(input_left) +
-                static_cast<double>(wet_left + wet_right) * 0.70710678);
+                (static_cast<double>(input_left) +
+                 static_cast<double>(wet_left + wet_right) * 0.70710678) *
+                output_level_gain_);
         } else {
             interleaved[offset] = finite_output(
-                static_cast<double>(input_left) + wet_left);
+                (static_cast<double>(input_left) + wet_left) *
+                output_level_gain_);
             interleaved[offset + 1U] = finite_output(
-                static_cast<double>(input_right) + wet_right);
+                (static_cast<double>(input_right) + wet_right) *
+                output_level_gain_);
         }
     }
 }

@@ -57,6 +57,9 @@ struct FractalThreeVoiceSynthConfig {
     // Project default is Guitar to preserve the existing 55–1100 Hz detector.
     // Bass adds a project-authored low-frequency detector to about F#0.
     FractalSynthTrackingMode tracking_mode = FractalSynthTrackingMode::Guitar;
+    // Fractal documents a block output Level but gives no range or default.
+    // TabletFX uses -24..+12 dB, default 0 dB, with a 10 ms ramp.
+    float output_level_db = 0.0F;
 };
 
 // Project-authored three-oscillator guitar synth. All three voices share one
@@ -70,8 +73,9 @@ struct FractalThreeVoiceSynthConfig {
 // a 1024-sample window plus a 256-sample hop after decimation near 8 kHz, so
 // bass-mode onset response can take roughly 0.1–0.22 seconds before buffering.
 // Waveforms, most ranges, envelopes, filtering, panning and DSP are project
-// choices, not Fractal settings or sound parity. Global Mix/Level/Balance/Bypass
-// and spillover controls are intentionally outside this processor.
+// choices, not Fractal settings or sound parity. The project-authored output
+// Level affects the complete block output; Mix, Balance, Bypass Mode, Global
+// Mix and spillover controls remain outside this processor.
 class FractalThreeVoiceSynth final : public tabletfx::Effect {
 public:
     explicit FractalThreeVoiceSynth(
@@ -109,6 +113,9 @@ private:
     static constexpr float kBassDetectorTargetRate = 8000.0F;
     static constexpr std::size_t kBassDetectorFrame = 1024U;
     static constexpr std::size_t kBassDetectorHop = 256U;
+    static constexpr float kMinimumOutputLevelDb = -24.0F;
+    static constexpr float kMaximumOutputLevelDb = 12.0F;
+    static constexpr float kOutputLevelSmoothingMs = 10.0F;
     static constexpr float kMaximumOutputMagnitude = 1000000.0F;
 
     struct VoiceState {
@@ -160,6 +167,10 @@ private:
     // Fixed-storage project-local low-frequency detector; processing allocates
     // nothing. Numerical detector thresholds are project-authored.
     std::array<float, kBassDetectorFrame> bass_detector_frame_{};
+    float output_level_gain_ = 1.0F;
+    float output_level_target_gain_ = 1.0F;
+    float output_level_gain_step_ = 0.0F;
+    std::uint32_t output_level_ramp_frames_remaining_ = 0U;
     std::size_t bass_detector_decimation_ = 1U;
     std::size_t bass_decimation_count_ = 0U;
     std::size_t bass_detector_write_ = 0U;

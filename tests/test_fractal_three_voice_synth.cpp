@@ -318,9 +318,72 @@ void test_bounds_invalid_values_and_safe_layouts() {
     assert(low_rate_synth.memory_bytes() >= sizeof(low_rate_synth));
 }
 
+void test_block_output_level_bounds_smoothing_and_partitioning() {
+    auto config = single_voice(FractalSynthWaveform::Sine,
+                               FractalSynthTracking::Off);
+    config.voices[0].level = 0.0F;
+    config.voices[1].waveform = FractalSynthWaveform::Off;
+    config.voices[2].waveform = FractalSynthWaveform::Off;
+
+    std::array<float, 1200> unity_audio{};
+    unity_audio.fill(0.25F);
+    FractalThreeVoiceSynth unity(kSampleRate, config, 0x87654321U);
+    unity.process(unity_audio, 1U);
+    for (const float sample : unity_audio) {
+        assert(sample == 0.25F);
+    }
+
+    constexpr float kTargetDb = -12.0F;
+    constexpr std::size_t kRampFrames = 480U;
+    const float expected_gain = std::pow(10.0F, kTargetDb / 20.0F);
+    config.output_level_db = kTargetDb;
+    std::array<float, 1200> whole_audio{};
+    whole_audio.fill(0.25F);
+    auto partitioned_audio = whole_audio;
+    FractalThreeVoiceSynth whole(kSampleRate, config, 0x87654321U);
+    FractalThreeVoiceSynth partitioned(kSampleRate, config, 0x87654321U);
+    assert(whole.config().output_level_db == kTargetDb);
+    whole.process(whole_audio, 1U);
+
+    std::size_t offset = 0U;
+    for (const std::size_t block_frames : {1U, 17U, 128U, 257U, 64U, 511U}) {
+        const std::size_t frames = std::min(
+            block_frames, partitioned_audio.size() - offset);
+        partitioned.process(
+            std::span<float>(partitioned_audio.data() + offset, frames), 1U);
+        offset += frames;
+        if (offset == partitioned_audio.size()) break;
+    }
+    if (offset < partitioned_audio.size()) {
+        partitioned.process(
+            std::span<float>(partitioned_audio.data() + offset,
+                             partitioned_audio.size() - offset),
+            1U);
+    }
+    assert(whole_audio == partitioned_audio);
+
+    const float first_gain = 1.0F + (expected_gain - 1.0F) /
+        static_cast<float>(kRampFrames);
+    assert(std::abs(whole_audio[0] - 0.25F * first_gain) < 1.0e-6F);
+    assert(std::abs(whole_audio[kRampFrames - 1U] -
+                    0.25F * expected_gain) < 1.0e-6F);
+    assert(std::abs(whole_audio.back() - 0.25F * expected_gain) < 1.0e-6F);
+
+    config.output_level_db = 99.0F;
+    whole.configure(config);
+    assert(whole.config().output_level_db == 12.0F);
+    config.output_level_db = -99.0F;
+    whole.configure(config);
+    assert(whole.config().output_level_db == -24.0F);
+    config.output_level_db = std::numeric_limits<float>::quiet_NaN();
+    whole.configure(config);
+    assert(whole.config().output_level_db == 0.0F);
+}
+
 void test_process_does_not_allocate() {
     auto config = single_voice(FractalSynthWaveform::Sawtooth,
                                FractalSynthTracking::PitchAndEnvelope);
+    config.output_level_db = -6.0F;
     synth_a.reset();
     synth_a.configure(config);
     std::array<float, 4096> audio{};
@@ -374,6 +437,7 @@ int main() {
     test_filter_and_stereo_pan();
     test_noise_waveforms_are_finite_and_repeatable_after_reset();
     test_bounds_invalid_values_and_safe_layouts();
+    test_block_output_level_bounds_smoothing_and_partitioning();
     test_process_does_not_allocate();
     std::fprintf(stdout, "All TabletFX three-voice synth tests passed.\n");
     return 0;

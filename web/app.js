@@ -213,7 +213,7 @@ const DEFAULT_PARAMETERS = {
     3, 2, 440, 0, 0, 0.5, 0, 12000, 0.707, 5, 0.25,
     3, 2, 440, 12, 0, 0.5, -0.35, 12000, 0.707, 10, 0.2,
     3, 2, 440, -12, 0, 0.5, 0.35, 12000, 0.707, 20, 0.2,
-    0,
+    0, 0,
   ],
   enhancer: [0, 1, 0.25, 120, 12000, 7, 0, 0, 1, 0, 1],
   resonantDelay: [350, 0.35, 800, 2, 0.25],
@@ -823,6 +823,24 @@ function buildFractalThreeVoiceSynthControls() {
   trackingLabel.append(trackingTitle, trackingOutput, trackingSelect);
   fractalThreeVoiceSynthControlsContainer.append(trackingLabel);
 
+  const outputLevelLabel = document.createElement("label");
+  outputLevelLabel.className = "mix-control";
+  outputLevelLabel.htmlFor = "fractal-three-voice-synth-output-level-db";
+  const outputLevelTitle = document.createElement("span");
+  outputLevelTitle.textContent = "Block output Level · project range";
+  const outputLevelOutput = document.createElement("output");
+  outputLevelOutput.id = "fractal-three-voice-synth-output-level-db-value";
+  outputLevelOutput.htmlFor = "fractal-three-voice-synth-output-level-db";
+  const outputLevelControl = document.createElement("input");
+  outputLevelControl.id = "fractal-three-voice-synth-output-level-db";
+  outputLevelControl.type = "range";
+  outputLevelControl.min = "-24";
+  outputLevelControl.max = "12";
+  outputLevelControl.step = "0.1";
+  outputLevelControl.value = String(DEFAULT_PARAMETERS.fractalThreeVoiceSynth[34]);
+  outputLevelLabel.append(outputLevelTitle, outputLevelOutput, outputLevelControl);
+  fractalThreeVoiceSynthControlsContainer.append(outputLevelLabel);
+
   const waveforms = [
     [0, "Sine"], [1, "Triangle"], [2, "Square"], [3, "Sawtooth"],
     [4, "Random sample/hold"], [5, "White noise"], [6, "Pink noise"], [7, "Off"],
@@ -893,6 +911,7 @@ function buildFractalThreeVoiceSynthControls() {
     fractalThreeVoiceSynthControlsContainer.append(details);
   }
   fractalThreeVoiceSynthControls.push(trackingSelect);
+  fractalThreeVoiceSynthControls.push(outputLevelControl);
 }
 
 buildFractalThreeVoiceSynthControls();
@@ -6373,6 +6392,11 @@ function updateFractalThreeVoiceSynth() {
   if (trackingModeControl) {
     const output = trackingModeControl.parentElement.querySelector("output");
     if (output) output.value = trackingModeControl.selectedOptions[0]?.textContent || "Guitar";
+  }
+  const outputLevelControl = fractalThreeVoiceSynthControls[34];
+  if (outputLevelControl) {
+    const output = outputLevelControl.parentElement.querySelector("output");
+    if (output) output.value = `${Number(outputLevelControl.value).toFixed(1)} dB`;
   }
   if (workletNode) {
     workletNode.port.postMessage({
@@ -15941,6 +15965,7 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     parameters[28] = 0.7;
     parameters[32] = 0.18;
     parameters[33] = 1;
+    parameters[34] = 0;
     fractalThreeVoiceSynthControls.forEach((control, index) => {
       control.value = String(parameters[index]);
     });
@@ -15948,7 +15973,7 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
     const capture = async (synthEnabled) => {
       checkboxes.forEach((checkbox, index) => {
-        const enabled = index === 83 || index === 85 || (synthEnabled && index === 78);
+          const enabled = synthEnabled && index === 78;
         checkbox.checked = enabled;
         workletNode.port.postMessage({ type: "enable", index, value: enabled });
       });
@@ -15972,6 +15997,18 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
     };
     const dry = await capture(false);
     const processed = await capture(true);
+    // Keep the tracked-guitar capture above as the live-path smoke test, then
+    // turn per-voice tracking off so oscillator phase is repeatable while the
+    // block-wide Level control is measured across separate browser captures.
+    for (const index of [1, 12, 23]) parameters[index] = 0;
+    fractalThreeVoiceSynthControls.forEach((control, index) => {
+      control.value = String(parameters[index]);
+    });
+    updateFractalThreeVoiceSynth();
+    const levelReference = await capture(true);
+    fractalThreeVoiceSynthControls[34].value = "-12";
+    updateFractalThreeVoiceSynth();
+    const attenuated = await capture(true);
     let maxDifference = 0;
     let differenceSquares = 0;
     let changedSamples = 0;
@@ -15986,6 +16023,29 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
       throw new Error(
         `The tracked synth did not alter local guitar output: ${JSON.stringify({ maxDifference, rmsDifference, changedSamples })}`);
     }
+    const expectedLevelGain = 10 ** (-12 / 20);
+    let levelDifferenceSquares = 0;
+    let levelReferenceSquares = 0;
+    let levelInputSquares = 0;
+    let levelProjection = 0;
+    for (let index = 0; index < levelReference.length; index += 1) {
+      const expected = levelReference[index] * expectedLevelGain;
+      const difference = attenuated[index] - expected;
+      levelDifferenceSquares += difference * difference;
+      levelReferenceSquares += expected * expected;
+      levelInputSquares += levelReference[index] * levelReference[index];
+      levelProjection += attenuated[index] * levelReference[index];
+    }
+    const levelRatioError = Math.sqrt(
+      levelDifferenceSquares / Math.max(1, levelReferenceSquares),
+    );
+    const measuredLevelRatio = levelProjection / Math.max(1e-20, levelInputSquares);
+    const levelScaleError = Math.abs(measuredLevelRatio - expectedLevelGain) /
+      expectedLevelGain;
+    if (!Number.isFinite(levelScaleError) || levelScaleError > 0.03) {
+      throw new Error(
+        `The Synth block Level did not apply −12 dB to the complete output: ${JSON.stringify({ levelScaleError, measuredLevelRatio, expectedLevelGain })}.`);
+    }
     return {
       enabledEffectIndex: 78,
       generatedVoices: 3,
@@ -15995,6 +16055,12 @@ async function runFractalThreeVoiceSynthBrowserSmokeTest(
       rmsDifference,
       maxDifference,
       changedSamples,
+      blockOutputLevelDb: -12,
+      expectedLevelGain,
+      measuredLevelRatio,
+      relativeLevelScaleError: levelScaleError,
+      levelMeasurementTracking: "per-voice tracking off for deterministic block-level comparison",
+      levelRatioError,
     };
   } finally {
     stopSource(false);
@@ -16128,9 +16194,13 @@ async function runBrowserSelfTest() {
             EFFECT_NAMES[76] !== "Plex Matrix Delay · project-authored feedback matrix" ||
              EFFECT_NAMES[77] !== "Celestial Reverb · project-authored dual-pitch feedback" ||
               EFFECT_NAMES[78] !== "Three-Voice Tracked Synth · project-authored" ||
-              fractalThreeVoiceSynthControls.length !== 34 ||
+               fractalThreeVoiceSynthControls.length !== 35 ||
               fractalThreeVoiceSynthControls[33]?.id !== "fractal-three-voice-synth-input-tracking" ||
               [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
+               fractalThreeVoiceSynthControls[34]?.id !== "fractal-three-voice-synth-output-level-db" ||
+               fractalThreeVoiceSynthControls[34]?.min !== "-24" ||
+               fractalThreeVoiceSynthControls[34]?.max !== "12" ||
+               fractalThreeVoiceSynthControls[34]?.step !== "0.1" ||
              !EFFECT_NAMES[79]?.startsWith("Cloud Reverb") ||
           !EFFECT_NAMES[80]?.startsWith("Three-Stage Distortion") ||
           !EFFECT_NAMES[81]?.startsWith("Manual Through-Zero Flanger") ||

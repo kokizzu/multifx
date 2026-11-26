@@ -5660,6 +5660,18 @@ void run_bench() {
         return std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
             static_cast<float>(sample_rate), parameters);
     }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
+    benchmark_one("fractal-three-voice-synth-guitar-output-minus-12db", [=] {
+        tabletfx::effects::FractalThreeVoiceSynthConfig parameters;
+        parameters.output_level_db = -12.0F;
+        for (auto& voice : parameters.voices) {
+            voice.waveform = tabletfx::effects::FractalSynthWaveform::Sawtooth;
+            voice.tracking =
+                tabletfx::effects::FractalSynthTracking::PitchAndEnvelope;
+            voice.level = 0.25F;
+        }
+        return std::make_unique<tabletfx::effects::FractalThreeVoiceSynth>(
+            static_cast<float>(sample_rate), parameters);
+    }, sample_rate, channels, block_frames, warmup_blocks, measured_blocks);
     benchmark_one("fractal-three-voice-synth-bass", [=] {
         tabletfx::effects::FractalThreeVoiceSynthConfig parameters;
         parameters.tracking_mode =
