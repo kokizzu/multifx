@@ -208,6 +208,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       { length: EFFECTS.length }, (_, index) => [0, 1, 6, OUTPUT_LEVEL_INDEX,
         PEAK_LIMITER_INDEX].includes(index),
     );
+    this.phaseInvert = config.phaseInvert
+      ? Uint8Array.from(config.phaseInvert, (value) => value ? 1 : 0)
+      : new Uint8Array(EFFECTS.length);
     this.initialMix = Number.isFinite(config.mix) ? config.mix : 1;
 
     this.port.onmessage = (event) => this.onMessage(event.data);
@@ -247,6 +250,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.outputIndex = module._tf_chain_output_buffer(this.chain) >>> 2;
       for (let i = 0; i < EFFECTS.length; i += 1) {
         module._tf_chain_set_enabled(this.chain, i, this.enabled[i] ? 1 : 0);
+        if (this.phaseInvert[i] &&
+            !module._tf_chain_set_phase_invert(this.chain, i, 1)) {
+          this.port.postMessage({ type: "phase-invert-error", index: i });
+        }
       }
       module._tf_chain_set_mix(this.chain, this.initialMix);
       const parameters = config.parameters || {};
@@ -1309,6 +1316,23 @@ class TabletFxProcessor extends AudioWorkletProcessor {
             index,
             effectMemoryBytes,
             memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+          });
+        }
+      }
+    } else if (message.type === "phase-invert" && this.ready) {
+      const index = message.index | 0;
+      if (index >= 0 && index < EFFECTS.length) {
+        const enabled = Boolean(message.value);
+        const accepted = this.module._tf_chain_set_phase_invert(
+          this.chain, index, enabled ? 1 : 0,
+        );
+        if (!accepted) {
+          this.phaseInvert[index] = 0;
+          this.port.postMessage({ type: "phase-invert-error", index });
+        } else {
+          this.phaseInvert[index] = enabled ? 1 : 0;
+          this.port.postMessage({
+            type: "phase-invert-state", index, value: this.phaseInvert[index] !== 0,
           });
         }
       }

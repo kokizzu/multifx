@@ -159,6 +159,17 @@ def bench_headrush_phaser_stereo(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_headrush_phase_invert(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_headrush_phase_invert_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_headrush_phase_invert_bench"
+    )
+    run([str(executable)])
+
+
 def bench_fractal_flanger_vco(cmake: str) -> None:
     build(cmake)
     print(f"CPU: {cpu_name()}")
@@ -213,6 +224,7 @@ def main() -> None:
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
                   "bench-pitch-ring-mod", "bench-headrush-phaser-stereo",
+                  "bench-headrush-phase-invert",
                    "bench-fractal-flanger-vco",
                    "bench-fender-harmonic-tremolo-mode",
                  "windows-build"),
@@ -302,6 +314,8 @@ def main() -> None:
         bench_pitch_ring_mod(cmake)
     elif action == "bench-headrush-phaser-stereo":
         bench_headrush_phaser_stereo(cmake)
+    elif action == "bench-headrush-phase-invert":
+        bench_headrush_phase_invert(cmake)
     elif action == "bench-fractal-flanger-vco":
         bench_fractal_flanger_vco(cmake)
     elif action == "bench-fender-harmonic-tremolo-mode":

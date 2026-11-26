@@ -124,6 +124,7 @@ const EFFECT_NAMES = [
   "Modulated Large Hall · project-authored Fender control roles",
   "Pitch Ring Mod · project-authored monophonic tracking",
 ];
+const phaseInvertByEffect = new Uint8Array(EFFECT_NAMES.length);
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
   stereoFilter: [1, 1000, 2, 0.707, 0, 0, 0, -100, 100, 0, 5, 0.5, 0.5, 0, 0, 0, 0, 0.5, 50, 4000, 0, 0, 1, 0, 120, 1, -36, 5, 80, 0, 0.25, 0, 0, 4, 50],
@@ -399,6 +400,8 @@ const cabinetIrFileInput = document.querySelector("#cabinet-ir-file");
 const cabinetIrStatus = document.querySelector("#cabinet-ir-status");
 const effectCategoryFilter = document.querySelector("#effect-category-filter");
 const effectSearch = document.querySelector("#effect-search");
+const phaseInvertTarget = document.querySelector("#phase-invert-target");
+const phaseInvertEnabled = document.querySelector("#phase-invert-enabled");
 const effectsList = document.querySelector("#effects-list");
 const effectCount = document.querySelector("#effect-count");
 const effectsEmpty = document.querySelector("#effects-empty");
@@ -2369,6 +2372,34 @@ function updateEffectBrowser() {
 
   effectCount.value = `${visibleCount} of ${rows.length}`;
   effectsEmpty.hidden = visibleCount !== 0;
+}
+
+function populatePhaseInvertTargets() {
+  const previousTarget = phaseInvertTarget.value;
+  const groups = new Map();
+  for (const row of effectsList.querySelectorAll(".effect-row")) {
+    const category = row.querySelector(".effect-category-tag")?.textContent.trim() || "Other";
+    let group = groups.get(category);
+    if (!group) {
+      group = document.createElement("optgroup");
+      group.label = category;
+      groups.set(category, group);
+      phaseInvertTarget.append(group);
+    }
+    const option = document.createElement("option");
+    option.value = row.querySelector("[data-effect]").dataset.effect;
+    option.textContent = row.querySelector(".effect-name").textContent.trim();
+    group.append(option);
+  }
+  if ([...phaseInvertTarget.options].some((option) => option.value === previousTarget)) {
+    phaseInvertTarget.value = previousTarget;
+  }
+  updatePhaseInvertControl();
+}
+
+function updatePhaseInvertControl() {
+  const index = Number(phaseInvertTarget.value);
+  phaseInvertEnabled.checked = phaseInvertByEffect[index] === 1;
 }
 
 function updateLooperOptions() {
@@ -4471,6 +4502,7 @@ async function setupProcessor(testOptions = null) {
   const processorOptions = {
     channels,
     enabled: testOptions?.enabled || enabledEffects(),
+    phaseInvert: testOptions?.phaseInvert || phaseInvertByEffect.slice(),
     mix: Number(wetMix.value) / 100,
     inputMuted: testOptions?.inputMuted ?? inputMute.checked,
     globalBypass: testOptions?.globalBypass ?? globalBypass.checked,
@@ -5165,6 +5197,18 @@ updateMultiDelayOptions();
 effectCategoryFilter.addEventListener("change", updateEffectBrowser);
 effectSearch.addEventListener("input", updateEffectBrowser);
 updateEffectBrowser();
+populatePhaseInvertTargets();
+phaseInvertTarget.addEventListener("change", updatePhaseInvertControl);
+phaseInvertEnabled.addEventListener("change", () => {
+  const index = Number(phaseInvertTarget.value);
+  if (!Number.isInteger(index) || index < 0 || index >= phaseInvertByEffect.length) return;
+  phaseInvertByEffect[index] = phaseInvertEnabled.checked ? 1 : 0;
+  workletNode?.port.postMessage({
+    type: "phase-invert",
+    index,
+    value: phaseInvertEnabled.checked,
+  });
+});
 
 for (const control of [
   multibandLowMid,
@@ -14703,6 +14747,134 @@ async function runFenderHarmonicTremoloModeBrowserSmokeTest(reference, captureVi
   }
 }
 
+async function runHeadRushPhaseInvertBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousPhaseState = phaseInvertByEffect.slice();
+  const previousCategory = effectCategoryFilter.value;
+  const previousSearch = effectSearch.value;
+  const previousTarget = phaseInvertTarget.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Prime Phase Invert smoke requires local stereo guitar DI audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "utility";
+    updateEffectBrowser();
+
+    const options = [...phaseInvertTarget.options];
+    const groups = [...phaseInvertTarget.querySelectorAll("optgroup")];
+    if (options.length !== EFFECT_NAMES.length || groups.length < 2 ||
+        !groups.some((group) => group.label === "Utility" &&
+          [...group.querySelectorAll("option")].some((option) => option.value === "0"))) {
+      throw new Error("Advanced Block Edit must list every processor under its picker category.");
+    }
+    phaseInvertTarget.value = "0";
+    updatePhaseInvertControl();
+    if (phaseInvertEnabled.checked || phaseInvertByEffect.some((value) => value !== 0)) {
+      throw new Error("Phase Invert must default off for every block.");
+    }
+
+    const capture = async (stageEnabled, invertStage) => {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = index === 0 && stageEnabled;
+        phaseInvertByEffect[index] = index === 0 && invertStage ? 1 : 0;
+        workletNode.port.postMessage({
+          type: "enable", index, value: box.checked,
+        });
+        workletNode.port.postMessage({
+          type: "phase-invert", index, value: phaseInvertByEffect[index] !== 0,
+        });
+      });
+      phaseInvertTarget.value = "0";
+      phaseInvertEnabled.checked = invertStage;
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Phase Invert playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice();
+    };
+
+    const normal = await capture(true, false);
+    const inverted = await capture(true, true);
+    let signalSquares = 0;
+    let invertedSumSquares = 0;
+    for (let index = 0; index < normal.length; index += 1) {
+      if (!Number.isFinite(normal[index]) || !Number.isFinite(inverted[index])) {
+        throw new Error(`Phase Invert produced non-finite audio at sample ${index}.`);
+      }
+      signalSquares += normal[index] * normal[index];
+      const sum = normal[index] + inverted[index];
+      invertedSumSquares += sum * sum;
+    }
+    const signalRms = Math.sqrt(signalSquares / normal.length);
+    const activeRelativeRms = Math.sqrt(invertedSumSquares / normal.length) /
+      Math.max(signalRms, 1e-12);
+    if (signalRms < 1e-5 || activeRelativeRms > 0.001) {
+      throw new Error(`Enabled-stage polarity check failed (RMS ${signalRms}, residual ${activeRelativeRms}).`);
+    }
+
+    const bypassed = await capture(false, false);
+    const bypassedInverted = await capture(false, true);
+    let bypassDifferenceSquares = 0;
+    let bypassSignalSquares = 0;
+    for (let index = 0; index < bypassed.length; index += 1) {
+      const difference = bypassed[index] - bypassedInverted[index];
+      bypassDifferenceSquares += difference * difference;
+      bypassSignalSquares += bypassed[index] * bypassed[index];
+    }
+    const bypassRelativeRms = Math.sqrt(bypassDifferenceSquares / bypassed.length) /
+      Math.max(Math.sqrt(bypassSignalSquares / bypassed.length), 1e-12);
+    if (bypassRelativeRms > 1e-6) {
+      throw new Error(`Phase Invert should be dormant while bypassed (difference ${bypassRelativeRms}).`);
+    }
+
+    return {
+      category: "Utility",
+      targetEffectId: 0,
+      categorizedTargets: options.length,
+      categoryGroups: groups.length,
+      defaultOff: true,
+      activeRelativeRms,
+      bypassRelativeRms,
+      browserStateBytes: phaseInvertByEffect.byteLength,
+      chainMemoryBytes,
+    };
+  } finally {
+    stopSource(false);
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      phaseInvertByEffect[index] = previousPhaseState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+      workletNode?.port.postMessage({
+        type: "phase-invert", index, value: previousPhaseState[index] !== 0,
+      });
+    });
+    phaseInvertTarget.value = previousTarget;
+    updatePhaseInvertControl();
+    effectCategoryFilter.value = previousCategory;
+    effectSearch.value = previousSearch;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 async function runFenderVirtualCapoMixBrowserSmokeTest(reference, captureView, captureBuffer) {
   const previousEffectState = enabledEffects();
   const previousCategory = effectCategoryFilter.value;
@@ -20371,6 +20543,24 @@ async function runBrowserSelfTest() {
           testResult.dataset.status = "passed";
           testResult.textContent = JSON.stringify(focusedReport);
           document.title = "PASS · TabletFX Tremolo Duty Cycle browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "headrush-phase-invert") {
+          testResult.textContent = "Checking categorized Prime Phase Invert on local guitar audio…";
+          const phaseInvertSmoke = await runHeadRushPhaseInvertBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            headRushPhaseInvert: phaseInvertSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Prime Phase Invert browser test";
           return;
         }
         if (new URLSearchParams(location.search).get("selftest") === "fender-harmonic-tremolo-mode") {

@@ -761,6 +761,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  volume_pedal_only: bool = False,
                  formant_control_lfo_only: bool = False,
                  headrush_drop_tune_only: bool = False,
+                 headrush_phase_invert_only: bool = False,
                  stadium_delay_trails_only: bool = False,
                  fender_stereo_flanger_phase_only: bool = False,
                  fender_flanger_tap_division_only: bool = False,
@@ -812,7 +813,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         if prerecorded_guitar_source is None:
             if (fractal_resonator_input_gain_only or fractal_diatonic_harmonizer_only
                     or stereo_panner_only or formant_control_lfo_only
-                    or headrush_drop_tune_only or fender_stereo_flanger_phase_only
+                    or headrush_drop_tune_only or headrush_phase_invert_only
+                    or fender_stereo_flanger_phase_only
                     or fender_flanger_tap_division_only
                     or fender_phaser_90_tap_division_only
                     or fractal_chorus_tempo_only
@@ -1329,6 +1331,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=fractal-poly-pitch-range"
         elif headrush_drop_tune_only:
             url = base_url + "/web/index.html?selftest=headrush-drop-tune"
+        elif headrush_phase_invert_only:
+            url = base_url + "/web/index.html?selftest=headrush-phase-invert"
         elif fender_stereo_flanger_phase_only:
             url = base_url + "/web/index.html?selftest=fender-stereo-flanger-phase"
         elif fender_flanger_tap_division_only:
@@ -1683,6 +1687,7 @@ def main() -> None:
         "test-stadium-delay-trails",
         "test-formant-control-lfo",
         "test-headrush-drop-tune",
+        "test-headrush-phase-invert",
         "test-fender-stereo-flanger-phase",
         "test-fender-flanger-tap-division",
         "test-fender-phaser-90-tap-division",
@@ -1723,6 +1728,8 @@ def main() -> None:
         browser_test(formant_control_lfo_only=True)
     elif action == "test-headrush-drop-tune":
         browser_test(headrush_drop_tune_only=True)
+    elif action == "test-headrush-phase-invert":
+        browser_test(headrush_phase_invert_only=True)
     elif action == "test-fender-stereo-flanger-phase":
         browser_test(fender_stereo_flanger_phase_only=True)
     elif action == "test-fender-flanger-tap-division":

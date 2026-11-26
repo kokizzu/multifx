@@ -92,6 +92,20 @@
           <output id="effect-count" class="effect-count" aria-live="polite">101 of 101</output>
       </div>
       <p id="effects-browse-note" class="effects-browse-note">Browse by effect type or name. Filtering keeps the current signal-chain order and settings.</p>
+      <section class="effect-parameter-group" aria-label="HeadRush Prime Advanced Block Edit">
+        <h3>HeadRush Prime · Advanced Block Edit</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="phase-invert-target">
+            <span>Target block · grouped by category</span>
+            <select id="phase-invert-target" aria-describedby="phase-invert-note"></select>
+          </label>
+          <label class="toggle-control" for="phase-invert-enabled">
+            <input id="phase-invert-enabled" type="checkbox">
+            Invert enabled block output polarity
+          </label>
+        </div>
+        <p id="phase-invert-note" class="hint">Off by default. The project applies polarity inversion after the selected enabled block on every channel. The setting is dormant while that block is bypassed; it adds no buffer or fixed delay.</p>
+      </section>
       <div id="effects-list" class="effects-list">
         <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="0" checked><span class="effect-number">01</span><span class="effect-name">Input trim</span><span class="effect-default">0 dB</span><span class="effect-category-tag">Utility</span></label>
         <label class="effect-row" data-category="utility"><input type="checkbox" data-effect="1" checked><span class="effect-number">02</span><span class="effect-name">Volume pedal</span><span class="effect-default">Audio taper · 0–100%</span><span class="effect-category-tag">Utility</span></label>

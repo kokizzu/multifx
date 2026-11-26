@@ -4,36 +4,36 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "a38ed39233d7aa27b45174110b1de8fe7bfe9944",
+  "previous_checkpoint_commit": "af9e37a4a5162396b1f1284a9e8e4f22cf8207d4",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Harmonic Tremolo Mode Switch",
-    "status": "Exact-model control labels and current firmware history verified; project-authored 6G4/6G4A selector integrated into existing Modulation ID 63. Focused native, browser/WASM local-guitar, Windows, and CPU/memory checks pass; only manual listening/device checks remain. No Fender circuit, algorithm, setting, or sound parity is claimed.",
+    "name": "HeadRush Prime per-block Phase Invert",
+    "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
     "date": "2026-11-27",
-    "picker_index": 63,
-    "category": "Modulation",
+    "picker_index": null,
+    "category": "Utility · per-block control",
     "official_source": {
-      "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 33; current firmware history lists v1.8.87 dated 2026-11-23; preceding v1.8.85 entry dated 2026-11-18; installed firmware unknown.",
-      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
-      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists Speed, Intensity, Shape, Tap Division, and Mode Switch choices 1960 6G4 / 1963 6G4A, but provides no numeric ranges/defaults or explanation of the circuit difference. The separately introduced Stereo Harmonic Tremolo is not inferred from this mono control table. v1.8.87 notes do not mention Harmonic Tremolo."
+      "title": "HeadRush Prime firmware update instructions",
+      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026, reproduces the prior v5.1.0 changelog entry; installed firmware unknown.",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
+      "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+      "qualification": "The v5.1.0 note says Phase Invert was added to Advanced Block Edit to correct phase cancellations when using Block Mix and other scenarios. Release notes do not specify numeric bounds/defaults, exact insertion point, stereo/split-path behavior, bypass behavior, DSP, or latency. The v5.2.0-specific changes do not discuss the control or explicitly confirm unchanged retention."
     },
-    "documented_controls": "Speed, Intensity, Shape, Tap Division, and Mode Switch selecting 1960 6G4 or 1963 6G4A. The source does not specify numeric ranges/defaults, mode response, DSP, or latency.",
-    "project_controls": "Existing project-authored Harmonic Tremolo at Modulation picker ID 63. 6G4 is output-identical default. 6G4A applies a smoothed 1.25× effective-crossover shift (700→875 Hz); this project profile does not reconstruct either Fender circuit.",
+    "documented_controls": "Phase Invert parameter on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and behavior details are not published.",
+    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups). The project flips every channel after the selected enabled stage and is dormant while that stage is bypassed. These signal-path details are project choices, not verified HeadRush semantics.",
     "verification": {
-      "native": "make test-fender-harmonic-tremolo-mode passes default-output compatibility, mode switching, effective crossover, response, bounds/sanitization, stereo/mono, reset, finite output, callback partition, and zero-process-allocation tests plus offline CLI smoke.",
-      "browser": "make web-test-fender-harmonic-tremolo-mode passes categorized picker checks and HeadlessChrome 151 Play captures on local prerecorded Guitar-TECHS DI in both profiles; output-difference RMS 0.00164583899; WASM effect state 112 B.",
-      "windows": "make windows-cross-build passes the MinGW Windows core and offline-renderer build including the new benchmark application.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. 6G4 p50/p95/p99/p99.9/max 0.084/0.087/0.098/0.363/1.720%; project 6G4A 0.084/0.085/0.094/0.318/1.157%. Both use 136 B native state, have zero fixed path latency, zero processing allocations, and zero deadline misses. Browser state is 112 B.",
+      "native": "make test-headrush-phase-invert passes the focused native PhaseInvert test for sample-wise polarity inversion, double inversion identity, zero channels, empty input, and helper memory reporting.",
+      "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
+      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
       "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware confirmation, and target-device timing remain manual. The guide does not document 6G4/6G4A circuit differences; no Fender circuit, algorithm, setting, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "XRecer XR1",
-    "next_feature": "Audit FX Loop host-routing feasibility against the existing native, Android, Linux, Windows, and Web/WASM audio-host paths. Do not register a pass-through placeholder: a usable FX Loop requires real external send/return I/O and its controls. Then continue the source-verified HeadRush Prime per-block Phase Invert audit/implementation, Melofty Axom Max looper/resource scope, and uncovered Helix Stadium effects.",
-    "qualification": "XR1's official FAQ says two effects loops while its product page says three; exact loop count, electrical behavior, level range/defaults, and mono/stereo routing remain unresolved. The current project has no FX Loop picker row; implement only if host send/return routing can actually be supported and tested across relevant platforms. Prime v5.1.0 notes introduce Phase Invert on the per-block Advanced Edit page and v5.2.0 retains that entry, but do not specify exact processing point or stereo/split-path behavior. Preserve unknowns about installed firmware, device performance, and commercial parity, and preserve independent expression-volume and footswitch-display queues. Continue until only manual listening/device checks remain."
+    "next_device": "Melofty Axom Max",
+    "next_feature": "Audit the current exact-model documentation and firmware source for a named effect with usable control behavior. Do not map broad DeepSynth, Inst.Sim, generic effect families, app notes, or unavailable ranges into vendor-specific DSP. If no safe model-specific effect can be justified, record the unresolved boundary and continue with the next documented gap: Fender Phaser stages 10/12, then Helix Stadium Dynamics Sidechain, Fractal FM9-family Global Mix, and HeadRush Prime Global EQ. Revisit XRecer XR1 global routing only after a real output-routing host exists.",
+    "qualification": "Preserve the existing manufacturer-versus-project distinction, categorized picker, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; manual hardware/listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
     {
@@ -1388,9 +1388,33 @@
         "browser": "make web-test-fender-harmonic-tremolo-mode passes categorized picker checks and HeadlessChrome 151 Play captures on local prerecorded Guitar-TECHS DI in both profiles; output-difference RMS 0.00164583899; WASM effect state 112 B.",
         "windows": "make windows-cross-build passes the MinGW Windows core and offline-renderer build including the new benchmark application.",
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. 6G4 p50/p95/p99/p99.9/max 0.084/0.087/0.098/0.363/1.720%; project 6G4A 0.084/0.085/0.094/0.318/1.157%. Both use 136 B native state, have zero fixed path latency, zero processing allocations, and zero deadline misses. Browser state is 112 B.",
-      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+        "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware confirmation, and target-device timing remain manual. The guide does not document 6G4/6G4A circuit differences; no Fender circuit, algorithm, setting, DSP, or sound parity is claimed."
+    },
+    {
+      "name": "HeadRush Prime per-block Phase Invert",
+      "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
+      "date": "2026-11-27",
+      "picker_index": null,
+      "category": "Utility · per-block control",
+      "official_source": {
+        "title": "HeadRush Prime firmware update instructions",
+        "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026, reproduces the prior v5.1.0 changelog entry; installed firmware unknown.",
+        "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
+        "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "qualification": "The v5.1.0 note says Phase Invert was added to Advanced Block Edit to correct phase cancellations when using Block Mix and other scenarios. Release notes do not specify numeric bounds/defaults, exact insertion point, stereo/split-path behavior, bypass behavior, DSP, or latency. The v5.2.0-specific changes do not discuss the control or explicitly confirm unchanged retention."
+      },
+      "documented_controls": "Phase Invert parameter on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and behavior details are not published.",
+      "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups). The project flips every channel after the selected enabled stage and is dormant while that stage is bypassed. These signal-path details are project choices, not verified HeadRush semantics.",
+      "verification": {
+        "native": "make test-headrush-phase-invert passes the focused native PhaseInvert test for sample-wise polarity inversion, double inversion identity, zero channels, empty input, and helper memory reporting.",
+        "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
+        "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
+        "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+      },
+      "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
     }
   ],
   "previous_checkpoint": {
@@ -1488,6 +1512,30 @@
       "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
     },
     "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware confirmation, and target-device timing remain manual. The guide does not document 6G4/6G4A circuit differences; no Fender circuit, algorithm, setting, DSP, or sound parity is claimed."
+  },
+  "current_checkpoint": {
+    "name": "HeadRush Prime per-block Phase Invert",
+    "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
+    "date": "2026-11-27",
+    "picker_index": null,
+    "category": "Utility · per-block control",
+    "official_source": {
+      "title": "HeadRush Prime firmware update instructions",
+      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026, reproduces the prior v5.1.0 changelog entry; installed firmware unknown.",
+      "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
+      "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+      "qualification": "The v5.1.0 note says Phase Invert was added to Advanced Block Edit to correct phase cancellations when using Block Mix and other scenarios. Release notes do not specify numeric bounds/defaults, exact insertion point, stereo/split-path behavior, bypass behavior, DSP, or latency. The v5.2.0-specific changes do not discuss the control or explicitly confirm unchanged retention."
+    },
+    "documented_controls": "Phase Invert parameter on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and behavior details are not published.",
+    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups). The project flips every channel after the selected enabled stage and is dormant while that stage is bypassed. These signal-path details are project choices, not verified HeadRush semantics.",
+    "verification": {
+      "native": "make test-headrush-phase-invert passes the focused native PhaseInvert test for sample-wise polarity inversion, double inversion identity, zero channels, empty input, and helper memory reporting.",
+      "browser": "make web-test-headrush-phase-invert passes the categorized 122-target/17-group selector check and HeadlessChrome Play smoke using local prerecorded Guitar-TECHS stereo DI. Active-stage inversion residual 0; bypassed-stage output difference 0; setting defaults off; browser UI state 122 B.",
+      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW. The project native Windows UI/audio host is not integrated or runtime-verified.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame (2.6667 ms) callbacks, 3,000 warm-up and 20,000 measured helper calls: CPU use p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget. Helper object 8 B, packed two-mask stage state 16 B, no process allocations, no fixed audio latency, zero deadline misses; maximum was an OS scheduling outlier.",
+      "diff_check": "make test and make diff-check pass; no GitHub workflow files changed."
+    },
+    "remaining": "Human listening, physical HeadRush Prime comparison, installed firmware confirmation, Windows native UI/audio-interface integration and runtime, and target-device timing remain open."
   },
   "next_research": [
     {

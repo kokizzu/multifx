@@ -59,6 +59,7 @@
 #include "tabletfx/effects/mid_overdrive.hpp"
 #include "tabletfx/effects/overdrive.hpp"
 #include "tabletfx/effects/peak_limiter.hpp"
+#include "tabletfx/effects/phase_invert.hpp"
 #include "tabletfx/effects/round_fuzz.hpp"
 #include "tabletfx/effects/pedal_compressor.hpp"
 #include "tabletfx/effects/phaser.hpp"
@@ -709,6 +710,19 @@ public:
         return true;
     }
 
+    [[nodiscard]] bool set_phase_invert(std::uint32_t index,
+                                        bool enabled) noexcept {
+        if (index >= effect_count()) return false;
+        const std::size_t word = static_cast<std::size_t>(index / 64U);
+        const std::uint64_t bit = std::uint64_t{1} << (index % 64U);
+        if (enabled) {
+            phase_invert_flags_[word] |= bit;
+        } else {
+            phase_invert_flags_[word] &= ~bit;
+        }
+        return true;
+    }
+
     [[nodiscard]] std::uint32_t begin(std::uint32_t frames) noexcept {
         if (frames == 0 || frames > max_frames_) {
             frames_ = 0;
@@ -725,6 +739,28 @@ public:
     }
 
     void process_effect(std::uint32_t index) noexcept {
+        if (frames_ == 0) return;
+        process_effect_impl(index);
+
+        const bool pipeline_effect = index < effects_.size();
+        const bool extra_effect = index >= 96U && index < effect_count();
+        if ((!pipeline_effect && !extra_effect) ||
+            !phase_inverted(index) || !stage_enabled(index)) {
+            return;
+        }
+
+        const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
+        if (index == 108U) {
+            phase_invert_.process(std::span<float>(work_.data(), samples), channels_);
+            phase_invert_.process(std::span<float>(dry_.data(), samples), channels_);
+        } else if (pipeline_effect) {
+            phase_invert_.process(std::span<float>(work_.data(), samples), channels_);
+        } else {
+            phase_invert_.process(std::span<float>(output_.data(), samples), channels_);
+        }
+    }
+
+    void process_effect_impl(std::uint32_t index) noexcept {
         if (frames_ == 0) {
             return;
         }
@@ -972,6 +1008,9 @@ public:
         }
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
         output_gain_.process(std::span<float>(output_.data(), samples), channels_);
+        if (phase_inverted(static_cast<std::uint32_t>(effects_.size()))) {
+            phase_invert_.process(std::span<float>(output_.data(), samples), channels_);
+        }
     }
 
     void process_output_limiter() noexcept {
@@ -981,6 +1020,9 @@ public:
         const std::size_t samples = static_cast<std::size_t>(frames_) * channels_;
         if (output_limiter_enabled_) {
             output_limiter_.process(std::span<float>(output_.data(), samples), channels_);
+            if (phase_inverted(static_cast<std::uint32_t>(effects_.size() + 1U))) {
+                phase_invert_.process(std::span<float>(output_.data(), samples), channels_);
+            }
         }
         tuner_.apply_output_mute(std::span<float>(output_.data(), samples), channels_);
         output_meter_.process(std::span<const float>(output_.data(), samples), channels_);
@@ -4196,6 +4238,47 @@ public:
     }
 
 private:
+    [[nodiscard]] bool phase_inverted(std::uint32_t index) const noexcept {
+        const std::size_t word = static_cast<std::size_t>(index / 64U);
+        const std::uint64_t bit = std::uint64_t{1} << (index % 64U);
+        return (phase_invert_flags_[word] & bit) != 0U;
+    }
+
+    [[nodiscard]] bool stage_enabled(std::uint32_t index) const noexcept {
+        if (index < effects_.size()) return effects_[index].enabled;
+        if (index == effects_.size()) return output_gain_enabled_;
+        if (index == effects_.size() + 1U) return output_limiter_enabled_;
+        switch (index) {
+        case 96U: return stereo_filter_enabled_;
+        case 97U: return step_tremolo_enabled_;
+        case 98U: return deluxe_looper_enabled_;
+        case 99U: return chromatic_pitch_delay_enabled_;
+        case 100U: return cabinet_ir_enabled_;
+        case 101U: return octave_divider_enabled_;
+        case 102U: return double_take_enabled_;
+        case 103U: return eq5_graphic_enabled_;
+        case 104U: return optical_tremolo_enabled_;
+        case 105U: return fractal_bias_trem_enabled_;
+        case 106U: return vibratone_enabled_;
+        case 107U: return uni_verse_vibe_enabled_;
+        case 108U: return four_osc_generator_enabled_;
+        case 109U: return poly_detune_enabled_;
+        case 110U: return pedal_detune_enabled_;
+        case 111U: return mutant_filter_enabled_;
+        case 112U: return fractal_chromatic_harmonizer_enabled_;
+        case 113U: return xr1_global_eq_enabled_;
+        case 114U: return stadium_seven_band_peq_enabled_;
+        case 115U: return fractal_diatonic_harmonizer_enabled_;
+        case 116U: return tone_master_pro_3d_chorus_enabled_;
+        case 117U: return fractal_surround_delay_enabled_;
+        case 118U: return fender_memory_delay_enabled_;
+        case 119U: return tone_master_small_hall_enabled_;
+        case 120U: return tone_master_modulated_large_hall_enabled_;
+        case 121U: return pitch_ring_mod_enabled_;
+        default: return false;
+        }
+    }
+
     std::uint32_t sample_rate_;
     std::uint16_t channels_;
     std::uint32_t max_frames_;
@@ -4215,6 +4298,8 @@ private:
     tabletfx::ChromaticTuner tuner_;
     tabletfx::LevelMeter input_meter_;
     tabletfx::LevelMeter output_meter_;
+    tabletfx::PhaseInvert phase_invert_;
+    std::array<std::uint64_t, 2> phase_invert_flags_{};
     tabletfx::CabinetIr cabinet_ir_;
     tabletfx::effects::OctaveDivider octave_divider_;
     tabletfx::DoubleTake double_take_;
@@ -4391,6 +4476,14 @@ TABLETFX_WASM_EXPORT std::uint32_t tf_chain_effect_memory_bytes(void* opaque,
 TABLETFX_WASM_EXPORT std::uint32_t tf_chain_set_enabled(void* opaque, std::uint32_t index,
                                                        std::uint32_t enabled) noexcept {
     return opaque != nullptr && as_chain(opaque)->set_enabled(index, enabled != 0) ? 1U : 0U;
+}
+
+TABLETFX_WASM_EXPORT std::uint32_t tf_chain_set_phase_invert(
+    void* opaque, std::uint32_t index, std::uint32_t enabled) noexcept {
+    return opaque != nullptr &&
+                   as_chain(opaque)->set_phase_invert(index, enabled != 0)
+               ? 1U
+               : 0U;
 }
 
 TABLETFX_WASM_EXPORT void tf_chain_set_mix(void* opaque, float mix) noexcept {

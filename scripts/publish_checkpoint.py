@@ -3044,6 +3044,28 @@ HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+HEADRUSH_PHASE_INVERT_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/headrush_phase_invert_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/phase_invert.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/phase_invert.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_phase_invert.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 FRACTAL_VCO_RESPONSE_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "EFFECTS_MATRIX.md",
@@ -3087,6 +3109,10 @@ FENDER_HARMONIC_TREMOLO_MODE_CHECKPOINT_PATHS = (
 )
 
 CHECKPOINTS = {
+    "headrush-phase-invert": (
+        HEADRUSH_PHASE_INVERT_CHECKPOINT_PATHS,
+        "feat: add HeadRush Prime per-block Phase Invert control",
+    ),
     "headrush-phaser-stereo": (
         HEADRUSH_PHASER_STEREO_CHECKPOINT_PATHS,
         "feat: add project-authored Phaser stereo spread control",
@@ -3975,6 +4001,51 @@ def git(*args: str, capture: bool = True) -> str:
         detail = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
         raise SystemExit(detail or f"git {' '.join(args)} failed with status {result.returncode}")
     return result.stdout if capture else ""
+
+PARTIAL_CHECKPOINT_HUNKS["headrush-phase-invert"] = {
+    "CMakeLists.txt": ("tabletfx_phase_invert_tests", "headrush_phase_invert_bench"),
+    "EFFECTS_MATRIX.md": ("## HeadRush Prime per-block Phase Invert",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": ("HeadRush Prime per-block Phase Invert control",),
+    "IMPLEMENTATION_CHECKLIST.md": ("HeadRush Prime — per-block Phase Invert",),
+    "LATENCY_AND_QUALITY.md": ("HeadRush Prime Phase Invert project control",),
+    "RESEARCH.md": ("HeadRush Prime per-block Phase Invert (2026-11-27)",),
+    "make/publish.mk": ("test-headrush-phase-invert", "headrush-phase-invert"),
+    "research-state.json": (
+        "HeadRush Prime per-block Phase Invert",
+        "Audit the current exact-model documentation and firmware source",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "HEADRUSH_PHASE_INVERT_CHECKPOINT_PATHS",
+        '"headrush-phase-invert": (',
+        'PARTIAL_CHECKPOINT_HUNKS[\"headrush-phase-invert\"]',
+    ),
+    "scripts/run_cmake.py": ("bench_headrush_phase_invert", "bench-headrush-phase-invert"),
+    "scripts/web.py": (
+        "headrush_phase_invert_only",
+        "test_headrush_phase_invert",
+        "test-headrush-phase-invert",
+    ),
+    "src/web/wasm_chain.cpp": (
+        "#include \"tabletfx/effects/phase_invert.hpp\"",
+        "set_phase_invert",
+        "phase_inverted(index)",
+        "phase_invert_.process",
+        "phase_invert_flags_",
+    ),
+    "web/app.js": (
+        "const phaseInvertByEffect",
+        "function populatePhaseInvertTargets()",
+        "phaseInvert: testOptions?.phaseInvert",
+        "phaseInvertEnabled.addEventListener",
+        "runHeadRushPhaseInvertBrowserSmokeTest",
+        "phase-invert-target",
+    ),
+    "web/audio-worklet.js": (
+        "this.phaseInvert = config.phaseInvert",
+        "phase-invert-error",
+    ),
+    "web/index.html": ("HeadRush Prime Advanced Block Edit", "phase-invert-target"),
+}
 
 
 def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int]:

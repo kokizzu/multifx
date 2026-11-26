@@ -359,3 +359,9 @@ The isolated benchmark uses Ryzen 9 5950X Release, 48 kHz stereo/128-frame callb
 | Maximum decay and modulation | 1.310% | 1.571% | 1.934% | 8.119% | 145,368 B | 0 | 0/20,000 |
 
 These isolated desktop processor-call timings do not predict tablet performance. Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open; no Fender DSP or sound parity is claimed.
+
+## HeadRush Prime per-block Phase Invert (2026-11-27)
+
+Prime v5.1.0 release notes add a Phase Invert parameter to Advanced Block Edit and cite phase cancellation involving Block Mix as a use case. Prime v5.2.0 release notes reproduce that earlier v5.1.0 entry but do not give a Phase Invert parameter table or explicitly describe a v5.2 behavior change. They provide no ranges/defaults, processing point, stereo/split-path rule, bypass semantics, latency, or DSP cost; installed firmware is unknown. [v5.1.0 notes](https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf) · [v5.2.0 notes](https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf)
+
+The project exposes a default-off polarity switch in the per-block Advanced Block Edit controls. It flips each output channel after the selected enabled stage, remains dormant while the block is bypassed, and does not add a picker row. The placement and bypass rule are project-authored. The grouped selector covers all 122 existing stages in 17 current effect categories. It uses an 8 B native helper and 16 B packed per-chain stage mask; the browser setting vector is 122 B. Processing adds no buffer, fixed path latency, or heap allocation. Human listening, hardware comparison, and target-device timing remain open; the Windows MinGW core build passes, while the native Windows UI/audio runtime is not yet verified.

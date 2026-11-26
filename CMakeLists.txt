@@ -190,6 +190,10 @@ target_link_libraries(tabletfx_tone_master_modulated_large_hall_bench PRIVATE ta
 add_executable(tabletfx_pitch_ring_mod_bench apps/pitch_ring_mod_bench.cpp)
 target_link_libraries(tabletfx_pitch_ring_mod_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_headrush_phase_invert_bench
+    apps/headrush_phase_invert_bench.cpp)
+target_link_libraries(tabletfx_headrush_phase_invert_bench PRIVATE tabletfx_core)
+
 add_executable(tabletfx_fractal_flanger_vco_bench
     apps/fractal_flanger_vco_bench.cpp)
 target_link_libraries(tabletfx_fractal_flanger_vco_bench PRIVATE tabletfx_core)
@@ -204,6 +208,10 @@ if(BUILD_TESTING)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
     target_link_libraries(tabletfx_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tests COMMAND tabletfx_tests)
+
+    add_executable(tabletfx_phase_invert_tests tests/test_phase_invert.cpp)
+    target_link_libraries(tabletfx_phase_invert_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_phase_invert_tests COMMAND tabletfx_phase_invert_tests)
 
     add_executable(tabletfx_compressor_tests tests/test_compressor.cpp)
     target_link_libraries(tabletfx_compressor_tests PRIVATE tabletfx_core)

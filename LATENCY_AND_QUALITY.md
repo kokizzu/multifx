@@ -867,3 +867,15 @@ The Release benchmark used AMD Ryzen 9 5950X, 48 kHz stereo, 128-frame callbacks
 | Square Law | 0.193% | 0.283% | 0.405% | 0.992% | 1.993% | 15,672 B | 0/20,000 |
 
 The Linear maximum is a scheduler outlier; every observed maximum was below one callback deadline. The exponential curve uses `std::pow` once per frame when selected; its p50 cost is approximately 0.12 percentage points above the Linear profile at the tested 1.5 exponent. This is a host-only benchmark, not a tablet, Windows runtime, or full-chain estimate. The browser/WASM local-DI test confirms distinct output profiles, but its timer resolution is not used for an isolated CPU percentage. The manufacturer does not document the curves or their CPU cost, and no Fractal DSP/settings/sound parity is claimed.
+
+## HeadRush Prime Phase Invert project control (2026-11-27)
+
+Prime v5.1.0 firmware notes added Phase Invert to Advanced Block Edit and mention Block Mix phase cancellation; v5.2.0 notes reproduce that v5.1.0 entry but do not document its parameter mapping or explicitly state unchanged retention. Project placement after the selected enabled stage, all-channel polarity flip, default-off setting, and bypass dormancy are independent design choices. This is a sign operation on the existing interleaved stage output: no buffer, fixed delay, or `process()` heap allocation is added. The helper object is 8 B; the per-chain packed masks for 122 stages use 16 B; browser UI state is 122 B.
+
+Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.6667 ms budget), 3,000 warm-up and 20,000 measured helper calls. Values are elapsed helper time as a percentage of one audio callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Helper state | Process allocations | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Sample-wise polarity inversion | 0.001500% | 0.001875% | 0.002625% | 0.003375% | 0.324750% | 8 B | 0 | 0/20,000 |
+
+The maximum is a scheduler outlier. This isolated helper benchmark excludes UI, the full processor chain, and host scheduling; these desktop measurements do not predict target-device cost. Focused native, browser/WASM Play on local prerecorded guitar, and Windows MinGW core/offline-renderer checks pass. The Windows desktop UI/audio path is not yet integrated. Listening and Prime hardware comparison remain manual.

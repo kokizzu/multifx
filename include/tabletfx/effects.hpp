@@ -69,6 +69,7 @@
 #include "tabletfx/effects/deluxe_looper.hpp"
 #include "tabletfx/effects/chromatic_pitch_delay.hpp"
 #include "tabletfx/effects/mutant_filter.hpp"
+#include "tabletfx/effects/phase_invert.hpp"
 
 #include <array>
 #include <cstddef>

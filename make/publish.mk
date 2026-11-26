@@ -287,6 +287,7 @@ PUBLISH_CHECKPOINTS += tone-master-small-hall
 PUBLISH_CHECKPOINTS += fractal-plex-shift
 PUBLISH_CHECKPOINTS += pitch-ring-mod
 PUBLISH_CHECKPOINTS += headrush-phaser-stereo
+PUBLISH_CHECKPOINTS += headrush-phase-invert
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -411,3 +412,13 @@ publish-fender-memory-delay:
  .PHONY: inspect-stadium-delay-probe
 inspect-stadium-delay-probe:
 	python3 scripts/inspect_stadium_delay_probe.py
+
+.PHONY: test-headrush-phase-invert web-test-headrush-phase-invert bench-headrush-phase-invert
+test-headrush-phase-invert:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_phase_invert_tests
+
+web-test-headrush-phase-invert: test-headrush-phase-invert web-build
+	$(PYTHON) scripts/web.py test-headrush-phase-invert
+
+bench-headrush-phase-invert:
+	$(PYTHON) scripts/run_cmake.py bench-headrush-phase-invert
