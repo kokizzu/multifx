@@ -4,36 +4,36 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "6a08d8c6820fba17cc8ecfe8ac9c639778d792a3",
+  "previous_checkpoint_commit": "762879fa683e6a0b20d03a5b1008958aa6e968d9",
   "latest_audit": {
-    "name": "Fender Tone Master Pro Memory Delay",
-    "status": "Exact-model controls verified and a project-authored Memory Delay is implemented at Delay picker ID 118. Native, browser/WASM local-DI Play, Windows MinGW, and benchmark checks pass; human listening and device comparison remain.",
+    "name": "Fender Tone Master Pro Modulated Small Hall",
+    "status": "Exact-model control roles verified; categorized project-authored Reverb ID 119 and native/browser/Windows/performance checks pass; human/device checks remain.",
     "date": "2026-11-26",
-    "picker_index": 118,
-    "category": "Delay",
+    "picker_index": 119,
+    "category": "Reverb",
     "official_source": {
       "title": "Fender Tone Master Pro Model Guide and firmware history",
-      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 46; firmware history checked through v1.8.87 dated 2026-11-23. Installed firmware is unknown.",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
       "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
       "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-      "qualification": "The guide lists Memory Delay control roles and Gain range; most bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo has independent L/R time and Tap Division but the project links the times."
+      "qualification": "The guide lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover, but no numeric ranges/defaults, topology, DSP, latency, or memory. Project-authored controls are not Fender settings or parity."
     },
-    "documented_controls": "Model Guide p. 46 lists Time, Tap Division, Feedback, Mix, Depth, Gain (−10…+20 dB), Grit (self-noise), Chorus/Vibrato Mode, and Spillover. Stereo Memory Delay has separate left/right times and tap divisions. Most numeric bounds/defaults and modulation rate/waveform are unspecified.",
-    "project_controls": "Delay picker ID 118. Project-authored linked stereo time, delay range/default, tap divisions, modulation, and wet-path Grit; Gain/Grit affect the recorded wet input, direct dry audio remains immediate, and bypass Spillover retains the tail without recording new input. Two-second project cap; no independent stereo L/R time/division. No Fender settings, DSP, or sound parity.",
+    "documented_controls": "The exact-model guide describes Modulated Small Hall as adding modulation to Small Hall and lists Level (wet blend), Decay, Dwell (input level), Diffuse (echo density/reflections), Rate, Depth, high-shelf gain, low-shelf gain, and Spillover. It publishes no numeric ranges/defaults or algorithm DSP/latency.",
+    "project_controls": "Project-authored Modulated Small Hall at Reverb picker ID 119, disabled by default. Defaults: Level 25%, Decay 3.2 s, Dwell 0 dB, Diffuse 60%, Rate 0.3 Hz, Depth 15%, neutral High/Low Cut shelf gains, Spillover off. Bounds: Level 0–100%, Decay 0.25–10 s, Dwell −12…+12 dB, Diffuse/Depth 0–100%, Rate 0.05–6 Hz, shelf gains ±12 dB. Direct dry path is immediate; project values and network are not Fender DSP/settings/sound parity.",
     "verification": {
-      "native": "make test passes documentation validation, 13 fixture-safety checks, and 119/119 CTests, including the Memory Delay tests.",
-      "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 local prerecorded stereo Guitar-TECHS DI Play captures verify Delay picker ID 118, category, defaults, parameter bounds, 768,216 B effect storage, and distinct input/Chorus/Vibrato output. Full browser/native comparison passes; this new effect is excluded because the offline CLI does not expose a matching stage.",
-      "windows": "make windows-cross-build passes the Windows MinGW core and offline-renderer build.",
-      "latency_memory": "Native state is 768,256 B, including 768,024 B ring storage; browser state is 768,216 B. Processing allocates nothing and the dry path adds no fixed latency. Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up / 20,000 measured: default Chorus p50/p95/p99/max 0.264/0.284/0.431/4.236%; Gain+Grit Chorus 0.240/0.318/0.362/1.236%; Gain+Grit Vibrato 0.240/0.329/0.381/1.759% of the 2.667 ms callback. No deadline misses; isolated desktop timing does not guarantee tablet performance.",
+      "native": "make test passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety checks, and 120/120 CTests including focused native Small Hall coverage.",
+      "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 full browser/native comparison passes; the focused local prerecorded stereo Guitar-TECHS DI smoke verifies Reverb picker ID 119, category/defaults/bounds, 144,984 B browser memory, and two Play captures responsive to input/profile changes (input-difference RMS 0.0904; profile-difference RMS 0.3176). This new effect has no offline-CLI parity stage and is tested with a focused WASM smoke.",
+      "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
+      "latency_memory": "Native state 145,368 B; browser/WASM state 144,984 B; process-time allocations 0; no added fixed dry-path latency. AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: default p50/p95/p99/max 1.308/1.956/2.055/14.703%; maximum decay/modulation 1.310/1.571/1.934/8.119% of one callback deadline. Deadline misses 0/20,000 in both profiles. Isolated host measurements do not predict tablet DSP.",
       "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
     },
-    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Independent stereo L/R time/division is not implemented. No Fender settings, DSP, or sound parity is claimed."
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Verify the exact official Fractal guide revision/pages for Plex Shift, then implement a bounded project-authored subset of independently shifted Plex Delay lines. Keep Plex Shift distinct from note tracking, Plex Detune, and the existing feedback matrix/Stack-Hold implementation. Add native/browser local-DI/Windows and callback memory/CPU checks.",
-    "qualification": "Preserve the independent general research cursor, expression-volume queue, and footswitch-display queue. Existing Fractal documentation is family-level; exact FM9 Mark II Turbo applicability and installed firmware remain unknown. AXOM MAX firmware V1.9.2 notes do not name the changed Delay/Synth algorithms or controls; keep the exact mapping unresolved. HeadRush Prime and Helix Stadium/XR1 still need exact-model source verification for remaining gaps."
+    "next_feature": "Implement the researched Plex Shift subset in the existing Plex Delay, with the existing delay as the unchanged default. Keep it distinct from Plex Detune and note tracking; verify per-voice shift/detune and Master Pitch/Master Detune independence, forward/reverse granule direction, latency, memory, and CPU at 1/4/8 voices.",
+    "qualification": "Fractal evidence is from the November 2026 FM9-family Blocks Guide; exact FM9 Mark II Turbo applicability and installed firmware remain unknown. Preserve other device, expression-volume, and footswitch-display queues."
   },
   "completed_checkpoints": [
     {
@@ -1247,34 +1247,33 @@
         "diff_check": "make diff-check passes; no workflow files are included."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open."
+    },
+    {
+      "name": "Fender Tone Master Pro Modulated Small Hall",
+      "status": "Exact-model control roles verified; categorized project-authored Reverb ID 119 and native/browser/Windows/performance checks pass; human/device checks remain.",
+      "date": "2026-11-26",
+      "picker_index": 119,
+      "category": "Reverb",
+      "official_source": {
+        "title": "Fender Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "The guide lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover, but no numeric ranges/defaults, topology, DSP, latency, or memory. Project-authored controls are not Fender settings or parity."
+      },
+      "documented_controls": "The exact-model guide describes Modulated Small Hall as adding modulation to Small Hall and lists Level (wet blend), Decay, Dwell (input level), Diffuse (echo density/reflections), Rate, Depth, high-shelf gain, low-shelf gain, and Spillover. It publishes no numeric ranges/defaults or algorithm DSP/latency.",
+      "project_controls": "Project-authored Modulated Small Hall at Reverb picker ID 119, disabled by default. Defaults: Level 25%, Decay 3.2 s, Dwell 0 dB, Diffuse 60%, Rate 0.3 Hz, Depth 15%, neutral High/Low Cut shelf gains, Spillover off. Bounds: Level 0–100%, Decay 0.25–10 s, Dwell −12…+12 dB, Diffuse/Depth 0–100%, Rate 0.05–6 Hz, shelf gains ±12 dB. Direct dry path is immediate; project values and network are not Fender DSP/settings/sound parity.",
+      "verification": {
+        "native": "make test passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety checks, and 120/120 CTests including focused native Small Hall coverage.",
+        "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 full browser/native comparison passes; the focused local prerecorded stereo Guitar-TECHS DI smoke verifies Reverb picker ID 119, category/defaults/bounds, 144,984 B browser memory, and two Play captures responsive to input/profile changes (input-difference RMS 0.0904; profile-difference RMS 0.3176). This new effect has no offline-CLI parity stage and is tested with a focused WASM smoke.",
+        "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
+        "latency_memory": "Native state 145,368 B; browser/WASM state 144,984 B; process-time allocations 0; no added fixed dry-path latency. AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: default p50/p95/p99/max 1.308/1.956/2.055/14.703%; maximum decay/modulation 1.310/1.571/1.934/8.119% of one callback deadline. Deadline misses 0/20,000 in both profiles. Isolated host measurements do not predict tablet DSP.",
+        "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+      },
+      "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
     }
   ],
   "previous_checkpoint": {
-    "name": "Fractal FM9-family Chorus Number Of Voices",
-    "status": "Project-authored 1–8 voice count, default 1, added to the existing categorized Chorus. Focused native/offline/browser and full validation pass; manual/device checks remain.",
-    "date": "2026-11-26",
-    "picker_index": 16,
-    "category": "Modulation",
-    "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide",
-      "revision": "Cover dated November 2026; printed pp. 25–26. FM9 downloads page lists v12.0, released 2026-07-07, for FM9 Original/Turbo only, not Mark II Turbo by name. Installed firmware is unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "Family-level Blocks Guide evidence. The guide does not state a Number Of Voices minimum/default. Exact applicability to FM9 Mark II Turbo and installed firmware remain unverified. Do not claim Fractal controls, settings, DSP, phase behavior, latency, or sound parity."
-    },
-    "documented_controls": "Expert-page Number Of Voices increases Chorus delay-line count up to eight; the guide suggests two for vintage chorus and up to eight for a lush ensemble but states no numeric minimum/default. More than two voices automatically changes LFO Type to SINE; selecting non-SINE resets voice count to two. The same pages document separate Delay Time/Minimum Delay 0.1–50 ms and Delay Range 1–40 ms. Chorus Tempo sets Rate rhythmically; quarter-note at 120 BPM is 2 Hz and NONE restores manual Rate. LFO1 SYNC is a separate controller source.",
-    "project_controls": "Project-authored integer voice count 1–8, default 1, at existing Modulation Chorus ID 16. One voice is sample-identical to the previous path; additional voices share the delay ring with evenly spaced sine phases and averaged wet output. This adds no ring storage, fixed latency, or processing allocation. The previous project-authored Free/quarter-note tempo control, 0.8 Hz default, 0.05–8 Hz rate bounds, and 20–300 BPM/default 120 range remain in place. Separate project Delay Time/Minimum Delay and Delay Range controls are not implemented.",
-    "verification": {
-      "native": "Focused native tests passed voice bounds, one-voice sample identity, multi-voice output, partition continuity, and zero process-time allocation. Full make test passes with 117/117 CTest cases.",
-      "offline_cli": "Focused offline CLI tests passed default/explicit one-voice identity, four-voice output difference, and invalid/missing count handling; existing Chorus tempo tests still pass.",
-      "browser": "Focused Chromium 151 browser/WASM Play used local prerecorded Guitar-TECHS DI at 48 kHz stereo, checked Modulation ID 16 and voice range/default, and captured output at 1/4/8 voices. RMS differences were 0.03633 for 1→4 and 0.01165 for 4→8. Full make web-test passed the browser/native comparison and existing WASM checks. Browser effect state was 12,436 B.",
-      "windows": "make windows-cross-build passed the Windows MinGW core and offline renderer.",
-      "diff_check": "make diff-check passed; no workflow changes were detected.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms; 3,000 warm-up/20,000 measured). Native state 12,472 B for each count; algorithmic latency 0 samples. p50/p95/p99/p99.9/max callback budget percentages: 1 voice 0.059/0.076/0.109/0.303/0.615; 2 voices 0.117/0.169/0.198/1.044/105.721; 4 voices 0.174/0.177/0.178/0.422/0.745; 8 voices 0.248/0.310/0.492/0.746/2.252. The 105.721% two-voice maximum was a host-scheduling spike. Isolated desktop timing, not target-device performance."
-    },
-    "remaining": "Human listening, physical Fractal comparison, target-device timing, installed firmware, and exact Mark II Turbo applicability remain open. LFO1 SYNC is separate and unimplemented. Separate project controls for Delay Time/Minimum Delay and Delay Range are the next feature. Do not claim Fractal settings, DSP, phase alignment, latency, or sound parity."
-  },
-  "current_checkpoint": {
     "name": "Fender Tone Master Pro Memory Delay",
     "status": "Project-authored Memory Delay is implemented in Delay at picker ID 118. Native, browser/WASM local-DI Play, Windows, benchmark, and diff checks pass; manual listening remains.",
     "date": "2026-11-26",
@@ -1297,6 +1296,30 @@
       "diff_check": "make diff-check passes without workflow changes."
     },
     "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Independent stereo L/R time and division are not implemented. No Fender DSP/settings/sound parity is claimed."
+  },
+  "current_checkpoint": {
+    "name": "Fender Tone Master Pro Modulated Small Hall",
+    "status": "Exact-model control roles verified; categorized project-authored Reverb ID 119 and native/browser/Windows/performance checks pass; human/device checks remain.",
+    "date": "2026-11-26",
+    "picker_index": 119,
+    "category": "Reverb",
+    "official_source": {
+      "title": "Fender Tone Master Pro Model Guide and firmware history",
+      "revision": "Model Guide v1.1.100 / Rev. A, printed p. 55; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
+      "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+      "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+      "qualification": "The guide lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover, but no numeric ranges/defaults, topology, DSP, latency, or memory. Project-authored controls are not Fender settings or parity."
+    },
+    "documented_controls": "The exact-model guide describes Modulated Small Hall as adding modulation to Small Hall and lists Level (wet blend), Decay, Dwell (input level), Diffuse (echo density/reflections), Rate, Depth, high-shelf gain, low-shelf gain, and Spillover. It publishes no numeric ranges/defaults or algorithm DSP/latency.",
+    "project_controls": "Project-authored Modulated Small Hall at Reverb picker ID 119, disabled by default. Defaults: Level 25%, Decay 3.2 s, Dwell 0 dB, Diffuse 60%, Rate 0.3 Hz, Depth 15%, neutral High/Low Cut shelf gains, Spillover off. Bounds: Level 0–100%, Decay 0.25–10 s, Dwell −12…+12 dB, Diffuse/Depth 0–100%, Rate 0.05–6 Hz, shelf gains ±12 dB. Direct dry path is immediate; project values and network are not Fender DSP/settings/sound parity.",
+    "verification": {
+      "native": "make test passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety checks, and 120/120 CTests including focused native Small Hall coverage.",
+      "browser": "make web-build and make web-browser-test pass. HeadlessChrome 151 full browser/native comparison passes; the focused local prerecorded stereo Guitar-TECHS DI smoke verifies Reverb picker ID 119, category/defaults/bounds, 144,984 B browser memory, and two Play captures responsive to input/profile changes (input-difference RMS 0.0904; profile-difference RMS 0.3176). This new effect has no offline-CLI parity stage and is tested with a focused WASM smoke.",
+      "windows": "make windows-cross-build passes the Windows MinGW core/offline-renderer build.",
+      "latency_memory": "Native state 145,368 B; browser/WASM state 144,984 B; process-time allocations 0; no added fixed dry-path latency. AMD Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms), 3,000 warm-up/20,000 measured: default p50/p95/p99/max 1.308/1.956/2.055/14.703%; maximum decay/modulation 1.310/1.571/1.934/8.119% of one callback deadline. Deadline misses 0/20,000 in both profiles. Isolated host measurements do not predict tablet DSP.",
+      "diff_check": "make diff-check passes; no whitespace errors or workflow changes."
+    },
+    "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open. Fender DSP, sound parity, and manufacturer numeric ranges/defaults remain unclaimed."
   },
   "next_research": [
     {

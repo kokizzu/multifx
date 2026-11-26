@@ -765,6 +765,16 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core and offline renderer build. `make bench` includes a separate Tap Division sync row: 4,832 B native state; p50/p95/p99/p99.9/max 0.0533/0.0795/0.0829/0.4763/2.3255% of a 2.667 ms callback on Ryzen 9 5950X Release. Dry path has no fixed algorithmic delay; `process()` allocates nothing.
 - [ ] Human listening, physical Tone Master Pro comparison, and target-device timing remain manual. Do not claim Fender DSP or sound parity.
 
+## Fender Tone Master Pro — Modulated Small Hall (2026-11-26)
+
+- [x] Verify the exact Model Guide v1.1.100 / Rev. A, printed p. 55: Modulated Small Hall builds on Small Hall with modulation and lists Level, Decay, Dwell, Diffuse, Rate, Depth, High Cut, Low Cut, and Spillover. The guide supplies control roles but no numeric ranges/defaults, modulation topology, DSP, or latency. Firmware history checked through v1.8.87 dated 2026-11-23; installed firmware is unknown.
+- [x] Add a project-authored effect at Reverb picker ID 119 (120 categorized entries total). It has a direct dry path, a bounded modulated feedback-delay network, and project-authored controls/defaults. It does not claim Fender settings, DSP, or sound parity.
+- [x] `make test` passes documentation validation (333 source requirements / 346 tracked rows), 13 fixture-safety checks, and 120/120 CTests, including the new native effect tests.
+- [x] `make web-build` and `make web-browser-test` pass. HeadlessChrome 151 verifies the categorized Reverb row, disabled-by-default picker state, browser memory, and two local prerecorded stereo Guitar-TECHS DI Play captures that respond to input and profile changes. The full browser/native comparison and existing playback checks pass; this new effect is tested by its focused browser smoke rather than the offline-CLI parity chain.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build. `make bench` measures native state 145,368 B, browser/WASM state 144,984 B, and no process-time allocations or deadline misses across 20,000 callbacks. On Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms deadline), default p50/p95/p99/max use is 1.308/1.956/2.055/14.703%; maximum decay/modulation is 1.310/1.571/1.934/8.119%. These are isolated host timings, not tablet performance.
+- [x] `make diff-check` passes after synchronizing the checklist and comparison; no whitespace errors or workflow changes are present.
+- [ ] Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain manual. Keep Fender DSP, sound parity, and manufacturer numeric ranges/defaults unclaimed.
+
 ## Fender Tone Master Pro — Memory Delay (2026-11-26)
 
 - [x] Verify the exact-model Model Guide v1.1.100 / Rev. A (printed p. 46): Time, Tap Division, Feedback, Mix, Depth, Gain (−10…+20 dB), Grit (self-noise), Chorus/Vibrato Mode, and Spillover. Stereo Memory Delay has independent L/R time and tap division. Numeric bounds/defaults for the remaining controls, DSP, latency, and effect memory are not published. Firmware notes checked through v1.8.87 dated 2026-11-23 do not mention Memory Delay; installed firmware is unknown.

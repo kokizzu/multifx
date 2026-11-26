@@ -770,3 +770,16 @@ The isolated benchmark uses AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame 
 | Gain + Grit Vibrato | 0.240% | 0.329% | 0.381% | 1.759% | 768,256 B | 0/20,000 |
 
 The browser/WASM local prerecorded Guitar-TECHS stereo DI test measured 768,216 B and passed two audible Play captures with distinct input and Chorus/Vibrato responses. `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench` pass. These isolated desktop timings do not predict tablet performance. Human listening and target-device measurements remain open.
+
+## Fender Tone Master Pro Modulated Small Hall (2026-11-26)
+
+The project-authored effect uses 145,368 B of native processor state and reports 144,984 B from the browser/WASM chain. Its direct dry signal has no added fixed algorithmic latency. The native benchmark observed no heap allocation in processing. These are TabletFX measurements, not Fender hardware specifications.
+
+On an AMD Ryzen 9 5950X Release build at 48 kHz stereo, 128-frame callbacks (2.667 ms deadline), 3,000 warm-up and 20,000 measured callbacks, isolated processor-call time relative to one callback deadline was:
+
+| Profile | p50 | p95 | p99 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Sane default | 1.308% | 1.956% | 2.055% | 14.703% | 145,368 B | 0/20,000 |
+| Maximum decay and modulation | 1.310% | 1.571% | 1.934% | 8.119% | 145,368 B | 0/20,000 |
+
+The maximum values are occasional host callback outliers; neither profile missed its measured deadline. This isolated desktop benchmark does not predict tablet load. The browser smoke used local prerecorded stereo Guitar-TECHS DI and captured two Play outputs that changed with input/profile. `make test`, `make web-build`, `make web-browser-test`, and the Windows MinGW `make windows-cross-build` pass. Human listening, physical hardware comparison, and target-device timing remain open; no Fender DSP or sound parity is claimed.

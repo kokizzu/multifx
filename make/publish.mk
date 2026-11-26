@@ -258,6 +258,7 @@ PUBLISH_CHECKPOINTS += prime-reverb-tails
 PUBLISH_CHECKPOINTS += fractal-synth-output-level
 PUBLISH_CHECKPOINTS += fender-3d-chorus
 PUBLISH_CHECKPOINTS += fractal-surround-delay
+PUBLISH_CHECKPOINTS += tone-master-small-hall
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -281,6 +282,9 @@ $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),$(eval $(call publish-checkpoint-rul
 .PHONY: publish-%-apply
 publish-%-apply:
 	python3 scripts/publish_checkpoint.py publish --checkpoint "$*"
+.PHONY: unstage-%
+unstage-%:
+	$(PYTHON) scripts/publish_checkpoint.py unstage --checkpoint "$*"
 inspect-effect-picker:
 	python3 scripts/inspect_effect_picker.py
 

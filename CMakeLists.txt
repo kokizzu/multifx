@@ -76,6 +76,7 @@ add_library(tabletfx_core
     src/effects/plex_delay.cpp
     src/effects/celestial_reverb.cpp
     src/effects/cloud_reverb.cpp
+    src/effects/tone_master_small_hall.cpp
     src/effects/porta_preamp.cpp
     src/effects/pitch_sequence.cpp
     src/effects/poly_sustain.cpp
@@ -167,6 +168,10 @@ target_link_libraries(tabletfx_fractal_surround_delay_bench PRIVATE tabletfx_cor
 add_executable(tabletfx_fender_memory_delay_bench
     apps/fender_memory_delay_bench.cpp)
 target_link_libraries(tabletfx_fender_memory_delay_bench PRIVATE tabletfx_core)
+
+add_executable(tabletfx_tone_master_small_hall_bench
+    apps/tone_master_small_hall_bench.cpp)
+target_link_libraries(tabletfx_tone_master_small_hall_bench PRIVATE tabletfx_core)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -569,6 +574,12 @@ if(BUILD_TESTING)
     add_executable(tabletfx_cloud_reverb_tests tests/test_cloud_reverb.cpp)
     target_link_libraries(tabletfx_cloud_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_cloud_reverb_tests COMMAND tabletfx_cloud_reverb_tests)
+
+    add_executable(tabletfx_tone_master_small_hall_tests
+        tests/test_tone_master_small_hall.cpp)
+    target_link_libraries(tabletfx_tone_master_small_hall_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_tone_master_small_hall_tests
+        COMMAND tabletfx_tone_master_small_hall_tests)
 
     add_executable(tabletfx_auto_swell_tests tests/test_auto_swell.cpp)
     target_link_libraries(tabletfx_auto_swell_tests PRIVATE tabletfx_core)

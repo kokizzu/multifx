@@ -806,6 +806,27 @@ FENDER_MEMORY_DELAY_CHECKPOINT_PATHS = (
     "web/audio-worklet.js",
     "web/index.html",
 )
+TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "apps/tone_master_small_hall_bench.cpp",
+    "include/tabletfx/effects/tone_master_small_hall.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/tone_master_small_hall.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_tone_master_small_hall.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
 FRACTAL_SOURCE_CORRECTION_CHECKPOINT_PATHS = (
     "make/publish.mk",
     "research-state.json",
@@ -2937,6 +2958,10 @@ PRIME_REVERB_TAILS_CHECKPOINT_PATHS = (
 )
 
 CHECKPOINTS = {
+    "tone-master-small-hall": (
+        TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS,
+        "feat: add project-authored Modulated Small Hall",
+    ),
     "fender-3d-chorus": (
         (
             "CMakeLists.txt",
@@ -3495,6 +3520,50 @@ PARTIAL_CHECKPOINT_HUNKS = {
             "Memory Delay · project-authored Fender control roles",
         ),
     },
+    "tone-master-small-hall": {
+        "make/publish.mk": (
+            "PUBLISH_CHECKPOINTS += tone-master-small-hall",
+            "unstage-%:",
+        ),
+        "scripts/publish_checkpoint.py": (
+            "TONE_MASTER_SMALL_HALL_CHECKPOINT_PATHS",
+            '"tone-master-small-hall": (',
+            '"tone-master-small-hall": {',
+            "def unstage(",
+        ),
+        "src/web/wasm_chain.cpp": (
+            "ToneMasterSmallHall",
+            "tone_master_small_hall",
+            "effects_.size() + 26",
+            "effect_id == 119",
+        ),
+        "scripts/run_cmake.py": ("tone_master_small_hall",),
+        "scripts/web.py": ("tone_master_small_hall",),
+        "web/app.js": (
+            "toneMasterSmallHall",
+            "Modulated Small Hall",
+            "119 ordered",
+        ),
+        "web/audio-worklet.js": (
+            "tone-master-small-hall",
+            "configureToneMasterSmallHall",
+        ),
+        "web/index.html": (
+            "tone-master-small-hall",
+            "Modulated Small Hall",
+        ),
+        "EFFECTS_MATRIX.md": ("## Fender Tone Master Pro Modulated Small Hall",),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "Modulated Small Hall",
+            "Fractal FM9-family Plex Shift",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## Fender Tone Master Pro — Modulated Small Hall",
+        ),
+        "LATENCY_AND_QUALITY.md": ("## Fender Tone Master Pro Modulated Small Hall",),
+        "RESEARCH.md": ("Tone Master Pro Model Guide", "Modulated Small Hall"),
+        "research-state.json": ("Fender Tone Master Pro Modulated Small Hall",),
+    },
 }
 
 
@@ -3775,9 +3844,28 @@ def stage(checkpoint: str) -> None:
     print("Staged only; no commit or push was performed.")
 
 
+def unstage(checkpoint: str) -> None:
+    paths, _, branch, remote_url = inspect(checkpoint)
+    staged_paths = set(git("diff", "--cached", "--name-only").splitlines())
+    if not staged_paths:
+        print("No staged paths to unstage.")
+        return
+    if not staged_paths.issubset(set(paths)):
+        raise SystemExit(
+            "Refusing to unstage paths outside the selected checkpoint: "
+            + ", ".join(sorted(staged_paths - set(paths)))
+        )
+    git("restore", "--staged", "--", *sorted(staged_paths), capture=False)
+    print(f"Repository: {remote_url}")
+    print(f"Branch: {branch} (verified upstream default)")
+    print("Removed only staged state for these checkpoint paths; worktree contents were preserved:")
+    for path in sorted(staged_paths):
+        print("  " + path)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("plan", "stage", "publish"))
+    parser.add_argument("mode", choices=("plan", "stage", "unstage", "publish"))
     parser.add_argument("--checkpoint", choices=tuple(CHECKPOINTS),
                         default=DEFAULT_CHECKPOINT)
     args = parser.parse_args()

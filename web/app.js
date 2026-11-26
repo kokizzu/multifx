@@ -120,6 +120,7 @@ const EFFECT_NAMES = [
   "3D Chorus · project-authored four-mode chorus",
   "Surround Delay · project-authored Fractal FM9-family control concept",
   "Memory Delay · project-authored Fender control roles",
+  "Modulated Small Hall · project-authored",
 ];
 const DEFAULT_PARAMETERS = {
   volumePan: [1, -96, 0, 0, 0, 0, -100, 100, 0, 0, 0],
@@ -339,6 +340,7 @@ const DEFAULT_PARAMETERS = {
   reverseDelayRun: true,
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   memoryDelay: [350, 0.25, 0.25, 0.8, 2, 0, 0, -24, 0, 0, 0, 0],
+  toneMasterSmallHall: [0.25, 3.2, 0, 0.6, 0.3, 0.15, 0, 0, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2214,6 +2216,17 @@ const fenderMemoryDelayControls = [
   fenderMemoryDelayDepth, fenderMemoryDelayGain, fenderMemoryDelayGrit,
   fenderMemoryDelayMode, fenderMemoryDelayRate, fenderMemoryDelayWaveform,
   fenderMemoryDelaySpillover,
+];
+const toneMasterSmallHallControls = [
+  document.querySelector("#tone-master-small-hall-level"),
+  document.querySelector("#tone-master-small-hall-decay"),
+  document.querySelector("#tone-master-small-hall-dwell"),
+  document.querySelector("#tone-master-small-hall-diffuse"),
+  document.querySelector("#tone-master-small-hall-rate"),
+  document.querySelector("#tone-master-small-hall-depth"),
+  document.querySelector("#tone-master-small-hall-high-cut"),
+  document.querySelector("#tone-master-small-hall-low-cut"),
+  document.querySelector("#tone-master-small-hall-spillover"),
 ];
 const filteredDelayTime = document.querySelector("#filtered-delay-time-ms");
 const filteredDelayTimeValue = document.querySelector("#filtered-delay-time-ms-value");
@@ -7791,6 +7804,39 @@ function updateFenderMemoryDelay() {
   }
 }
 
+function updateToneMasterSmallHall() {
+  const values = [
+    Number(toneMasterSmallHallControls[0].value) / 100,
+    Number(toneMasterSmallHallControls[1].value),
+    Number(toneMasterSmallHallControls[2].value),
+    Number(toneMasterSmallHallControls[3].value) / 100,
+    Number(toneMasterSmallHallControls[4].value),
+    Number(toneMasterSmallHallControls[5].value) / 100,
+    Number(toneMasterSmallHallControls[6].value),
+    Number(toneMasterSmallHallControls[7].value),
+    Number(toneMasterSmallHallControls[8].checked),
+  ];
+  const formats = [
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} s`,
+    (value) => `${value.toFixed(1)} dB`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(2)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} dB`,
+    (value) => `${value.toFixed(1)} dB`,
+    (value) => value === 1 ? "On" : "Off",
+  ];
+  toneMasterSmallHallControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.toneMasterSmallHall = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "tone-master-small-hall", value: values });
+  }
+}
+
 function updateFilteredDelay() {
   const timeMode = Number(filteredDelayTimeMode.value);
   const tempoBpm = Number(filteredDelayTempoBpm.value);
@@ -8010,6 +8056,10 @@ for (const input of [fenderMemoryDelayTime, fenderMemoryDelayTempo,
 for (const input of [fenderMemoryDelayTimeMode, fenderMemoryDelayDivision,
   fenderMemoryDelayMode, fenderMemoryDelayWaveform, fenderMemoryDelaySpillover]) {
   input.addEventListener("change", updateFenderMemoryDelay);
+}
+for (const control of toneMasterSmallHallControls) {
+  control.addEventListener("input", updateToneMasterSmallHall);
+  control.addEventListener("change", updateToneMasterSmallHall);
 }
 for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   filteredDelayLowCut, filteredDelayHighCut]) {
@@ -16961,6 +17011,133 @@ async function runFenderMemoryDelayBrowserSmokeTest(reference, captureView, capt
   }
 }
 
+async function runToneMasterSmallHallBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const effectIndex = 119;
+  const previousEffectState = enabledEffects();
+  const previousValues = toneMasterSmallHallControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.toneMasterSmallHall];
+  const previousCategory = effectCategoryFilter.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Tone Master Small Hall smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    if (row?.dataset.category !== "reverb" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Reverb" ||
+        !row.querySelector(".effect-name")?.textContent.includes("Modulated Small Hall") ||
+        !checkbox || checkbox.checked || toneMasterSmallHallControls.length !== 9 ||
+        DEFAULT_PARAMETERS.toneMasterSmallHall.join(",") !== "0.25,3.2,0,0.6,0.3,0.15,0,0,0" ||
+        effectMemory.length !== EFFECT_NAMES.length ||
+        effectMemory[effectIndex] <= 0 || effectMemory[effectIndex] >= 500000) {
+      throw new Error(`Tone Master Small Hall picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.toneMasterSmallHall.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [toneMasterSmallHallControls[0], "0", "100"],
+      [toneMasterSmallHallControls[1], "0.25", "10"],
+      [toneMasterSmallHallControls[2], "-12", "12"],
+      [toneMasterSmallHallControls[3], "0", "100"],
+      [toneMasterSmallHallControls[4], "0.05", "6"],
+      [toneMasterSmallHallControls[5], "0", "100"],
+      [toneMasterSmallHallControls[6], "-12", "12"],
+      [toneMasterSmallHallControls[7], "-12", "12"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Tone Master Small Hall project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "reverb";
+    updateEffectBrowser();
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === effectIndex;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+    checkbox.checked = true;
+
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.4) * reference.channels),
+    );
+    const capture = async (parameters) => {
+      toneMasterSmallHallControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = Boolean(parameters[index]);
+        else control.value = String(parameters[index]);
+      });
+      updateToneMasterSmallHall();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+    };
+    const moderateHall = await capture([50, 3.2, 0, 60, 0.3, 15, 0, 0, false]);
+    const brightModulatedHall = await capture([75, 6, 9, 85, 2.5, 90, 6, -3, false]);
+    let peak = 0;
+    let inputDifferenceSquares = 0;
+    let profileDifferenceSquares = 0;
+    for (let index = 0; index < moderateHall.length; index += 1) {
+      const channel = index % reference.channels;
+      const frame = Math.floor(index / reference.channels);
+      const input = decodedAudio.getChannelData(channel)[frame];
+      if (!Number.isFinite(moderateHall[index]) ||
+          !Number.isFinite(brightModulatedHall[index])) {
+        throw new Error("Tone Master Small Hall produced non-finite browser output.");
+      }
+      peak = Math.max(peak, Math.abs(moderateHall[index]),
+        Math.abs(brightModulatedHall[index]));
+      const inputDifference = moderateHall[index] - input;
+      inputDifferenceSquares += inputDifference * inputDifference;
+      const profileDifference = moderateHall[index] - brightModulatedHall[index];
+      profileDifferenceSquares += profileDifference * profileDifference;
+    }
+    const inputDifferenceRms = Math.sqrt(inputDifferenceSquares / Math.max(1, moderateHall.length));
+    const profileDifferenceRms = Math.sqrt(profileDifferenceSquares / Math.max(1, moderateHall.length));
+    if (peak < 1.0e-5 || inputDifferenceRms < 1.0e-4 || profileDifferenceRms < 1.0e-5) {
+      throw new Error(`Tone Master Small Hall Play captures failed: peak=${peak}, inputDiff=${inputDifferenceRms}, profileDiff=${profileDifferenceRms}, memory=${effectMemory[effectIndex]}.`);
+    }
+    return {
+      category: "Reverb",
+      effectIndex,
+      playCaptures: 2,
+      inputDifferenceRms,
+      profileDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      peak,
+    };
+  } finally {
+    stopSource(false);
+    toneMasterSmallHallControls.forEach((control, index) => {
+      if (control.type === "checkbox") control.checked = previousValues[index];
+      else control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.toneMasterSmallHall = previousParameters;
+    updateToneMasterSmallHall();
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
 async function runBrowserSelfTest() {
   testResult.hidden = false;
   testResult.dataset.status = "running";
@@ -16969,6 +17146,7 @@ async function runBrowserSelfTest() {
   let toneMasterPro3DChorusSmoke = null;
   let fractalSurroundDelaySmoke = null;
   let fenderMemoryDelaySmoke = null;
+  let toneMasterSmallHallSmoke = null;
   try {
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
@@ -17092,10 +17270,14 @@ async function runBrowserSelfTest() {
                  effectRows[118]?.dataset.category !== "delay" ||
                  effectRows[118]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
                  DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0" ||
+                 !EFFECT_NAMES[119]?.startsWith("Modulated Small Hall · project-authored") ||
+                 effectRows[119]?.dataset.category !== "reverb" ||
+                 effectRows[119]?.querySelector(".effect-category-tag")?.textContent !== "Reverb" ||
+                 DEFAULT_PARAMETERS.toneMasterSmallHall.join(",") !== "0.25,3.2,0,0.6,0.3,0.15,0,0,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
                  initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
-                 initialEffectState[118] ||
+                  initialEffectState[118] || initialEffectState[119] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -17132,7 +17314,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                  throw new Error(`The effect picker must list 119 ordered, categorized effects (IDs 0–118), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, and Memory Delay; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[118]}, row118=${effectRows[118]?.dataset.category}/${effectRows[118]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[118]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                  throw new Error(`The effect picker must list 120 ordered, categorized effects (IDs 0–119), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, and Modulated Small Hall; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[119]}, row119=${effectRows[119]?.dataset.category}/${effectRows[119]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[119]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -18509,9 +18691,9 @@ async function runBrowserSelfTest() {
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                   if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79" || effectCount.value !== `8 of ${effectRows.length}` ||
+                   if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119" || effectCount.value !== `9 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
-       throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, and Cloud Reverb without changing enabled state.");
+      throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, Cloud Reverb, and Modulated Small Hall without changing enabled state.");
     }
      const celestialDefaults = [...DEFAULT_PARAMETERS.celestialReverb];
      celestialReverbControls[0].value = "61";
@@ -18849,6 +19031,8 @@ async function runBrowserSelfTest() {
     parityEnabled[117] = false;
     // Memory Delay has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[118] = false;
+    // Modulated Small Hall has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[119] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -20258,6 +20442,10 @@ async function runBrowserSelfTest() {
     fenderMemoryDelaySmoke = await runFenderMemoryDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+    testResult.textContent = "Checking Tone Master Small Hall with local guitar playback…";
+    toneMasterSmallHallSmoke = await runToneMasterSmallHallBrowserSmokeTest(
+      reference, captureView, captureBuffer,
+    );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -20333,6 +20521,7 @@ async function runBrowserSelfTest() {
       toneMasterPro3DChorus: toneMasterPro3DChorusSmoke,
       fractalSurroundDelay: fractalSurroundDelaySmoke,
       fenderMemoryDelay: fenderMemoryDelaySmoke,
+      toneMasterSmallHall: toneMasterSmallHallSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,
