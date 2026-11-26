@@ -2699,7 +2699,12 @@ function updatePlexDelayOptions() {
     const item = control(name);
     return item.type === "checkbox" ? item.checked : Number(item.value);
   };
+  const pitchShiftEnabled = value("pitchShiftEnabled");
   const parameters = {
+    pitchShiftEnabled,
+    masterPitch: value("masterPitch") / 100,
+    masterDetune: value("masterDetune") / 100,
+    pitchDirection: value("pitchDirection"),
     activeLines: value("activeLines"),
     inputSelect: value("inputSelect"),
     tempoBpm: value("tempoBpm"),
@@ -2746,20 +2751,36 @@ function updatePlexDelayOptions() {
       const timeMs = Number(timeControl.value);
       const level = read("level") / 100;
       const pan = read("pan") / 100;
+      const pitchShiftSemitones = read("pitchShiftSemitones");
+      const pitchDetuneCents = read("pitchDetuneCents");
       line.querySelector('[data-plex-line-output="timeMs"]').value = `${timeMs} ms`;
       line.querySelector('[data-plex-line-output="level"]').value = `${Math.round(level * 100)}%`;
       line.querySelector('[data-plex-line-output="pan"]').value =
         pan === 0 ? "Center" : `${pan < 0 ? "−" : "+"}${Math.round(Math.abs(pan) * 100)}%`;
+      line.querySelector('[data-plex-line-output="pitchShiftSemitones"]').value =
+        `${pitchShiftSemitones > 0 ? "+" : ""}${pitchShiftSemitones} st`;
+      line.querySelector('[data-plex-line-output="pitchDetuneCents"]').value =
+        `${pitchDetuneCents > 0 ? "+" : ""}${pitchDetuneCents} cents`;
+      line.querySelector('[data-plex-line-param="pitchShiftSemitones"]').disabled =
+        !pitchShiftEnabled;
+      line.querySelector('[data-plex-line-param="pitchDetuneCents"]').disabled =
+        !pitchShiftEnabled;
       return {
         timeMs,
         timeMode,
         division: read("division"),
         level,
         pan,
+        pitchShiftSemitones,
+        pitchDetuneCents,
       };
     }),
   };
   const labels = {
+    pitchShiftEnabled: parameters.pitchShiftEnabled ? "Plex Shift" : "Plex Delay",
+    masterPitch: `${Math.round(parameters.masterPitch * 100)}%`,
+    masterDetune: `${Math.round(parameters.masterDetune * 100)}%`,
+    pitchDirection: parameters.pitchDirection === 1 ? "Reverse grains" : "Forward grains",
     activeLines: `${parameters.activeLines} lines`,
     inputSelect: ["L+R (default)", "Left", "Right"][parameters.inputSelect] ??
       "L+R (default)",
@@ -2808,6 +2829,9 @@ function updatePlexDelayOptions() {
   }
   for (const name of ["envelopeThresholdDb", "envelopeAttackMs", "envelopeReleaseMs"]) {
     control(name).disabled = !parameters.envelopeEnabled;
+  }
+  for (const name of ["masterPitch", "masterDetune", "pitchDirection"]) {
+    control(name).disabled = !parameters.pitchShiftEnabled;
   }
   DEFAULT_PARAMETERS.plexDelay = parameters;
   if (workletNode) {
@@ -9907,6 +9931,15 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     if (!workletNode || !decodedAudio || !audioContext) {
       throw new Error("Plex Delay smoke test requires the ready browser chain and local guitar audio.");
     }
+    const plexPickerRow = [...document.querySelectorAll(".effect-row")].find(
+      (row) => row.querySelector("[data-effect]")?.dataset.effect === "76");
+    const plexTypeControl = plexDelayGlobalControls.find(
+      (control) => control.dataset.plexGlobal === "pitchShiftEnabled");
+    if (plexPickerRow?.dataset.category !== "delay" ||
+        plexPickerRow.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+        plexTypeControl?.value !== "0") {
+      throw new Error("Plex Delay must remain categorized under Delay and Plex Shift must stay off by default.");
+    }
     await audioContext.resume();
     stopSource(false);
     const setGlobal = (name, value) => {
@@ -9916,6 +9949,8 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
       else control.value = String(value);
     };
     for (const [name, value] of Object.entries({
+      pitchShiftEnabled: 0, masterPitch: 100, masterDetune: 100,
+      pitchDirection: 0,
       activeLines: 2, inputSelect: 1, tempoBpm: 120, masterTime: 1, masterLevel: 100,
       masterPan: 100, decaySeconds: 3, diffusion: 55,
       inputDiffusionMix: 60, inputDiffusionTimeMs: 20, lowCutHz: 20,
@@ -9967,11 +10002,47 @@ async function runPlexDelayBrowserSmokeTest(reference, captureView, captureBuffe
     if (peak < 1e-5 || activeSamples < 32) {
       throw new Error(`Plex Delay produced no measurable output from local guitar audio (peak ${peak}, active samples ${activeSamples}).`);
     }
+    setGlobal("activeLines", 1);
+    setGlobal("pitchShiftEnabled", 1);
+    updatePlexDelayOptions();
+    plexDelayLines[0].querySelector(
+      '[data-plex-line-param="pitchShiftSemitones"]').value = "12";
+    plexDelayLines[0].querySelector(
+      '[data-plex-line-param="pitchDetuneCents"]').value = "0";
+    updatePlexDelayOptions();
+    workletNode.port.postMessage({ type: "reset" });
+    workletNode.port.postMessage({ type: "capture-reset" });
+    Atomics.store(captureView, 0, 0);
+    Atomics.store(captureView, 1, 0);
+    playbackOffset = 0;
+    playButton.click();
+    await Promise.race([
+      playTask,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out starting Plex Shift playback.")), 5000,
+      )),
+    ]);
+    await waitForCapture(captureView, reference.samples.length);
+    stopSource(false);
+    const shifted = new Float32Array(captureBuffer);
+    let shiftDifferenceSquares = 0;
+    for (let index = 0; index < shifted.length; index += 1) {
+      const difference = shifted[index] - actual[index];
+      shiftDifferenceSquares += difference * difference;
+    }
+    const shiftDifferenceRms = Math.sqrt(
+      shiftDifferenceSquares / Math.max(1, shifted.length),
+    );
+    if (shiftDifferenceRms < 1e-4) {
+      throw new Error(`Plex Shift did not change the local guitar Play capture (RMS difference ${shiftDifferenceRms}).`);
+    }
     return { peak, activeSamples, enabledEffectIndex: 76, activeLines: 2,
       inputSelect: "left", delayMs: [40, 70], diffusionPercent: 55,
       inputDiffusionMixPercent: 60, inputDiffusionTimeMs: 20,
       killDry: true,
-      advancedControls: true };
+      advancedControls: true,
+      plexShift: { category: "Delay", activeVoices: 1, semitones: 12,
+        shiftDifferenceRms } };
   } finally {
     stopSource(false);
     if (workletNode) {

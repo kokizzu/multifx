@@ -259,6 +259,7 @@ PUBLISH_CHECKPOINTS += fractal-synth-output-level
 PUBLISH_CHECKPOINTS += fender-3d-chorus
 PUBLISH_CHECKPOINTS += fractal-surround-delay
 PUBLISH_CHECKPOINTS += tone-master-small-hall
+PUBLISH_CHECKPOINTS += fractal-plex-shift
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:

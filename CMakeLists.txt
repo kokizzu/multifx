@@ -165,6 +165,10 @@ add_executable(tabletfx_fractal_surround_delay_bench
     apps/fractal_surround_delay_bench.cpp)
 target_link_libraries(tabletfx_fractal_surround_delay_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_fractal_plex_shift_bench
+    apps/fractal_plex_shift_bench.cpp)
+target_link_libraries(tabletfx_fractal_plex_shift_bench PRIVATE tabletfx_core)
+
 add_executable(tabletfx_fender_memory_delay_bench
     apps/fender_memory_delay_bench.cpp)
 target_link_libraries(tabletfx_fender_memory_delay_bench PRIVATE tabletfx_core)

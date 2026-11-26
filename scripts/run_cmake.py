@@ -228,6 +228,12 @@ def main() -> None:
             else "tabletfx_fractal_surround_delay_bench"
         )
         run([str(fractal_surround_delay_benchmark)])
+        fractal_plex_shift_benchmark = BUILD_DIR / (
+            "tabletfx_fractal_plex_shift_bench.exe"
+            if os.name == "nt"
+            else "tabletfx_fractal_plex_shift_bench"
+        )
+        run([str(fractal_plex_shift_benchmark)])
         fender_memory_delay_benchmark = BUILD_DIR / (
             "tabletfx_fender_memory_delay_bench.exe"
             if os.name == "nt"

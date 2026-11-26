@@ -198,6 +198,8 @@ def build_web() -> None:
         "_tf_chain_set_plex_delay_global",
         "_tf_chain_set_plex_delay_advanced",
         "_tf_chain_set_plex_delay_line",
+        "_tf_chain_set_plex_shift",
+        "_tf_chain_set_plex_shift_line",
         "_tf_chain_set_auto_pan",
         "_tf_chain_set_megatap_delay",
         "_tf_chain_set_de_esser",

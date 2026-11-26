@@ -277,14 +277,17 @@ void test_memory_cap_finite_audio_and_no_process_allocations() {
     require(capped.maximum_delay_ms() < 100.0F &&
                 capped.memory_bytes() <= sizeof(capped) +
                     tabletfx::plex_delay_storage_limit_bytes +
-                    tabletfx::plex_delay_input_diffusion_storage_limit_bytes,
-            "the fixed storage caps should bound delay lines and input diffusion at high sample rates");
+                    tabletfx::plex_delay_input_diffusion_storage_limit_bytes +
+                    tabletfx::plex_shift_history_storage_limit_bytes,
+            "the fixed storage caps should bound delay, diffusion, and pitch history at high sample rates");
 
     auto p = simple_parameters();
     p.diffusion = 1.0F;
     p.input_diffusion_mix = 0.7F;
     p.input_diffusion_time_ms = 22.0F;
     p.stack_mode = tabletfx::PlexDelayStackMode::stack;
+    p.pitch_shift_enabled = true;
+    p.pitch_shift_semitones[0] = 7.0F;
     tabletfx::PlexDelay delay(48000.0F, 100.0F, p);
     std::array<float, 512U> audio{};
     audio[0] = 0.8F;
@@ -352,6 +355,123 @@ float render_plex_sine_rms(tabletfx::PlexDelayParameters parameters,
         square_sum += static_cast<double>(audio[i]) * audio[i];
     }
     return static_cast<float>(std::sqrt(square_sum / 2000.0));
+}
+
+std::vector<float> render_plex_shift(
+    tabletfx::PlexDelayParameters parameters, float frequency_hz = 440.0F,
+    std::size_t frame_count = 8000U,
+    tabletfx::PlexPitchDirection direction =
+        tabletfx::PlexPitchDirection::forward) {
+    constexpr float sample_rate = 8000.0F;
+    parameters.active_lines = 1U;
+    parameters.time_ms[0] = 400.0F;
+    parameters.time_mode[0] = tabletfx::DelayTimeMode::milliseconds;
+    parameters.line_level[0] = 1.0F;
+    parameters.line_pan[0] = 0.0F;
+    parameters.diffusion = 0.0F;
+    parameters.low_cut_hz = 0.0F;
+    parameters.high_cut_hz = 20000.0F;
+    parameters.decay_seconds = 0.1F;
+    parameters.mix = 1.0F;
+    parameters.pitch_direction = direction;
+    tabletfx::PlexDelay delay(sample_rate, 1000.0F, parameters);
+    std::vector<float> audio(frame_count);
+    for (std::size_t frame = 0; frame < frame_count; ++frame) {
+        const float t = static_cast<float>(frame) / sample_rate;
+        const float sweep = 150.0F + 900.0F * t;
+        audio[frame] = 0.2F * std::sin(
+            2.0F * 3.14159265358979323846F * frequency_hz * t) +
+            0.04F * std::sin(
+                2.0F * 3.14159265358979323846F * sweep * t);
+    }
+    delay.process(audio, 1U);
+    return audio;
+}
+
+void test_plex_shift_default_identity_and_voice_pitch() {
+    auto plain = simple_parameters();
+    plain.active_lines = 1U;
+    plain.time_ms[0] = 400.0F;
+    plain.line_level[0] = 1.0F;
+    plain.line_pan[0] = 0.0F;
+    plain.diffusion = 0.0F;
+    plain.mix = 1.0F;
+    auto identity = plain;
+    identity.pitch_shift_enabled = true;
+    const auto unpitched = render_plex_shift(plain);
+    const auto enabled_at_unison = render_plex_shift(identity);
+    require(unpitched == enabled_at_unison,
+            "Plex Shift mode at unison should preserve the existing delay output");
+
+    auto shifted = plain;
+    shifted.pitch_shift_enabled = true;
+    shifted.pitch_shift_semitones[0] = 12.0F;
+    const auto octave_up = render_plex_shift(shifted);
+    std::size_t positive_crossings = 0U;
+    for (std::size_t frame = 3520U; frame < 3920U; ++frame) {
+        if (octave_up[frame - 1U] <= 0.0F && octave_up[frame] > 0.0F) {
+            ++positive_crossings;
+        }
+    }
+    require(positive_crossings >= 34U && positive_crossings <= 50U,
+            "one active +12-semitone voice should produce an octave-up wet signal");
+}
+
+void test_plex_shift_master_scales_are_independent() {
+    auto pitch_master = simple_parameters();
+    pitch_master.pitch_shift_enabled = true;
+    pitch_master.pitch_shift_semitones[0] = 12.0F;
+    pitch_master.pitch_detune_cents[0] = 25.0F;
+    pitch_master.master_pitch = 0.5F;
+    pitch_master.master_detune = 1.0F;
+    auto per_voice_pitch = pitch_master;
+    per_voice_pitch.pitch_shift_semitones[0] = 6.0F;
+    per_voice_pitch.master_pitch = 1.0F;
+    require(render_plex_shift(pitch_master) == render_plex_shift(per_voice_pitch),
+            "Master Pitch should scale shifts without changing per-voice detune");
+
+    auto detune_master = simple_parameters();
+    detune_master.pitch_shift_enabled = true;
+    detune_master.pitch_shift_semitones[0] = 12.0F;
+    detune_master.pitch_detune_cents[0] = 25.0F;
+    detune_master.master_pitch = 1.0F;
+    detune_master.master_detune = 2.0F;
+    auto per_voice_detune = detune_master;
+    per_voice_detune.pitch_detune_cents[0] = 50.0F;
+    per_voice_detune.master_detune = 1.0F;
+    require(render_plex_shift(detune_master) == render_plex_shift(per_voice_detune),
+            "Master Detune should scale detunes without changing per-voice pitch");
+}
+
+void test_plex_shift_reverse_granules_and_bounds() {
+    auto p = simple_parameters();
+    p.pitch_shift_enabled = true;
+    p.pitch_shift_semitones[0] = 7.0F;
+    const auto forward = render_plex_shift(
+        p, 440.0F, 8000U, tabletfx::PlexPitchDirection::forward);
+    const auto reverse = render_plex_shift(
+        p, 440.0F, 8000U, tabletfx::PlexPitchDirection::reverse);
+    double difference = 0.0;
+    for (std::size_t frame = 3600U; frame < 3900U; ++frame) {
+        const double delta = static_cast<double>(forward[frame] - reverse[frame]);
+        difference += delta * delta;
+    }
+    require(std::sqrt(difference / 300.0) > 0.005,
+            "reverse granule direction should change the processed snippets");
+
+    p.pitch_shift_semitones[0] = 99.0F;
+    p.pitch_detune_cents[0] = -99.0F;
+    p.master_pitch = 3.0F;
+    p.master_detune = -1.0F;
+    p.pitch_direction = static_cast<tabletfx::PlexPitchDirection>(99U);
+    tabletfx::PlexDelay delay(8000.0F, 1000.0F, p);
+    const auto bounded = delay.parameters();
+    require(bounded.pitch_shift_semitones[0] == 24.0F &&
+                bounded.pitch_detune_cents[0] == -50.0F &&
+                bounded.master_pitch == 2.0F &&
+                bounded.master_detune == 0.0F &&
+                bounded.pitch_direction == tabletfx::PlexPitchDirection::forward,
+            "Plex Shift values and master scales should clamp to project bounds");
 }
 
 void test_wet_filter_and_lfo_controls() {
@@ -462,6 +582,9 @@ int main() {
         test_wet_filter_and_lfo_controls();
         test_envelope_send_and_ducker();
         test_stereo_spread_and_advanced_bounds();
+        test_plex_shift_default_identity_and_voice_pitch();
+        test_plex_shift_master_scales_are_independent();
+        test_plex_shift_reverse_granules_and_bounds();
         std::cout << "Plex Delay tests passed\n";
     } catch (const std::exception& error) {
         std::cerr << "Plex Delay test failure: " << error.what() << '\n';

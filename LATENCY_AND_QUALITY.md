@@ -783,3 +783,19 @@ On an AMD Ryzen 9 5950X Release build at 48 kHz stereo, 128-frame callbacks (2.6
 | Maximum decay and modulation | 1.310% | 1.571% | 1.934% | 8.119% | 145,368 B | 0/20,000 |
 
 The maximum values are occasional host callback outliers; neither profile missed its measured deadline. This isolated desktop benchmark does not predict tablet load. The browser smoke used local prerecorded stereo Guitar-TECHS DI and captured two Play outputs that changed with input/profile. `make test`, `make web-build`, `make web-browser-test`, and the Windows MinGW `make windows-cross-build` pass. Human listening, physical hardware comparison, and target-device timing remain open; no Fender DSP or sound parity is claimed.
+
+## Fractal FM9-family Plex Shift project subset (2026-11-26)
+
+Plex Shift is a separate Fractal block from Plex Delay and Plex Detune. TabletFX places an optional project-authored granular shifter within the existing Plex Matrix Delay at Delay picker ID 76, off by default. It adds no processor or picker row. The wet tap path uses a 5.333 ms target grain; actual history lookback varies with pitch ratio and direction, so a single fixed wet-latency value is not specified. The unshifted dry path remains immediate. Pitch history is preallocated at construction, capped at 256 KiB, and included in the 1,132,152 B native Plex processor state at 48 kHz stereo. Processing allocates nothing. Master scales and project bounds are documented in `EFFECTS_MATRIX.md`; they are not manufacturer ranges/defaults.
+
+The Release benchmark ran on an AMD Ryzen 9 5950X at 48 kHz stereo with 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up callbacks, and 20,000 measured callbacks per profile. Percentages show isolated processor-call time relative to one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Plex matrix, no pitch | 0.1324% | 0.2025% | 0.2434% | 0.5689% | 4.7803% | 1,132,152 B | 0/20,000 |
+| One shifted line, Forward | 0.2145% | 0.3124% | 0.3675% | 0.9188% | 1.9463% | 1,132,152 B | 0/20,000 |
+| Four shifted lines, Forward | 0.4688% | 0.6945% | 0.8340% | 1.5825% | 14.9479% | 1,132,152 B | 0/20,000 |
+| Eight shifted lines, Forward | 0.7069% | 0.9803% | 1.1625% | 1.9602% | 10.3679% | 1,132,152 B | 0/20,000 |
+| Eight shifted lines, Reverse | 0.6529% | 0.9514% | 1.2019% | 3.5836% | 7.8759% | 1,132,152 B | 0/20,000 |
+
+These are isolated desktop CPU readings, not total-chain cost or Android/tablet performance. The maxima are occasional host outliers. `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench` pass. Browser validation uses local prerecorded Guitar-TECHS DI. Human listening, physical Fractal comparison, firmware applicability, and target-device timing remain open; no manufacturer DSP or sound parity is claimed.

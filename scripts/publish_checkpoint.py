@@ -2077,6 +2077,27 @@ FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS = (
     "research-state.json",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_PLEX_SHIFT_CHECKPOINT_PATHS = (
+    "make/publish.mk",
+    "CMakeLists.txt",
+    "apps/fractal_plex_shift_bench.cpp",
+    "include/tabletfx/effects/plex_delay.hpp",
+    "src/effects/plex_delay.cpp",
+    "tests/test_plex_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+)
 OCTOBOT_CHECKPOINT_PATHS = (
     "CMakeLists.txt",
     "include/tabletfx/effects.hpp",
@@ -3240,6 +3261,10 @@ CHECKPOINTS = {
         FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS,
         "feat: add project-authored Fractal Surround Delay",
     ),
+    "fractal-plex-shift": (
+        FRACTAL_PLEX_SHIFT_CHECKPOINT_PATHS,
+        "feat: add project-authored Plex Shift subset",
+    ),
     "fractal-ring-mod-tracking": (
         FRACTAL_RING_MOD_TRACKING_CHECKPOINT_PATHS,
         "feat: add project-authored ring mod pitch tracking",
@@ -3467,6 +3492,49 @@ PARTIAL_CHECKPOINT_HUNKS = {
         ),
         "RESEARCH.md": ("## Fractal FM9-family Surround Delay",),
         "research-state.json": ("Fractal FM9-family Surround Delay",),
+    },
+    "fractal-plex-shift": {
+        "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-plex-shift",),
+        "scripts/publish_checkpoint.py": (
+            "FRACTAL_PLEX_SHIFT_CHECKPOINT_PATHS",
+            '"fractal-plex-shift": (',
+            '"fractal-plex-shift": {',
+        ),
+        "CMakeLists.txt": ("fractal_plex_shift",),
+        "include/tabletfx/effects/plex_delay.hpp": (
+            "pitch_shift_enabled",
+            "Plex Shift subset",
+        ),
+        "src/effects/plex_delay.cpp": (
+            "read_pitch_history",
+            "pitch_shift_enabled",
+        ),
+        "tests/test_plex_delay.cpp": (
+            "test_plex_shift_default_identity_and_voice_pitch",
+            "test_plex_shift_reverse_granules_and_bounds",
+        ),
+        "src/web/wasm_chain.cpp": (
+            "configure_plex_shift",
+            "tf_chain_set_plex_shift",
+        ),
+        "scripts/run_cmake.py": ("fractal_plex_shift",),
+        "scripts/web.py": ("_tf_chain_set_plex_shift",),
+        "web/app.js": ("runPlexDelayBrowserSmokeTest", "pitchShiftEnabled"),
+        "web/audio-worklet.js": ("_tf_chain_set_plex_shift",),
+        "web/index.html": ("plex-delay-type", "optional per-line pitch"),
+        "EFFECTS_MATRIX.md": ("Current Fractal FM9-family Plex Shift checkpoint",),
+        "FLAGSHIP_EFFECT_COMPARISON.md": (
+            "Current Fractal FM9-family Plex Shift checkpoint",
+            "Fractal FM9-family Plex Shift: rechecked",
+        ),
+        "IMPLEMENTATION_CHECKLIST.md": (
+            "## Fractal FM9-family Plex Shift",
+        ),
+        "LATENCY_AND_QUALITY.md": (
+            "## Fractal FM9-family Plex Shift project subset",
+        ),
+        "RESEARCH.md": ("## Fractal FM9-family Plex Shift",),
+        "research-state.json": ("Fractal FM9-family Plex Shift",),
     },
     "fender-memory-delay": {
         "CMakeLists.txt": ("fender_memory_delay",),

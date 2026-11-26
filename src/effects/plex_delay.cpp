@@ -72,6 +72,37 @@ PlexDelay::PlexDelay(float sample_rate, float max_delay_ms,
         throw std::length_error(
             "Plex Delay allocator exceeded its input diffuser storage cap");
     }
+    constexpr std::size_t maximum_pitch_history_frames =
+        plex_shift_history_storage_limit_bytes /
+        (plex_delay_line_count * sizeof(float));
+    const double target_granule_frames = std::round(
+        static_cast<double>(sample_rate_) *
+        static_cast<double>(kPitchGranuleMilliseconds) / 1000.0);
+    const std::size_t target_frames = static_cast<std::size_t>(
+        std::max(1.0, target_granule_frames));
+    const std::size_t frames_per_granule = static_cast<std::size_t>(
+        kPitchHistoryFramesPerGranule);
+    pitch_history_capacity_frames_ = std::min(
+        maximum_pitch_history_frames,
+        target_frames * frames_per_granule + 2U);
+    pitch_granule_frames_ = std::max<std::size_t>(
+        1U, std::min(target_frames,
+                     (pitch_history_capacity_frames_ - 2U) /
+                         frames_per_granule));
+    pitch_granule_phase_increment_ =
+        1.0F / static_cast<float>(pitch_granule_frames_);
+    const std::size_t pitch_history_samples =
+        pitch_history_capacity_frames_ * plex_delay_line_count;
+    if (pitch_history_samples >
+        pitch_history_storage_.max_size()) {
+        throw std::length_error("Plex Shift history size is invalid");
+    }
+    pitch_history_storage_.assign(pitch_history_samples, 0.0F);
+    if (pitch_history_storage_.capacity() * sizeof(float) >
+        plex_shift_history_storage_limit_bytes) {
+        throw std::length_error(
+            "Plex Shift history exceeds its 256 KiB storage cap");
+    }
     configure(parameters);
 }
 
@@ -245,6 +276,20 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
             parameters_.line_level[line], 0.0F, 2.0F);
         parameters.line_pan[line] = bounded(parameters.line_pan[line],
             parameters_.line_pan[line], -1.0F, 1.0F);
+        parameters.pitch_shift_semitones[line] = bounded(
+            parameters.pitch_shift_semitones[line],
+            parameters_.pitch_shift_semitones[line], -24.0F, 24.0F);
+        parameters.pitch_detune_cents[line] = bounded(
+            parameters.pitch_detune_cents[line],
+            parameters_.pitch_detune_cents[line], -50.0F, 50.0F);
+    }
+    parameters.master_pitch = bounded(parameters.master_pitch,
+        parameters_.master_pitch, 0.0F, 2.0F);
+    parameters.master_detune = bounded(parameters.master_detune,
+        parameters_.master_detune, 0.0F, 2.0F);
+    if (parameters.pitch_direction != PlexPitchDirection::forward &&
+        parameters.pitch_direction != PlexPitchDirection::reverse) {
+        parameters.pitch_direction = parameters_.pitch_direction;
     }
     parameters.input_gain_db = bounded(parameters.input_gain_db,
         parameters_.input_gain_db, -24.0F, 24.0F);
@@ -294,6 +339,16 @@ void PlexDelay::configure(PlexDelayParameters parameters) noexcept {
         parameters.input_diffusion_mix == 0.0F &&
         parameters_.input_diffusion_mix > 0.0F;
     parameters_ = parameters;
+    for (std::size_t line = 0; line < plex_delay_line_count; ++line) {
+        const float semitones = std::clamp(
+            parameters_.pitch_shift_semitones[line] * parameters_.master_pitch,
+            -24.0F, 24.0F);
+        const float detune = std::clamp(
+            parameters_.pitch_detune_cents[line] * parameters_.master_detune,
+            -50.0F, 50.0F);
+        pitch_ratios_[line] = static_cast<float>(std::pow(
+            2.0, static_cast<double>(semitones + detune / 100.0F) / 12.0));
+    }
     update_input_diffusion_times();
     if (input_diffusion_time_changed || input_diffusion_turned_off) {
         clear_input_diffusion();
@@ -564,6 +619,31 @@ std::size_t PlexDelay::read_index(std::size_t delay,
     return ring * capacity_frames_ + frame;
 }
 
+float PlexDelay::read_pitch_history(float delay_frames,
+                                    std::size_t line) const noexcept {
+    if (pitch_history_capacity_frames_ < 2U ||
+        line >= plex_delay_line_count || !std::isfinite(delay_frames)) {
+        return 0.0F;
+    }
+    const float bounded_delay = std::clamp(
+        delay_frames, 1.0F,
+        static_cast<float>(pitch_history_capacity_frames_ - 1U));
+    const std::size_t lower_delay = static_cast<std::size_t>(bounded_delay);
+    const std::size_t upper_delay = std::min(
+        lower_delay + 1U, pitch_history_capacity_frames_ - 1U);
+    const float fraction = bounded_delay - static_cast<float>(lower_delay);
+    const std::size_t lower_frame =
+        (pitch_history_write_frame_ + pitch_history_capacity_frames_ -
+         lower_delay) % pitch_history_capacity_frames_;
+    const std::size_t upper_frame =
+        (pitch_history_write_frame_ + pitch_history_capacity_frames_ -
+         upper_delay) % pitch_history_capacity_frames_;
+    const std::size_t base = line * pitch_history_capacity_frames_;
+    const float lower = pitch_history_storage_[base + lower_frame];
+    const float upper = pitch_history_storage_[base + upper_frame];
+    return lower + (upper - lower) * fraction;
+}
+
 float PlexDelay::filter_feedback(float input, std::size_t line) noexcept {
     float value = input;
     if (low_cut_enabled_) {
@@ -641,6 +721,21 @@ void PlexDelay::process(std::span<float> interleaved,
         ? 1.0F - parameters_.balance : 1.0F;
     const float balance_right = parameters_.balance < 0.0F
         ? 1.0F + parameters_.balance : 1.0F;
+    std::array<float, plex_delay_line_count> pitch_age_base{};
+    std::array<float, plex_delay_line_count> pitch_age_slope{};
+    for (std::size_t line = 0; line < active_lines; ++line) {
+        const float ratio = pitch_ratios_[line];
+        if (parameters_.pitch_direction == PlexPitchDirection::reverse) {
+            pitch_age_base[line] = static_cast<float>(pitch_granule_frames_);
+            pitch_age_slope[line] = static_cast<float>(pitch_granule_frames_) *
+                                    (1.0F + ratio);
+        } else {
+            pitch_age_base[line] = static_cast<float>(pitch_granule_frames_) *
+                                   std::max(1.0F, ratio);
+            pitch_age_slope[line] = static_cast<float>(pitch_granule_frames_) *
+                                    (1.0F - ratio);
+        }
+    }
 
     for (std::size_t frame = 0; frame < frames; ++frame) {
         const std::size_t offset = frame * static_cast<std::size_t>(channels);
@@ -687,12 +782,34 @@ void PlexDelay::process(std::span<float> interleaved,
             ? diffused_input
             : storage_[read_index(pre_delay_frames_, plex_delay_line_count)];
 
+        const float phase = pitch_granule_phase_;
+        const float half_phase = phase < 0.5F ? phase + 0.5F : phase - 0.5F;
+        const float fade = phase < 0.5F ? phase * 2.0F : (1.0F - phase) * 2.0F;
+        const float fade_smooth = fade * fade * (3.0F - 2.0F * fade);
+        const float fade_other = 1.0F - fade_smooth;
         std::array<float, plex_delay_line_count> taps{};
         std::array<float, plex_delay_line_count> feedback_taps{};
         float tap_sum = 0.0F;
         for (std::size_t line = 0; line < active_lines; ++line) {
             const float delayed = storage_[read_index(delay_frames_[line], line)];
-            taps[line] = filter_feedback(delayed, line);
+            const float unshifted_tap = filter_feedback(delayed, line);
+            if (pitch_history_capacity_frames_ > 1U) {
+                pitch_history_storage_[line * pitch_history_capacity_frames_ +
+                                       pitch_history_write_frame_] =
+                    unshifted_tap;
+            }
+            taps[line] = unshifted_tap;
+            if (parameters_.pitch_shift_enabled &&
+                std::abs(pitch_ratios_[line] - 1.0F) > 1.0e-6F) {
+                const float shifted_a = read_pitch_history(
+                    pitch_age_base[line] + pitch_age_slope[line] * phase,
+                    line);
+                const float shifted_b = read_pitch_history(
+                    pitch_age_base[line] + pitch_age_slope[line] * half_phase,
+                    line);
+                taps[line] = safe_signal(
+                    shifted_a * fade_smooth + shifted_b * fade_other);
+            }
             feedback_taps[line] = parameters_.stack_mode ==
                     PlexDelayStackMode::off
                 ? taps[line] : delayed;
@@ -732,6 +849,10 @@ void PlexDelay::process(std::span<float> interleaved,
                 diffused_input;
         }
         write_frame_ = (write_frame_ + 1U) % capacity_frames_;
+        pitch_history_write_frame_ = (pitch_history_write_frame_ + 1U) %
+                                     pitch_history_capacity_frames_;
+        pitch_granule_phase_ += pitch_granule_phase_increment_;
+        if (pitch_granule_phase_ >= 1.0F) pitch_granule_phase_ -= 1.0F;
 
         advance_wet_filter();
         if (channels == 1U) {
@@ -763,6 +884,7 @@ void PlexDelay::process(std::span<float> interleaved,
 
 void PlexDelay::reset() noexcept {
     std::fill(storage_.begin(), storage_.end(), 0.0F);
+    std::fill(pitch_history_storage_.begin(), pitch_history_storage_.end(), 0.0F);
     clear_input_diffusion();
     low_cut_input_.fill(0.0F);
     low_cut_output_.fill(0.0F);
@@ -779,6 +901,8 @@ void PlexDelay::reset() noexcept {
     ducker_envelope_ = 0.0F;
     ducker_gain_ = 1.0F;
     write_frame_ = 0U;
+    pitch_history_write_frame_ = 0U;
+    pitch_granule_phase_ = 0.0F;
 }
 
 } // namespace tabletfx

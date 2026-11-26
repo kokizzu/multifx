@@ -151,10 +151,20 @@ function configurePlexDelay(module, chain, parameters = {}) {
     Number(parameters.duckerReleaseMs ?? 200),
     Number(parameters.stereoSpread ?? 1),
   );
+  module._tf_chain_set_plex_shift(
+    chain, Number(parameters.pitchShiftEnabled ?? false),
+    Number(parameters.masterPitch ?? 1),
+    Number(parameters.masterDetune ?? 1),
+    Number(parameters.pitchDirection ?? 0),
+  );
   lines.forEach((line, index) => {
     module._tf_chain_set_plex_delay_line(
       chain, index, Number(line.timeMs), Number(line.timeMode),
       Number(line.division), Number(line.level), Number(line.pan),
+    );
+    module._tf_chain_set_plex_shift_line(
+      chain, index, Number(line.pitchShiftSemitones ?? 0),
+      Number(line.pitchDetuneCents ?? 0),
     );
   });
 }

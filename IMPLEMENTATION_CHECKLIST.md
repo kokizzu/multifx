@@ -1,5 +1,15 @@
 # Implementation checklist
 
+## Fractal FM9-family Plex Shift (2026-11-26)
+
+- [x] Verify the current official Blocks Guide revision: November 2026 cover, 114 pages, Plex Shift controls on printed pp. 87–90. Keep it separate from Fractal's Plex Delay and Plex Detune algorithms; exact FM9 Mark II Turbo applicability remains unverified.
+- [x] Add an optional project-authored granular pitch-shift mode to the existing Delay picker ID 76. It stays off by default and adds no picker row. Per-line shift is bounded to ±24 semitones, detune to ±50 cents, Master Pitch/Detune to 0–200%, with Forward/Reverse direction. These bounds/defaults and the 5.333 ms granule design are project choices, not Fractal settings.
+- [x] `make test` passes native Plex Shift identity, transposition, independent master-scale, direction, parameter-bound, and zero-process-allocation coverage.
+- [x] `make web-browser-test` passes full browser/native checks and local prerecorded Guitar-TECHS DI Play captures. The picker remains Delay, the switch remains off by default, and enabling one +12-semitone line changes the captured output.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build.
+- [x] `make bench` records zero callback deadline misses at 0/1/4/8 voices and Forward/Reverse 8-voice profiles. The native state and callback budget percentages are documented in `LATENCY_AND_QUALITY.md`; process-time allocations are zero.
+- [ ] Human listening, tablet/device timing, and physical Fractal comparison remain manual. No Fractal DSP, preset, latency, or sound parity is claimed.
+
 ## Line 6 Helix Stadium global TAP modulation reset (2026-11-26)
 
 - [x] Verify the live Effects manual selector revision (v1.4 Rev D / v1.3 Rev B / v1.2). Its common Speed/Rate entry says one TAP press resets modulation in LFO-based effects, including tremolos and rotary speakers; exact phase semantics and numeric settings are not specified. Hardware v1.4.2 notes are dated 2026-10-27; installed firmware is unknown.

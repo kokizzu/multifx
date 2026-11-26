@@ -1496,6 +1496,31 @@ public:
         delay->configure(parameters);
     }
 
+    void configure_plex_shift(std::uint32_t enabled, float master_pitch,
+                              float master_detune,
+                              std::uint32_t direction) noexcept {
+        auto* delay = static_cast<tabletfx::PlexDelay*>(
+            effects_[76].effect.get());
+        auto parameters = delay->parameters();
+        parameters.pitch_shift_enabled = enabled != 0U;
+        parameters.master_pitch = master_pitch;
+        parameters.master_detune = master_detune;
+        parameters.pitch_direction = static_cast<tabletfx::PlexPitchDirection>(
+            std::min(direction, 1U));
+        delay->configure(parameters);
+    }
+
+    void configure_plex_shift_line(std::uint32_t line, float semitones,
+                                   float detune_cents) noexcept {
+        if (line >= tabletfx::plex_delay_line_count) return;
+        auto* delay = static_cast<tabletfx::PlexDelay*>(
+            effects_[76].effect.get());
+        auto parameters = delay->parameters();
+        parameters.pitch_shift_semitones[line] = semitones;
+        parameters.pitch_detune_cents[line] = detune_cents;
+        delay->configure(parameters);
+    }
+
     void configure_auto_pan(float rate_hz, float depth, std::uint32_t waveform,
                             std::uint32_t tempo_sync, float tempo_bpm,
                             std::uint32_t division) noexcept {
@@ -5632,6 +5657,24 @@ TABLETFX_WASM_EXPORT void tf_chain_set_plex_delay_line(
     if (opaque != nullptr) {
         as_chain(opaque)->configure_plex_delay_line(
             line, time_ms, time_mode, division, level, pan);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plex_shift(
+    void* opaque, std::uint32_t enabled, float master_pitch,
+    float master_detune, std::uint32_t direction) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plex_shift(
+            enabled, master_pitch, master_detune, direction);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_plex_shift_line(
+    void* opaque, std::uint32_t line, float semitones,
+    float detune_cents) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_plex_shift_line(
+            line, semitones, detune_cents);
     }
 }
 

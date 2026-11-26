@@ -15,6 +15,8 @@ inline constexpr std::size_t plex_delay_line_count = 8U;
 inline constexpr std::size_t plex_delay_storage_limit_bytes = 1024U * 1024U;
 inline constexpr std::size_t plex_delay_input_diffusion_storage_limit_bytes =
     256U * 1024U;
+inline constexpr std::size_t plex_shift_history_storage_limit_bytes =
+    256U * 1024U;
 
 enum class PlexDelayStackMode : std::uint8_t {
     off,
@@ -47,6 +49,11 @@ enum class PlexFilterLfoType : std::uint8_t {
     saw,
 };
 
+enum class PlexPitchDirection : std::uint8_t {
+    forward,
+    reverse,
+};
+
 struct PlexDelayParameters {
     std::uint8_t active_lines = 8U;
     std::array<float, plex_delay_line_count> time_ms{
@@ -74,6 +81,12 @@ struct PlexDelayParameters {
         1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F};
     std::array<float, plex_delay_line_count> line_pan{
         -0.85F, -0.6F, -0.35F, -0.1F, 0.1F, 0.35F, 0.6F, 0.85F};
+    bool pitch_shift_enabled = false;
+    std::array<float, plex_delay_line_count> pitch_shift_semitones{};
+    std::array<float, plex_delay_line_count> pitch_detune_cents{};
+    float master_pitch = 1.0F;
+    float master_detune = 1.0F;
+    PlexPitchDirection pitch_direction = PlexPitchDirection::forward;
     float input_gain_db = 0.0F;
     float mix = 0.25F;
     bool kill_dry = false;
@@ -111,11 +124,15 @@ struct PlexDelayParameters {
  * defaults, input selection/summing, and storage caps are project choices. The
  * matrix/pre-delay rings are capped at 1 MiB; input diffusion has a separate
  * 256 KiB fixed cap. The remaining Filter-block types, delay-line modulation,
- * Plex Detune/Shift/Verb and Shimmer Verb algorithms, Bypass, Bypass Mode,
+ * Plex Detune/Verb and Shimmer Verb algorithms, Bypass, Bypass Mode,
  * Global Mix, spillover, and exact Fractal settings/DSP/sound parity are not
  * implemented.
- * Plex Delay itself has no pitch effects; Plex Detune and Plex Shift are
- * separate types.
+ * In Fractal's library, Plex Delay has no pitch effects; Plex Detune and Plex
+ * Shift are separate algorithms. This picker row also offers an optional,
+ * project-authored Plex Shift subset using the existing delay-line history,
+ * per-line granular transposition and detune, independent master scales, and
+ * forward/reverse grain direction. It is not Fractal's pitch-shifting
+ * algorithm or a note-tracking synth.
  * The guide
  * names FM9 without distinguishing the Mark II Turbo hardware revision; the
  * FM9 downloads page currently lists v12.0 for Original/Turbo without a
@@ -137,7 +154,8 @@ public:
     }
     [[nodiscard]] std::size_t memory_bytes() const noexcept override {
         return sizeof(*this) + storage_.capacity() * sizeof(float) +
-               input_diffusion_storage_.capacity() * sizeof(float);
+               input_diffusion_storage_.capacity() * sizeof(float) +
+               pitch_history_storage_.capacity() * sizeof(float);
     }
     [[nodiscard]] PlexDelayParameters parameters() const noexcept {
         return parameters_;
@@ -170,6 +188,8 @@ private:
 
     static constexpr std::size_t kRingCount = plex_delay_line_count + 1U;
     static constexpr std::size_t kInputDiffusionStages = 3U;
+    static constexpr float kPitchGranuleMilliseconds = 5.3333333F;
+    static constexpr float kPitchHistoryFramesPerGranule = 8.0F;
     static constexpr float kMinimumSampleRate = 8000.0F;
     static constexpr float kMaximumSampleRate = 384000.0F;
     static constexpr float kMinimumDelayMs = 1.0F;
@@ -190,6 +210,8 @@ private:
     [[nodiscard]] static float beats_for_division(DelayDivision division) noexcept;
     [[nodiscard]] std::size_t read_index(std::size_t delay,
                                          std::size_t ring) const noexcept;
+    [[nodiscard]] float read_pitch_history(float delay_frames,
+                                           std::size_t line) const noexcept;
     [[nodiscard]] float process_input_diffusion(float input) noexcept;
     void update_input_diffusion_times() noexcept;
     void clear_input_diffusion() noexcept;
@@ -209,6 +231,12 @@ private:
     std::size_t capacity_frames_ = 0U;
     std::size_t write_frame_ = 0U;
     std::vector<float> storage_;
+    std::size_t pitch_history_capacity_frames_ = 0U;
+    std::size_t pitch_history_write_frame_ = 0U;
+    std::size_t pitch_granule_frames_ = 0U;
+    float pitch_granule_phase_ = 0.0F;
+    float pitch_granule_phase_increment_ = 0.0F;
+    std::vector<float> pitch_history_storage_;
     std::size_t input_diffusion_capacity_frames_ = 0U;
     std::size_t input_diffusion_write_frame_ = 0U;
     std::vector<float> input_diffusion_storage_;
@@ -218,6 +246,7 @@ private:
     std::array<std::size_t, plex_delay_line_count> delay_frames_{};
     std::size_t pre_delay_frames_ = 0U;
     std::array<float, plex_delay_line_count> feedback_gains_{};
+    std::array<float, plex_delay_line_count> pitch_ratios_{};
     std::array<float, plex_delay_line_count> output_left_gains_{};
     std::array<float, plex_delay_line_count> output_right_gains_{};
     float input_gain_linear_ = 1.0F;
