@@ -336,14 +336,10 @@ def main() -> None:
         bench_fender_harmonic_tremolo_mode(cmake)
     elif action == "windows-build":
         build_windows(cmake)
-
-
-if __name__ == "__main__":
-    main()
-    elif action == "bench-fractal-global-mix-flanger":
-        bench_fractal_global_mix_flanger(cmake)
     elif action == "bench-fractal-global-mix-delay":
         bench_fractal_global_mix_delay(cmake)
+    elif action == "bench-fractal-surround-delay":
+        bench_fractal_surround_delay(cmake)
 
 
 def bench_fractal_global_mix_delay(cmake: str) -> None:
@@ -355,3 +351,18 @@ def bench_fractal_global_mix_delay(cmake: str) -> None:
         else "tabletfx_fractal_global_mix_delay_bench"
     )
     run([str(executable)])
+
+
+def bench_fractal_surround_delay(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fractal_surround_delay_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fractal_surround_delay_bench"
+    )
+    run([str(executable)])
+
+
+if __name__ == "__main__":
+    main()

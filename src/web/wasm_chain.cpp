@@ -2424,7 +2424,8 @@ public:
         float right_time_ratio_percent, float feedback_left_percent,
         float feedback_right_percent, float master_feedback_percent,
         float rotation_percent, float width_percent, float mix_percent,
-        float level_db) noexcept {
+        float level_db, std::uint32_t global_mix_enabled,
+        float global_mix_offset) noexcept {
         tabletfx::FractalSurroundDelayParameters parameters;
         parameters.time_ms = time_ms;
         parameters.master_time_percent = master_time_percent;
@@ -2436,6 +2437,8 @@ public:
         parameters.width_percent = width_percent;
         parameters.mix_percent = mix_percent;
         parameters.level_db = level_db;
+        parameters.global_mix_enabled = global_mix_enabled != 0U;
+        parameters.global_mix_offset = global_mix_offset;
         fractal_surround_delay_.set_parameters(parameters);
     }
 
@@ -3276,7 +3279,8 @@ public:
                            float mix, float right_channel_phase_degrees,
                            std::uint32_t tempo_sync, float tempo_bpm,
                            std::uint32_t tap_division, std::uint32_t mode,
-                           float color) noexcept {
+                           float color, std::uint32_t global_mix_enabled,
+                           float global_mix_offset) noexcept {
         tabletfx::FlangerParameters parameters;
         parameters.rate_hz = rate_hz;
         parameters.tempo_sync = tempo_sync != 0U;
@@ -5170,6 +5174,22 @@ TABLETFX_WASM_EXPORT void tf_chain_set_tone_master_pro_3d_chorus(
     }
 }
 
+TABLETFX_WASM_EXPORT void tf_chain_set_fractal_surround_delay(
+    void* opaque, float time_ms, float master_time_percent,
+    float right_time_ratio_percent, float feedback_left_percent,
+    float feedback_right_percent, float master_feedback_percent,
+    float rotation_percent, float width_percent, float mix_percent,
+    float level_db, std::uint32_t global_mix_enabled,
+    float global_mix_offset) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fractal_surround_delay(
+            time_ms, master_time_percent, right_time_ratio_percent,
+            feedback_left_percent, feedback_right_percent,
+            master_feedback_percent, rotation_percent, width_percent,
+            mix_percent, level_db, global_mix_enabled, global_mix_offset);
+    }
+}
+
 TABLETFX_WASM_EXPORT void tf_chain_set_triple_double_chorus(
     void* opaque, std::uint32_t preset_switch, std::uint32_t manual_switch,
     float rate_hz, float left_depth_ms, float center_depth_ms,
@@ -5597,13 +5617,15 @@ TABLETFX_WASM_EXPORT void tf_chain_set_flanger(
     float feedback, std::uint32_t feedback_polarity, float mix,
     float right_channel_phase_degrees, std::uint32_t tempo_sync,
     float tempo_bpm, std::uint32_t tap_division, std::uint32_t mode,
-    float color) noexcept {
+    float color, std::uint32_t global_mix_enabled,
+    float global_mix_offset) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_flanger(rate_hz, base_delay_ms, depth_ms,
                                             feedback, feedback_polarity, mix,
                                             right_channel_phase_degrees,
                                             tempo_sync, tempo_bpm, tap_division,
-                                            mode, color);
+                                            mode, color, global_mix_enabled,
+                                            global_mix_offset);
     }
 }
 

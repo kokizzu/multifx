@@ -55,12 +55,15 @@ void run_profile(std::string_view label,
 
     std::vector<double> timings;
     timings.reserve(kMeasuredCallbacks);
+    std::size_t deadline_misses = 0U;
     for (std::size_t callback = 0; callback < kMeasuredCallbacks; ++callback) {
         const auto start = std::chrono::steady_clock::now();
         delay.process(std::span<float>(block.data(), sample_count), channels);
         const auto end = std::chrono::steady_clock::now();
-        timings.push_back(std::chrono::duration<double, std::nano>(end - start)
-                              .count());
+        const double elapsed_ns =
+            std::chrono::duration<double, std::nano>(end - start).count();
+        timings.push_back(elapsed_ns);
+        if (elapsed_ns > kCallbackDeadlineNs) ++deadline_misses;
     }
 
     std::cout << label << " channels=" << channels
@@ -71,7 +74,8 @@ void run_profile(std::string_view label,
               << "% p99.9=" << percent_of_deadline(percentile(timings, 0.999))
               << "% max=" << percent_of_deadline(*std::max_element(
                      timings.begin(), timings.end()))
-              << "%\n";
+              << "% deadline_misses=" << deadline_misses << "/"
+              << kMeasuredCallbacks << "\n";
 }
 
 } // namespace
@@ -85,6 +89,12 @@ int main() {
               << "cost, not total-chain or device latency.\n";
 
     run_profile("default-stereo", {}, 2U);
+
+    tabletfx::FractalSurroundDelayParameters global_mix{};
+    global_mix.global_mix_offset = 0.2F;
+    run_profile("global-mix-stored-disabled", global_mix, 2U);
+    global_mix.global_mix_enabled = true;
+    run_profile("global-mix-enabled-plus-20pp", global_mix, 2U);
 
     tabletfx::FractalSurroundDelayParameters rotating{};
     rotating.time_ms = 25.0F;

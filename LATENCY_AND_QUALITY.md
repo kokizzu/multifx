@@ -840,6 +840,23 @@ The isolated benchmark uses an AMD Ryzen 9 5950X Release build, 48 kHz, stereo, 
 
 `make test`, `make web-test`, `make windows-cross-build`, and `make bench` pass. These are isolated processor-call measurements, not total-chain or device latency; the new effect's native/WASM parity remains untested because the offline CLI does not expose it. Manual listening and target-device timing remain open.
 
+## Fractal FM9-family Surround Delay Global Mix follow-up (2026-11-27)
+
+At 48 kHz stereo the project Global Mix switch and offset add 8 B to native state (144,176 B) and browser/WASM state (144,132 B) without enlarging the 144,000 B default delay ring. The processor makes no heap allocations during `process()`. The dry path has no added fixed algorithmic latency; the wet path follows the selected delay time. Manufacturer Global Mix eligibility is documented for Delay, but the equation is not; this local additive offset is not Fractal parity.
+
+The isolated Release benchmark ran on AMD Ryzen 9 5950X at 48 kHz, stereo, 128-frame callbacks (2.6667 ms deadline), with 3,000 warm-up and 20,000 measured callbacks. Values are isolated processor-call time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default stereo | 0.0713% | 0.0761% | 0.0803% | 0.3034% | 0.9825% | 144,176 B | 0/20,000 |
+| +20 pp stored, opt-in Off | 0.0713% | 0.0765% | 0.0814% | 0.2805% | 26.8556% | 144,176 B | 0/20,000 |
+| +20 pp enabled | 0.0709% | 0.0885% | 0.1118% | 0.2625% | 1.0260% | 144,176 B | 0/20,000 |
+| Short rotating, high-feedback stereo | 0.0709% | 0.0761% | 0.1155% | 0.3506% | 4.1079% | 9,776 B | 0/20,000 |
+| Maximum-time/ratio stereo | 0.1519% | 0.1763% | 0.3116% | 0.4755% | 5.4718% | 1,536,176 B | 0/20,000 |
+| Default mono | 0.0263% | 0.0349% | 0.0465% | 0.2239% | 0.7609% | 144,176 B | 0/20,000 |
+
+All measured calls stayed below the deadline. The 26.8556% disabled-offset maximum is an isolated scheduling outlier and remains well below 100%. This does not predict tablet or full-chain load. The focused native, local prerecorded guitar browser/WASM, Windows MinGW, and benchmark checks pass; physical listening and target-device measurements remain manual.
+
 ## Fender Tone Master Pro Memory Delay (2026-11-26)
 
 At 48 kHz stereo, the project allocates 768,256 B of native effect state, including 768,024 B for the two-second delay ring; the browser/WASM effect reports 768,216 B. `process()` performs no heap allocations. The direct dry path has zero fixed algorithmic latency; repeats use the selected delay time. This is project memory and timing, not Fender hardware specifications.

@@ -480,6 +480,16 @@ web-test-fractal-global-mix-delay: test-fractal-global-mix-delay web-build
 bench-fractal-global-mix-delay:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-global-mix-delay
 
+.PHONY: test-fractal-surround-delay web-test-fractal-surround-delay bench-fractal-surround-delay
+test-fractal-surround-delay:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_fractal_surround_delay_tests
+
+web-test-fractal-surround-delay: test-fractal-surround-delay web-build
+	$(PYTHON) scripts/web.py test-fractal-surround-delay
+
+bench-fractal-surround-delay:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-surround-delay
+
 .PHONY: publish-plan-fractal-global-mix-delay
 publish-plan-fractal-global-mix-delay:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-delay

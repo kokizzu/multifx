@@ -832,6 +832,12 @@ TabletFX adds an optional project-authored granular subset to its existing Plex 
 
 Native identity/transposition/master-scale/direction/bounds/no-allocation tests, full HeadlessChrome 151 browser/native checks, local prerecorded Guitar-TECHS DI Play capture, Windows MinGW cross-build, and isolated 0/1/4/8-line CPU benchmark pass. Human listening, hardware comparison, exact firmware applicability, and tablet timing remain open. This is not a fresh full-catalog audit, a Fractal algorithm implementation, or a DSP/settings/sound parity claim.
 
+## Fractal FM9-family Surround Delay Global Mix follow-up (2026-11-27)
+
+The November 2026 [Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf), printed pp. 4 and 39, lists Delay for Global Mix up to ±50% and notes the Delay block's distinct Mix law. It does not describe the offset equation for Surround Delay. The current [FM9 downloads page](https://www.fractalaudio.com/fm9-downloads/) lists v12.0 for Original and Turbo but not Mark II Turbo separately; exact-SKU applicability and installed firmware are unknown.
+
+TabletFX adds a project-authored, default-off offset control to the existing Delay ID 117. Its UI range is −50…+50 percentage points (default 0); when enabled it uses `clamp(baseMix + offset, 0, 1)` and keeps the original Mix value. This implementation adds 8 B of effect state, does not enlarge the delay ring, allocates nothing in processing, and does not add fixed dry-path latency. Native, local guitar browser/WASM, Windows MinGW, and CPU/memory checks pass. The manufacturer equation and DSP/settings/sound parity are unknown; human listening and target-device timing remain open.
+
 ## Fractal FM9-family Through-Zero Flanger VCO Response (2026-11-27)
 
 The current official [Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf), with a November 2026 cover, printed p. 50 names Linear, Exponential, Square Law, and Exponent for the Flanger VCO Response. It states that Exponent 1.0 produces a linear sweep and says the response changes sweep shape/dwell. It does not specify the transfer functions, Exponent numeric range/default, DSP cost, or latency. The [FM9 downloads page](https://www.fractalaudio.com/fm9-downloads/) lists v12.0 for FM9 Original/Turbo but not Mark II Turbo separately; exact SKU applicability and installed hardware firmware are unknown.

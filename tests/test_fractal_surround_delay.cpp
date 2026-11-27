@@ -54,7 +54,9 @@ void test_defaults_memory_and_time_relationships() {
                 parameters.master_feedback_percent == 100.0F &&
                 parameters.rotation_percent == 50.0F &&
                 parameters.width_percent == 100.0F &&
-                parameters.mix_percent == 25.0F && parameters.level_db == 0.0F,
+                parameters.mix_percent == 25.0F && parameters.level_db == 0.0F &&
+                !parameters.global_mix_enabled &&
+                parameters.global_mix_offset == 0.0F,
             "project-authored delay defaults changed");
     require(delay.maximum_delay_frames() == 18000U &&
                 delay.maximum_supported_delay_frames() == 192000U,
@@ -63,6 +65,68 @@ void test_defaults_memory_and_time_relationships() {
     require(delay.memory_bytes() >= sizeof(delay) + expected_ring_bytes &&
                 delay.memory_bytes() <= sizeof(delay) + expected_ring_bytes + 4096U,
             "delay memory report should include only the currently required stereo ring");
+    auto adjusted_parameters = parameters;
+    adjusted_parameters.global_mix_enabled = true;
+    adjusted_parameters.global_mix_offset = 0.1F;
+    tabletfx::FractalSurroundDelay adjusted(48000.0F, adjusted_parameters);
+    require(adjusted.memory_bytes() == delay.memory_bytes(),
+            "global mix offset should not allocate additional delay storage");
+}
+
+void test_project_global_mix_offset_bounds_and_audio_path() {
+    const auto render_impulse = [](tabletfx::FractalSurroundDelayParameters parameters) {
+        tabletfx::FractalSurroundDelay delay(8000.0F, parameters);
+        std::array<float, 41U> audio{};
+        audio[0] = 1.0F;
+        delay.process(audio, 1U);
+        return std::array<float, 2U>{audio[0], audio[40U]};
+    };
+
+    tabletfx::FractalSurroundDelayParameters parameters;
+    parameters.time_ms = 5.0F;
+    parameters.mix_percent = 25.0F;
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 0.1F;
+    auto adjusted = render_impulse(parameters);
+    tabletfx::FractalSurroundDelay adjusted_delay(8000.0F, parameters);
+    require(near(adjusted_delay.parameters().mix_percent, 25.0F) &&
+                near(adjusted_delay.parameters().global_mix_offset, 0.1F) &&
+                near(adjusted[0], 0.65F) && near(adjusted[1], 0.35F),
+            "project mix trim should add percentage points without replacing base mix");
+
+    parameters.global_mix_enabled = false;
+    parameters.global_mix_offset = 0.4F;
+    const auto disabled = render_impulse(parameters);
+    require(near(disabled[0], 0.75F) && near(disabled[1], 0.25F),
+            "disabled shared mix trim changed the existing dry/wet output");
+
+    parameters.global_mix_enabled = true;
+    parameters.mix_percent = 80.0F;
+    parameters.global_mix_offset = 5.0F;
+    const auto upper = render_impulse(parameters);
+    tabletfx::FractalSurroundDelay upper_delay(8000.0F, parameters);
+    require(upper_delay.parameters().mix_percent == 80.0F &&
+                upper_delay.parameters().global_mix_offset == 0.5F &&
+                near(upper[0], 0.0F) && near(upper[1], 1.0F),
+            "shared mix trim did not clamp at +0.5 and effective 100 percent");
+
+    parameters.mix_percent = 20.0F;
+    parameters.global_mix_offset = -5.0F;
+    const auto lower = render_impulse(parameters);
+    tabletfx::FractalSurroundDelay lower_delay(8000.0F, parameters);
+    require(lower_delay.parameters().mix_percent == 20.0F &&
+                lower_delay.parameters().global_mix_offset == -0.5F &&
+                near(lower[0], 1.0F) && near(lower[1], 0.0F),
+            "shared mix trim did not clamp at -0.5 and effective 0 percent");
+
+    parameters.mix_percent = 25.0F;
+    parameters.global_mix_offset = std::numeric_limits<float>::infinity();
+    const auto non_finite = render_impulse(parameters);
+    tabletfx::FractalSurroundDelay non_finite_delay(8000.0F, parameters);
+    require(non_finite_delay.parameters().mix_percent == 25.0F &&
+                non_finite_delay.parameters().global_mix_offset == 0.0F &&
+                near(non_finite[0], 0.75F) && near(non_finite[1], 0.25F),
+            "non-finite global offset should use zero and preserve base mix output");
 }
 
 void test_stereo_time_and_ratio_bounds() {
@@ -275,7 +339,10 @@ void test_non_finite_audio_is_sanitized_before_feedback() {
 }
 
 void test_invalid_channel_layouts_and_process_allocations() {
-    tabletfx::FractalSurroundDelay delay;
+    tabletfx::FractalSurroundDelayParameters parameters;
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 0.1F;
+    tabletfx::FractalSurroundDelay delay(48000.0F, parameters);
     std::array<float, 2> untouched{0.25F, -0.5F};
     delay.process(untouched, 0U);
     require(untouched == std::array<float, 2>{0.25F, -0.5F},
@@ -326,6 +393,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_memory_and_time_relationships();
+        test_project_global_mix_offset_bounds_and_audio_path();
         test_stereo_time_and_ratio_bounds();
         test_project_authored_bounds_and_non_finite_controls();
         test_mono_echo_feedback_and_dry_path();

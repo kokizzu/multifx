@@ -1631,7 +1631,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
         this.chain, message.value,
       );
     } else if (message.type === "fractal-surround-delay" && this.ready &&
-        Array.isArray(message.value) && message.value.length === 10) {
+        Array.isArray(message.value) && message.value.length === 12) {
       this.module._tf_chain_set_fractal_surround_delay(
         this.chain, ...message.value,
       );

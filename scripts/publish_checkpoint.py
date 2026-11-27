@@ -3860,12 +3860,19 @@ PARTIAL_CHECKPOINT_HUNKS = {
         "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-synth-output-level",),
     },
     "fractal-surround-delay": {
-        "make/publish.mk": ("PUBLISH_CHECKPOINTS += fractal-surround-delay",),
+        "make/publish.mk": (
+            "PUBLISH_CHECKPOINTS += fractal-surround-delay",
+            "bench-fractal-surround-delay",
+            "test-fractal-surround-delay",
+        ),
         "scripts/publish_checkpoint.py": (
             "FRACTAL_SURROUND_DELAY_CHECKPOINT_PATHS",
             '"fractal-surround-delay": (',
             "Fractal Surround Delay wires",
             "Fractal Surround Delay checkpoint recovery",
+            "bench-fractal-surround-delay",
+            '"CMakeLists.txt"',
+            '"include/tabletfx/effects.hpp"',
         ),
         "CMakeLists.txt": ("fractal_surround_delay",),
         "include/tabletfx/effects.hpp": ("fractal_surround_delay.hpp",),

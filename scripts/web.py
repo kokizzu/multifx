@@ -786,11 +786,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_chromatic_harmonizer_only: bool = False,
                   fractal_diatonic_harmonizer_only: bool = False,
                   fractal_resonator_input_gain_only: bool = False,
-                  fractal_global_mix_delay_only: bool = False) -> None:
+                 fractal_global_mix_delay_only: bool = False,
+                 fractal_surround_delay_only: bool = False) -> None:
     compiler = emscripten_cpp()
-                 fractal_global_mix_chorus_only: bool = False,
-                 fractal_global_mix_flanger_only: bool = False,
-                 fractal_global_mix_chorus_only: bool = False,
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
     chrome = shutil.which("google-chrome")
@@ -1389,6 +1387,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             url = base_url + "/web/index.html?selftest=volume-pan"
         else:
             url = base_url + "/web/index.html?selftest=1"
+        if fractal_surround_delay_only:
+            url = base_url + "/web/index.html?selftest=fractal-surround-delay"
+        if fractal_global_mix_delay_only:
+            url = base_url + "/web/index.html?selftest=fractal-global-mix-delay"
         stereo_tape_echo_expression = (
             "(async()=>{"
             "const assert=(condition,message)=>{if(!condition)throw new Error(message)};"
@@ -1588,6 +1590,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                 or fender_pedal_shifter_only or fender_pedal_detune_only
                 or fractal_diatonic_custom_scale_only
                 or fractal_resonator_input_gain_only
+                or fractal_surround_delay_only
                 else stereo_tape_echo_expression,
             )
         finally:
@@ -1655,6 +1658,9 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(json.dumps(report, indent=2))
         elif fractal_resonator_input_gain_only:
             print("Focused Fractal-family Resonator Input Gain browser/WASM prerecorded-guitar Play smoke passed.")
+            print(json.dumps(report, indent=2))
+        elif fractal_surround_delay_only:
+            print("Focused Fractal Surround Delay Global Mix browser/WASM local-guitar Play smoke passed.")
             print(json.dumps(report, indent=2))
         else:
             print("Browser/native chain comparison passed.")
@@ -1822,6 +1828,10 @@ def main() -> None:
         inspect_web_build_path()
     elif action == "inspect-smoke-path":
         inspect_web_smoke_path()
+    elif action == "test-fractal-global-mix-delay":
+        browser_test(fractal_global_mix_delay_only=True)
+    elif action == "test-fractal-surround-delay":
+        browser_test(fractal_surround_delay_only=True)
     else:
         build_web()
 

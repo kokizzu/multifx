@@ -110,6 +110,9 @@ void FractalSurroundDelay::set_parameters(
                                       25.0F, 0.0F, 100.0F);
     parameters.level_db = bounded(parameters.level_db,
                                   0.0F, -24.0F, 12.0F);
+    parameters.global_mix_offset = bounded(
+        parameters.global_mix_offset, 0.0F, kMinimumGlobalMixOffset,
+        kMaximumGlobalMixOffset);
     parameters_ = parameters;
     update_targets(initialized);
 }
@@ -147,7 +150,11 @@ void FractalSurroundDelay::update_targets(bool ramp_delay) noexcept {
     rotation_cos_ = std::cos(radians);
     rotation_sin_ = std::sin(radians);
     width_scale_ = parameters_.width_percent / 100.0F;
-    mix_ = parameters_.mix_percent / 100.0F;
+    const float base_mix = parameters_.mix_percent / 100.0F;
+    const float effective_mix = parameters_.global_mix_enabled
+        ? std::clamp(base_mix + parameters_.global_mix_offset, 0.0F, 1.0F)
+        : base_mix;
+    mix_ = effective_mix;
     level_gain_ = std::pow(10.0F, parameters_.level_db / 20.0F);
 
     if (!ramp_delay || current_delay_left_frames_ <= 0.0F ||

@@ -881,6 +881,14 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core and offline-renderer build. `make bench` reports 144,168 B default native state / 144,124 B browser state and no `process()` allocation. At 48 kHz stereo/128 frames, default p50/p95/p99/p99.9/max is 0.0649/0.0803/0.0979/0.2606/1.4629% of the 2.667 ms callback deadline; the 1,536,168 B maximum-time profile is 0.1324/0.1537/0.1609/0.3559/0.4740%. The dry path adds no fixed latency; wet echoes follow the selected time.
 - [ ] Human listening, physical Fractal comparison, installed firmware, exact Mark II Turbo applicability, and target-device timing remain manual. Do not claim Fractal DSP, settings, or sound parity.
 
+## Fractal FM9-family Surround Delay Global Mix follow-up (2026-11-27)
+
+- [x] Check the November 2026 Blocks Guide, printed pp. 4 and 39: Delay is Global Mix eligible up to ±50%, and the Delay block uses a distinct Mix law. The guide does not document the offset equation. Firmware v12.0 is listed for FM9 Original/Turbo, not Mark II Turbo separately; installed firmware is unknown.
+- [x] Add a project-only Global Mix opt-in to the existing Delay picker ID 117. Default is Off/0 pp; range is −50…+50 pp. When enabled, the project computes `clamp(baseMix + offset, 0, 1)` while preserving base Mix. The checkbox/slider add 8 B to native/browser effect state and no delay-ring storage.
+- [x] `make test-fractal-surround-delay` passes native default, offset, bounds/clamp, memory, and zero-process-allocation coverage. `make web-test-fractal-surround-delay` passes HeadlessChrome 151 playback using local prerecorded stereo Guitar-TECHS DI; enabled +20 pp RMS difference is 0.0225445485; disabled and endpoint-clamp differences are 0; browser state is 144,132 B.
+- [x] `make windows-cross-build` compiles the Windows MinGW core, offline renderer, and benchmark. `make bench-fractal-surround-delay` on Ryzen 9 5950X Release at 48 kHz stereo/128 frames measures p50/p95/p99/p99.9/max of 0.0709/0.0885/0.1118/0.2625/1.0260% for enabled +20 pp; state is 144,176 B and 0/20,000 callback deadline misses. No extra buffer or fixed dry latency is added.
+- [ ] Human listening, physical Fractal comparison, target-device timing, exact Mark II Turbo firmware applicability, and the manufacturer's actual Global Mix combination law remain manual or undocumented. No Fractal settings/DSP/sound parity is claimed.
+
 ## Fender Tone Master Pro — Electric Flanger Filter mode (2026-11-26)
 
 - [x] Verify the exact Model Guide v1.1.100 / Rev. A, printed p. 39: Electric Flanger Rate, Depth, Color, Tap Division, and Flanger/Filter mode. Filter keeps harmonic flanging without frequency modulation; Rate changes tone and Color adjusts intensity. The guide gives no ranges/defaults, DSP, or latency. Firmware history checked through v1.8.87 dated 2026-11-23; installed firmware is unknown.

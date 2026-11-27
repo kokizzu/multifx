@@ -338,7 +338,7 @@ const DEFAULT_PARAMETERS = {
   chorusGlobalMix: [0, 0],
   dimensionChorus: [0, 0, 0.5, 0],
   toneMasterPro3DChorus: 0,
-  fractalSurroundDelay: [375, 100, 100, 35, 35, 100, 50, 100, 25, 0],
+  fractalSurroundDelay: [375, 100, 100, 35, 35, 100, 50, 100, 25, 0, 0, 0],
   tripleDoubleChorus: [0, 0, 0.8, 7, 5, 8, 0.1, 0.2, 1],
   fourBandResonator: [0, 0, 1, 110, 164.81, 220, 329.63, 110,
     0.75, 0.75, 0.75, 0.75, 2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5,
@@ -1829,6 +1829,15 @@ const fractalSurroundDelayControls = [
   document.querySelector("#fractal-surround-mix-percent"),
   document.querySelector("#fractal-surround-level-db"),
 ];
+const fractalSurroundDelayGlobalMixEnabled = document.querySelector(
+  "#fractal-surround-global-mix-enabled",
+);
+const fractalSurroundDelayGlobalMixOffset = document.querySelector(
+  "#fractal-surround-global-mix-offset",
+);
+const fractalSurroundDelayGlobalMixOffsetValue = document.querySelector(
+  "#fractal-surround-global-mix-offset-value",
+);
 const fractalSurroundDelayValueOutputs = [
   document.querySelector("#fractal-surround-time-value"),
   document.querySelector("#fractal-surround-master-time-value"),
@@ -6438,9 +6447,16 @@ function updateFractalSurroundDelay() {
   fractalSurroundDelayValueOutputs[7].textContent = `${width.toFixed(0)}%`;
   fractalSurroundDelayValueOutputs[8].textContent = `${mix.toFixed(0)}%`;
   fractalSurroundDelayValueOutputs[9].textContent = `${level.toFixed(1)} dB`;
-  DEFAULT_PARAMETERS.fractalSurroundDelay = values;
+  const globalMixEnabled = fractalSurroundDelayGlobalMixEnabled.checked ? 1 : 0;
+  const globalMixOffsetPoints = Number(fractalSurroundDelayGlobalMixOffset.value);
+  const globalMixOffset = globalMixOffsetPoints / 100;
+  const offsetSign = globalMixOffsetPoints > 0 ? "+" : "";
+  fractalSurroundDelayGlobalMixOffsetValue.textContent =
+    `${offsetSign}${globalMixOffsetPoints.toFixed(0)} pp`;
+  const completeValues = [...values, globalMixEnabled, globalMixOffset];
+  DEFAULT_PARAMETERS.fractalSurroundDelay = completeValues;
   if (workletNode) {
-    workletNode.port.postMessage({ type: "fractal-surround-delay", value: values });
+    workletNode.port.postMessage({ type: "fractal-surround-delay", value: completeValues });
   }
 }
 
@@ -6448,6 +6464,9 @@ for (const control of fractalSurroundDelayControls) {
   control.addEventListener("input", updateFractalSurroundDelay);
   control.addEventListener("change", updateFractalSurroundDelay);
 }
+fractalSurroundDelayGlobalMixEnabled.addEventListener("change", updateFractalSurroundDelay);
+fractalSurroundDelayGlobalMixOffset.addEventListener("input", updateFractalSurroundDelay);
+fractalSurroundDelayGlobalMixOffset.addEventListener("change", updateFractalSurroundDelay);
 updateFractalSurroundDelay();
 
 function updateTripleDoubleChorus() {
@@ -17609,6 +17628,8 @@ async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, c
   const effectIndex = 117;
   const previousEffectState = enabledEffects();
   const previousValues = fractalSurroundDelayControls.map((control) => control.value);
+  const previousGlobalMixEnabled = fractalSurroundDelayGlobalMixEnabled.checked;
+  const previousGlobalMixOffset = fractalSurroundDelayGlobalMixOffset.value;
   const previousParameters = [...DEFAULT_PARAMETERS.fractalSurroundDelay];
   const previousCategory = effectCategoryFilter.value;
   try {
@@ -17625,8 +17646,11 @@ async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, c
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
         !row.querySelector(".effect-name")?.textContent.includes("Surround Delay") ||
         !checkbox || checkbox.checked || fractalSurroundDelayControls.length !== 10 ||
+        fractalSurroundDelayGlobalMixEnabled.checked ||
+        fractalSurroundDelayGlobalMixOffset.value !== "0" ||
+        fractalSurroundDelayGlobalMixOffsetValue.textContent !== "0 pp" ||
         fractalSurroundDelayControls[0].value !== "375" ||
-        DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0" ||
+        DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0,0,0" ||
         effectMemory.length !== EFFECT_NAMES.length ||
         effectMemory[effectIndex] < expectedMemory ||
         effectMemory[effectIndex] >= expectedMemory + 10_000) {
@@ -17670,9 +17694,13 @@ async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, c
       fractalSurroundDelayControls.forEach((control, index) => {
         control.value = String(values[index]);
       });
+      fractalSurroundDelayGlobalMixEnabled.checked = globalMixEnabled;
+      fractalSurroundDelayGlobalMixOffset.value = String(offsetPoints);
       updateFractalSurroundDelay();
+      await waitForWorkletBarrier();
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForWorkletBarrier();
       Atomics.store(captureView, 0, 0);
       Atomics.store(captureView, 1, 0);
       playbackOffset = 0;
@@ -17727,6 +17755,8 @@ async function runFractalSurroundDelayBrowserSmokeTest(reference, captureView, c
     fractalSurroundDelayControls.forEach((control, index) => {
       control.value = previousValues[index];
     });
+    fractalSurroundDelayGlobalMixEnabled.checked = previousGlobalMixEnabled;
+    fractalSurroundDelayGlobalMixOffset.value = previousGlobalMixOffset;
     DEFAULT_PARAMETERS.fractalSurroundDelay = previousParameters;
     updateFractalSurroundDelay();
     effectCategoryFilter.value = previousCategory;
@@ -18384,7 +18414,12 @@ async function runBrowserSelfTest() {
                 effectRows[117]?.dataset.category !== "delay" ||
                 effectRows[117]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
                 fractalSurroundDelayControls.length !== 10 ||
-                DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0" ||
+                fractalSurroundDelayGlobalMixEnabled.checked ||
+                fractalSurroundDelayGlobalMixOffset.value !== "0" ||
+                fractalSurroundDelayGlobalMixOffset.min !== "-50" ||
+                fractalSurroundDelayGlobalMixOffset.max !== "50" ||
+                fractalSurroundDelayGlobalMixOffsetValue.textContent !== "0 pp" ||
+                DEFAULT_PARAMETERS.fractalSurroundDelay.join(",") !== "375,100,100,35,35,100,50,100,25,0,0,0" ||
                  !EFFECT_NAMES[118]?.startsWith("Memory Delay · project-authored Fender control roles") ||
                  effectRows[118]?.dataset.category !== "delay" ||
                  effectRows[118]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
@@ -21276,6 +21311,42 @@ async function runBrowserSelfTest() {
        document.title = "PASS · TabletFX Volume/Pan browser test";
        return;
      }
+      if (new URLSearchParams(location.search).get("selftest") === "fractal-surround-delay") {
+        testResult.textContent = "Checking project Global Mix offset on categorized Surround Delay with local guitar audio…";
+        const surroundDelaySmoke = await runFractalSurroundDelayBrowserSmokeTest(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          fractalSurroundDelay: surroundDelaySmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Surround Delay Global Mix browser test";
+        return;
+      }
+      if (new URLSearchParams(location.search).get("selftest") === "fractal-global-mix-delay") {
+        testResult.textContent = "Checking project Global Mix opt-in on categorized Delay with local guitar audio…";
+        const globalMixSmoke = await runFractalGlobalMixDelayBrowserSmokeTestIsolated(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          fractalGlobalMixDelay: globalMixSmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Global Mix Delay browser test";
+        return;
+      }
      if (convolutionIRUploadedVersion !== convolutionIRVersion) {
        throw new Error("The local convolution IR was not acknowledged by the WASM audio processor.");
      }

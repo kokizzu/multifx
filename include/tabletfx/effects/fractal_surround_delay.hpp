@@ -27,6 +27,11 @@ struct FractalSurroundDelayParameters {
     float width_percent = 100.0F;
     float mix_percent = 25.0F;
     float level_db = 0.0F;
+    // Project-authored normalized mix delta; +0.1 adds ten percentage points
+    // to mix_percent / 100. It is separate from the manufacturer parameter
+    // model, bounded to [-0.5, +0.5], and only used when enabled.
+    bool global_mix_enabled = false;
+    float global_mix_offset = 0.0F;
 };
 
 /*
@@ -94,6 +99,8 @@ private:
     static constexpr float kMaximumDelayMs = 4000.0F;
     static constexpr float kMinimumMasterTimePercent = 25.0F;
     static constexpr float kMaximumMasterTimePercent = 400.0F;
+    static constexpr float kMinimumGlobalMixOffset = -0.5F;
+    static constexpr float kMaximumGlobalMixOffset = 0.5F;
     static constexpr std::size_t kParameterRampMs = 10U;
 
     [[nodiscard]] static float bounded(float value, float fallback,
