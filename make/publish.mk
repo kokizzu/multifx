@@ -323,6 +323,7 @@ PUBLISH_CHECKPOINTS += pitch-ring-mod
 PUBLISH_CHECKPOINTS += headrush-phaser-stereo
 PUBLISH_CHECKPOINTS += headrush-phase-invert
 PUBLISH_CHECKPOINTS += stadium-dynamics-sidechain
+PUBLISH_CHECKPOINTS += fractal-global-mix-delay
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -467,3 +468,18 @@ web-test-stadium-dynamics-sidechain: test-stadium-dynamics-sidechain web-build
 
 bench-stadium-dynamics-sidechain:
 	$(PYTHON) scripts/run_cmake.py bench-stadium-dynamics-sidechain
+
+.PHONY: test-fractal-global-mix-delay web-test-fractal-global-mix-delay bench-fractal-global-mix-delay
+test-fractal-global-mix-delay:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_delay_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-global-mix-delay: test-fractal-global-mix-delay web-build
+	$(PYTHON) scripts/web.py test-fractal-global-mix-delay
+
+bench-fractal-global-mix-delay:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-global-mix-delay
+
+.PHONY: publish-plan-fractal-global-mix-delay
+publish-plan-fractal-global-mix-delay:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-delay

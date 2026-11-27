@@ -130,6 +130,10 @@ else()
 endif()
 
 add_executable(tabletfx_offline apps/offline_render.cpp)
+add_executable(tabletfx_fractal_global_mix_delay_bench
+    apps/fractal_global_mix_delay_bench.cpp)
+target_link_libraries(tabletfx_fractal_global_mix_delay_bench PRIVATE tabletfx_core)
+
 target_link_libraries(tabletfx_offline PRIVATE tabletfx_core)
 
 add_executable(tabletfx_xr1_global_eq_bench apps/xr1_global_eq_bench.cpp)

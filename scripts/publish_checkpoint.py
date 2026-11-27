@@ -4266,7 +4266,16 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
         return
 
     partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
+    status = git("status", "--porcelain=v1", "--untracked-files=all")
+    untracked = {
+        line[3:] for line in status.splitlines() if line.startswith("?? ")
+    }
     for path in paths:
+        if path in untracked:
+            # A new file has no diff hunks until Git knows about it. The
+            # checkpoint path allowlist is the explicit scope for staging it.
+            git("add", "--", path, capture=False)
+            continue
         markers = partial.get(path)
         if markers is None:
             git("add", "--", path, capture=False)
@@ -4745,6 +4754,112 @@ PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-flanger"] = {
     "scripts/run_cmake.py": 0,
     "scripts/web.py": 0,
     "src/web/wasm_chain.cpp": 0,
+    "web/app.js": 0,
+    "web/audio-worklet.js": 0,
+    "web/index.html": 0,
+}
+
+FRACTAL_GLOBAL_MIX_DELAY_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_global_mix_delay_bench.cpp",
+    "include/tabletfx/effects.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-global-mix-delay"] = (
+    FRACTAL_GLOBAL_MIX_DELAY_CHECKPOINT_PATHS,
+    "feat: add project Global Mix offset to Delay",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-delay"] = {
+    "CMakeLists.txt": ("tabletfx_fractal_global_mix_delay_bench",),
+    "EFFECTS_MATRIX.md": ("## Fractal FM9-family Global Mix — Delay subset",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "## Fractal FM9-family Global Mix — Delay subset",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Global Mix — Delay subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Global Mix — Delay subset",
+    ),
+    "RESEARCH.md": (
+        "TabletFX implements project-authored subsets on existing Chorus",
+    ),
+    "research-state.json": ("Fractal FM9-family Global Mix — Delay subset",),
+    "apps/fractal_global_mix_delay_bench.cpp": ("delay_global_mix_enabled_plus_20pp",),
+    "include/tabletfx/effects.hpp": (
+        "configure_global_mix_offset(bool enabled, float offset)",
+    ),
+    "make/publish.mk": (
+        "fractal-global-mix-delay",
+        "test-fractal-global-mix-delay",
+        "publish-plan-fractal-global-mix-delay",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_GLOBAL_MIX_DELAY_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-global-mix-delay"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-delay"]',
+        "A new file has no diff hunks until Git knows about it.",
+    ),
+    "scripts/run_cmake.py": (
+        "bench-fractal-global-mix-delay",
+        "def bench_fractal_global_mix_delay(cmake: str)",
+    ),
+    "scripts/web.py": (
+        "fractal_global_mix_delay_only",
+        "test-fractal-global-mix-delay",
+    ),
+    "src/effects.cpp": ("void Delay::configure_global_mix_offset",),
+    "src/web/wasm_chain.cpp": (
+        "configure_delay_global_mix",
+        "tf_chain_set_delay_global_mix",
+    ),
+    "tests/test_delay.cpp": (
+        "test_global_mix_offset_is_opt_in_and_keeps_base_mix",
+        "test_global_mix_offset_is_additive_clamped_and_smoothed",
+    ),
+    "web/app.js": (
+        'const delayGlobalMixEnabled = document.querySelector',
+        'DEFAULT_PARAMETERS.delayGlobalMix = [globalMixEnabled ? 1 : 0, globalMixOffset]',
+        'const globalMixEnabled = delayGlobalMixEnabled.checked;',
+        'const globalMixOffset = Number(delayGlobalMixOffset.value) / 100;',
+        'delayGlobalMixEnabled, delayGlobalMixOffset]',
+        "async function runFractalGlobalMixDelayBrowserSmokeTestIsolated",
+        "runFractalGlobalMixDelayBrowserSmokeTestIsolated(",
+    ),
+    "web/audio-worklet.js": ("delayGlobalMix",),
+    "web/index.html": ("delay-global-mix-enabled",),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-delay"] = {
+    "CMakeLists.txt": 0,
+    "EFFECTS_MATRIX.md": 0,
+    "FLAGSHIP_EFFECT_COMPARISON.md": 0,
+    "IMPLEMENTATION_CHECKLIST.md": 0,
+    "LATENCY_AND_QUALITY.md": 0,
+    "RESEARCH.md": 0,
+    "research-state.json": 0,
+    "include/tabletfx/effects.hpp": 0,
+    "make/publish.mk": 0,
+    "scripts/publish_checkpoint.py": 1,
+    "scripts/run_cmake.py": 0,
+    "scripts/web.py": 0,
+    "src/effects.cpp": 0,
+    "src/web/wasm_chain.cpp": 0,
+    "tests/test_delay.cpp": 0,
     "web/app.js": 0,
     "web/audio-worklet.js": 0,
     "web/index.html": 0,

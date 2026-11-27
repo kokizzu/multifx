@@ -785,7 +785,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_diatonic_custom_scale_only: bool = False,
                   fractal_chromatic_harmonizer_only: bool = False,
                   fractal_diatonic_harmonizer_only: bool = False,
-                  fractal_resonator_input_gain_only: bool = False) -> None:
+                  fractal_resonator_input_gain_only: bool = False,
+                  fractal_global_mix_delay_only: bool = False) -> None:
     compiler = emscripten_cpp()
                  fractal_global_mix_chorus_only: bool = False,
                  fractal_global_mix_flanger_only: bool = False,
@@ -833,6 +834,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             print(f"Browser guitar input: local prerecorded DI {prerecorded_guitar_source}")
         make_tuner_test_audio(tuner_path)
         make_convolution_test_ir(convolution_ir_path)
+        if fractal_global_mix_delay_only and prerecorded_guitar_source is None:
+            raise SystemExit(
+                "Focused Delay Global Mix browser test requires the local prerecorded guitar DI fixture."
+            )
         make_cabinet_ir_test_wav(cabinet_ir_path)
         make_long_convolution_test_ir(long_convolution_ir_path)
         make_stereo_tape_echo_impulse(stereo_tape_echo_input_path)
@@ -1403,6 +1408,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "if(message?.type==='tape-echo')posted.push(message.value);"
             "return originalPost.call(this,message,...transfer)};"
             "try{const arpShift=document.querySelector('#pitch-arpeggiator-step-1');"
+        if fractal_global_mix_delay_only:
+            url = base_url + "/web/index.html?selftest=fractal-global-mix-delay"
             "assert(arpShift?.min==='-24'&&arpShift?.max==='24',"
             "'Pitch Arpeggiator UI does not expose the documented ±24-degree step range');"
             "arpShift.value='24';arpShift.dispatchEvent(new Event('input',{bubbles:true}));"
@@ -1750,6 +1757,7 @@ def main() -> None:
         browser_test(stadium_dynamics_sidechain_only=True)
     elif action == "test-formant-control-lfo":
         browser_test(formant_control_lfo_only=True)
+        "test-fractal-global-mix-delay",
     elif action == "test-headrush-drop-tune":
         browser_test(headrush_drop_tune_only=True)
     elif action == "test-headrush-phase-invert":
@@ -1820,3 +1828,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    elif action == "test-fractal-global-mix-delay":
+        browser_test(fractal_global_mix_delay_only=True)

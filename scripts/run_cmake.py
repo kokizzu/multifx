@@ -230,7 +230,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "action",
-        choices=("configure", "build", "test", "bench",
+        choices=("bench-fractal-global-mix-delay", "configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
@@ -342,3 +342,16 @@ if __name__ == "__main__":
     main()
     elif action == "bench-fractal-global-mix-flanger":
         bench_fractal_global_mix_flanger(cmake)
+    elif action == "bench-fractal-global-mix-delay":
+        bench_fractal_global_mix_delay(cmake)
+
+
+def bench_fractal_global_mix_delay(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fractal_global_mix_delay_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fractal_global_mix_delay_bench"
+    )
+    run([str(executable)])

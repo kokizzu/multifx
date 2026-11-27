@@ -1,5 +1,155 @@
 import { decodePcmWave, decodeCabinetIrWave } from "./wav_decoder.js";
 
+async function runFractalGlobalMixDelayBrowserSmokeTestIsolated(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [delayPreset.value, delayMode.value, delayMs.value,
+    delayBpm.value, delayDivision.value, delayFeedback.value, delayMix.value,
+    delayGlobalMixEnabled.checked, delayGlobalMixOffset.value,
+    delayTrailsOnBypass.checked];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Global Mix Delay test requires local stereo guitar DI audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "delay";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="21"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        delayGlobalMixEnabled.checked || delayGlobalMixOffset.value !== "0" ||
+        delayGlobalMixOffset.min !== "-50" || delayGlobalMixOffset.max !== "50" ||
+        delayGlobalMixOffsetValue.value !== "0 pp" ||
+        JSON.stringify(DEFAULT_PARAMETERS.delayGlobalMix) !== "[0,0]" ||
+        !(effectMemory[21] > 0)) {
+      throw new Error("Delay Global Mix defaults, bounds, or Delay picker category are invalid.");
+    }
+
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 21;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    let barrierSequence = 0;
+    const waitForWorkletBarrier = () => new Promise((resolve, reject) => {
+      const port = workletNode.port;
+      const token = `delay-global-mix-${++barrierSequence}`;
+      const timeout = setTimeout(() => {
+        port.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for the Delay Global Mix worklet barrier."));
+      }, 5000);
+      const onMessage = (event) => {
+        if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+        clearTimeout(timeout);
+        port.removeEventListener("message", onMessage);
+        resolve();
+      };
+      port.addEventListener("message", onMessage);
+      port.postMessage({ type: "test-barrier", token });
+    });
+    await waitForWorkletBarrier();
+
+    const captureAt = async (baseMix, enabled, offsetPoints) => {
+      delayPreset.value = "custom";
+      delayMode.value = "free";
+      delayMs.value = "100";
+      delayFeedback.value = "0.25";
+      delayMix.value = String(baseMix);
+      delayGlobalMixEnabled.checked = enabled;
+      delayGlobalMixOffset.value = String(offsetPoints);
+      updateDelay(true);
+      const expected = [enabled ? 1 : 0, offsetPoints / 100];
+      if (JSON.stringify(DEFAULT_PARAMETERS.delayGlobalMix) !==
+          JSON.stringify(expected) || DEFAULT_PARAMETERS.delay[2] !== baseMix ||
+          delayGlobalMixOffsetValue.value !==
+            `${offsetPoints > 0 ? "+" : ""}${offsetPoints} pp`) {
+        throw new Error("Delay Global Mix controls changed the base Mix or failed to update.");
+      }
+      await waitForWorkletBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForWorkletBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Global Mix Delay playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) {
+          throw new Error(`Global Mix Delay output is not finite at sample ${i}.`);
+        }
+      }
+      return output;
+    };
+    const rmsDifference = (left, right) => {
+      let squared = 0;
+      for (let i = 0; i < left.length; i += 1) {
+        const difference = left[i] - right[i];
+        squared += difference * difference;
+      }
+      return Math.sqrt(squared / Math.max(1, left.length));
+    };
+    const noOffset = await captureAt(0.3, false, 0);
+    const disabledOffset = await captureAt(0.3, false, 20);
+    const enabledOffset = await captureAt(0.3, true, 20);
+    const upperOffset = await captureAt(0.75, true, 50);
+    const upperClamped = await captureAt(1.0, true, 50);
+    const lowerOffset = await captureAt(0.25, true, -50);
+    const lowerClamped = await captureAt(0.0, true, -50);
+    const disabledDifference = rmsDifference(noOffset, disabledOffset);
+    const enabledDifference = rmsDifference(noOffset, enabledOffset);
+    const upperClampDifference = rmsDifference(upperOffset, upperClamped);
+    const lowerClampDifference = rmsDifference(lowerOffset, lowerClamped);
+    if (disabledDifference > 1e-7 || enabledDifference < 1e-4 ||
+        upperClampDifference > 1e-7 || lowerClampDifference > 1e-7) {
+      throw new Error(`Global Mix Delay behavior failed: disabled RMS ${disabledDifference}, enabled RMS ${enabledDifference}, upper clamp RMS ${upperClampDifference}, lower clamp RMS ${lowerClampDifference}.`);
+    }
+    return {
+      category: "Delay",
+      effectId: 21,
+      baseMix: 0.3,
+      offsetPoints: 20,
+      defaultEnabled: false,
+      projectOffsetBoundsPoints: [-50, 50],
+      disabledOffsetRms: disabledDifference,
+      enabledOffsetRms: enabledDifference,
+      upperClampRms: upperClampDifference,
+      lowerClampRms: lowerClampDifference,
+      effectMemoryBytes: effectMemory[21],
+      addedAudioBuffers: 0,
+    };
+  } finally {
+    stopSource(false);
+    [delayPreset.value, delayMode.value, delayMs.value, delayBpm.value,
+      delayDivision.value, delayFeedback.value, delayMix.value,
+      delayGlobalMixEnabled.checked, delayGlobalMixOffset.value,
+      delayTrailsOnBypass.checked] = previousControls;
+    updateDelay(true);
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      box.checked = previousEffectState[index];
+      workletNode?.port.postMessage({
+        type: "enable", index, value: previousEffectState[index],
+      });
+    });
+    effectCategoryFilter.value = previousCategory;
+    updateEffectBrowser();
+    workletNode?.port.postMessage({ type: "reset" });
+    workletNode?.port.postMessage({ type: "capture-reset" });
+  }
+}
+
 const EFFECT_NAMES = [
   "Input trim",
   "Volume pedal",
@@ -1810,6 +1960,9 @@ const opticalCompressorControls = [
   "optical-threshold-db", "optical-ratio", "optical-knee-db", "optical-attack-ms",
   "optical-release-ms", "optical-program-release-ms", "optical-rms-window-ms",
   "optical-makeup-db",
+const delayGlobalMixEnabled = document.querySelector("#delay-global-mix-enabled");
+const delayGlobalMixOffset = document.querySelector("#delay-global-mix-offset");
+const delayGlobalMixOffsetValue = document.querySelector("#delay-global-mix-offset-value");
 ].map((id) => ({ input: document.querySelector(`#${id}`), output: document.querySelector(`#${id}-value`) }));
 const fetCompressorControls = [
   "fet-threshold-db", "fet-ratio", "fet-knee-db", "fet-attack-ms",
@@ -7127,8 +7280,11 @@ function applyDelayPreset() {
     delayMode.value = "free";
     delayMs.value = "110";
     delayBpm.value = "120";
+  const globalMixEnabled = delayGlobalMixEnabled.checked;
+  const globalMixOffset = Number(delayGlobalMixOffset.value) / 100;
     delayDivision.value = "4";
     delayFeedback.value = "0.12";
+  DEFAULT_PARAMETERS.delayGlobalMix = [globalMixEnabled ? 1 : 0, globalMixOffset];
     delayMix.value = "0.25";
   } else if (delayPreset.value === "tape") {
     delayMode.value = "free";
@@ -8348,7 +8504,8 @@ for (const controls of delayMultiTapInputs) {
     control.addEventListener("change", updateDelayMultiTap);
   }
 }
-for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix]) {
+for (const control of [delayMode, delayMs, delayBpm, delayDivision, delayFeedback, delayMix,
+  delayGlobalMixEnabled, delayGlobalMixOffset]) {
   control.addEventListener("input", () => updateDelay());
   control.addEventListener("change", () => updateDelay());
 }
@@ -21386,6 +21543,24 @@ async function runBrowserSelfTest() {
     const ringModulatorSmoke = await runRingModulatorBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );
+      if (new URLSearchParams(location.search).get("selftest") === "fractal-global-mix-delay") {
+        testResult.textContent = "Checking project Global Mix opt-in on categorized Delay with local guitar audio…";
+        const globalMixSmoke = await runFractalGlobalMixDelayBrowserSmokeTestIsolated(
+          reference, captureView, captureBuffer,
+        );
+        const focusedReport = {
+          result: "passed",
+          browser: navigator.userAgent,
+          sampleRate: audioContext.sampleRate,
+          channels: reference.channels,
+          frames: reference.frames,
+          fractalGlobalMixDelay: globalMixSmoke,
+        };
+        testResult.dataset.status = "passed";
+        testResult.textContent = JSON.stringify(focusedReport);
+        document.title = "PASS · TabletFX Global Mix Delay browser test";
+        return;
+      }
     testResult.textContent = "Checking tracked Synth playback on local guitar audio…";
     const fractalThreeVoiceSynthSmoke =
       await runFractalThreeVoiceSynthBrowserSmokeTest(

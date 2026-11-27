@@ -337,6 +337,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
        module._tf_chain_set_delay_trails_on_bypass(
          this.chain, parameters.delayTrailsOnBypass ? 1 : 0,
        );
+      const delayGlobalMix = parameters.delayGlobalMix || [0, 0];
+      module._tf_chain_set_delay_global_mix(
+        this.chain, delayGlobalMix[0], delayGlobalMix[1],
+      );
       module._tf_chain_set_delay_bbd_style(this.chain, parameters.delayBbd ? 1 : 0);
       module._tf_chain_set_delay_bbd_mode(this.chain, parameters.delayBbdMode ? 1 : 0);
       const tape = parameters.delayTape || [0, 0.45, 0.35, 0.3, 0.08, 6];

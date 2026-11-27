@@ -780,6 +780,81 @@ void test_parameter_ramps_are_block_partition_invariant_and_resettable() {
             "reset must settle pending tempo/parameter changes to their selected targets");
 }
 
+void test_global_mix_offset_is_opt_in_and_keeps_base_mix() {
+    tabletfx::Delay base(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.25F);
+    tabletfx::Delay disabled_offset(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.25F);
+    tabletfx::Delay enabled_zero(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.25F);
+    require(!base.global_mix_offset_enabled() && near(base.global_mix_offset(), 0.0F),
+            "Global Mix offset must default to disabled at zero");
+
+    base.reset();
+    disabled_offset.reset();
+    enabled_zero.reset();
+    disabled_offset.configure_global_mix_offset(false, 0.5F);
+    enabled_zero.configure_global_mix_offset(true, 0.0F);
+
+    std::array<float, 48> base_audio{};
+    for (std::size_t i = 0; i < base_audio.size(); ++i) {
+        base_audio[i] = std::sin(static_cast<float>(i) * 0.17F) * 0.4F;
+    }
+    auto disabled_audio = base_audio;
+    auto zero_audio = base_audio;
+    base.process(base_audio, 1);
+    disabled_offset.process(disabled_audio, 1);
+    enabled_zero.process(zero_audio, 1);
+    for (std::size_t i = 0; i < base_audio.size(); ++i) {
+        require(near(base_audio[i], disabled_audio[i]) &&
+                    near(base_audio[i], zero_audio[i]),
+                "disabled or zero Global Mix offset must preserve ordinary Delay output");
+    }
+    require(near(disabled_offset.mix(), 0.25F) && near(enabled_zero.mix(), 0.25F),
+            "Global Mix offset must not overwrite the base Mix value");
+}
+
+void test_global_mix_offset_is_additive_clamped_and_smoothed() {
+    tabletfx::Delay delay(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.25F);
+    delay.reset();
+    delay.configure_global_mix_offset(true, 0.25F);
+    require(near(delay.mix(), 0.25F),
+            "additive Global Mix offset must retain the original base Mix");
+    require(near(delay.effective_mix(), 0.25F),
+            "Global Mix target change must begin at the current smoothed Mix");
+
+    std::array<float, 5> first_half{};
+    delay.process(first_half, 1);
+    require(delay.effective_mix() > 0.25F && delay.effective_mix() < 0.5F,
+            "Global Mix change must follow the Delay's existing parameter ramp");
+    std::array<float, 5> second_half{};
+    delay.process(second_half, 1);
+    require(near(delay.effective_mix(), 0.5F) && near(delay.mix(), 0.25F),
+            "normalized +0.25 offset must add 25 percentage points without changing base Mix");
+
+    tabletfx::Delay upper(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.75F);
+    upper.configure_global_mix_offset(true, 0.9F);
+    upper.reset();
+    require(near(upper.global_mix_offset(), 0.5F) && near(upper.effective_mix(), 1.0F) &&
+                near(upper.mix(), 0.75F),
+            "positive offset and effective Mix must clamp at +50 points and 100 percent");
+
+    tabletfx::Delay lower(1000.0F, 1, 100.0F, 4.0F, 0.0F, 0.25F);
+    lower.configure_global_mix_offset(true, -0.9F);
+    lower.reset();
+    require(near(lower.global_mix_offset(), -0.5F) && near(lower.effective_mix(), 0.0F) &&
+                near(lower.mix(), 0.25F),
+            "negative offset and effective Mix must clamp at -50 points and zero percent");
+}
+
+void test_global_mix_offset_processing_allocates_nothing() {
+    tabletfx::Delay delay(48000.0F, 2, 100.0F, 20.0F, 0.5F, 0.25F);
+    std::array<float, 256> audio{};
+    audio.fill(0.1F);
+    const std::size_t before = allocation_count.load(std::memory_order_relaxed);
+    delay.configure_global_mix_offset(true, -0.25F);
+    for (int iteration = 0; iteration < 100; ++iteration) delay.process(audio, 2);
+    const std::size_t after = allocation_count.load(std::memory_order_relaxed);
+    require(after == before, "Global Mix offset configuration or Delay processing allocated memory");
+}
+
 void test_repeat_filters_shape_delay_path_and_preserve_dry_audio() {
     const auto capture_echoes = [](bool enabled, float low_cut_hz,
                                    float high_cut_hz) {
@@ -1063,6 +1138,9 @@ int main() {
         test_tape_head_reconfiguration_is_smoothed();
         test_tempo_change_crossfades_without_discontinuity();
         test_parameter_ramps_are_block_partition_invariant_and_resettable();
+        test_global_mix_offset_is_opt_in_and_keeps_base_mix();
+        test_global_mix_offset_is_additive_clamped_and_smoothed();
+        test_global_mix_offset_processing_allocates_nothing();
         test_repeat_filters_shape_delay_path_and_preserve_dry_audio();
         test_repeat_filters_bypass_stereo_bounds_reset_and_allocations();
         test_trails_on_bypass_default_off_clears_and_preserves_dry_audio();

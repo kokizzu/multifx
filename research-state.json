@@ -6,8 +6,8 @@
   "workflow": "flagship-effects-categorized",
   "previous_checkpoint_commit": "6eef29188bad9eb398bd663c4099b4f62e1933ed",
   "latest_audit": {
-    "name": "Fractal FM9-family Global Mix — Flanger subset",
-    "status": "Current guide eligibility and exact-model/firmware qualifications verified. Project Flanger Global Mix subset passes native, local-guitar browser/WASM, Windows MinGW, and isolated CPU/memory checks. The manufacturer combination equation is not published; no Fractal parity is claimed.",
+    "name": "Fractal FM9-family Global Mix — Delay subset",
+    "status": "The current guide eligibility, distinct Delay Mix law, and exact-model/firmware qualifications are recorded. Project Delay Global Mix subset passes native, local-guitar browser/WASM, Windows MinGW, and isolated CPU/memory checks. The manufacturer combination equation is not published; no Fractal parity is claimed.",
     "date": "2026-11-27",
     "picker_index": 16,
     "category": "Modulation",
@@ -81,6 +81,28 @@
       },
       "remaining": "Human listening, exact Mark II Turbo compatibility/installed firmware, and target-device timing. Other guide-listed blocks remain queued."
     },
+    {
+      "name": "Fractal FM9-family Global Mix — Delay subset",
+      "status": "The November 2026 eligible-block list, distinct Delay Mix law, and FM9 firmware/SKU qualifications are recorded. Project-only Delay opt-in at Delay picker ID 21 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. Human listening, exact SKU applicability, installed firmware, and device timing remain open.",
+      "date": "2026-11-27",
+      "picker_index": 21,
+      "category": "Delay",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "November 2026 Blocks Guide, printed pp. 4 and 39; FM9 v12.0 dated 2026-07-07 lists Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Delay is eligible for the Global Mix offset. The guide states Delay has a different Mix law, but not the offset equation. FM9 Mark II Turbo is not named separately; exact SKU and installed firmware applicability remain unknown."
+      },
+      "documented_controls": "Per-block Global Mix switch and shared Effects Mix offset up to ±50%; Delay's Mix law differs from other blocks. The Global Mix equation is not published.",
+      "project_controls": "Existing Delay at category Delay / picker ID 21; project-only opt-in disabled by default, offset −50…+50 pp, base Mix stored separately, and effective Mix clamp(base + offset, 0, 1). The existing parameter ramp is reused.",
+      "verification": {
+        "native": "make test-fractal-global-mix-delay passes focused tabletfx_delay_tests and offline CLI checks.",
+        "browser": "HeadlessChrome 151 local Guitar-TECHS stereo DI: Delay/ID 21, default off/0 pp, disabled-offset RMS below 1e-7, enabled +20 pp RMS 0.0130543164, endpoint clamps 0, browser state 768,648 B.",
+        "windows": "make windows-cross-build compiles the MinGW core, offline renderer, and Delay benchmark.",
+        "latency_memory": "Ryzen 9 5950X Release at 48 kHz stereo/128 frames: disabled +20 pp stored p50/p95/p99/p99.9/max 0.225/0.263/0.318/1.049/9.368%; enabled 0.111/0.252/0.290/0.582/10.501%. 768,832 B native state, no process allocations or fixed latency, 0/20,000 deadline misses; maxima are scheduling-sensitive outliers."
+      },
+      "remaining": "Human listening, exact Mark II Turbo compatibility/installed firmware, target-device timing, the manufacturer Delay Mix law, and the Global Mix equation."
     },
     {
       "name": "Fractal FM9-family Surround Delay",

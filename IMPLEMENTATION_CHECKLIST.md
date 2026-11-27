@@ -925,3 +925,13 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build.
 - [x] `make bench-fractal-global-mix-flanger`: Ryzen 9 5950X Release, 48 kHz stereo, 128 frames, 3,000 warm-up and 20,000 measured callbacks. Disabled p50/p95/p99/p99.9/max 0.059/0.060/0.140/0.415/1.177%; enabled +20 pp 0.059/0.073/0.092/0.413/1.059% of the 2.667 ms budget. Both profiles use 4,840 B, have 0 allocations and 0/20,000 deadline misses. No fixed latency or added buffer.
 - [ ] Human listening, physical FM9 Mark II Turbo comparison, exact firmware applicability, and target-device timing remain manual. The Global Mix equation remains unknown; do not claim Fractal settings, DSP, or sound parity.
+
+## Fractal FM9-family Global Mix — Delay subset (2026-11-27)
+
+- [x] Verify the November 2026 Blocks Guide, printed p. 4: Delay is eligible for the per-block Global Mix switch and shared offset up to ±50%. Printed p. 39 says Delay has a different Mix law; the Global Mix equation is not specified. FM9 v12.0 downloads list Original/Turbo, not Mark II Turbo separately; installed firmware is unknown.
+- [x] Add a project-only, default-off control to the existing Delay at category Delay / picker ID 21. Offset defaults to 0 pp and ranges −50…+50 pp. TabletFX computes `clamp(baseMix + offset, 0, 1)` while preserving stored base Mix and using the existing parameter ramp. This is not Fractal formula/settings/sound parity.
+- [x] `make test-fractal-global-mix-delay` passes focused `tabletfx_delay_tests` and offline CLI checks. Existing Delay tests cover default identity, opt-in, offset bounds/clamps, smoothing, preserved base Mix, and zero process allocations.
+- [x] `make web-test-fractal-global-mix-delay` passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI: Delay/ID 21, defaults and bounds, base-Mix preservation, disabled RMS below 1e-7, enabled +20 pp RMS 0.0130543164, both clamp RMS 0, and 768,648 B browser/WASM state.
+- [x] `make windows-cross-build` compiles the MinGW core, offline renderer, and Delay benchmark.
+- [x] `make bench-fractal-global-mix-delay`: Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. Disabled +20 pp stored p50/p95/p99/p99.9/max 0.225/0.263/0.318/1.049/9.368%; enabled 0.111/0.252/0.290/0.582/10.501% of the 2.6667 ms budget. Both profiles use 768,832 B, allocate nothing in `process()`, add no fixed latency, and miss 0/20,000 deadlines; maxima are scheduling-sensitive outliers.
+- [ ] Human listening, physical FM9 Mark II Turbo comparison, exact SKU/firmware applicability, and target-device timing remain manual. The Fractal Delay Mix law and Global Mix equation remain unknown.

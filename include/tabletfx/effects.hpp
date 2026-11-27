@@ -185,6 +185,11 @@ public:
     // repeats. This reuses the existing delay ring and adds no processor stage.
     void configure_bbd_style(bool enabled) noexcept;
     // Project-authored BBD repeat mode. MOD uses gentler saturation and a
+    // Project interpretation of Fractal Global Mix for this Delay's shared Mix:
+    // effective Mix = clamp(base Mix + offset, 0, 1). The offset is normalized
+    // wet-ratio units, bounded to +/-0.50 (50 percentage points). Disabled/zero
+    // is identity. Fractal's exact equation is not documented; this is not parity.
+    void configure_global_mix_offset(bool enabled, float offset) noexcept;
     // small repeat-path gain match at 0.5 linear level. This does not claim
     // HeadRush DSP, control-curve, or active/bypass level-matching parity.
     void configure_bbd_mode(bool mod) noexcept;

@@ -2075,6 +2075,11 @@ public:
 
     [[nodiscard]] float delay_time_ms() const noexcept {
         return static_cast<const tabletfx::Delay*>(effects_[21].effect.get())
+    void configure_delay_global_mix(bool enabled, float offset) noexcept {
+        static_cast<tabletfx::Delay*>(effects_[21].effect.get())
+            ->configure_global_mix_offset(enabled, offset);
+    }
+
             ->delay_time_ms();
     }
 
@@ -6126,6 +6131,13 @@ TABLETFX_WASM_EXPORT void tf_chain_set_delay_trails_on_bypass(
 
 TABLETFX_WASM_EXPORT void tf_chain_set_delay_bbd_style(
     void* opaque, std::uint32_t enabled) noexcept {
+TABLETFX_WASM_EXPORT void tf_chain_set_delay_global_mix(
+    void* opaque, std::uint32_t enabled, float offset) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_delay_global_mix(enabled != 0U, offset);
+    }
+}
+
     if (opaque != nullptr) {
         as_chain(opaque)->configure_delay_bbd_style(enabled != 0U);
     }

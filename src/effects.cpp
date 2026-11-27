@@ -294,6 +294,19 @@ void Delay::configure(float delay_ms, float feedback, float mix) noexcept {
     retarget_parameters();
 }
 
+float Delay::target_effective_mix() const noexcept {
+    const float offset = global_mix_offset_enabled_ ? global_mix_offset_ : 0.0F;
+    return std::clamp(target_mix_ + offset, 0.0F, 1.0F);
+}
+
+void Delay::configure_global_mix_offset(bool enabled, float offset) noexcept {
+    if (std::isfinite(offset)) {
+        global_mix_offset_ = std::clamp(offset, -0.5F, 0.5F);
+    }
+    global_mix_offset_enabled_ = enabled;
+    retarget_parameters();
+}
+
 float Delay::storage_peak() const noexcept {
     float peak = 0.0F;
     for (float sample : storage_) peak = std::max(peak, std::abs(sample));
