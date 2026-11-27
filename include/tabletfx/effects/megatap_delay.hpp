@@ -60,6 +60,9 @@ struct MegatapDelayParameters {
     float envelope_release_ms = 15.0F;
     float input_gain_db = 0.0F;
     float mix = 0.25F;
+    // Project-authored opt-in offset, separate from the stored base Mix.
+    bool global_mix_enabled = false;
+    float global_mix_offset = 0.0F;
     float level_db = 0.0F;
     MegatapInputSelect input_select = MegatapInputSelect::sum;
     bool envelope_enabled = false;

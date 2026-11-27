@@ -964,4 +964,21 @@ Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.
 | Offset +20 pp stored, opt-in Off | 0.059% | 0.060% | 0.140% | 0.415% | 1.177% | 4,840 B | 0 | 0/20,000 |
 | Offset +20 pp, opt-in On (effective Mix 55%) | 0.059% | 0.073% | 0.092% | 0.413% | 1.059% | 4,840 B | 0 | 0/20,000 |
 
-The desktop maxima are scheduler-sensitive; these isolated calls do not predict tablet or whole-chain cost. Local Guitar-TECHS DI browser Play measured disabled +20 pp RMS difference 0, enabled +20 pp difference 0.018654, upper clamp 0, and lower-clamp difference below 1e−15. Native/browser, Windows MinGW build, and offline CLI checks pass. Human listening, exact-model firmware applicability, and target-device timing remain manual.
+
+The desktop maxima are scheduler-sensitive; these isolated calls do not predict tablet or whole-chain cost. Local Guitar-TECHS DI browser Play measured disabled +20 pp RMS difference 0, enabled +20 pp RMS difference 0.018654, upper clamp 0, and lower-clamp difference below 1e−15. Native/browser, Windows MinGW build, and offline CLI checks pass. Human listening, exact-model firmware applicability, and target-device timing remain manual.
+
+## Fractal FM9-family Megatap Delay Global Mix subset (2026-11-27)
+
+The project-only Global Mix option reuses the existing Megatap delay ring and adds no delay storage or fixed dry-path latency. The full isolated native processor state is 1,028,132 B at both 16 and 64 taps; the native test confirms zero processing-time allocations. Wet output still follows the configured tap delay. This memory and DSP are the project implementation, not Fractal hardware measurements.
+
+Release benchmark on AMD Ryzen 9 5950X used 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. Values are isolated processor-call time as a percentage of one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | State | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 taps, default | 0.2985% | 0.3731% | 0.4995% | 0.7545% | 28.4089% | 1,028,132 B | 0/20,000 |
+| 16 taps, offset stored/disabled | 0.2981% | 0.3518% | 0.4995% | 0.6015% | 28.9875% | 1,028,132 B | 0/20,000 |
+| 16 taps, offset +20 pp enabled | 0.2959% | 0.3079% | 0.4939% | 0.6810% | 20.0769% | 1,028,132 B | 0/20,000 |
+| 64 taps, default | 0.9878% | 1.1513% | 1.6380% | 1.8548% | 26.4637% | 1,028,132 B | 0/20,000 |
+| 16 taps, mono | 0.2460% | 0.4234% | 0.4440% | 0.6679% | 20.0510% | 1,028,132 B | 0/20,000 |
+
+All measured calls stayed below the callback deadline. Maximum values are scheduler-sensitive outliers and remain below 100%; these isolated calls do not predict tablet or full-chain load. HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI found disabled-offset RMS difference 0 and enabled +20 pp difference 0.0108016722. Human listening, target-device timing, physical-device comparison, and Fractal Mix-law parity remain open.

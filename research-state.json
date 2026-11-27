@@ -1,37 +1,37 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-26",
+  "updated": "2026-11-27",
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "72074fe5bf8c7369f51faccfe685a0b97ac05c3a",
+  "previous_checkpoint_commit": "1f3b114f88168d749b66f6ed1bf2f5cf1fb5236b",
   "latest_audit": {
-    "name": "Fractal FM9-family Global Mix — Surround Delay subset",
-    "status": "The November 2026 Blocks Guide lists Delay for Global Mix and notes a distinct Delay Mix law without giving the offset equation. The project-only opt-in on Surround Delay ID 117 passes focused native, local-guitar browser/WASM, Windows MinGW, and isolated CPU/memory checks. Manufacturer parity is not claimed.",
+    "name": "Fractal FM9-family Global Mix — Megatap Delay subset",
+    "status": "The November 2026 Blocks Guide lists Megatap for shared Global Mix up to ±50%, with relevant controls on printed pp. 4 and 57–58, but no Megatap-specific equation. The project-only offset at categorized Delay picker ID 68 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
     "date": "2026-11-27",
-    "picker_index": 117,
+    "picker_index": 68,
     "category": "Delay",
     "official_source": {
       "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover dated November 2026, printed pp. 4, 31–34, and 39; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 57–58; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
       "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
       "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The current guide lists Delay as eligible for shared ±50% Global Mix and says Delay has a different Mix law, but omits the Surround Delay combination equation. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
+      "qualification": "The current guide lists Megatap for shared Global Mix up to ±50% and identifies its Mix/Level/Balance/Global Mix controls, but does not publish the Megatap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
     },
-    "documented_controls": "Global Mix is a per-block opt-in to a global Effects Mix offset up to ±50%. Printed p. 39 says Delay uses a different Mix law; printed pp. 31–34 describe Surround Delay controls but not how Global Mix combines with its Mix parameter.",
-    "project_controls": "Existing categorized Delay picker ID 117 has a default-off opt-in and offset slider −50…+50 percentage points (default 0). Effective Mix is clamp(base Mix + offset, 0, 1) when enabled; base Mix remains separately stored. This project-authored interpretation is not the Fractal Delay Mix law.",
+    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",
+    "project_controls": "Existing categorized Delay picker ID 68 has a default-off project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
     "verification": {
-      "native": "make test-fractal-surround-delay passes focused default, offset, bounds/clamps, memory, and zero-process-allocation tests.",
-      "browser": "make web-test-fractal-surround-delay passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 117, default Off/0 pp and bounds, disabled-offset RMS 0, enabled +20 pp RMS difference 0.0225445485, upper/lower clamp RMS 0, rotation response, and 144,132 B browser effect state.",
-      "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Surround Delay benchmark.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. Default stereo p50/p95/p99/p99.9/max 0.0713/0.0761/0.0803/0.3034/0.9825%; +20 pp stored/disabled 0.0713/0.0765/0.0814/0.2805/26.8556%; enabled +20 pp 0.0709/0.0885/0.1118/0.2625/1.0260%. All below deadline, 0/20,000 misses; 144,176 B default native state, 1,536,176 B max-time state; no new delay-ring storage or process allocations."
+      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",
+      "browser": "make web-test-fractal-megatap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 68, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0108016722.",
+      "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Megatap benchmark.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. 16-tap p50/p95/p99/p99.9/max: default 0.2985/0.3731/0.4995/0.7545/28.4089%; +20 pp stored/disabled 0.2981/0.3518/0.4995/0.6015/28.9875%; +20 pp enabled 0.2959/0.3079/0.4939/0.6810/20.0769%. 64 taps: 0.9878/1.1513/1.6380/1.8548/26.4637%; mono: 0.2460/0.4234/0.4440/0.6679/20.0510%. All 0/20,000 callback misses; measured effect state 1,028,132 B and no process allocations."
     },
-    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the manufacturer Global Mix equation remain open. Continue with the other guide-listed blocks; do not infer these manufacturer behaviors."
+    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Audit the existing Megatap Delay at category Delay against the November 2026 Blocks Guide and implement its project-only Global Mix opt-in at the current picker ID if the existing processor semantics allow a neutral default. Continue the remaining eligible Multitap Delay, Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay blocks one at a time; do not infer Fractal Mix laws. Then continue exact-model HeadRush Prime, Melofty AXOM MAX, Fender Tone Master Pro, Line 6 Helix Stadium XL, and XRecer XR1 gaps. Do not add Prime Global EQ before independent output routes exist or XR1 FX loops before a real routing host exists.",
+    "next_feature": "Audit the existing Multitap Delay at category Delay against the November 2026 Blocks Guide, then implement its documented Global Mix-eligible controls as a project-only feature where semantics are clear. Continue Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay one at a time. Verify each model-specific Mix law and algorithm before implementing; do not infer Fractal settings or parity. Then continue exact-model HeadRush Prime, Melofty AXOM MAX, Fender Tone Master Pro, Line 6 Helix Stadium XL, and XRecer XR1 gaps. Do not add Prime Global EQ before independent output routes exist or XR1 FX loops before a real routing host exists.",
     "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
@@ -57,6 +57,7 @@
         "latency_memory": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: disabled p50/p95/p99/p99.9/max 0.076/0.096/0.114/0.268/0.502%; enabled 0.076/0.101/0.128/0.264/2.111% of 2.6667 ms. 0/20,000 deadline misses; 34,856 B native state; no added buffers, latency, or allocations."
       },
       "remaining": "Human listening, physical exact-SKU comparison, installed firmware applicability, target-device performance, and all other guide-listed Global Mix block families remain open."
+    },
     {
       "name": "Fractal FM9-family Global Mix — Flanger subset",
       "status": "The November 2026 eligible-block list and FM9 firmware/SKU qualifications are recorded. Project-only Flanger opt-in at Modulation ID 17 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. Human listening, exact SKU applicability, installed firmware, and device timing remain open.",
@@ -1575,33 +1576,32 @@
         "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. Default stereo p50/p95/p99/p99.9/max 0.0713/0.0761/0.0803/0.3034/0.9825%; +20 pp stored/disabled 0.0713/0.0765/0.0814/0.2805/26.8556%; enabled +20 pp 0.0709/0.0885/0.1118/0.2625/1.0260%. All below deadline, 0/20,000 misses; 144,176 B default native state, 1,536,176 B max-time state; no new delay-ring storage or process allocations."
       },
       "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the manufacturer Global Mix equation remain open."
-    }
-  ],
+    },
+    {
+      "name": "Fractal FM9-family Global Mix — Megatap Delay subset",
+      "status": "The November 2026 Blocks Guide lists Megatap for shared Global Mix up to ±50%, with relevant controls on printed pp. 4 and 57–58, but no Megatap-specific equation. The project-only offset at categorized Delay picker ID 68 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+      "date": "2026-11-27",
+      "picker_index": 68,
+      "category": "Delay",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 57–58; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The current guide lists Megatap for shared Global Mix up to ±50% and identifies its Mix/Level/Balance/Global Mix controls, but does not publish the Megatap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
+      },
+      "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",
+      "project_controls": "Existing categorized Delay picker ID 68 has a default-off project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+      "verification": {
+        "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",
+        "browser": "make web-test-fractal-megatap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 68, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0108016722.",
+        "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Megatap benchmark.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. 16-tap p50/p95/p99/p99.9/max: default 0.2985/0.3731/0.4995/0.7545/28.4089%; +20 pp stored/disabled 0.2981/0.3518/0.4995/0.6015/28.9875%; +20 pp enabled 0.2959/0.3079/0.4939/0.6810/20.0769%. 64 taps: 0.9878/1.1513/1.6380/1.8548/26.4637%; mono: 0.2460/0.4234/0.4440/0.6679/20.0510%. All 0/20,000 callback misses; measured effect state 1,028,132 B and no process allocations.",
+        "diff_check": "make test passes 123/123 CTest and 13 fixture-safety tests; make diff-check passes. No GitHub workflow files changed."
+      },
+      "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
+    }],
   "previous_checkpoint": {
-    "name": "HeadRush Prime per-block Phase Invert",
-    "status": "Exact-model v5.1.0 release-note control identified; project-authored categorized Advanced Block Edit toggle passes focused native, browser/WASM local-guitar, Windows MinGW core-build, and callback CPU/memory checks. Manual/device and native Windows host checks remain. No Prime algorithm, settings, or signal-path parity is claimed.",
-    "date": "2026-11-27",
-    "picker_index": null,
-    "category": "Utility · per-block control",
-    "official_source": {
-      "title": "HeadRush Prime firmware update instructions",
-      "revision": "v5.1.0, released August 2026; v5.2.0, released October 2026; installed firmware unknown.",
-      "url": "https://cdn.inmusicbrands.com/Software/SGEE/51/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.1.0.pdf",
-      "current_firmware_url": "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
-      "qualification": "v5.1.0 added Phase Invert to Advanced Block Edit, but does not document parameter default, insertion point, split-path behavior, bypass behavior, DSP, or latency. v5.2.0 does not discuss the control."
-    },
-    "documented_controls": "Phase Invert on Advanced Block Edit; Block Mix phase cancellation is a stated use case. Parameter type/default, processing position, routing, and detailed behavior are unpublished.",
-    "project_controls": "Default-off checkbox for any existing stage in a category-grouped 122-target selector (17 category groups); project flips every channel after the selected enabled stage and is dormant while bypassed. These are project choices, not verified HeadRush semantics.",
-    "verification": {
-      "native": "make test-headrush-phase-invert passes focused sample-wise inversion, double-inversion identity, empty-input, and helper-memory tests.",
-      "browser": "make web-test-headrush-phase-invert verifies the categorized 122-target/17-group selector and local prerecorded Guitar-TECHS stereo DI Play. Active-stage inversion residual 0; bypassed-stage difference 0; default Off; browser state 122 B.",
-      "windows": "make windows-cross-build compiles the shared PhaseInvert core and offline renderer with MinGW; native Windows UI/audio runtime is not verified.",
-      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks: helper CPU p50/p95/p99/p99.9/max 0.001500/0.001875/0.002625/0.003375/0.324750% of callback budget; 8 B helper plus 16 B packed mask, no allocations or fixed latency.",
-      "diff_check": "make test and make diff-check pass; no workflows changed."
-    },
-    "remaining": "Human listening, physical Prime comparison, installed firmware, native Windows UI/audio runtime, and target-device timing remain open."
-  },
-  "current_checkpoint": {
     "name": "Fractal FM9-family Global Mix — Surround Delay subset",
     "status": "The November 2026 Blocks Guide lists Delay for Global Mix and notes a distinct Delay Mix law without giving the offset equation. The project-only opt-in on Surround Delay ID 117 passes focused native, local-guitar browser/WASM, Windows MinGW, and isolated CPU/memory checks. Manufacturer parity is not claimed.",
     "date": "2026-11-27",
@@ -1624,6 +1624,30 @@
       "diff_check": "make test-docs and make diff-check pass; no workflows changed."
     },
     "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the manufacturer Global Mix equation remain open."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Global Mix — Megatap Delay subset",
+    "status": "The November 2026 Blocks Guide lists Megatap for shared Global Mix up to ±50%, with relevant controls on printed pp. 4 and 57–58, but no Megatap-specific equation. The project-only offset at categorized Delay picker ID 68 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+    "date": "2026-11-27",
+    "picker_index": 68,
+    "category": "Delay",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 57–58; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The current guide lists Megatap for shared Global Mix up to ±50% and identifies its Mix/Level/Balance/Global Mix controls, but does not publish the Megatap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
+    },
+    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",
+    "project_controls": "Existing categorized Delay picker ID 68 has a default-off project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+    "verification": {
+      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",
+      "browser": "make web-test-fractal-megatap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 68, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0108016722.",
+      "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Megatap benchmark.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. 16-tap p50/p95/p99/p99.9/max: default 0.2985/0.3731/0.4995/0.7545/28.4089%; +20 pp stored/disabled 0.2981/0.3518/0.4995/0.6015/28.9875%; +20 pp enabled 0.2959/0.3079/0.4939/0.6810/20.0769%. 64 taps: 0.9878/1.1513/1.6380/1.8548/26.4637%; mono: 0.2460/0.4234/0.4440/0.6679/20.0510%. All 0/20,000 callback misses; measured effect state 1,028,132 B and no process allocations.",
+      "diff_check": "make test passes 123/123 CTest and 13 fixture-safety tests; make diff-check passes. No GitHub workflow files changed."
+    },
+    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
   },
   "next_research": [
     {

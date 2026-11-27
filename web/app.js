@@ -1483,6 +1483,15 @@ const megatapDelayInputSelect = document.querySelector("#megatap-delay-input-sel
 const megatapDelayControls = [
   megatapDelayTime, megatapDelayTapCount, megatapDelayTimeAlpha,
   megatapDelayTimeRandomize, megatapDelayAmplitudeShape,
+const megatapDelayGlobalMixEnabled = document.querySelector(
+  "#megatap-delay-global-mix-enabled",
+);
+const megatapDelayGlobalMixOffset = document.querySelector(
+  "#megatap-delay-global-mix-offset",
+);
+const megatapDelayGlobalMixOffsetValue = document.querySelector(
+  "#megatap-delay-global-mix-offset-value",
+);
   megatapDelayAmplitudeAlpha, megatapDelayAmplitudeRandomize,
   megatapDelayPanShape, megatapDelayPanAlpha, megatapDelayStereoSpread,
   megatapDelayPredelay, megatapDelayFeedback, megatapDelayFeedbackTap,
@@ -1491,7 +1500,8 @@ const megatapDelayControls = [
   megatapDelayDiffusionDepth, megatapDelayEnvelopeEnabled,
   megatapDelayEnvelopeThreshold, megatapDelayEnvelopeAttack,
   megatapDelayEnvelopeRelease, megatapDelayInputGain, megatapDelayMix,
-  megatapDelayLevel, megatapDelayInputSelect,
+  megatapDelayLevel, megatapDelayInputSelect, megatapDelayGlobalMixEnabled,
+  megatapDelayGlobalMixOffset,
 ];
 const deEsserFrequency = document.querySelector("#de-esser-frequency-hz");
 const deEsserQ = document.querySelector("#de-esser-q");
@@ -3225,6 +3235,10 @@ function updateMegatapDelayOptions() {
   show(megatapDelayTimeAlpha, values[2].toFixed(2));
   show(megatapDelayTimeRandomize, `${values[3]}%`);
   show(megatapDelayAmplitudeShape,
+    megatapDelayGlobalMixEnabled.checked ? 1 : 0,
+    globalMixOffsetPoints / 100,
+    megatapDelayGlobalMixEnabled.checked ? 1 : 0,
+    globalMixOffsetPoints / 100,
     megatapDelayAmplitudeShape.selectedOptions[0].textContent);
   show(megatapDelayAmplitudeAlpha, values[5].toFixed(2));
   show(megatapDelayAmplitudeRandomize, `${values[6]}%`);
@@ -9392,6 +9406,136 @@ async function runDeEsserBrowserSmokeTest(reference, captureView, captureBuffer)
       workletNode.port.postMessage({ type: "active", value: false });
       deEsserControls.forEach((control, index) => {
         control.value = previousControls[index];
+async function runFractalMegatapGlobalMixBrowserSmokeTest(
+  reference, captureView, captureBuffer,
+) {
+  const previousEffectState = enabledEffects();
+  const previousControls = megatapDelayControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value);
+  const initialParameters = [...DEFAULT_PARAMETERS.megatapDelay];
+  let barrierSequence = 0;
+  const waitForBarrier = () => new Promise((resolve, reject) => {
+    const port = workletNode.port;
+    const token = `megatap-global-mix-${++barrierSequence}`;
+    const timeout = setTimeout(() => {
+      port.removeEventListener("message", onMessage);
+      reject(new Error("Timed out waiting for the Megatap Global Mix worklet barrier."));
+    }, 5000);
+    const onMessage = (event) => {
+      if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+      clearTimeout(timeout);
+      port.removeEventListener("message", onMessage);
+      resolve();
+    };
+    port.addEventListener("message", onMessage);
+    port.postMessage({ type: "test-barrier", token });
+  });
+  const rmsDifference = (left, right) => {
+    let squared = 0;
+    for (let i = 0; i < left.length; i += 1) {
+      const difference = left[i] - right[i];
+      squared += difference * difference;
+    }
+    return Math.sqrt(squared / Math.max(1, left.length));
+  };
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext) {
+      throw new Error("Megatap Global Mix test requires the ready browser chain and local guitar audio.");
+    }
+    const pickerRow = document.querySelector('[data-effect="68"]')?.closest(".effect-row");
+    if (pickerRow?.dataset.category !== "delay" ||
+        pickerRow.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !EFFECT_NAMES[68]?.startsWith("Megatap Delay") ||
+        megatapDelayGlobalMixEnabled.checked ||
+        megatapDelayGlobalMixOffset.value !== "0" ||
+        megatapDelayGlobalMixOffset.min !== "-50" ||
+        megatapDelayGlobalMixOffset.max !== "50" ||
+        initialParameters[27] !== 0 || initialParameters[28] !== 0) {
+      throw new Error("Megatap Delay category, picker ID, or default-off Global Mix controls are invalid.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    const testEnabled = previousEffectState.map((_, index) => index === 68);
+    document.querySelectorAll("[data-effect]").forEach((checkbox, index) => {
+      checkbox.checked = testEnabled[index];
+      workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
+    });
+    const baseControlValues = [
+      "50", "1", "1", "0", "0", "1", "0", "0", "50", "0", "0", "0",
+      "1", "20", "20000", "0", "10", "0.5", "0", false, "-70", "400",
+      "15", "0", "25", "0", "0",
+    ];
+    const captureAt = async (enabled, offsetPoints, mixPercent = 25) => {
+      const controls = [...baseControlValues];
+      controls[24] = String(mixPercent);
+      controls.push(enabled, String(offsetPoints));
+      megatapDelayControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = controls[index];
+        else control.value = controls[index];
+      });
+      updateMegatapDelayOptions();
+      await waitForBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Megatap Global Mix playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = Float32Array.from(new Float32Array(captureBuffer));
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) {
+          throw new Error(`Megatap Global Mix output is not finite at sample ${i}.`);
+        }
+      }
+      return output;
+    };
+    const baseline = await captureAt(false, 0);
+    const storedDisabled = await captureAt(false, 20);
+    const enabled = await captureAt(true, 20);
+    const disabledRms = rmsDifference(baseline, storedDisabled);
+    const enabledRms = rmsDifference(baseline, enabled);
+    if (disabledRms > 1.0e-7 || enabledRms < 1.0e-5) {
+      throw new Error(`Megatap Global Mix failed: disabled RMS ${disabledRms}, enabled RMS ${enabledRms}.`);
+    }
+    return {
+      category: "Delay",
+      effectIndex: 68,
+      defaultEnabled: false,
+      defaultOffsetPoints: 0,
+      disabledOffsetRms: disabledRms,
+      enabledPlus20ppRms: enabledRms,
+      channels: reference.channels,
+      frames: reference.frames,
+    };
+  } finally {
+    stopSource(false);
+    if (workletNode) {
+      workletNode.port.postMessage({ type: "active", value: false });
+      megatapDelayControls.forEach((control, index) => {
+        if (control.type === "checkbox") control.checked = previousControls[index];
+        else control.value = previousControls[index];
+      });
+      updateMegatapDelayOptions();
+      document.querySelectorAll("[data-effect]").forEach((checkbox, index) => {
+        checkbox.checked = previousEffectState[index];
+        workletNode.port.postMessage({ type: "enable", index, value: previousEffectState[index] });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+    }
+  }
+}
+
       });
       updateDeEsserOptions();
       const checkboxes = [...document.querySelectorAll("[data-effect]")];
@@ -19056,7 +19200,8 @@ async function runBrowserSelfTest() {
         megatapDelayEnvelopeAttack.value, megatapDelayEnvelopeRelease.value,
         megatapDelayEnvelopeEnabled.checked, megatapDelayInputGain.value,
         megatapDelayMix.value, megatapDelayLevel.value,
-        megatapDelayInputSelect.value] = [
+        megatapDelayInputSelect.value, megatapDelayGlobalMixEnabled.checked,
+        megatapDelayGlobalMixOffset.value] = [
         "750", "12", "0.75", "25", "1", "2", "10", "3", "60", "30",
         "90", "45", "3", "120", "10000", "50", "5", "1.25", "1.5",
         "-40", "250", "100", true, "3", "75", "-2", "2",
@@ -21311,7 +21456,23 @@ async function runBrowserSelfTest() {
        document.title = "PASS · TabletFX Volume/Pan browser test";
        return;
      }
-      if (new URLSearchParams(location.search).get("selftest") === "fractal-surround-delay") {
+       if (new URLSearchParams(location.search).get("selftest") === "fractal-megatap-global-mix") {
+         testResult.textContent = "Checking project Global Mix on categorized Megatap Delay with local guitar audio…";
+         const megatapGlobalMixSmoke = await runFractalMegatapGlobalMixBrowserSmokeTest(
+           reference, captureView, captureBuffer,
+         );
+         const focusedReport = {
+           result: "passed",
+           browser: navigator.userAgent,
+           sampleRate: audioContext.sampleRate,
+           megatapGlobalMix: megatapGlobalMixSmoke,
+         };
+         testResult.dataset.status = "passed";
+         testResult.textContent = JSON.stringify(focusedReport);
+         document.title = "PASS · TabletFX Megatap Global Mix browser test";
+         return;
+       }
+       if (new URLSearchParams(location.search).get("selftest") === "fractal-surround-delay") {
         testResult.textContent = "Checking project Global Mix offset on categorized Surround Delay with local guitar audio…";
         const surroundDelaySmoke = await runFractalSurroundDelayBrowserSmokeTest(
           reference, captureView, captureBuffer,

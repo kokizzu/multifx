@@ -167,6 +167,83 @@ void test_randomization_is_deterministic_and_controls_are_bounded() {
             "project-authored controls must be clamped to documented bounds");
 }
 
+void test_project_global_mix_offset_is_opt_in_bounded_and_allocation_free() {
+    const auto render = [](tabletfx::MegatapDelayParameters parameters) {
+        parameters.delay_time_ms = 4.0F;
+        parameters.tap_count = 1U;
+        parameters.amplitude_shape = tabletfx::MegatapAmplitudeShape::constant;
+        parameters.pan_shape = tabletfx::MegatapPanShape::constant;
+        parameters.low_cut_hz = 0.0F;
+        tabletfx::MegatapDelay delay(8000.0F, 100.0F, parameters);
+        std::array<float, 48U> audio{};
+        audio[0] = 1.0F;
+        delay.process(audio, 1U);
+        return audio;
+    };
+
+    tabletfx::MegatapDelayParameters parameters;
+    const auto base = render(parameters);
+    parameters.global_mix_offset = 0.2F;
+    const auto disabled = render(parameters);
+    require(base == disabled,
+            "a stored Global Mix offset must be inaudible while disabled");
+
+    parameters.global_mix_enabled = true;
+    parameters.delay_time_ms = 4.0F;
+    parameters.tap_count = 1U;
+    parameters.amplitude_shape = tabletfx::MegatapAmplitudeShape::constant;
+    parameters.pan_shape = tabletfx::MegatapPanShape::constant;
+    parameters.low_cut_hz = 0.0F;
+    auto enabled_delay = tabletfx::MegatapDelay(8000.0F, 100.0F, parameters);
+    const std::size_t memory_before = enabled_delay.memory_bytes();
+    require(near(enabled_delay.parameters().mix, 0.25F) &&
+                near(enabled_delay.parameters().global_mix_offset, 0.2F),
+            "Global Mix must preserve the stored base Mix and offset");
+    std::array<float, 48U> enabled{};
+    enabled[0] = 1.0F;
+    const std::size_t allocations_before =
+        allocation_count.load(std::memory_order_relaxed);
+    enabled_delay.process(enabled, 1U);
+    const std::size_t allocations_after =
+        allocation_count.load(std::memory_order_relaxed);
+    require(near(enabled[0], 0.55F),
+            "enabled +20 pp must add to the base Mix for the dry output");
+    require(enabled[32U] > disabled[32U],
+            "enabled +20 pp must raise the delayed wet output: enabled=" +
+                std::to_string(enabled[32U]) + ", disabled=" +
+                std::to_string(disabled[32U]));
+    require(allocations_before == allocations_after,
+            "Global Mix processing must not allocate in the audio callback");
+    require(enabled_delay.memory_bytes() == memory_before,
+            "Global Mix changes must not add or resize delay storage");
+
+    parameters.mix = 0.8F;
+    parameters.global_mix_offset = 8.0F;
+    const auto upper = render(parameters);
+    tabletfx::MegatapDelay upper_delay(8000.0F, 100.0F, parameters);
+    require(near(upper_delay.parameters().mix, 0.8F) &&
+                near(upper_delay.parameters().global_mix_offset, 0.5F) &&
+                near(upper[0], 0.0F),
+            "positive offset must clamp at +50 pp and at 100% effective Mix");
+
+    parameters.mix = 0.2F;
+    parameters.global_mix_offset = -8.0F;
+    const auto lower = render(parameters);
+    tabletfx::MegatapDelay lower_delay(8000.0F, 100.0F, parameters);
+    require(near(lower_delay.parameters().mix, 0.2F) &&
+                near(lower_delay.parameters().global_mix_offset, -0.5F) &&
+                near(lower[0], 1.0F) && near(lower[32U], 0.0F),
+            "negative offset must clamp at -50 pp and at 0% effective Mix");
+
+    parameters.mix = 0.25F;
+    parameters.global_mix_offset = std::numeric_limits<float>::infinity();
+    const auto non_finite = render(parameters);
+    tabletfx::MegatapDelay non_finite_delay(8000.0F, 100.0F, parameters);
+    require(near(non_finite_delay.parameters().global_mix_offset, 0.0F) &&
+                non_finite == base,
+            "non-finite project offset must fall back to zero and preserve output");
+}
+
 void test_diffusion_envelope_reset_and_process_no_allocations() {
     auto parameters = impulse_parameters();
     parameters.diffusion_mix = 0.5F;
@@ -226,6 +303,7 @@ int main() {
         test_feedback_repeats_the_selected_tap();
         test_stereo_spread_and_input_selection();
         test_randomization_is_deterministic_and_controls_are_bounded();
+        test_project_global_mix_offset_is_opt_in_bounded_and_allocation_free();
         test_diffusion_envelope_reset_and_process_no_allocations();
         test_sample_rate_and_storage_validation();
         std::cout << "Megatap Delay tests passed\n";

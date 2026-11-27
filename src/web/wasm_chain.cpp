@@ -1647,7 +1647,9 @@ public:
         float envelope_threshold_db, float envelope_attack_ms,
         float envelope_release_ms, float input_gain_db, float mix,
         float level_db, std::uint32_t input_select,
-        std::uint32_t envelope_enabled) noexcept {
+        std::uint32_t envelope_enabled,
+        std::uint32_t megatap_global_mix_enabled,
+        float megatap_global_mix_offset) noexcept {
         auto* delay = static_cast<tabletfx::MegatapDelay*>(effects_[68].effect.get());
         auto parameters = delay->parameters();
         parameters.delay_time_ms = delay_time_ms;
@@ -1684,6 +1686,8 @@ public:
         parameters.envelope_enabled = envelope_enabled != 0U;
         delay->set_parameters(parameters);
     }
+        parameters.global_mix_enabled = megatap_global_mix_enabled != 0U;
+        parameters.global_mix_offset = megatap_global_mix_offset;
 
     void configure_de_esser(float detector_frequency_hz, float detector_q,
                             float threshold_dbfs, float max_reduction_db,
@@ -5959,7 +5963,9 @@ TABLETFX_WASM_EXPORT void tf_chain_set_megatap_delay(
     float diffusion_lfo_rate_hz, float diffusion_lfo_depth_ms,
     float envelope_threshold_db, float envelope_attack_ms,
     float envelope_release_ms, float input_gain_db, float mix, float level_db,
-    std::uint32_t input_select, std::uint32_t envelope_enabled) noexcept {
+    std::uint32_t input_select, std::uint32_t envelope_enabled,
+    std::uint32_t megatap_global_mix_enabled,
+    float megatap_global_mix_offset) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_megatap_delay(
             delay_time_ms, tap_count, time_alpha, time_randomize_percent,
@@ -5968,7 +5974,8 @@ TABLETFX_WASM_EXPORT void tf_chain_set_megatap_delay(
             feedback, feedback_tap, low_cut_hz, high_cut_hz, diffusion_mix,
             diffusion_time_ms, diffusion_lfo_rate_hz, diffusion_lfo_depth_ms,
             envelope_threshold_db, envelope_attack_ms, envelope_release_ms,
-            input_gain_db, mix, level_db, input_select, envelope_enabled);
+            input_gain_db, mix, level_db, input_select, envelope_enabled,
+            megatap_global_mix_enabled, megatap_global_mix_offset);
     }
 }
 

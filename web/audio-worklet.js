@@ -431,7 +431,7 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       module._tf_chain_set_stereo_panner(this.chain, ...stereoPanner);
       const megatapDelay = parameters.megatapDelay ||
         [1000, 16, 1, 0, 2, 1, 0, 1, 100, 0, 0, 0, 16, 20, 20000,
-          0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0];
+          0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0, 0, 0];
       module._tf_chain_set_megatap_delay(this.chain, ...megatapDelay);
       const deEsser = parameters.deEsser || [6500, 1.5, -30, 12, 2, 80];
       module._tf_chain_set_de_esser(this.chain, ...deEsser);

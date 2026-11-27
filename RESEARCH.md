@@ -6,6 +6,12 @@ The current live [Helix Stadium Effects manual](https://manuals.line6.com/en/hel
 
 TabletFX reuses its Studio Compressor and selects either its current Block Input (default) or the existing pre-effect dry-chain buffer as detector. The latter does not add external buses or Stadium-equivalent routing. The source choice adds no audio buffer, fixed latency, process allocation, or incremental processor state. The project compressor's numeric ranges/defaults are documented in IMPLEMENTATION_CHECKLIST.md; native/browser state, local guitar-DI smoke, CPU percentages, and automated results are in EFFECTS_MATRIX.md and LATENCY_AND_QUALITY.md. The manufacturer comparison remains unverified beyond the documented control concept. Human listening, hardware comparison, and target-device timing remain open.
 
+## Fractal FM9-family Megatap Delay Global Mix subset (2026-11-27)
+
+The current official [Fractal Audio Blocks Guide](https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf), with a November 2026 cover, lists Megatap as eligible for Global Mix on printed p. 4. Printed pp. 57–58 list Megatap's Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, Global Mix, and spillover controls. The guide describes Global Mix as an opt-in shared Effects Mix offset of up to ±50%, but does not publish a Megatap-specific mix-combination equation or most control ranges/defaults. The [FM9 downloads page](https://www.fractalaudio.com/fm9-downloads/) lists firmware v12.0 dated 2026-07-07 for Original/Turbo, not Mark II Turbo separately; exact SKU applicability and installed firmware are unknown.
+
+TabletFX adds a project-only, default-off offset to existing Delay picker ID 68. It adds the normalized offset to the separately preserved base Mix and clamps the result to 0…1. The project interpretation is not the shared Fractal setting or a verified Fractal law. Focused native tests and HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI pass; the latter checks the category, default controls, bounds, disabled identity, and an audible enabled +20 pp difference. MinGW Windows cross-build and 16-/64-tap CPU/memory measurements pass. See `EFFECTS_MATRIX.md`, `IMPLEMENTATION_CHECKLIST.md`, and `LATENCY_AND_QUALITY.md`. Listening, physical comparison, exact Mark II firmware applicability, and target-device timing remain open.
+
 ## HeadRush Prime Orange Phaser Stereo control (2026-11-27)
 
 ## Fractal FM9-family Global Mix source comparison (2026-11-27)

@@ -4872,5 +4872,104 @@ PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-delay"] = {
     "web/index.html": 0,
 }
 
+FRACTAL_MEGATAP_GLOBAL_MIX_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_megatap_global_mix_bench.cpp",
+    "include/tabletfx/effects/megatap_delay.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/megatap_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_megatap_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-megatap-global-mix"] = (
+    FRACTAL_MEGATAP_GLOBAL_MIX_CHECKPOINT_PATHS,
+    "feat: add project Global Mix option to Megatap Delay",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-megatap-global-mix"] = {
+    "CMakeLists.txt": ("tabletfx_fractal_megatap_global_mix_bench",),
+    "EFFECTS_MATRIX.md": ("| `megatap-delay` |",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "| **Fractal FM9 Mark II Turbo** |",
+        "Fractal FM9-family Megatap Delay Global Mix",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Megatap Delay Global Mix subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Megatap Delay Global Mix subset",
+    ),
+    "RESEARCH.md": (
+        "## Fractal FM9-family Megatap Delay Global Mix subset",
+    ),
+    "apps/fractal_megatap_global_mix_bench.cpp": (
+        "global-mix-enabled-plus-20pp",
+    ),
+    "include/tabletfx/effects/megatap_delay.hpp": ("global_mix_enabled",),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += fractal-megatap-global-mix",
+        "test-fractal-megatap-global-mix:",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_MEGATAP_GLOBAL_MIX_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-megatap-global-mix"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-megatap-global-mix"]',
+    ),
+    "scripts/run_cmake.py": (
+        "bench-fractal-megatap-global-mix",
+        "def bench_fractal_megatap_global_mix(cmake: str)",
+    ),
+    "scripts/web.py": (
+        "fractal_megatap_global_mix_only",
+        '"test-fractal-megatap-global-mix"',
+    ),
+    "src/effects/megatap_delay.cpp": ("parameters_.global_mix_enabled",),
+    "src/web/wasm_chain.cpp": ("megatap_global_mix_enabled",),
+    "tests/test_megatap_delay.cpp": (
+        "test_project_global_mix_offset_is_opt_in_bounded_and_allocation_free",
+    ),
+    "web/app.js": (
+        "megatapDelayGlobalMixEnabled",
+        "runFractalMegatapGlobalMixBrowserSmokeTest",
+        'selftest=fractal-megatap-global-mix',
+    ),
+    "web/audio-worklet.js": (
+        "0, 10, 0.5, 0, -70, 400, 15, 0, 0.25, 0, 0, 0, 0, 0",
+    ),
+    "web/index.html": (
+        "megatap-delay-global-mix-enabled",
+        "megatap-delay-global-mix-offset",
+    ),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-megatap-global-mix"] = {
+    "CMakeLists.txt": 0,
+    "EFFECTS_MATRIX.md": 0,
+    "FLAGSHIP_EFFECT_COMPARISON.md": 0,
+    "IMPLEMENTATION_CHECKLIST.md": 0,
+    "LATENCY_AND_QUALITY.md": 0,
+    "RESEARCH.md": 0,
+    "make/publish.mk": 0,
+    "scripts/publish_checkpoint.py": 1,
+    "scripts/run_cmake.py": 1,
+    "scripts/web.py": 0,
+    "src/effects/megatap_delay.cpp": 0,
+    "src/web/wasm_chain.cpp": 0,
+    "tests/test_megatap_delay.cpp": 0,
+    "web/app.js": 0,
+    "web/audio-worklet.js": 0,
+    "web/index.html": 0,
+}
+
 if __name__ == "__main__":
     main()

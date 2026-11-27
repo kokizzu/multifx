@@ -230,7 +230,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "action",
-        choices=("bench-fractal-global-mix-delay", "configure", "build", "test", "bench",
+        choices=("bench-fractal-global-mix-delay", "bench-fractal-surround-delay", "bench-fractal-megatap-global-mix", "configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
@@ -340,6 +340,8 @@ def main() -> None:
         bench_fractal_global_mix_delay(cmake)
     elif action == "bench-fractal-surround-delay":
         bench_fractal_surround_delay(cmake)
+    elif action == "bench-fractal-megatap-global-mix":
+        bench_fractal_megatap_global_mix(cmake)
 
 
 def bench_fractal_global_mix_delay(cmake: str) -> None:
@@ -360,6 +362,17 @@ def bench_fractal_surround_delay(cmake: str) -> None:
         "tabletfx_fractal_surround_delay_bench.exe"
         if os.name == "nt"
         else "tabletfx_fractal_surround_delay_bench"
+    )
+    run([str(executable)])
+
+
+def bench_fractal_megatap_global_mix(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fractal_megatap_global_mix_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fractal_megatap_global_mix_bench"
     )
     run([str(executable)])
 

@@ -787,7 +787,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_diatonic_harmonizer_only: bool = False,
                   fractal_resonator_input_gain_only: bool = False,
                  fractal_global_mix_delay_only: bool = False,
-                 fractal_surround_delay_only: bool = False) -> None:
+                 fractal_surround_delay_only: bool = False,
+                 fractal_megatap_global_mix_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1413,6 +1414,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         if fractal_global_mix_delay_only:
             url = base_url + "/web/index.html?selftest=fractal-global-mix-delay"
             "assert(arpShift?.min==='-24'&&arpShift?.max==='24',"
+        if fractal_megatap_global_mix_only:
+            url = base_url + "/web/index.html?selftest=fractal-megatap-global-mix"
+        if fractal_megatap_global_mix_only:
+            url = base_url + "/web/index.html?selftest=fractal-megatap-global-mix"
             "'Pitch Arpeggiator UI does not expose the documented ±24-degree step range');"
             "arpShift.value='24';arpShift.dispatchEvent(new Event('input',{bubbles:true}));"
             "assert(arpeggiatorPosted.at(-1)?.[14]===24&&"
@@ -1762,8 +1767,14 @@ def main() -> None:
     elif action == "test-stadium-dynamics-sidechain":
         browser_test(stadium_dynamics_sidechain_only=True)
     elif action == "test-formant-control-lfo":
+        "test-fractal-global-mix-delay",
+        "test-fractal-surround-delay",
+        "test-fractal-megatap-global-mix",
         browser_test(formant_control_lfo_only=True)
         "test-fractal-global-mix-delay",
+        "test-fractal-global-mix-delay",
+        "test-fractal-surround-delay",
+        "test-fractal-megatap-global-mix",
     elif action == "test-headrush-drop-tune":
         browser_test(headrush_drop_tune_only=True)
     elif action == "test-headrush-phase-invert":
@@ -1840,3 +1851,7 @@ if __name__ == "__main__":
     main()
     elif action == "test-fractal-global-mix-delay":
         browser_test(fractal_global_mix_delay_only=True)
+    elif action == "test-fractal-megatap-global-mix":
+        browser_test(fractal_megatap_global_mix_only=True)
+    elif action == "test-fractal-megatap-global-mix":
+        browser_test(fractal_megatap_global_mix_only=True)

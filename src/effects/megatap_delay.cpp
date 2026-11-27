@@ -457,7 +457,10 @@ void MegatapDelay::process(std::span<float> interleaved,
     if (channels == 0U || channels > 2U) return;
     const std::size_t frames = interleaved.size() /
                                static_cast<std::size_t>(channels);
-    const float mix = parameters_.mix;
+    const float mix = std::clamp(
+        parameters_.mix + (parameters_.global_mix_enabled
+            ? parameters_.global_mix_offset : 0.0F),
+        0.0F, 1.0F);
     for (std::size_t frame = 0; frame < frames; ++frame) {
         const std::size_t offset = frame * static_cast<std::size_t>(channels);
         const float dry_left = safe_signal(interleaved[offset]);

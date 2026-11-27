@@ -183,6 +183,10 @@ add_executable(tabletfx_fractal_surround_delay_bench
 target_link_libraries(tabletfx_fractal_surround_delay_bench PRIVATE tabletfx_core)
 
 add_executable(tabletfx_fractal_plex_shift_bench
+add_executable(tabletfx_fractal_megatap_global_mix_bench
+    apps/fractal_megatap_global_mix_bench.cpp)
+target_link_libraries(tabletfx_fractal_megatap_global_mix_bench PRIVATE tabletfx_core)
+
     apps/fractal_plex_shift_bench.cpp)
 target_link_libraries(tabletfx_fractal_plex_shift_bench PRIVATE tabletfx_core)
 
