@@ -788,7 +788,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_resonator_input_gain_only: bool = False,
                  fractal_global_mix_delay_only: bool = False,
                  fractal_surround_delay_only: bool = False,
-                 fractal_megatap_global_mix_only: bool = False) -> None:
+                 fractal_megatap_global_mix_only: bool = False,
+                 fractal_multitap_global_mix_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -836,6 +837,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         if fractal_global_mix_delay_only and prerecorded_guitar_source is None:
             raise SystemExit(
                 "Focused Delay Global Mix browser test requires the local prerecorded guitar DI fixture."
+        if (fractal_global_mix_delay_only or fractal_multitap_global_mix_only) and prerecorded_guitar_source is None:
+            raise SystemExit(
+                "Focused delay Global Mix browser test requires the local prerecorded guitar DI fixture."
+            )
             )
         make_cabinet_ir_test_wav(cabinet_ir_path)
         make_long_convolution_test_ir(long_convolution_ir_path)
@@ -1396,6 +1401,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "(async()=>{"
             "const assert=(condition,message)=>{if(!condition)throw new Error(message)};"
             "const row=document.querySelector('[data-effect=\"84\"]')?.closest('.effect-row');"
+        elif fractal_multitap_global_mix_only:
+            url = base_url + "/web/index.html?selftest=fractal-multitap-global-mix"
             "assert(row?.dataset.category==='delay'&&row.querySelector('.effect-category-tag')?.textContent.trim()==='Delay',"
             "'Tape Echo picker entry is not categorized as Delay');"
             "const independent=document.querySelector('#tape-echo-independent-times');"
@@ -1762,6 +1769,7 @@ def main() -> None:
         browser_test()
     elif action == "test-volume-pedal":
         browser_test(volume_pedal_only=True)
+        "test-fractal-multitap-global-mix",
     elif action == "test-stadium-delay-trails":
         browser_test(stadium_delay_trails_only=True)
     elif action == "test-stadium-dynamics-sidechain":
@@ -1842,6 +1850,8 @@ def main() -> None:
     elif action == "test-fractal-global-mix-delay":
         browser_test(fractal_global_mix_delay_only=True)
     elif action == "test-fractal-surround-delay":
+    elif action == "test-fractal-multitap-global-mix":
+        browser_test(fractal_multitap_global_mix_only=True)
         browser_test(fractal_surround_delay_only=True)
     else:
         build_web()

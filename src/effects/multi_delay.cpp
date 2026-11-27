@@ -257,6 +257,10 @@ void MultiDelay::configure(MultiDelayParameters parameters) noexcept {
     parameters_ = parameters;
 
     input_gain_linear_ = static_cast<float>(std::pow(
+    effective_mix_ = parameters_.global_mix_enabled
+        ? std::clamp(parameters_.mix + parameters_.global_mix_offset,
+                     0.0F, 1.0F)
+        : parameters_.mix;
         10.0, static_cast<double>(parameters_.input_gain_db) / 20.0));
     output_level_linear_ = static_cast<float>(std::pow(
         10.0, static_cast<double>(parameters_.level_db) / 20.0));

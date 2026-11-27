@@ -753,3 +753,7 @@ if(WIN32)
         add_test(NAME tabletfx_wasapi_compile_test COMMAND tabletfx_wasapi_compile)
     endif()
 endif()
+
+add_executable(tabletfx_fractal_multitap_global_mix_bench
+    apps/fractal_multitap_global_mix_bench.cpp)
+target_link_libraries(tabletfx_fractal_multitap_global_mix_bench PRIVATE tabletfx_core)

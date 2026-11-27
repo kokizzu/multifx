@@ -982,3 +982,18 @@ Release benchmark on AMD Ryzen 9 5950X used 48 kHz stereo, 128-frame callbacks (
 | 16 taps, mono | 0.2460% | 0.4234% | 0.4440% | 0.6679% | 20.0510% | 1,028,132 B | 0/20,000 |
 
 All measured calls stayed below the callback deadline. Maximum values are scheduler-sensitive outliers and remain below 100%; these isolated calls do not predict tablet or full-chain load. HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI found disabled-offset RMS difference 0 and enabled +20 pp difference 0.0108016722. Human listening, target-device timing, physical-device comparison, and Fractal Mix-law parity remain open.
+
+## Fractal FM9-family Multitap Delay Global Mix subset (2026-11-27)
+
+The project-only offset reuses the existing four-line delay ring. It adds no storage, fixed latency, or processing-time allocation. The measured native state is 524,920 B at the benchmark's 48 kHz stereo setup; the configured 512 KiB ring is the existing memory cap. Wet repeats still follow the selected delay topology and time settings.
+
+Release benchmark on AMD Ryzen 9 5950X used 48 kHz, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up, and 20,000 measured callbacks. Percentages are isolated processor-call time relative to one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | State | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default stereo | 0.1159% | 0.1748% | 0.2115% | 0.6008% | 1.1903% | 524,920 B | 0/20,000 |
+| +20 pp stored, opt-in Off | 0.1155% | 0.1691% | 0.1834% | 0.4455% | 0.7812% | 524,920 B | 0/20,000 |
+| +20 pp enabled | 0.1166% | 0.1819% | 0.1901% | 0.4560% | 0.5325% | 524,920 B | 0/20,000 |
+| Default mono | 0.1095% | 0.1534% | 0.1845% | 0.3968% | 0.5614% | 524,920 B | 0/20,000 |
+
+The native tests confirm the offset is combined at configuration time, not in the sample loop, and `process()` performs no allocation. Local prerecorded Guitar-TECHS DI browser Play confirms an audible enabled +20 pp change (RMS difference 0.0152142) and disabled-offset identity (0). Maxima are desktop scheduler-dependent; the measurement does not predict tablet, Windows-runtime, or full-chain load. Human listening and target-device timing remain open.

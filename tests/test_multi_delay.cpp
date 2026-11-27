@@ -287,6 +287,97 @@ void test_quad_series_compounds_delays_and_routes_selected_feedback() {
     tabletfx::MultiDelay series(8000.0F, 100.0F, parameters);
     std::array<float, 112> mono{};
     mono[0] = 1.0F;
+void test_global_mix_defaults_disabled_identity_and_base_mix_storage() {
+    const tabletfx::MultiDelayParameters defaults{};
+    require(!defaults.global_mix_enabled && defaults.global_mix_offset == 0.0F,
+            "Global Mix must default to disabled with a zero offset");
+
+    auto disabled = impulse_parameters();
+    disabled.mix = 0.35F;
+    disabled.global_mix_enabled = false;
+    disabled.global_mix_offset = 0.4F;
+    auto disabled_zero_offset = disabled;
+    disabled_zero_offset.global_mix_offset = 0.0F;
+    const auto with_ignored_offset = render_impulse(disabled);
+    const auto without_offset = render_impulse(disabled_zero_offset);
+    require(with_ignored_offset == without_offset,
+            "a disabled Global Mix offset must be an exact sonic identity");
+
+    tabletfx::MultiDelay delay(8000.0F, 100.0F, disabled);
+    require(delay.parameters().mix == 0.35F &&
+                delay.parameters().global_mix_offset == 0.4F,
+            "Global Mix must keep base Mix and the disabled offset separately stored");
+}
+
+void test_global_mix_offsets_adjust_final_wet_dry_mix() {
+    auto parameters = impulse_parameters();
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.pan.fill(0.5F);
+    parameters.feedback.fill(0.0F);
+    parameters.mix = 0.25F;
+
+    const auto base = render_impulse(parameters);
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 0.2F;
+    const auto positive = render_impulse(parameters);
+    parameters.global_mix_offset = -0.2F;
+    const auto negative = render_impulse(parameters);
+
+    require(std::abs(positive[0] - 0.55F) < 1e-6F &&
+                std::abs(negative[0] - 0.95F) < 1e-6F &&
+                positive[8] > base[8] && base[8] > negative[8],
+            "positive and negative Global Mix offsets must adjust wet/dry balance around the base Mix");
+
+    tabletfx::MultiDelay stored(8000.0F, 100.0F, parameters);
+    require(stored.parameters().mix == 0.25F &&
+                stored.parameters().global_mix_offset == -0.2F,
+            "applying Global Mix must not overwrite the separately stored base Mix");
+}
+
+void test_global_mix_clamps_offset_and_effective_mix_endpoints() {
+    auto parameters = impulse_parameters();
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.pan.fill(0.5F);
+    parameters.mix = 0.8F;
+    parameters.global_mix_enabled = true;
+    parameters.global_mix_offset = 1.0F;
+    tabletfx::MultiDelay upper(8000.0F, 100.0F, parameters);
+    const auto upper_output = render_impulse(upper.parameters());
+    require(upper.parameters().mix == 0.8F &&
+                upper.parameters().global_mix_offset == 0.5F &&
+                std::abs(upper_output[0]) < 1e-6F && upper_output[8] > 0.8F,
+            "Global Mix offset must clamp to +0.5 and effective Mix to fully wet");
+
+    parameters.mix = 0.2F;
+    parameters.global_mix_offset = -1.0F;
+    tabletfx::MultiDelay lower(8000.0F, 100.0F, parameters);
+    const auto lower_output = render_impulse(lower.parameters());
+    require(lower.parameters().mix == 0.2F &&
+                lower.parameters().global_mix_offset == -0.5F &&
+                std::abs(lower_output[0] - 1.0F) < 1e-6F &&
+                std::abs(lower_output[8]) < 1e-6F,
+            "Global Mix offset must clamp to -0.5 and effective Mix to fully dry");
+}
+
+void test_global_mix_nonfinite_offsets_fall_back_to_zero() {
+    auto parameters = impulse_parameters();
+    parameters.level = {1.0F, 0.0F, 0.0F, 0.0F};
+    parameters.pan.fill(0.5F);
+    parameters.mix = 0.3F;
+    parameters.global_mix_enabled = true;
+    const auto zero_offset = render_impulse(parameters);
+
+    for (const float invalid_offset : {
+             std::numeric_limits<float>::quiet_NaN(),
+             std::numeric_limits<float>::infinity()}) {
+        parameters.global_mix_offset = invalid_offset;
+        tabletfx::MultiDelay delay(8000.0F, 100.0F, parameters);
+        require(delay.parameters().global_mix_offset == 0.0F &&
+                    render_impulse(delay.parameters()) == zero_offset,
+                "nonfinite Global Mix offsets must fall back to zero");
+    }
+}
+
     series.process(mono, 1U);
     require(mono[8] > 0.5F && mono[24] > 0.5F &&
                 mono[48] > 0.5F && mono[80] > 0.5F,
@@ -592,4 +683,8 @@ int main() {
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
+        test_global_mix_defaults_disabled_identity_and_base_mix_storage();
+        test_global_mix_offsets_adjust_final_wet_dry_mix();
+        test_global_mix_clamps_offset_and_effective_mix_endpoints();
+        test_global_mix_nonfinite_offsets_fall_back_to_zero();
 }

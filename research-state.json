@@ -4,10 +4,10 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "1f3b114f88168d749b66f6ed1bf2f5cf1fb5236b",
+  "previous_checkpoint_commit": "ebae974bb4952ae27e5a89ab9fbd380564f4e089",
   "latest_audit": {
-    "name": "Fractal FM9-family Global Mix — Megatap Delay subset",
-    "status": "The November 2026 Blocks Guide lists Megatap for shared Global Mix up to ±50%, with relevant controls on printed pp. 4 and 57–58, but no Megatap-specific equation. The project-only offset at categorized Delay picker ID 68 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+    "name": "Fractal FM9-family Global Mix — Multitap Delay subset",
+    "status": "The November 2026 Blocks Guide lists Multitap Delay for shared Global Mix up to ±50% and p. 68 names its Mix-page controls, but the combination equation and most bounds/defaults are not published. The project-only offset on categorized Delay picker ID 72 passes focused native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
     "date": "2026-11-27",
     "picker_index": 68,
     "category": "Delay",
@@ -1600,6 +1600,29 @@
         "diff_check": "make test passes 123/123 CTest and 13 fixture-safety tests; make diff-check passes. No GitHub workflow files changed."
       },
       "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
+    },
+    {
+      "name": "Fractal FM9-family Global Mix — Multitap Delay subset",
+      "status": "The November 2026 Blocks Guide lists Multitap Delay for shared Global Mix up to ±50% and p. 68 names its Mix-page controls, but the combination equation and most bounds/defaults are not published. The project-only offset on categorized Delay picker ID 72 passes focused native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+      "date": "2026-11-27",
+      "picker_index": 72,
+      "category": "Delay",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 62–68; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "The current guide lists Multitap Delay for shared Global Mix up to ±50% and p. 68 identifies its Mix/Level/Balance/Bypass/Bypass Mode/Input Select/Input Gain/Kill Dry/Global Mix/spillover controls. It does not publish the Multitap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown. Search-index copies may return a stale June 2023 revision."
+      },
+      "documented_controls": "Global Mix is a per-block opt-in to a shared Effects Mix offset up to ±50%. Multitap's Mix page lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select, Input Gain, Kill Dry, Global Mix, and spillover. The guide does not state the Multitap offset equation or most numeric control ranges/defaults.",
+      "project_controls": "Existing categorized Delay picker ID 72 has a default-off, project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+      "verification": {
+        "native": "make test-fractal-multitap-global-mix passes defaults, disabled-offset identity, positive/negative offset behavior, bounds/clamps, non-finite fallback, unchanged base Mix storage, and zero-process-allocation coverage.",
+        "browser": "make web-test-fractal-multitap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 72, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0152142 across 48,000 frames.",
+        "windows": "make windows-cross-build compiles the Windows MinGW core and offline renderer.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz/128-frame callbacks (2.6667 ms), 3,000 warm-up and 20,000 measured calls. Default stereo p50/p95/p99/p99.9/max 0.1155/0.1185/0.1740/0.3720/0.7317%; +20 pp stored/disabled 0.1155/0.1181/0.1718/0.4241/0.8659%; +20 pp enabled 0.1163/0.1185/0.1676/0.3728/0.5539%; default mono 0.1095/0.1140/0.1815/0.4140/1.1517%. Each profile uses 524,920 B and records 0/20,000 deadline misses. No process-time allocation."
+      },
+      "remaining": "Human listening, physical FM9 comparison, exact Mark II Turbo applicability, installed firmware, target-device timing, and the manufacturer's Global Mix equation remain open."
     }],
   "previous_checkpoint": {
     "name": "Fractal FM9-family Global Mix — Surround Delay subset",
@@ -1624,6 +1647,29 @@
       "diff_check": "make test-docs and make diff-check pass; no workflows changed."
     },
     "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the manufacturer Global Mix equation remain open."
+  },
+  "current_checkpoint": {
+    "name": "Fractal FM9-family Global Mix — Multitap Delay subset",
+    "status": "The November 2026 Blocks Guide lists Multitap Delay for shared Global Mix up to ±50% and p. 68 names its Mix-page controls, but the combination equation and most bounds/defaults are not published. The project-only offset on categorized Delay picker ID 72 passes focused native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+    "date": "2026-11-27",
+    "picker_index": 72,
+    "category": "Delay",
+    "official_source": {
+      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 62–68; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
+      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+      "qualification": "The current guide lists Multitap Delay for shared Global Mix up to ±50% and p. 68 identifies its Mix/Level/Balance/Bypass/Bypass Mode/Input Select/Input Gain/Kill Dry/Global Mix/spillover controls. It does not publish the Multitap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown. Search-index copies may return a stale June 2023 revision."
+    },
+    "documented_controls": "Global Mix is a per-block opt-in to a shared Effects Mix offset up to ±50%. Multitap's Mix page lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select, Input Gain, Kill Dry, Global Mix, and spillover. The guide does not state the Multitap offset equation or most numeric control ranges/defaults.",
+    "project_controls": "Existing categorized Delay picker ID 72 has a default-off, project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+    "verification": {
+      "native": "make test-fractal-multitap-global-mix passes defaults, disabled-offset identity, positive/negative offset behavior, bounds/clamps, non-finite fallback, unchanged base Mix storage, and zero-process-allocation coverage.",
+      "browser": "make web-test-fractal-multitap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 72, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0152142 across 48,000 frames.",
+      "windows": "make windows-cross-build compiles the Windows MinGW core and offline renderer.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz/128-frame callbacks (2.6667 ms), 3,000 warm-up and 20,000 measured calls. Default stereo p50/p95/p99/p99.9/max 0.1155/0.1185/0.1740/0.3720/0.7317%; +20 pp stored/disabled 0.1155/0.1181/0.1718/0.4241/0.8659%; +20 pp enabled 0.1163/0.1185/0.1676/0.3728/0.5539%; default mono 0.1095/0.1140/0.1815/0.4140/1.1517%. Each profile uses 524,920 B and records 0/20,000 deadline misses. No process-time allocation."
+    },
+    "remaining": "Human listening, physical FM9 comparison, exact Mark II Turbo applicability, installed firmware, target-device timing, and the manufacturer's Global Mix equation remain open."
   },
   "current_checkpoint": {
     "name": "Fractal FM9-family Global Mix — Megatap Delay subset",

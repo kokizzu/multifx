@@ -772,7 +772,8 @@ This is a targeted cross-check of the six requested flagships, not a fresh one-b
 - [x] Fractal FM9-family Surround Delay: native DSP, categorized Delay picker ID 117, local-DI browser smoke, Windows MinGW build, and isolated CPU/memory report complete.
 - [x] Fractal FM9-family Surround Delay Global Mix follow-up: default-off project offset, categorized picker/control checks, native and local-DI browser/WASM tests, MinGW build, and isolated CPU/memory report complete; manufacturer mix equation remains unpublished.
 - [x] Fractal FM9-family Megatap Delay Global Mix: November 2026 guide checked at printed pp. 4 and 57–58; categorized Delay picker ID 68 keeps a default-off project-only offset. Native tests, local-DI browser/WASM smoke, Windows MinGW build, and isolated CPU/memory report pass; shared Fractal Mix law remains undocumented.
-- [ ] Continue the Fractal guide's other Global Mix-eligible blocks in order: Multitap Delay, Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay. Verify each algorithm's own documented Mix behavior before choosing any project control.
+- [x] Fractal FM9-family Multitap Delay Global Mix: November 2026 guide checked at printed pp. 4 and 62–68; categorized Delay picker ID 72 keeps a default-off project-only offset. Focused native tests, local-DI browser/WASM Play, Windows MinGW build, and isolated CPU/memory report pass; the manufacturer equation remains undocumented.
+- [ ] Continue the Fractal guide's other Global Mix-eligible blocks in order: Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay. Verify each algorithm's own documented Mix behavior before choosing any project control.
 - [x] Fender Tone Master Pro Memory Delay: categorized Delay picker ID 118, native/WASM tests and local-DI Play captures, Windows build, bounded memory, and isolated CPU report complete; human listening/device checks remain.
 - [x] Fender Tone Master Pro Modulated Small Hall: categorized Reverb picker ID 119, native/browser local-DI Play, Windows build, and isolated CPU/memory checks complete; human listening/device checks remain.
 - [x] Fractal FM9-family Plex Shift: rechecked the November 2026 guide (printed pp. 87–90); added and tested a bounded project-authored subset on existing Delay picker ID 76. It is distinct from note tracking and Fractal's Plex Detune algorithm. Human listening/device checks remain open.
@@ -844,3 +845,20 @@ The Ryzen 9 5950X Release benchmark used 48 kHz stereo/128-frame callbacks, a 2.
 | Default mono | 0.0263% | 0.0349% | 0.0465% | 0.2239% | 0.7609% | 144,176 B | 0/20,000 |
 
 All observed maxima were below the callback deadline; the 26.8556% disabled-offset maximum is a single desktop scheduling outlier. The mix controls add 8 B to the native/browser processor state and no ring-buffer storage; the existing zero-allocation test covers `process()`. These figures are not full-chain, tablet, or Fractal DSP measurements. Human listening, physical comparison, installed firmware, exact Mark II Turbo applicability, and target-device timing remain manual.
+
+## Fractal FM9-family Multitap Delay Global Mix subset (2026-11-27)
+
+The November 2026 Blocks Guide lists Multitap Delay for Global Mix on printed p. 4 and lists its Mix-page controls on p. 68. The page establishes a per-block opt-in to the shared Effects Mix offset, but neither the guide nor the general Mix section gives the exact Multitap combination equation or most control defaults/ranges. FM9 downloads list v12.0 for Original/Turbo only; Mark II Turbo applicability and installed firmware are unverified. The existing project-authored Multi-Delay remains a Delay-category processor at picker ID 72. Its default-off control stores a separate −50…+50 percentage-point offset (default 0); when enabled the project adds it to base Mix and clamps the result to 0…1. This is a project interpretation, not a Fractal setting or parity claim.
+
+`make test-fractal-multitap-global-mix` passes focused defaults, disabled-offset identity, positive/negative offsets, clamping, non-finite fallback, storage separation, and zero-process-allocation coverage. `make web-test-fractal-multitap-global-mix` passes HeadlessChrome 151 Play on the local prerecorded stereo Guitar-TECHS DI: category Delay, effect index 72, Off/0 pp defaults, disabled-offset RMS 0, and enabled +20 pp RMS 0.0152142 over 48,000 frames. `make windows-cross-build` compiles the MinGW shared core and offline renderer.
+
+The isolated Release benchmark used AMD Ryzen 9 5950X, 48 kHz, stereo 128-frame callbacks (2.6667 ms), 3,000 warm-up and 20,000 measured calls. CPU values are processor-call time as a percentage of one callback deadline; each profile reports 524,920 B state and 0/20,000 deadline misses:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Default stereo | 0.1159% | 0.1748% | 0.2115% | 0.6008% | 1.1903% |
+| +20 pp stored, opt-in Off | 0.1155% | 0.1691% | 0.1834% | 0.4455% | 0.7812% |
+| +20 pp enabled | 0.1166% | 0.1819% | 0.1901% | 0.4560% | 0.5325% |
+| Default mono | 0.1095% | 0.1534% | 0.1845% | 0.3968% | 0.5614% |
+
+The stored-but-disabled option has no measurable path difference by design; the offset is combined during configuration, outside the sample loop. These desktop figures do not predict full-chain or target-device performance. Manual listening, FM9 hardware comparison, exact firmware applicability, and tablet timing remain open.

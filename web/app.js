@@ -1783,6 +1783,9 @@ const multiDelaySeriesFeedback = document.querySelector("#multi-delay-series-fee
 const multiDelaySeriesSend = document.querySelector("#multi-delay-series-send");
 const multiDelaySeriesReturn = document.querySelector("#multi-delay-series-return");
 const multiDelayDiffusorPanel = document.querySelector("#multi-delay-diffusor-controls");
+const multiDelayGlobalMixEnabled = document.querySelector("#multi-delay-global-mix-enabled");
+const multiDelayGlobalMixOffset = document.querySelector("#multi-delay-global-mix-offset");
+const multiDelayGlobalMixOffsetValue = document.querySelector("#multi-delay-global-mix-offset-value");
 const multiDelayDiffusorMasterTime = document.querySelector("#multi-delay-diffusor-master-time");
 const multiDelayDiffusorMasterFeedback = document.querySelector("#multi-delay-diffusor-master-feedback");
 const multiDelayMotorPanel = document.querySelector("#multi-delay-motor-controls");
@@ -21812,6 +21815,58 @@ async function runBrowserSelfTest() {
       reference, captureView, captureBuffer,
     );
     testResult.textContent = "Checking Ducking Delay tempo sync, repeat cuts, and modulation on local guitar audio…";
+       if (new URLSearchParams(location.search).get("selftest") === "fractal-multitap-global-mix") {
+         testResult.textContent = "Checking project Global Mix on categorized Multitap Delay with local guitar audio…";
+         const multitapTestModule = await import("./fractal_multitap_global_mix_test.js");
+         const multitapGlobalMixSmoke = await multitapTestModule.runFractalMultitapGlobalMixBrowserSmokeTest({
+           reference,
+           captureView,
+           captureBuffer,
+           processorReady,
+           getWorkletNode: () => workletNode,
+           getDecodedAudio: () => decodedAudio,
+           getAudioContext: () => audioContext,
+           enabledEffects,
+           stopSource,
+           waitForCapture,
+           getPlayTask: () => playTask,
+           playButton,
+           setPlaybackOffset: (value) => { playbackOffset = value; },
+           defaults: DEFAULT_PARAMETERS.multiDelay,
+           effectNames: EFFECT_NAMES,
+           updateOptions: updateMultiDelayOptions,
+           controls: {
+             all: multiDelayControls,
+             globalMixEnabled: multiDelayGlobalMixEnabled,
+             globalMixOffset: multiDelayGlobalMixOffset,
+             lineControls: multiDelayLineControls,
+             lfoControls: multiDelayLfoControls,
+             topology: multiDelayTopology,
+             tempo: multiDelayTempo,
+             lowCut: multiDelayLowCut,
+             highCut: multiDelayHighCut,
+             inputGain: multiDelayInputGain,
+             mix: multiDelayMix,
+             level: multiDelayLevel,
+             seriesFeedback: multiDelaySeriesFeedback,
+             seriesSend: multiDelaySeriesSend,
+             seriesReturn: multiDelaySeriesReturn,
+             diffusorMasterTime: multiDelayDiffusorMasterTime,
+             diffusorMasterFeedback: multiDelayDiffusorMasterFeedback,
+             motorSpeed: multiDelayMotorSpeed,
+           },
+         });
+         const focusedReport = {
+           result: "passed",
+           browser: navigator.userAgent,
+           sampleRate: audioContext.sampleRate,
+           multitapGlobalMix: multitapGlobalMixSmoke,
+         };
+         testResult.dataset.status = "passed";
+         testResult.textContent = JSON.stringify(focusedReport);
+         document.title = "PASS · TabletFX Multitap Global Mix browser test";
+         return;
+       }
     const duckingDelaySmoke = await runDuckingDelayBrowserSmokeTest(
       reference, captureView, captureBuffer,
     );

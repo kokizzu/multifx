@@ -4971,5 +4971,120 @@ PARTIAL_CHECKPOINT_CONTEXT["fractal-megatap-global-mix"] = {
     "web/index.html": 0,
 }
 
+FRACTAL_MULTITAP_GLOBAL_MIX_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_multitap_global_mix_bench.cpp",
+    "include/tabletfx/effects/multi_delay.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/multi_delay.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_multi_delay.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/fractal_multitap_global_mix_test.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-multitap-global-mix"] = (
+    FRACTAL_MULTITAP_GLOBAL_MIX_CHECKPOINT_PATHS,
+    "feat: add project Global Mix option to Multitap Delay",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-multitap-global-mix"] = {
+    "CMakeLists.txt": ("tabletfx_fractal_multitap_global_mix_bench",),
+    "EFFECTS_MATRIX.md": (
+        "## Fractal FM9-family Global Mix — Multitap Delay subset",
+    ),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "Fractal FM9-family Multitap Delay Global Mix",
+        "## Fractal FM9-family Multitap Delay Global Mix subset",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Multitap Delay Global Mix subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Multitap Delay Global Mix subset",
+    ),
+    "RESEARCH.md": (
+        "## Fractal FM9-family Multitap Delay Global Mix subset",
+    ),
+    "research-state.json": (
+        "Fractal FM9-family Global Mix — Multitap Delay subset",
+        "ebae974bb4952ae27e5a89ab9fbd380564f4e089",
+        "Fractal FM9-family Global Mix — Megatap Delay subset",
+    ),
+    "apps/fractal_multitap_global_mix_bench.cpp": (
+        "global-mix-enabled-plus-20pp",
+    ),
+    "include/tabletfx/effects/multi_delay.hpp": ("bool global_mix_enabled",),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += fractal-multitap-global-mix",
+        "test-fractal-multitap-global-mix:",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_MULTITAP_GLOBAL_MIX_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-multitap-global-mix"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-multitap-global-mix"]',
+    ),
+    "scripts/run_cmake.py": (
+        "bench-fractal-multitap-global-mix",
+        "def bench_fractal_multitap_global_mix(cmake: str)",
+    ),
+    "scripts/web.py": (
+        "fractal_multitap_global_mix_only",
+        '"test-fractal-multitap-global-mix"',
+    ),
+    "src/effects/multi_delay.cpp": ("effective_mix_ = parameters_.global_mix_enabled",),
+    "src/web/wasm_chain.cpp": (
+        "configure_multi_delay_global",
+        "global_mix_offset = global_mix_offset",
+    ),
+    "tests/test_multi_delay.cpp": (
+        "test_global_mix_defaults_disabled_identity_and_base_mix_storage",
+        "test_global_mix_offsets_adjust_final_wet_dry_mix",
+    ),
+    "web/app.js": (
+        "const multiDelayGlobalMixOffsetValue =",
+        'selftest") === "fractal-multitap-global-mix"',
+    ),
+    "web/audio-worklet.js": (
+        "Number(parameters.globalMixEnabled ?? 0)",
+        "Number(parameters.globalMixOffset ?? 0)",
+    ),
+    "web/fractal_multitap_global_mix_test.js": (
+        "export async function runFractalMultitapGlobalMixBrowserSmokeTest",
+    ),
+    "web/index.html": (
+        "multi-delay-global-mix-enabled",
+        "multi-delay-global-mix-offset",
+    ),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-multitap-global-mix"] = {
+    "CMakeLists.txt": 0,
+    "EFFECTS_MATRIX.md": 0,
+    "FLAGSHIP_EFFECT_COMPARISON.md": 0,
+    "IMPLEMENTATION_CHECKLIST.md": 0,
+    "LATENCY_AND_QUALITY.md": 0,
+    "RESEARCH.md": 0,
+    "research-state.json": 0,
+    "make/publish.mk": 0,
+    "scripts/publish_checkpoint.py": 1,
+    "scripts/run_cmake.py": 1,
+    "scripts/web.py": 0,
+    "src/effects/multi_delay.cpp": 0,
+    "src/web/wasm_chain.cpp": 1,
+    "tests/test_multi_delay.cpp": 0,
+    "web/app.js": 0,
+    "web/audio-worklet.js": 1,
+    "web/index.html": 1,
+}
+
 if __name__ == "__main__":
     main()

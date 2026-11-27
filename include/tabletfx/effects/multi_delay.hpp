@@ -90,6 +90,10 @@ struct MultiDelayParameters {
     // Trailing fields preserve existing aggregate/config field order. Zero
     // depth keeps all older presets and callers sonically unchanged.
     std::array<MultiDelayTimeLfoParameters, multi_delay_time_lfo_count> time_lfo{};
+    // Project-only opt-in for an additive percentage-point offset to Mix.
+    // The base Mix remains stored independently, and the option is neutral off.
+    bool global_mix_enabled = false;
+    float global_mix_offset = 0.0F;
 };
 
 /*

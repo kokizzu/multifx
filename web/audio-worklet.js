@@ -87,6 +87,8 @@ function configureMultiDelay(module, chain, parameters = {}) {
     chain, Number(parameters.tempoBpm ?? 120), Number(parameters.lowCutHz ?? 20),
     Number(parameters.highCutHz ?? 20000), Number(parameters.inputGainDb ?? 0),
     Number(parameters.mix ?? 0.25), Number(parameters.levelDb ?? 0),
+    Number(parameters.globalMixEnabled ?? 0),
+    Number(parameters.globalMixOffset ?? 0),
   );
   module._tf_chain_set_multi_delay_topology(
     chain, Number(parameters.topology ?? 0),

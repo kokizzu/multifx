@@ -1810,6 +1810,8 @@ public:
         parameters.input_gain_db = input_gain_db;
         parameters.mix = mix;
         parameters.level_db = level_db;
+        parameters.global_mix_enabled = global_mix_enabled != 0U;
+        parameters.global_mix_offset = global_mix_offset;
         delay->configure(parameters);
     }
 
