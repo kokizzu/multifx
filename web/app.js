@@ -1920,6 +1920,9 @@ const phaserMix = document.querySelector("#phaser-mix");
 const phaserMixValue = document.querySelector("#phaser-mix-value");
 const phaserStereo = document.querySelector("#phaser-stereo");
 const phaserStereoValue = document.querySelector("#phaser-stereo-value");
+const phaserGlobalMixEnabled = document.querySelector("#phaser-global-mix-enabled");
+const phaserGlobalMixOffset = document.querySelector("#phaser-global-mix-offset");
+const phaserGlobalMixOffsetValue = document.querySelector("#phaser-global-mix-offset-value");
 const vibratoRate = document.querySelector("#vibrato-rate-hz");
 const vibratoRateValue = document.querySelector("#vibrato-rate-value");
 const vibratoDepth = document.querySelector("#vibrato-depth-ms");
@@ -7247,6 +7250,8 @@ function updatePhaser() {
     Number(phaserFeedback.value), Number(phaserStages.value), Number(phaserMix.value),
     tempoSync ? 1 : 0, tempoBpm, division,
     phaserStereo.checked ? 1 : 0,
+    phaserGlobalMixEnabled.checked ? 1 : 0,
+    Number(phaserGlobalMixOffset.value),
   ];
   DEFAULT_PARAMETERS.phaser = values;
   phaserRateValue.value = tempoSync
@@ -7258,12 +7263,13 @@ function updatePhaser() {
   phaserMixValue.value = `${Math.round(Number(phaserMix.value) * 100)}%`;
   phaserTempoBpmValue.value = `${tempoBpm.toFixed(0)} BPM`;
   phaserStereoValue.value = phaserStereo.checked ? "On" : "Off";
+  phaserGlobalMixOffsetValue.value = `${Number(phaserGlobalMixOffset.value).toFixed(0)} pp`;
   if (workletNode) workletNode.port.postMessage({ type: "phaser", value: values });
 }
 
 for (const control of [phaserRate, phaserMinimum, phaserMaximum,
   phaserFeedback, phaserStages, phaserMix, phaserTapDivision, phaserTempoBpm,
-  phaserStereo]) {
+  phaserStereo, phaserGlobalMixEnabled, phaserGlobalMixOffset]) {
   control.addEventListener("input", updatePhaser);
   control.addEventListener("change", updatePhaser);
 }
@@ -14447,8 +14453,11 @@ async function runFenderPhaser90TapDivisionBrowserSmokeTest(reference, captureVi
         !phaserStereo.checked || phaserStereoValue.value !== "On" ||
         phaserStages.options.length !== 5 ||
         [...phaserStages.options].map((option) => option.value).join(",") !== "4,6,8,10,12" ||
-        DEFAULT_PARAMETERS.phaser.length !== 10 ||
+         DEFAULT_PARAMETERS.phaser.length !== 12 ||
         DEFAULT_PARAMETERS.phaser[9] !== 1 ||
+         DEFAULT_PARAMETERS.phaser[10] !== 0 ||
+         DEFAULT_PARAMETERS.phaser[11] !== 0 ||
+         phaserGlobalMixEnabled.checked || phaserGlobalMixOffset.value !== "0" ||
         !(effectMemory[18] > 0)) {
       throw new Error("Phaser Tap Division controls or unchanged free-rate default are invalid.");
     }
@@ -21815,6 +21824,53 @@ async function runBrowserSelfTest() {
       reference, captureView, captureBuffer,
     );
     testResult.textContent = "Checking Ducking Delay tempo sync, repeat cuts, and modulation on local guitar audio…";
+    if (new URLSearchParams(location.search).get("selftest") === "fractal-phaser-global-mix") {
+      testResult.textContent = "Checking project Global Mix on categorized Phaser with local guitar audio…";
+      const phaserTestModule = await import("./fractal_phaser_global_mix_test.js");
+      const phaserGlobalMixSmoke = await phaserTestModule.runFractalPhaserGlobalMixBrowserSmokeTest({
+        reference,
+        captureView,
+        captureBuffer,
+        processorReady,
+        getWorkletNode: () => workletNode,
+        getAudioContext: () => audioContext,
+        enabledEffects,
+        stopSource,
+        waitForCapture,
+        getPlayTask: () => playTask,
+        playButton,
+        setPlaybackOffset: (value) => { playbackOffset = value; },
+        defaults: DEFAULT_PARAMETERS.phaser,
+        effectNames: EFFECT_NAMES,
+        updatePhaser,
+        controls: {
+          all: [phaserRate, phaserTapDivision, phaserTempoBpm, phaserMinimum,
+            phaserMaximum, phaserFeedback, phaserStages, phaserMix, phaserStereo,
+            phaserGlobalMixEnabled, phaserGlobalMixOffset],
+          rate: phaserRate,
+          tapDivision: phaserTapDivision,
+          tempoBpm: phaserTempoBpm,
+          minimum: phaserMinimum,
+          maximum: phaserMaximum,
+          feedback: phaserFeedback,
+          stages: phaserStages,
+          mix: phaserMix,
+          stereo: phaserStereo,
+          globalMixEnabled: phaserGlobalMixEnabled,
+          globalMixOffset: phaserGlobalMixOffset,
+        },
+      });
+      const focusedReport = {
+        result: "passed",
+        browser: navigator.userAgent,
+        sampleRate: audioContext.sampleRate,
+        phaserGlobalMix: phaserGlobalMixSmoke,
+      };
+      testResult.dataset.status = "passed";
+      testResult.textContent = JSON.stringify(focusedReport);
+      document.title = "PASS · TabletFX Phaser Global Mix browser test";
+      return;
+    }
        if (new URLSearchParams(location.search).get("selftest") === "fractal-multitap-global-mix") {
          testResult.textContent = "Checking project Global Mix on categorized Multitap Delay with local guitar audio…";
          const multitapTestModule = await import("./fractal_multitap_global_mix_test.js");

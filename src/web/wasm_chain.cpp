@@ -3327,6 +3327,8 @@ public:
         parameters.stages = static_cast<std::uint8_t>(stages);
         parameters.mix = mix;
         parameters.stereo = stereo != 0U;
+        parameters.global_mix_enabled = global_mix_enabled != 0U;
+        parameters.global_mix_offset = global_mix_offset;
         static_cast<tabletfx::Phaser*>(effects_[18].effect.get())
             ->set_parameters(parameters);
     }

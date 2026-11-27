@@ -326,6 +326,8 @@ PUBLISH_CHECKPOINTS += stadium-dynamics-sidechain
 PUBLISH_CHECKPOINTS += fractal-global-mix-delay
 PUBLISH_CHECKPOINTS += fractal-megatap-global-mix
 PUBLISH_CHECKPOINTS += fractal-multitap-global-mix
+PUBLISH_CHECKPOINTS += fractal-phaser-global-mix
+
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 
 publish-plan:
@@ -513,6 +515,15 @@ web-test-fractal-multitap-global-mix: test-fractal-multitap-global-mix web-build
 bench-fractal-multitap-global-mix:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-multitap-global-mix
 
+.PHONY: test-fractal-phaser-global-mix web-test-fractal-phaser-global-mix bench-fractal-phaser-global-mix
+test-fractal-phaser-global-mix:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_phaser_tests
+
+web-test-fractal-phaser-global-mix: test-fractal-phaser-global-mix web-build
+	$(PYTHON) scripts/web.py test-fractal-phaser-global-mix
+
+bench-fractal-phaser-global-mix:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-phaser-global-mix
 .PHONY: publish-plan-fractal-global-mix-delay
 publish-plan-fractal-global-mix-delay:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-delay

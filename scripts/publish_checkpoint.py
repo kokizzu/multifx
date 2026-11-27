@@ -5086,5 +5086,121 @@ PARTIAL_CHECKPOINT_CONTEXT["fractal-multitap-global-mix"] = {
     "web/index.html": 1,
 }
 
+FRACTAL_PHASER_GLOBAL_MIX_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_phaser_global_mix_bench.cpp",
+    "include/tabletfx/effects/phaser.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/phaser.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_phaser.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/fractal_phaser_global_mix_test.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-phaser-global-mix"] = (
+    FRACTAL_PHASER_GLOBAL_MIX_CHECKPOINT_PATHS,
+    "feat: add project Global Mix offset to Phaser",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-phaser-global-mix"] = {
+    "CMakeLists.txt": ("tabletfx_fractal_phaser_global_mix_bench",),
+    "EFFECTS_MATRIX.md": (
+        "## Fractal FM9-family Global Mix — Phaser subset",
+    ),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "Fractal FM9-family Phaser Global Mix subset",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Phaser Global Mix subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Phaser Global Mix subset",
+    ),
+    "RESEARCH.md": (
+        "## Fractal FM9-family Phaser Global Mix subset",
+    ),
+    "research-state.json": (
+        "Fractal FM9-family Global Mix — Phaser subset",
+        "3214f3da1c0ac85b498be7ba6175397c9eba5bf8",
+    ),
+    "apps/fractal_phaser_global_mix_bench.cpp": (
+        "Project Phaser Global Mix benchmark",
+    ),
+    "include/tabletfx/effects/phaser.hpp": ("bool global_mix_enabled = false",),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += fractal-phaser-global-mix",
+        "test-fractal-phaser-global-mix:",
+        "bench-fractal-phaser-global-mix:",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_PHASER_GLOBAL_MIX_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-phaser-global-mix"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-phaser-global-mix"]',
+    ),
+    "scripts/run_cmake.py": (
+        "bench-fractal-phaser-global-mix",
+        "def bench_fractal_phaser_global_mix(cmake: str)",
+    ),
+    "scripts/web.py": ("browser_test(fractal_phaser_global_mix_only=True)",),
+    "src/effects/phaser.cpp": ("parameters_.global_mix_enabled",),
+    "src/web/wasm_chain.cpp": (
+        "configure_phaser",
+        "global_mix_offset = global_mix_offset",
+    ),
+    "tests/test_phaser.cpp": (
+        "test_project_global_mix_is_opt_in_and_preserves_base_mix",
+        "test_project_global_mix_is_opt_in_and_preserves_base_mix();",
+    ),
+    "web/app.js": (
+        "const phaserGlobalMixEnabled =",
+        "Number(phaserGlobalMixOffset.value),",
+        "phaserGlobalMixOffsetValue.value =",
+        "phaserStereo, phaserGlobalMixEnabled, phaserGlobalMixOffset]",
+        "DEFAULT_PARAMETERS.phaser.length !== 12",
+        "phaserGlobalMixEnabled.checked || phaserGlobalMixOffset.value",
+        'get("selftest") === "fractal-phaser-global-mix"',
+        "runFractalPhaserGlobalMixBrowserSmokeTest",
+    ),
+    "web/audio-worklet.js": (
+        "parameters.phaser || [0.5, 250, 1600, 0.2, 4, 0.5, 0, 120, 4, 1, 0, 0]",
+    ),
+    "web/fractal_phaser_global_mix_test.js": (
+        "export async function runFractalPhaserGlobalMixBrowserSmokeTest",
+    ),
+    "web/index.html": (
+        "phaser-global-mix-enabled",
+        "phaser-global-mix-offset",
+    ),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-phaser-global-mix"] = {
+    "CMakeLists.txt": 0,
+    "EFFECTS_MATRIX.md": 0,
+    "FLAGSHIP_EFFECT_COMPARISON.md": 0,
+    "IMPLEMENTATION_CHECKLIST.md": 0,
+    "LATENCY_AND_QUALITY.md": 0,
+    "RESEARCH.md": 0,
+    "research-state.json": 0,
+    "make/publish.mk": 1,
+    "scripts/publish_checkpoint.py": 1,
+    "scripts/run_cmake.py": 1,
+    "scripts/web.py": 1,
+    "src/effects/phaser.cpp": 0,
+    "src/web/wasm_chain.cpp": 1,
+    "tests/test_phaser.cpp": 1,
+    "web/app.js": 1,
+    "web/audio-worklet.js": 1,
+    "web/index.html": 1,
+}
+
 if __name__ == "__main__":
     main()

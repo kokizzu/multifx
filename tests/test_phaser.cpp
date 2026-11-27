@@ -100,6 +100,88 @@ void test_defaults_bounds_and_stage_choices() {
             "non-finite phaser parameters did not use safe defaults");
 }
 
+void test_project_global_mix_is_opt_in_and_preserves_base_mix() {
+    using tabletfx::Phaser;
+    using tabletfx::PhaserParameters;
+
+    PhaserParameters baseline_parameters;
+    Phaser baseline(48000.0F, 2U, baseline_parameters);
+    PhaserParameters stored_parameters = baseline_parameters;
+    stored_parameters.global_mix_offset = 20.0F;
+    Phaser stored_but_disabled(48000.0F, 2U, stored_parameters);
+    require(stored_but_disabled.parameters().mix == baseline_parameters.mix &&
+                stored_but_disabled.parameters().global_mix_offset == 20.0F &&
+                !stored_but_disabled.parameters().global_mix_enabled,
+            "disabled offset did not preserve its stored value and base Mix");
+
+    stored_parameters.global_mix_offset = 75.0F;
+    Phaser bounded_offset(48000.0F, 2U, stored_parameters);
+    require(bounded_offset.parameters().global_mix_offset == 50.0F,
+            "Global Mix offset exceeded its project-authored ±50 pp range");
+    stored_parameters.global_mix_offset = 20.0F;
+
+    std::vector<float> base_audio = make_tone(330.0F, 4096U);
+    std::vector<float> disabled_audio = base_audio;
+    baseline.process(base_audio, 2U);
+    stored_but_disabled.process(disabled_audio, 2U);
+    require(base_audio == disabled_audio,
+            "stored Global Mix offset changed Phaser while the option was disabled");
+
+    stored_parameters.global_mix_enabled = true;
+    Phaser raised(48000.0F, 2U, stored_parameters);
+    std::vector<float> raised_audio = make_tone(330.0F, 4096U);
+    raised.process(raised_audio, 2U);
+    double raised_difference = 0.0;
+    for (std::size_t i = 0U; i < raised_audio.size(); ++i) {
+        const double delta = static_cast<double>(raised_audio[i]) - base_audio[i];
+        raised_difference += delta * delta;
+    }
+    require(raised_difference > 1.0e-4,
+            "enabled positive Global Mix offset did not change the wet/dry balance");
+    require(raised.parameters().mix == baseline_parameters.mix &&
+                raised.parameters().global_mix_offset == 20.0F &&
+                raised.parameters().global_mix_enabled,
+            "effective project mix overwrote the user's base Mix value");
+
+    stored_parameters.global_mix_offset = -20.0F;
+    Phaser lowered(48000.0F, 2U, stored_parameters);
+    std::vector<float> lowered_audio = make_tone(330.0F, 4096U);
+    lowered.process(lowered_audio, 2U);
+    require(lowered_audio != base_audio,
+            "enabled negative Global Mix offset did not change the wet/dry balance");
+
+    stored_parameters.mix = 0.9F;
+    stored_parameters.global_mix_offset = 50.0F;
+    Phaser upper_clamped(48000.0F, 2U, stored_parameters);
+    stored_parameters.mix = 1.0F;
+    stored_parameters.global_mix_offset = 0.0F;
+    Phaser full_wet(48000.0F, 2U, stored_parameters);
+    std::vector<float> upper_audio = make_tone(220.0F, 2048U);
+    std::vector<float> full_wet_audio = upper_audio;
+    upper_clamped.process(upper_audio, 2U);
+    full_wet.process(full_wet_audio, 2U);
+    require(upper_audio == full_wet_audio,
+            "positive project mix offset did not clamp the effective mix to 100%");
+
+    stored_parameters.mix = 0.1F;
+    stored_parameters.global_mix_offset = -50.0F;
+    Phaser lower_clamped(48000.0F, 2U, stored_parameters);
+    stored_parameters.mix = 0.0F;
+    stored_parameters.global_mix_offset = 0.0F;
+    Phaser full_dry(48000.0F, 2U, stored_parameters);
+    std::vector<float> lower_audio = make_tone(220.0F, 2048U);
+    std::vector<float> full_dry_audio = lower_audio;
+    lower_clamped.process(lower_audio, 2U);
+    full_dry.process(full_dry_audio, 2U);
+    require(lower_audio == full_dry_audio,
+            "negative project mix offset did not clamp the effective mix to 0%");
+
+    stored_parameters.global_mix_offset = std::numeric_limits<float>::infinity();
+    Phaser non_finite(48000.0F, 2U, stored_parameters);
+    require(non_finite.parameters().global_mix_offset == 0.0F,
+            "non-finite project offset did not fall back to zero");
+}
+
 void test_stereo_toggle_and_default_compatibility() {
     // Preserve source compatibility for callers that aggregate-initialize the
     // previous parameter fields and rely on trailing defaults.
@@ -408,6 +490,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_stage_choices();
+        test_project_global_mix_is_opt_in_and_preserves_base_mix();
         test_tempo_sync_divisions();
         test_stereo_toggle_and_default_compatibility();
         test_notch_and_selectable_stages();

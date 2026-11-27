@@ -997,3 +997,18 @@ Release benchmark on AMD Ryzen 9 5950X used 48 kHz, 128-frame callbacks (2.6667 
 | Default mono | 0.1095% | 0.1534% | 0.1845% | 0.3968% | 0.5614% | 524,920 B | 0/20,000 |
 
 The native tests confirm the offset is combined at configuration time, not in the sample loop, and `process()` performs no allocation. Local prerecorded Guitar-TECHS DI browser Play confirms an audible enabled +20 pp change (RMS difference 0.0152142) and disabled-offset identity (0). Maxima are desktop scheduler-dependent; the measurement does not predict tablet, Windows-runtime, or full-chain load. Human listening and target-device timing remain open.
+
+## Fractal FM9-family Phaser Global Mix subset (2026-11-27)
+
+The project-only Phaser Global Mix control reuses the existing Modulation processor at ID 18. It adds two scalar configuration fields, no audio buffer, fixed signal latency, or `process()` allocation. Native state is 360 B at 48 kHz stereo. The offset is combined during configuration, outside the sample loop.
+
+Release benchmark on AMD Ryzen 9 5950X used 48 kHz stereo, 128-frame callbacks (2.6667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. Percentages are isolated Phaser processor-call time relative to one callback deadline:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | State | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default | 0.0720% | 0.0724% | 0.1076% | 0.3124% | 0.4384% | 360 B | 0/20,000 |
+| +20 pp stored, opt-in Off | 0.0720% | 0.0724% | 0.1091% | 0.3218% | 0.4354% | 360 B | 0/20,000 |
+| +20 pp enabled | 0.0720% | 0.0896% | 0.1084% | 0.2741% | 1.8184% | 360 B | 0/20,000 |
+| −20 pp enabled | 0.0720% | 0.0724% | 0.0904% | 0.2629% | 0.7440% | 360 B | 0/20,000 |
+
+All maxima remain below the callback deadline; the larger opt-in maxima are scheduler-sensitive desktop outliers. The local guitar-DI browser test measures disabled-offset RMS difference 0 and enabled ±20 pp difference 0.0164916291. These are isolated desktop measurements and do not predict tablet, Windows-runtime, full-chain, or Fractal DSP load. Human listening, device comparison, and target-device timing remain open.

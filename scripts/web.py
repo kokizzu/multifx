@@ -1843,6 +1843,10 @@ def main() -> None:
         browser_test(fractal_diatonic_harmonizer_only=True)
     elif action == "test-fractal-resonator-input-gain":
         browser_test(fractal_resonator_input_gain_only=True)
+    elif action == "test-fractal-multitap-global-mix":
+        browser_test(fractal_multitap_global_mix_only=True)
+    elif action == "test-fractal-phaser-global-mix":
+        browser_test(fractal_phaser_global_mix_only=True)
     elif action == "inspect-build-path":
         inspect_web_build_path()
     elif action == "inspect-smoke-path":

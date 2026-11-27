@@ -53,6 +53,10 @@ void Phaser::set_parameters(PhaserParameters parameters) noexcept {
     target_mix_ = parameters_.mix;
     prepare_lfo();
     retarget(false);
+    if (parameters_.global_mix_enabled) {
+        target_mix_ = std::clamp(target_mix_ + parameters_.global_mix_offset * 0.01F,
+                                 0.0F, 1.0F);
+    }
 }
 
 bool Phaser::valid_tap_division(DelayDivision division) noexcept {

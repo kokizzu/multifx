@@ -2677,6 +2677,14 @@
           <span>Stereo LFO spread · project mapping</span><output id="phaser-stereo-value" for="phaser-stereo">On</output>
           <input id="phaser-stereo" type="checkbox" checked>
         </label>
+        <label class="mix-control" for="phaser-global-mix-enabled">
+          <span>Project Global Mix · opt-in</span>
+          <input id="phaser-global-mix-enabled" type="checkbox">
+        </label>
+        <label class="mix-control" for="phaser-global-mix-offset">
+          <span>Project-only Mix offset</span><output id="phaser-global-mix-offset-value" for="phaser-global-mix-offset">0 pp</output>
+          <input id="phaser-global-mix-offset" type="range" min="-50" max="50" step="1" value="0">
+        </label>
       </div>
       <div class="gain-controls" aria-label="Vibrato controls">
         <label class="mix-control" for="vibrato-rate-hz">

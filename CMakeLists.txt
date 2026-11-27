@@ -757,3 +757,7 @@ endif()
 add_executable(tabletfx_fractal_multitap_global_mix_bench
     apps/fractal_multitap_global_mix_bench.cpp)
 target_link_libraries(tabletfx_fractal_multitap_global_mix_bench PRIVATE tabletfx_core)
+
+add_executable(tabletfx_fractal_phaser_global_mix_bench
+    apps/fractal_phaser_global_mix_bench.cpp)
+target_link_libraries(tabletfx_fractal_phaser_global_mix_bench PRIVATE tabletfx_core)
