@@ -1727,6 +1727,9 @@ const flangerTapDivision = document.querySelector("#flanger-tap-division");
 const flangerTempoBpm = document.querySelector("#flanger-tempo-bpm");
 const flangerTempoBpmValue = document.querySelector("#flanger-tempo-bpm-value");
 const flangerDivisionBeats = [
+const flangerGlobalMixEnabled = document.querySelector("#flanger-global-mix-enabled");
+const flangerGlobalMixOffset = document.querySelector("#flanger-global-mix-offset");
+const flangerGlobalMixOffsetValue = document.querySelector("#flanger-global-mix-offset-value");
   4, 3, 2, 1.5, 1, 2 / 3, 0.75, 0.5, 1 / 3, 0.375, 0.25, 1 / 6, 0.125, 0.0625,
 ];
 const phaserRate = document.querySelector("#phaser-rate-hz");
@@ -6999,6 +7002,8 @@ function updateFlanger() {
   flangerPolarity.disabled = filterMode;
   flangerRightPhase.disabled = filterMode;
   flangerColor.disabled = !filterMode;
+  const globalMixEnabled = flangerGlobalMixEnabled.checked;
+  const globalMixOffset = Number(flangerGlobalMixOffset.value) / 100;
   flangerRateLabel.textContent = filterMode
     ? "Filter Rate position · project scale"
     : "Flanger rate";
@@ -7026,7 +7031,8 @@ function updateFlanger() {
 
 for (const control of [flangerRate, flangerDelay, flangerDepth, flangerFeedback,
   flangerPolarity, flangerRightPhase, flangerMix, flangerTapDivision,
-  flangerTempoBpm, flangerMode, flangerColor]) {
+  flangerTempoBpm, flangerMode, flangerColor,
+  flangerGlobalMixEnabled, flangerGlobalMixOffset]) {
   control.addEventListener("input", updateFlanger);
   control.addEventListener("change", updateFlanger);
 }
@@ -14627,10 +14633,94 @@ async function runFractalGlobalMixChorusBrowserSmokeTest(reference, captureView,
   }
 }
 
-    const maximumDifference = rmsDifference(unmodified, clipped);
-    if (tremoloLfoClipValue.value !== "100%" ||
-        partialDifference < 1e-5 || maximumDifference <= partialDifference) {
-      throw new Error("Tremolo LFO Clip UI changes did not produce bounded audible output differences.");
+async function runFractalGlobalMixFlangerBrowserSmokeTest(reference, captureView, captureBuffer) {
+  const previousEffectState = enabledEffects();
+  const previousCategory = effectCategoryFilter.value;
+  const previousControls = [flangerMix.value, flangerGlobalMixEnabled.checked,
+    flangerGlobalMixOffset.value];
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Global Mix Flanger test requires local stereo guitar DI audio.");
+    }
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    updateEffectBrowser();
+    const row = document.querySelector('[data-effect="17"]')?.closest(".effect-row");
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        flangerGlobalMixEnabled.checked || flangerGlobalMixOffset.value !== "0" ||
+        flangerGlobalMixOffset.min !== "-50" || flangerGlobalMixOffset.max !== "50" ||
+        flangerGlobalMixOffsetValue.value !== "0 pp" ||
+        JSON.stringify(DEFAULT_PARAMETERS.flangerGlobalMix) !== "[0,0]" ||
+        !(effectMemory[17] > 0)) {
+      throw new Error("Flanger Global Mix defaults, bounds, or Modulation picker category are invalid.");
+    }
+
+    [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+      const enabled = index === 0 || index === 17;
+      box.checked = enabled;
+      workletNode.port.postMessage({ type: "enable", index, value: enabled });
+    });
+
+    const captureAt = async (baseMix, enabled, offsetPoints) => {
+      flangerMix.value = String(baseMix);
+      flangerGlobalMixEnabled.checked = enabled;
+      flangerGlobalMixOffset.value = String(offsetPoints);
+      updateFlanger();
+      const expected = [enabled ? 1 : 0, offsetPoints / 100];
+      if (JSON.stringify(DEFAULT_PARAMETERS.flangerGlobalMix) !==
+          JSON.stringify(expected) ||
+          flangerGlobalMixOffsetValue.value !==
+            `${offsetPoints > 0 ? "+" : ""}${offsetPoints} pp`) {
+        throw new Error("Flanger Global Mix controls did not update opt-in or offset state.");
+      }
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await Promise.race([
+        playTask,
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error("Timed out starting Global Mix Flanger playback.")), 5000,
+        )),
+      ]);
+      await waitForCapture(captureView, reference.samples.length);
+      stopSource(false);
+      const output = new Float32Array(captureBuffer).slice();
+      for (let i = 0; i < output.length; i += 1) {
+        if (!Number.isFinite(output[i])) {
+          throw new Error(`Global Mix Flanger output is not finite at sample ${i}.`);
+        }
+      }
+      return output;
+    };
+    const rmsDifference = (left, right) => {
+      let squared = 0;
+      for (let i = 0; i < left.length; i += 1) {
+        const difference = left[i] - right[i];
+        squared += difference * difference;
+      }
+      return Math.sqrt(squared / Math.max(1, left.length));
+    };
+    const noOffset = await captureAt(0.3, false, 0);
+    const disabledOffset = await captureAt(0.3, false, 20);
+    const enabledOffset = await captureAt(0.3, true, 20);
+    const upperOffset = await captureAt(0.9, true, 50);
+    const upperClamped = await captureAt(1.0, true, 50);
+    const lowerOffset = await captureAt(0.1, true, -50);
+    const lowerClamped = await captureAt(0.0, true, -50);
+    const disabledDifference = rmsDifference(noOffset, disabledOffset);
+    const enabledDifference = rmsDifference(noOffset, enabledOffset);
+    const upperClampDifference = rmsDifference(upperOffset, upperClamped);
+    const lowerClampDifference = rmsDifference(lowerOffset, lowerClamped);
+    if (disabledDifference > 1e-7 || enabledDifference < 1e-4 ||
+        upperClampDifference > 1e-7 || lowerClampDifference > 1e-7) {
+      throw new Error(`Global Mix Flanger behavior failed: disabled RMS ${disabledDifference}, enabled RMS ${enabledDifference}, upper clamp RMS ${upperClampDifference}, lower clamp RMS ${lowerClampDifference}.`);
     }
     return {
       category: "Modulation",
@@ -14644,10 +14734,9 @@ async function runFractalGlobalMixChorusBrowserSmokeTest(reference, captureView,
     };
   } finally {
     stopSource(false);
-    [tremoloRate.value, tremoloDepth.value, tremoloWaveform.value,
-      tremoloSync.value, tremoloBpm.value, tremoloDivision.value,
-      tremoloLfoClip.value, tremoloDuty.value] = previousControls;
-    updateTremolo();
+    [flangerMix.value, flangerGlobalMixEnabled.checked,
+      flangerGlobalMixOffset.value] = previousControls;
+    updateFlanger();
     [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
       box.checked = previousEffectState[index];
       workletNode?.port.postMessage({
@@ -20909,6 +20998,42 @@ async function runBrowserSelfTest() {
         const mutantFilterSmoke = await runMutantFilterBrowserSmokeTest(
           reference, captureView, captureBuffer,
         );
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-global-mix-chorus") {
+          testResult.textContent = "Checking project Global Mix opt-in on categorized Chorus with local guitar audio…";
+          const globalMixSmoke = await runFractalGlobalMixChorusBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            fractalGlobalMixChorus: globalMixSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Global Mix Chorus browser test";
+          return;
+        }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-global-mix-flanger") {
+          testResult.textContent = "Checking project Global Mix opt-in on categorized Flanger with local guitar audio…";
+          const globalMixSmoke = await runFractalGlobalMixFlangerBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            fractalGlobalMixFlanger: globalMixSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Global Mix Flanger browser test";
+          return;
+        }
         const focusedReport = {
           result: "passed",
           browser: navigator.userAgent,

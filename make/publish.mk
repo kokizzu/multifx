@@ -155,6 +155,7 @@ PUBLISH_CHECKPOINTS += fractal-resonator-input-gain
 PUBLISH_CHECKPOINTS += stadium-seven-band-peq
 PUBLISH_CHECKPOINTS += fractal-chorus-tempo
 PUBLISH_CHECKPOINTS += fractal-global-mix-chorus
+PUBLISH_CHECKPOINTS += fractal-global-mix-flanger
 
 .PHONY: test-fractal-chorus-tempo web-test-fractal-chorus-tempo bench-fractal-chorus-tempo
 test-fractal-chorus-tempo:
@@ -177,6 +178,21 @@ web-test-fractal-global-mix-chorus: test-fractal-global-mix-chorus web-build
 
 bench-fractal-global-mix-chorus:
 	$(PYTHON) scripts/run_cmake.py bench-fractal-chorus-tempo
+
+.PHONY: test-fractal-global-mix-flanger web-test-fractal-global-mix-flanger bench-fractal-global-mix-flanger
+test-fractal-global-mix-flanger:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_flanger_tests
+	$(PYTHON) scripts/test_offline_cli.py --executable build/native/tabletfx_offline
+
+web-test-fractal-global-mix-flanger: test-fractal-global-mix-flanger web-build
+	$(PYTHON) scripts/web.py test-fractal-global-mix-flanger
+
+bench-fractal-global-mix-flanger:
+	$(PYTHON) scripts/run_cmake.py bench-fractal-global-mix-flanger
+
+.PHONY: publish-plan-fractal-global-mix-flanger
+publish-plan-fractal-global-mix-flanger:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-flanger
 
 .PHONY: publish-plan-fractal-global-mix-chorus
 publish-plan-fractal-global-mix-chorus:

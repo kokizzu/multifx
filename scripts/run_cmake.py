@@ -259,6 +259,7 @@ def main() -> None:
         run([str(executable), "--bench"])
         xr1_benchmark = BUILD_DIR / (
             "tabletfx_xr1_global_eq_bench.exe"
+                  "bench-fractal-global-mix-flanger",
             if os.name == "nt"
             else "tabletfx_xr1_global_eq_bench"
         )
@@ -339,3 +340,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    elif action == "bench-fractal-global-mix-flanger":
+        bench_fractal_global_mix_flanger(cmake)

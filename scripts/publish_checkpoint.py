@@ -4654,5 +4654,101 @@ PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-chorus"] = {
     "scripts/publish_checkpoint.py": 1,
 }
 
+FRACTAL_GLOBAL_MIX_FLANGER_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "EFFECTS_MATRIX.md",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "RESEARCH.md",
+    "research-state.json",
+    "apps/fractal_global_mix_flanger_bench.cpp",
+    "include/tabletfx/effects/flanger.hpp",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/flanger.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_flanger.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+CHECKPOINTS["fractal-global-mix-flanger"] = (
+    FRACTAL_GLOBAL_MIX_FLANGER_CHECKPOINT_PATHS,
+    "feat: add project Global Mix offset to Flanger",
+)
+PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-flanger"] = {
+    "CMakeLists.txt": ("tabletfx_fractal_global_mix_flanger_bench",),
+    "EFFECTS_MATRIX.md": ("## Fractal FM9-family Global Mix — Flanger subset",),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "## Fractal FM9-family Global Mix — Flanger subset",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "## Fractal FM9-family Global Mix — Flanger subset",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fractal FM9-family Global Mix — Flanger subset",
+    ),
+    "RESEARCH.md": (
+        "TabletFX implements project-authored subsets on existing Chorus",
+    ),
+    "research-state.json": ("Fractal FM9-family Global Mix — Flanger subset",),
+    "make/publish.mk": (
+        "PUBLISH_CHECKPOINTS += fractal-global-mix-flanger",
+        "test-fractal-global-mix-flanger",
+        "publish-plan-fractal-global-mix-flanger",
+    ),
+    "scripts/publish_checkpoint.py": (
+        "FRACTAL_GLOBAL_MIX_FLANGER_CHECKPOINT_PATHS",
+        'CHECKPOINTS["fractal-global-mix-flanger"]',
+        'PARTIAL_CHECKPOINT_HUNKS["fractal-global-mix-flanger"]',
+    ),
+    "scripts/run_cmake.py": ("bench-fractal-global-mix-flanger",),
+    "scripts/web.py": (
+        "fractal_global_mix_flanger_only",
+        "test-fractal-global-mix-flanger",
+    ),
+    "include/tabletfx/effects/flanger.hpp": (
+        "Project interpretation of Fractal's Global Mix feature",
+    ),
+    "src/effects/flanger.cpp": (
+        "Fractal documents a global ±50% offset but not its equation.",
+    ),
+    "src/web/wasm_chain.cpp": (
+        "parameters.global_mix_enabled = global_mix_enabled != 0U;",
+    ),
+    "tests/test_flanger.cpp": (
+        "test_global_mix_offset_is_opt_in_clamped_and_mode_scoped",
+    ),
+    "web/app.js": (
+        "flangerGlobalMixEnabled",
+        "runFractalGlobalMixFlangerBrowserSmokeTest",
+    ),
+    "web/audio-worklet.js": ("flangerGlobalMix",),
+    "web/index.html": (
+        "flanger-global-mix-enabled",
+        "The Global Mix control applies only in Flanger mode.",
+    ),
+}
+PARTIAL_CHECKPOINT_CONTEXT["fractal-global-mix-flanger"] = {
+    "CMakeLists.txt": 0,
+    "EFFECTS_MATRIX.md": 0,
+    "FLAGSHIP_EFFECT_COMPARISON.md": 0,
+    "IMPLEMENTATION_CHECKLIST.md": 0,
+    "LATENCY_AND_QUALITY.md": 0,
+    "RESEARCH.md": 0,
+    "research-state.json": 0,
+    "make/publish.mk": 0,
+    "scripts/publish_checkpoint.py": 1,
+    "scripts/run_cmake.py": 0,
+    "scripts/web.py": 0,
+    "src/web/wasm_chain.cpp": 0,
+    "web/app.js": 0,
+    "web/audio-worklet.js": 0,
+    "web/index.html": 0,
+}
+
 if __name__ == "__main__":
     main()

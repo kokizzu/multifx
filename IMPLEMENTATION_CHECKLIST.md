@@ -915,3 +915,13 @@ Total source requirements: 327; approved additions: 12.
 - [x] `make bench-fractal-global-mix-chorus` reports the 48 kHz stereo/128-frame Ryzen 9 5950X result: Global Mix disabled p50/p95/p99/p99.9/max 0.076/0.096/0.114/0.268/0.502%; enabled +20 pp 0.076/0.101/0.128/0.264/2.111% of 2.667 ms. Both profiles are finite, 34,856 B native state, 0/20,000 deadline misses; tests confirm zero process allocations, no new buffer, and no fixed latency.
 - [x] `make test-docs` passes 333 source requirements/346 tracked rows; `make diff-check` passes and reports no workflow changes.
 - [ ] Human listening, physical FM9 Mark II Turbo comparison, exact firmware applicability, and target-device timing remain manual; the manufacturer equation is unresolved. The remaining guide-listed Global Mix blocks require separate work.
+
+## Fractal FM9-family Global Mix — Flanger subset (2026-11-27)
+
+- [x] Verify the November 2026 Blocks Guide, printed pp. 4 and 50: Flanger is eligible for the per-block Global Mix opt-in and shared ±50% Effects Mix offset. The equation is unspecified. FM9 downloads name v12.0 for Original/Turbo but not Mark II Turbo separately; installed firmware is unknown.
+- [x] Add project-only opt-in to existing Flanger at Modulation picker ID 17, with default Off/0 pp, slider −50…+50 pp, separate stored base Mix, and clamped additive effective Mix. Keep it active only in Flanger mode; the project-authored Filter mode ignores it. No effect row, buffer, or latency is added.
+- [x] Focused native Flanger tests verify defaults, disabled identity, +20 pp, endpoint clamps, non-finite fallback, base Mix preservation, Filter-mode scope, memory, and allocation-free `process()`. `make test-fractal-global-mix-flanger` also passes offline CLI checks.
+- [x] `make web-test-fractal-global-mix-flanger` passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Modulation/ID 17, default/bounds, disabled RMS 0, enabled +20 pp RMS 0.018654, upper clamp 0, lower clamp <1e−15, and 4,808 B browser/WASM state.
+- [x] `make windows-cross-build` passes the Windows MinGW core/offline-renderer build.
+- [x] `make bench-fractal-global-mix-flanger`: Ryzen 9 5950X Release, 48 kHz stereo, 128 frames, 3,000 warm-up and 20,000 measured callbacks. Disabled p50/p95/p99/p99.9/max 0.059/0.060/0.140/0.415/1.177%; enabled +20 pp 0.059/0.073/0.092/0.413/1.059% of the 2.667 ms budget. Both profiles use 4,840 B, have 0 allocations and 0/20,000 deadline misses. No fixed latency or added buffer.
+- [ ] Human listening, physical FM9 Mark II Turbo comparison, exact firmware applicability, and target-device timing remain manual. The Global Mix equation remains unknown; do not claim Fractal settings, DSP, or sound parity.

@@ -6,8 +6,8 @@
   "workflow": "flagship-effects-categorized",
   "previous_checkpoint_commit": "6eef29188bad9eb398bd663c4099b4f62e1933ed",
   "latest_audit": {
-    "name": "Fractal FM9-family Global Mix — Chorus subset",
-    "status": "Verified the November 2026 Blocks Guide and August 2022 FM9 manual; their eligible-block lists differ and neither publishes the exact Global Mix equation. TabletFX implements only a project-authored opt-in additive percentage-point offset on existing Chorus at Modulation ID 16. Focused native, browser/local-guitar, Windows MinGW, and callback/memory checks pass. No Fractal setting, formula, DSP, or sound parity is claimed.",
+    "name": "Fractal FM9-family Global Mix — Flanger subset",
+    "status": "Current guide eligibility and exact-model/firmware qualifications verified. Project Flanger Global Mix subset passes native, local-guitar browser/WASM, Windows MinGW, and isolated CPU/memory checks. The manufacturer combination equation is not published; no Fractal parity is claimed.",
     "date": "2026-11-27",
     "picker_index": 16,
     "category": "Modulation",
@@ -58,6 +58,29 @@
         "latency_memory": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames: disabled p50/p95/p99/p99.9/max 0.076/0.096/0.114/0.268/0.502%; enabled 0.076/0.101/0.128/0.264/2.111% of 2.6667 ms. 0/20,000 deadline misses; 34,856 B native state; no added buffers, latency, or allocations."
       },
       "remaining": "Human listening, physical exact-SKU comparison, installed firmware applicability, target-device performance, and all other guide-listed Global Mix block families remain open."
+    {
+      "name": "Fractal FM9-family Global Mix — Flanger subset",
+      "status": "The November 2026 eligible-block list and FM9 firmware/SKU qualifications are recorded. Project-only Flanger opt-in at Modulation ID 17 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. Human listening, exact SKU applicability, installed firmware, and device timing remain open.",
+      "date": "2026-11-27",
+      "picker_index": 17,
+      "category": "Modulation",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
+        "revision": "November 2026 Blocks Guide, printed pp. 4 and 50; FM9 v12.0 dated 2026-07-07 lists Original/Turbo; installed firmware unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Flanger is on the guide eligibility list. The exact offset equation is unspecified. FM9 Mark II Turbo is not named separately; exact SKU and installed firmware applicability remain unknown."
+      },
+      "documented_controls": "Per-block Global Mix switch and shared Effects Mix offset up to ±50%; the equation is not published.",
+      "project_controls": "Existing Flanger at Modulation ID 17; project-only opt-in disabled by default and normalized offset ±0.50 (±50 pp). Base Mix is preserved; effective Mix is clamp(base + offset, 0, 1) only in Flanger mode. Filter mode ignores the option.",
+      "verification": {
+        "native": "make test-fractal-global-mix-flanger passes focused Flanger CTest and offline CLI checks.",
+        "browser": "HeadlessChrome 151, local Guitar-TECHS stereo DI: disabled-offset RMS 0, enabled +20 pp RMS 0.0186540012, endpoint clamps 0/<1e−15; 4,808 B browser state.",
+        "windows": "make windows-cross-build passes MinGW core/offline-renderer compilation.",
+        "latency_memory": "Ryzen 9 5950X Release at 48 kHz stereo/128 frames: disabled p50/p95/p99/p99.9/max 0.059/0.060/0.140/0.415/1.177%; enabled +20 pp 0.059/0.073/0.092/0.413/1.059%. 4,840 B native state, no process allocations or fixed latency, 0/20,000 deadline misses."
+      },
+      "remaining": "Human listening, exact Mark II Turbo compatibility/installed firmware, and target-device timing. Other guide-listed blocks remain queued."
+    },
     },
     {
       "name": "Fractal FM9-family Surround Delay",

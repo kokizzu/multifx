@@ -922,3 +922,16 @@ Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.
 | Offset +20 pp, opt-in On (effective Mix 50%) | 0.076% | 0.101% | 0.128% | 0.264% | 2.111% | 34,856 B | 0/20,000 |
 
 The enabled maximum is a scheduling outlier; all measured calls remained under the 2.6667 ms budget. The comparison is an isolated Chorus processor benchmark on this desktop, not a full-chain, tablet, or Fractal DSP estimate. Focused native and browser tests confirm defaults, the enabled signal change, endpoint clamps, smooth retargeting, and no process allocations. Human listening and device timing remain manual.
+
+## Fractal FM9-family Global Mix — Flanger subset (2026-11-27)
+
+The November 2026 Blocks Guide lists Flanger as eligible for the per-block Global Mix offset up to ±50%, but leaves the equation unspecified. TabletFX's project interpretation adds the normalized offset to base Mix and clamps to [0,1] only when opted in and in Flanger mode. The setting is prepared outside `process()`, uses the existing mix ramp, and adds no buffer, fixed path latency, or processing allocation. Native effect state is 4,840 B; focused browser/WASM state is 4,808 B.
+
+Release benchmark: AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.6667 ms budget), 3,000 warm-up and 20,000 measured callbacks. Values are processor-call elapsed time as a percentage of one callback budget:
+
+| Profile | p50 | p95 | p99 | p99.9 | Max | Native state | Process allocations | Deadline misses |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Offset +20 pp stored, opt-in Off | 0.059% | 0.060% | 0.140% | 0.415% | 1.177% | 4,840 B | 0 | 0/20,000 |
+| Offset +20 pp, opt-in On (effective Mix 55%) | 0.059% | 0.073% | 0.092% | 0.413% | 1.059% | 4,840 B | 0 | 0/20,000 |
+
+The desktop maxima are scheduler-sensitive; these isolated calls do not predict tablet or whole-chain cost. Local Guitar-TECHS DI browser Play measured disabled +20 pp RMS difference 0, enabled +20 pp difference 0.018654, upper clamp 0, and lower-clamp difference below 1e−15. Native/browser, Windows MinGW build, and offline CLI checks pass. Human listening, exact-model firmware applicability, and target-device timing remain manual.

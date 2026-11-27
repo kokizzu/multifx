@@ -99,6 +99,70 @@ void test_defaults_bounds_and_memory() {
             "non-finite flanger parameters did not use safe defaults");
 }
 
+void test_global_mix_offset_is_opt_in_clamped_and_mode_scoped() {
+    tabletfx::FlangerParameters base;
+    base.mix = 0.3F;
+    base.smoothing_ms = 0.0F;
+    base.global_mix_offset = 0.2F;
+    tabletfx::Flanger disabled(48000.0F, 2, base);
+    require(disabled.parameters().mix == 0.3F &&
+                !disabled.parameters().global_mix_enabled &&
+                disabled.effective_mix() == 0.3F,
+            "disabled Global Mix changed the stored or effective base Mix");
+
+    auto enabled_parameters = base;
+    enabled_parameters.global_mix_enabled = true;
+    tabletfx::Flanger enabled(48000.0F, 2, enabled_parameters);
+    require(enabled.parameters().mix == 0.3F &&
+                enabled.effective_mix() == 0.5F,
+            "enabled Global Mix did not add the project offset to base Mix");
+
+    auto upper_parameters = enabled_parameters;
+    upper_parameters.mix = 0.9F;
+    upper_parameters.global_mix_offset = 0.5F;
+    tabletfx::Flanger upper(48000.0F, 2, upper_parameters);
+    require(upper.effective_mix() == 1.0F,
+            "Global Mix did not clamp at fully wet");
+    auto lower_parameters = enabled_parameters;
+    lower_parameters.mix = 0.1F;
+    lower_parameters.global_mix_offset = -0.5F;
+    tabletfx::Flanger lower(48000.0F, 2, lower_parameters);
+    require(lower.effective_mix() == 0.0F,
+            "Global Mix did not clamp at fully dry");
+
+    auto filter_parameters = enabled_parameters;
+    filter_parameters.mode = tabletfx::FlangerMode::Filter;
+    filter_parameters.global_mix_offset = 0.2F;
+    tabletfx::Flanger filter(48000.0F, 2, filter_parameters);
+    require(filter.effective_mix() == filter_parameters.mix,
+            "Fractal Global Mix offset was incorrectly applied to project Filter mode");
+
+    std::vector<float> input(8192U);
+    for (std::size_t i = 0; i < input.size(); ++i) {
+        input[i] = 0.3F * std::sin(2.0F * 3.14159265358979323846F *
+                                   311.0F * static_cast<float>(i / 2U) / 48000.0F);
+    }
+    auto baseline = input;
+    auto offset_disabled = input;
+    auto offset_enabled = input;
+    tabletfx::FlangerParameters baseline_parameters = base;
+    baseline_parameters.global_mix_offset = 0.0F;
+    tabletfx::Flanger baseline_flanger(48000.0F, 2, baseline_parameters);
+    disabled.process(offset_disabled, 2);
+    baseline_flanger.process(baseline, 2);
+    enabled.process(offset_enabled, 2);
+    require(offset_disabled == baseline,
+            "disabled Global Mix offset changed Flanger output");
+    float squared_difference = 0.0F;
+    for (std::size_t i = 0; i < baseline.size(); ++i) {
+        const float difference = offset_enabled[i] - baseline[i];
+        squared_difference += difference * difference;
+    }
+    require(std::sqrt(squared_difference / static_cast<float>(baseline.size())) >
+                1.0e-4F,
+            "enabled Global Mix offset did not change Flanger output");
+}
+
 void test_filter_mode_legacy_identity_and_shared_memory() {
     tabletfx::Flanger defaults(48000.0F, 2);
     tabletfx::FlangerParameters explicit_parameters;
@@ -566,6 +630,7 @@ void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); 
 int main() {
     try {
         test_defaults_bounds_and_memory();
+        test_global_mix_offset_is_opt_in_clamped_and_mode_scoped();
         test_filter_mode_legacy_identity_and_shared_memory();
         test_filter_mode_rate_tunes_fixed_comb_and_ignores_sync();
         test_filter_mode_depth_color_and_stability();

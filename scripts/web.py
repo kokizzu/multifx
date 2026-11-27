@@ -788,6 +788,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                   fractal_resonator_input_gain_only: bool = False) -> None:
     compiler = emscripten_cpp()
                  fractal_global_mix_chorus_only: bool = False,
+                 fractal_global_mix_flanger_only: bool = False,
+                 fractal_global_mix_chorus_only: bool = False,
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
     chrome = shutil.which("google-chrome")
@@ -840,6 +842,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
             "--gain-db", "2", "--output-gain-db", "-1",
             "--volume-position", "0.92", "--volume-min-db", "-96",
             "--volume-max-db", "0", "--volume-curve", "audio",
+                    or fractal_global_mix_flanger_only
+                    or fender_harmonic_tremolo_mode_only
             "--limiter-ceiling-db", "-1", "--limiter-release-ms", "80",
             "--wah-position", "0.62", "--wah-min-hz", "350",
             "--wah-max-hz", "2200", "--wah-q", "4", "--wah-level-db", "0",
@@ -1365,6 +1369,10 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif fractal_resonator_input_gain_only:
             url = base_url + "/web/index.html?selftest=fractal-resonator-input-gain"
         elif stereo_panner_only:
+        elif fractal_global_mix_chorus_only:
+            url = base_url + "/web/index.html?selftest=fractal-global-mix-chorus"
+        elif fractal_global_mix_flanger_only:
+            url = base_url + "/web/index.html?selftest=fractal-global-mix-flanger"
             url = base_url + "/web/index.html?selftest=stereo-panner"
         elif mutant_filter_only:
         elif fractal_global_mix_chorus_only:
@@ -1722,6 +1730,8 @@ def main() -> None:
         "test-fractal-resonator-input-gain",
         "inspect-build-path", "inspect-smoke-path",
     ))
+        "test-fractal-global-mix-chorus",
+        "test-fractal-global-mix-flanger",
     action = parser.parse_args().action
     if action == "bootstrap-toolchain":
         bootstrap_toolchain()
@@ -1770,6 +1780,10 @@ def main() -> None:
         browser_test(mutant_filter_only=True)
     elif action == "test-step-tremolo":
         browser_test(step_tremolo_only=True)
+    elif action == "test-fractal-global-mix-chorus":
+        browser_test(fractal_global_mix_chorus_only=True)
+    elif action == "test-fractal-global-mix-flanger":
+        browser_test(fractal_global_mix_flanger_only=True)
     elif action == "test-fractal-bias-trem":
         browser_test(fractal_bias_trem_only=True)
     elif action == "test-fender-vibratone":

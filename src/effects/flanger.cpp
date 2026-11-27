@@ -88,6 +88,13 @@ void Flanger::set_parameters(FlangerParameters parameters) noexcept {
         target_feedback_ = parameters_.feedback * polarity;
     }
     target_mix_ = parameters_.mix;
+    if (parameters_.global_mix_enabled &&
+        parameters_.mode == FlangerMode::Flanger) {
+        // Fractal documents a global ±50% offset but not its equation. This
+        // project uses an additive percentage-point interpretation.
+        target_mix_ = std::clamp(target_mix_ + parameters_.global_mix_offset,
+                                 0.0F, 1.0F);
+    }
     prepare_rate();
     retarget(false);
 }

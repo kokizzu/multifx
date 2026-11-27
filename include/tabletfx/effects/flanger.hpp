@@ -33,6 +33,12 @@ struct FlangerParameters {
     float right_channel_phase_degrees = 180.0F;
     float smoothing_ms = 10.0F;
     FlangerMode mode = FlangerMode::Flanger;
+    // Project interpretation of Fractal's Global Mix feature. The offset is
+    // normalized (0.2 means +20 percentage points), is applied only in
+    // Flanger mode, and is ignored unless enabled. The manufacturer does not
+    // publish the exact offset equation.
+    bool global_mix_enabled = false;
+    float global_mix_offset = 0.0F;
     // Project-authored static-comb feedback/intensity control used only by
     // Filter mode: 0..0.9, default 0.35. It is not a Fender Color scale.
     float color = 0.35F;

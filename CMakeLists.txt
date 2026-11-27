@@ -156,6 +156,9 @@ add_executable(tabletfx_fractal_chorus_tempo_bench
     apps/fractal_chorus_tempo_bench.cpp)
 target_link_libraries(tabletfx_fractal_chorus_tempo_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_fender_tremolo_duty_cycle_bench
+add_executable(tabletfx_fractal_global_mix_flanger_bench
+    apps/fractal_global_mix_flanger_bench.cpp)
+target_link_libraries(tabletfx_fractal_global_mix_flanger_bench PRIVATE tabletfx_core)
     apps/fender_tremolo_duty_cycle_bench.cpp)
 target_link_libraries(tabletfx_fender_tremolo_duty_cycle_bench PRIVATE tabletfx_core)
 

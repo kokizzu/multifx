@@ -3291,6 +3291,8 @@ public:
         parameters.color = color;
         static_cast<tabletfx::Flanger*>(effects_[17].effect.get())
             ->set_parameters(parameters);
+        parameters.global_mix_enabled = global_mix_enabled != 0U;
+        parameters.global_mix_offset = global_mix_offset;
     }
 
     void configure_phaser(float rate_hz, float minimum_hz, float maximum_hz,
