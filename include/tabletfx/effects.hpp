@@ -4,6 +4,7 @@
 #include "tabletfx/effects/delay_timing.hpp"
 #include "tabletfx/effects/formant_filter.hpp"
 #include "tabletfx/effects/four_band_resonator.hpp"
+#include "tabletfx/effects/resonator.hpp"
 #include "tabletfx/effects/diatonic_harmonizer.hpp"
 #include "tabletfx/effects/fractal_diatonic_harmonizer.hpp"
 #include "tabletfx/effects/pitch_arpeggiator.hpp"

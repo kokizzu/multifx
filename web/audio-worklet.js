@@ -43,6 +43,7 @@ EFFECTS.push("fender-memory-delay");
 EFFECTS.push("tone-master-small-hall");
 EFFECTS.push("tone-master-modulated-large-hall");
 EFFECTS.push("pitch-ring-mod");
+EFFECTS.push("resonator");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -636,6 +637,17 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       );
       this.configurePitchRingMod(
         parameters.pitchRingMod || [1, 110, 0.55, 0.5, 0],
+      );
+      this.configureResonator(
+        parameters.resonator || [
+          0, 0, 1, 110, 164.81, 220, 329.63, 110,
+          0.55, 0.55, 0.55, 0.55,
+          2, 2, 2, 2,
+          0.4, 0.4, 0.4, 0.4,
+          -0.75, -0.25, 0.25, 0.75,
+          1, 1, 1, 1, 0,
+          0.8, 1, 1, 1, 0.35, 0, 0, 0, 0, 0,
+        ],
       );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -1258,6 +1270,22 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._free(pointer);
   }
 
+  configureResonator(values) {
+    // Keep this 39-float payload order synchronized with WasmChain's setter.
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        values.length !== 39) {
+      return;
+    }
+    const pointer = this.module._malloc(values.length * Float32Array.BYTES_PER_ELEMENT);
+    if (!pointer) return;
+    try {
+      this.module.HEAPF32.set(values, pointer >>> 2);
+      this.module._tf_chain_set_resonator(this.chain, pointer, values.length);
+    } finally {
+      this.module._free(pointer);
+    }
+  }
+
   configureEnhancer(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
       return;
@@ -1295,7 +1323,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       return;
     }
     if (message.type === "test-barrier") {
-      this.port.postMessage({ type: "test-barrier-ack", token: message.token });
+      this.port.postMessage({
+        type: "test-barrier-ack",
+        token: message.token,
+        active: this.active,
+      });
+      return;
       return;
     }
     if (message.type === "active") {
@@ -1591,6 +1624,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureToneMasterModulatedLargeHall(message.value);
     } else if (message.type === "pitch-ring-mod" && this.ready) {
       this.configurePitchRingMod(message.value);
+    } else if (message.type === "resonator" && this.ready) {
+      this.configureResonator(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

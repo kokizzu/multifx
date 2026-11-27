@@ -229,6 +229,7 @@
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="119"><span class="effect-number">120</span><span class="effect-name">Modulated Small Hall · project-authored</span><span class="effect-default">3.2 s decay · 25% wet · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
          <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="120"><span class="effect-number">121</span><span class="effect-name">Modulated Large Hall · project-authored Fender control roles</span><span class="effect-default">6.5 s decay · 28% wet · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="121"><span class="effect-number">122</span><span class="effect-name">Pitch Ring Mod · project-authored monophonic tracking</span><span class="effect-default">1× carrier · 50% mix · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="122"><span class="effect-number">123</span><span class="effect-name">Fractal Resonator · project-authored, not a pitch-tracked synth</span><span class="effect-default">Four feedback-fed band-pass voices · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -669,6 +670,66 @@
           <label class="mix-control" for="pitch-ring-mod-level"><span>Output level</span><output id="pitch-ring-mod-level-value" for="pitch-ring-mod-level">0.0 dB</output><input id="pitch-ring-mod-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
         </div>
         <p class="hint">Line 6’s current Helix Stadium model list verifies Pitch Ring Mod as a Stereo, Line 6 Original effect in Modulation (first appearance 1.0). The live manual describes the category generally; neither source publishes this model’s algorithm, parameter list, numeric ranges, defaults, DSP, or latency. This project uses a monophonic autocorrelation tracker and sine carrier; the project controls above are not Line 6 settings or sound parity. It handles one clear note best, falls back to the selected pitch on weak or ambiguous input, and has about 43 ms default tracking warm-up while its audio path itself adds no fixed latency.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Fractal Resonator controls">
+        <h3>Fractal Resonator · project-authored resonator/filter</h3>
+        <p class="hint">Four parallel feedback-fed delays and four matching band-pass filters; this does not detect notes or track input pitch. The Blocks Guide gives 100–10,000 Hz for Manual voice frequencies and 50–5,000 Hz for the Chordal root. Other numeric bounds and defaults shown here are project choices.</p>
+        <details>
+          <summary>Voice and mix settings</summary>
+          <div class="gain-controls">
+            <label class="mix-control" for="resonator-mode"><span>Mode</span><select id="resonator-mode" data-resonator-parameter="0"><option value="0" selected>Manual</option><option value="1">Chordal</option></select></label>
+            <label class="mix-control" for="resonator-chord"><span>Chord</span><select id="resonator-chord" data-resonator-parameter="1"><option value="0" selected>Major</option><option value="1">Major 6</option><option value="2">Dominant 7</option><option value="3">Major 7</option><option value="4">Minor</option><option value="5">Minor 6</option><option value="6">Minor 7</option><option value="7">Diminished</option><option value="8">Augmented</option></select></label>
+            <label class="mix-control" for="resonator-master-frequency"><span>Master Frequency</span><output for="resonator-master-frequency">1.00×</output><input id="resonator-master-frequency" type="range" min="0.5" max="2" step="0.01" value="1" data-resonator-parameter="2"></label>
+            <label class="mix-control" for="resonator-chord-root"><span>Chord Root</span><output for="resonator-chord-root">110 Hz</output><input id="resonator-chord-root" type="range" min="50" max="5000" step="0.01" value="110" data-resonator-parameter="7"></label>
+            <label class="mix-control" for="resonator-input-mode"><span>Input Mode</span><select id="resonator-input-mode" data-resonator-parameter="28"><option value="0" selected>Mono</option><option value="1">Stereo</option></select></label>
+          </div>
+          <div class="gain-controls">
+            <fieldset><legend>Voice 1</legend>
+              <label class="mix-control" for="resonator-frequency-1"><span>Frequency</span><output for="resonator-frequency-1">110 Hz</output><input id="resonator-frequency-1" type="range" min="100" max="10000" step="0.01" value="110" data-resonator-parameter="3"></label>
+              <label class="mix-control" for="resonator-feedback-1"><span>Feedback</span><output for="resonator-feedback-1">0.55</output><input id="resonator-feedback-1" type="range" min="0" max="0.9" step="0.01" value="0.55" data-resonator-parameter="8"></label>
+              <label class="mix-control" for="resonator-q-1"><span>Filter Q</span><output for="resonator-q-1">2.0</output><input id="resonator-q-1" type="range" min="0.5" max="12" step="0.1" value="2" data-resonator-parameter="12"></label>
+              <label class="mix-control" for="resonator-level-1"><span>Level</span><output for="resonator-level-1">0.40</output><input id="resonator-level-1" type="range" min="0" max="1" step="0.01" value="0.4" data-resonator-parameter="16"></label>
+              <label class="mix-control" for="resonator-pan-1"><span>Pan</span><output for="resonator-pan-1">−0.75</output><input id="resonator-pan-1" type="range" min="-1" max="1" step="0.01" value="-0.75" data-resonator-parameter="20"></label>
+              <label class="mix-control" for="resonator-filter-location-1"><span>Filter Location</span><select id="resonator-filter-location-1" data-resonator-parameter="24"><option value="0">Pre</option><option value="1" selected>Post</option></select></label>
+            </fieldset>
+            <fieldset><legend>Voice 2</legend>
+              <label class="mix-control" for="resonator-frequency-2"><span>Frequency</span><output for="resonator-frequency-2">164.81 Hz</output><input id="resonator-frequency-2" type="range" min="100" max="10000" step="0.01" value="164.81" data-resonator-parameter="4"></label>
+              <label class="mix-control" for="resonator-feedback-2"><span>Feedback</span><output for="resonator-feedback-2">0.55</output><input id="resonator-feedback-2" type="range" min="0" max="0.9" step="0.01" value="0.55" data-resonator-parameter="9"></label>
+              <label class="mix-control" for="resonator-q-2"><span>Filter Q</span><output for="resonator-q-2">2.0</output><input id="resonator-q-2" type="range" min="0.5" max="12" step="0.1" value="2" data-resonator-parameter="13"></label>
+              <label class="mix-control" for="resonator-level-2"><span>Level</span><output for="resonator-level-2">0.40</output><input id="resonator-level-2" type="range" min="0" max="1" step="0.01" value="0.4" data-resonator-parameter="17"></label>
+              <label class="mix-control" for="resonator-pan-2"><span>Pan</span><output for="resonator-pan-2">−0.25</output><input id="resonator-pan-2" type="range" min="-1" max="1" step="0.01" value="-0.25" data-resonator-parameter="21"></label>
+              <label class="mix-control" for="resonator-filter-location-2"><span>Filter Location</span><select id="resonator-filter-location-2" data-resonator-parameter="25"><option value="0">Pre</option><option value="1" selected>Post</option></select></label>
+            </fieldset>
+            <fieldset><legend>Voice 3</legend>
+              <label class="mix-control" for="resonator-frequency-3"><span>Frequency</span><output for="resonator-frequency-3">220 Hz</output><input id="resonator-frequency-3" type="range" min="100" max="10000" step="0.01" value="220" data-resonator-parameter="5"></label>
+              <label class="mix-control" for="resonator-feedback-3"><span>Feedback</span><output for="resonator-feedback-3">0.55</output><input id="resonator-feedback-3" type="range" min="0" max="0.9" step="0.01" value="0.55" data-resonator-parameter="10"></label>
+              <label class="mix-control" for="resonator-q-3"><span>Filter Q</span><output for="resonator-q-3">2.0</output><input id="resonator-q-3" type="range" min="0.5" max="12" step="0.1" value="2" data-resonator-parameter="14"></label>
+              <label class="mix-control" for="resonator-level-3"><span>Level</span><output for="resonator-level-3">0.40</output><input id="resonator-level-3" type="range" min="0" max="1" step="0.01" value="0.4" data-resonator-parameter="18"></label>
+              <label class="mix-control" for="resonator-pan-3"><span>Pan</span><output for="resonator-pan-3">0.25</output><input id="resonator-pan-3" type="range" min="-1" max="1" step="0.01" value="0.25" data-resonator-parameter="22"></label>
+              <label class="mix-control" for="resonator-filter-location-3"><span>Filter Location</span><select id="resonator-filter-location-3" data-resonator-parameter="26"><option value="0">Pre</option><option value="1" selected>Post</option></select></label>
+            </fieldset>
+            <fieldset><legend>Voice 4</legend>
+              <label class="mix-control" for="resonator-frequency-4"><span>Frequency</span><output for="resonator-frequency-4">329.63 Hz</output><input id="resonator-frequency-4" type="range" min="100" max="10000" step="0.01" value="329.63" data-resonator-parameter="6"></label>
+              <label class="mix-control" for="resonator-feedback-4"><span>Feedback</span><output for="resonator-feedback-4">0.55</output><input id="resonator-feedback-4" type="range" min="0" max="0.9" step="0.01" value="0.55" data-resonator-parameter="11"></label>
+              <label class="mix-control" for="resonator-q-4"><span>Filter Q</span><output for="resonator-q-4">2.0</output><input id="resonator-q-4" type="range" min="0.5" max="12" step="0.1" value="2" data-resonator-parameter="15"></label>
+              <label class="mix-control" for="resonator-level-4"><span>Level</span><output for="resonator-level-4">0.40</output><input id="resonator-level-4" type="range" min="0" max="1" step="0.01" value="0.4" data-resonator-parameter="19"></label>
+              <label class="mix-control" for="resonator-pan-4"><span>Pan</span><output for="resonator-pan-4">0.75</output><input id="resonator-pan-4" type="range" min="-1" max="1" step="0.01" value="0.75" data-resonator-parameter="23"></label>
+              <label class="mix-control" for="resonator-filter-location-4"><span>Filter Location</span><select id="resonator-filter-location-4" data-resonator-parameter="27"><option value="0">Pre</option><option value="1" selected>Post</option></select></label>
+            </fieldset>
+          </div>
+          <div class="gain-controls">
+            <label class="mix-control" for="resonator-master-level"><span>Master Level</span><output for="resonator-master-level">0.80</output><input id="resonator-master-level" type="range" min="0" max="2" step="0.01" value="0.8" data-resonator-parameter="29"></label>
+            <label class="mix-control" for="resonator-master-pan"><span>Master Pan</span><output for="resonator-master-pan">1.00</output><input id="resonator-master-pan" type="range" min="-1" max="1" step="0.01" value="1" data-resonator-parameter="30"></label>
+            <label class="mix-control" for="resonator-master-feedback"><span>Master Feedback</span><output for="resonator-master-feedback">1.00</output><input id="resonator-master-feedback" type="range" min="0" max="1" step="0.01" value="1" data-resonator-parameter="31"></label>
+            <label class="mix-control" for="resonator-master-q"><span>Master Q</span><output for="resonator-master-q">1.00</output><input id="resonator-master-q" type="range" min="0.1" max="4" step="0.01" value="1" data-resonator-parameter="32"></label>
+            <label class="mix-control" for="resonator-mix"><span>Mix</span><output for="resonator-mix">35%</output><input id="resonator-mix" type="range" min="0" max="1" step="0.01" value="0.35" data-resonator-parameter="33"></label>
+            <label class="mix-control" for="resonator-level-db"><span>Level</span><output for="resonator-level-db">0.0 dB</output><input id="resonator-level-db" type="range" min="-24" max="12" step="0.1" value="0" data-resonator-parameter="34"></label>
+            <label class="mix-control" for="resonator-balance"><span>Balance</span><output for="resonator-balance">0.00</output><input id="resonator-balance" type="range" min="-1" max="1" step="0.01" value="0" data-resonator-parameter="35"></label>
+            <label class="mix-control" for="resonator-input-gain"><span>Input Gain</span><output for="resonator-input-gain">0.0 dB</output><input id="resonator-input-gain" type="range" min="-24" max="12" step="0.1" value="0" data-resonator-parameter="36"></label>
+            <label class="mix-control" for="resonator-global-mix-enabled"><span>Project Global Mix · opt-in</span><output for="resonator-global-mix-enabled">Off</output><select id="resonator-global-mix-enabled" data-resonator-parameter="37"><option value="0" selected>Off</option><option value="1">On</option></select></label>
+            <label class="mix-control" for="resonator-global-mix-offset"><span>Project-only Mix offset</span><output for="resonator-global-mix-offset">0 pp</output><input id="resonator-global-mix-offset" type="range" min="-50" max="50" step="1" value="0" data-resonator-parameter="38"></label>
+          </div>
+        </details>
       </div>
       <div class="effect-parameter-group" aria-label="Filtered Delay controls">
         <h3>Filtered Delay · project-authored</h3>

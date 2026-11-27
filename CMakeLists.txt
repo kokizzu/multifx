@@ -19,6 +19,7 @@ add_library(tabletfx_core
     src/effects/poly_detune.cpp
     src/effects/pedal_detune.cpp
     src/effects/four_band_resonator.cpp
+    src/effects/resonator.cpp
     src/effects/diatonic_harmonizer.cpp
     src/effects/pitch_arpeggiator.cpp
     src/effects/mono_guitar_synth.cpp
@@ -151,6 +152,8 @@ add_executable(tabletfx_feedback_generator_bench
     apps/feedback_generator_bench.cpp)
 target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_resonator_bench apps/resonator_bench.cpp)
+target_link_libraries(tabletfx_resonator_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_shuffling_looper_bench
     apps/shuffling_looper_bench.cpp)
 target_link_libraries(tabletfx_shuffling_looper_bench PRIVATE tabletfx_core)
@@ -314,6 +317,9 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_four_band_resonator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_four_band_resonator_tests COMMAND tabletfx_four_band_resonator_tests)
 
+    add_executable(tabletfx_resonator_tests tests/test_resonator.cpp)
+    target_link_libraries(tabletfx_resonator_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_resonator_tests COMMAND tabletfx_resonator_tests)
     add_executable(tabletfx_diatonic_harmonizer_tests tests/test_diatonic_harmonizer.cpp)
     target_link_libraries(tabletfx_diatonic_harmonizer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_diatonic_harmonizer_tests COMMAND tabletfx_diatonic_harmonizer_tests)

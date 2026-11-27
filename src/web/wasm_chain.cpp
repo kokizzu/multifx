@@ -1,6 +1,7 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
+#include "tabletfx/effects/resonator.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
@@ -168,6 +169,8 @@ public:
               static_cast<std::uint16_t>(channels))) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
+          resonator_(std::make_unique<tabletfx::Resonator>(
+              static_cast<float>(sample_rate))),
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
         effects_.push_back({std::make_unique<tabletfx::VolumePedal>(
@@ -457,8 +460,8 @@ public:
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept {
-        return effects_.size() + 27;
     }
+    return effects_.size() + 28;
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* work_data() noexcept { return work_.data(); }
@@ -617,6 +620,10 @@ public:
         if (index == 121U) {
             if (!enabled) pitch_ring_mod_->reset();
             pitch_ring_mod_enabled_ = enabled;
+            return true;
+        }
+        if (index == 122U) {
+            resonator_enabled_ = enabled;
             return true;
         }
         if (index >= effects_.size()) {
@@ -977,6 +984,15 @@ public:
             }
             return;
         }
+        if (index == 122U) {
+            const auto audio = std::span<float>(output_.data(), samples);
+            if (resonator_enabled_) {
+                resonator_->process(audio, channels_);
+            } else {
+                resonator_->process_bypassed(audio, channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -1050,6 +1066,7 @@ public:
         tone_master_small_hall_->reset();
         tone_master_modulated_large_hall_->reset();
         pitch_ring_mod_->reset();
+        resonator_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -3866,6 +3883,54 @@ public:
         pitch_ring_mod_->configure(parameters);
     }
 
+    void configure_resonator(const float* values,
+                             std::uint32_t value_count) noexcept {
+        // Stable 39-float ABI order: mode, chord, master frequency, manual
+        // frequencies[4], chord root, feedback[4], Q[4], level[4], pan[4],
+        // filter location[4], input mode, master level/pan/feedback/Q, mix,
+        // level dB, balance, input gain dB, Global Mix enabled, offset pp.
+        constexpr std::uint32_t kParameterCount = 39U;
+        if (values == nullptr || value_count != kParameterCount) {
+            return;
+        }
+
+        auto parameters = resonator_->parameters();
+        std::uint32_t index = 0U;
+        const auto enum_value = [&values, &index](std::uint32_t maximum) noexcept {
+            const float value = values[index++];
+            if (!std::isfinite(value) || value <= 0.0F) return 0U;
+            if (value >= static_cast<float>(maximum)) return maximum;
+            return static_cast<std::uint32_t>(value + 0.5F);
+        };
+
+        parameters.mode = static_cast<tabletfx::ResonatorMode>(enum_value(1U));
+        parameters.chord = static_cast<tabletfx::ResonatorChord>(enum_value(8U));
+        parameters.master_frequency = values[index++];
+        for (float& value : parameters.manual_frequency_hz) value = values[index++];
+        parameters.chord_root_frequency_hz = values[index++];
+        for (float& value : parameters.feedback) value = values[index++];
+        for (float& value : parameters.filter_q) value = values[index++];
+        for (float& value : parameters.level) value = values[index++];
+        for (float& value : parameters.pan) value = values[index++];
+        for (auto& value : parameters.filter_location) {
+            value = static_cast<tabletfx::ResonatorFilterLocation>(
+                enum_value(1U));
+        }
+        parameters.input_mode = static_cast<tabletfx::ResonatorInputMode>(
+            enum_value(1U));
+        parameters.master_level = values[index++];
+        parameters.master_pan = values[index++];
+        parameters.master_feedback = values[index++];
+        parameters.master_q = values[index++];
+        parameters.mix = values[index++];
+        parameters.level_db = values[index++];
+        parameters.balance = values[index++];
+        parameters.input_gain_db = values[index++];
+        parameters.global_mix_enabled = enum_value(1U) != 0U;
+        parameters.global_mix_offset_percentage_points = values[index++];
+        resonator_->set_parameters(parameters);
+    }
+
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -4096,6 +4161,7 @@ public:
         bytes += tone_master_small_hall_->memory_bytes();
         bytes += tone_master_modulated_large_hall_->memory_bytes();
         bytes += pitch_ring_mod_->memory_bytes();
+        bytes += resonator_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4276,6 +4342,12 @@ public:
         if (index == 121U) {
             return static_cast<std::uint32_t>(pitch_ring_mod_->memory_bytes());
         }
+        if (index == 122U) {
+            const std::size_t bytes = resonator_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4323,6 +4395,7 @@ private:
         case 119U: return tone_master_small_hall_enabled_;
         case 120U: return tone_master_modulated_large_hall_enabled_;
         case 121U: return pitch_ring_mod_enabled_;
+        case 122U: return resonator_enabled_;
         default: return false;
         }
     }
@@ -4370,6 +4443,7 @@ private:
     std::unique_ptr<tabletfx::ToneMasterModulatedLargeHallReverb>
         tone_master_modulated_large_hall_;
     std::unique_ptr<tabletfx::effects::PitchRingMod> pitch_ring_mod_;
+    std::unique_ptr<tabletfx::Resonator> resonator_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4403,6 +4477,7 @@ private:
     bool fender_memory_delay_enabled_ = false;
     bool tone_master_small_hall_enabled_ = false;
     bool pitch_ring_mod_enabled_ = false;
+    bool resonator_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -6301,6 +6376,12 @@ TABLETFX_WASM_EXPORT void tf_chain_set_pitch_ring_mod(
         as_chain(opaque)->configure_pitch_ring_mod(
             carrier_ratio, fallback_pitch_hz, tracking_confidence, mix,
             level_db);
+    }
+}
+TABLETFX_WASM_EXPORT void tf_chain_set_resonator(
+    void* opaque, const float* values, std::uint32_t value_count) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_resonator(values, value_count);
     }
 }
 } // extern "C"

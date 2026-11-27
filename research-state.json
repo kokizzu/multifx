@@ -35,6 +35,29 @@
     "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
   "completed_checkpoints": [
+      "name": "Fractal FM9-family Resonator block — project-authored four-voice filter",
+      "status": "Verified; native, browser/WASM, and Windows MinGW automation passes; manual/device checks remain",
+      "date": "2026-11-27",
+      "picker_index": 122,
+      "category": "Filters & wah",
+      "official_source": {
+        "title": "Fractal Audio Systems Blocks Guide and FM9 Downloads",
+        "revision": "Blocks Guide dated November 2026, printed p. 92. FM9 firmware v12.0 dated 2026-07-07 lists Original and Turbo, not Mark II Turbo by name; installed firmware is unknown.",
+        "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
+        "downloads_url": "https://www.fractalaudio.com/fm9-downloads/",
+        "qualification": "Guide describes four parallel feedback delays and four bandpass filters. The project effect is not a pitch tracker or instrument-tone generator and does not claim Fractal DSP, settings, or sound parity."
+      },
+      "documented_controls": "Manual/Chordal Mode; Manual resonant/filter frequencies 100–10,000 Hz; Chordal qualities Major, Major 6, Dominant 7, Major 7, Minor, Minor 6, Minor 7, Diminished, Augmented; chord-root Frequency 50–5,000 Hz; Master Frequency, Level, Pan, Feedback, Q; Input Mode; Frequency 1–4, Feedback 1–4, Filter Location 1–4, Filter Q 1–4, Level 1–4, Pan 1–4; Mix-page Mix, Level, Balance, Bypass, Bypass Mode, Input Gain, Global Mix.",
+      "project_controls": "Project-authored four-voice resonant filter, default-disabled at picker ID 122 under Filters & wah. Manual/Chordal voicings and per-voice resonant/filter controls use project-selected defaults; chordal mode selects a voicing rather than tracking input chords. Its optional project Global Mix switch defaults Off and adds a clamped ±50 percentage-point offset to stored Mix, as a project interpretation rather than a Fractal setting or parity claim.",
+      "verification": {
+        "native": "make test passed documentation validation, 13 fixture-safety checks, and 127/127 CTest cases; allocation, Global Mix disabled-offset identity, equivalent static Mix, upper/lower clamp, and deterministic reset coverage pass.",
+        "browser": "make web-test-fractal-resonator passed in HeadlessChrome 151 using local prerecorded guitar-DI Play and 11 captures: parameter-dependent output, chordal response, reset replay, disabled-offset identity, enabled-offset equivalence, and upper/lower clamps. Reset replay differs by zero; browser effect state is 31,188 B in a fixed 100,663,296 B chain memory. A separate full make web-test run still fails an existing Hall Reverb Tails serialization assertion before reaching this smoke test.",
+        "windows": "make windows-cross-build passed for the MinGW core and offline renderer; native Windows UI/runtime is not covered.",
+        "benchmark": "Latest run on AMD Ryzen 9 5950X, 48 kHz stereo/128 frames (2.6667 ms budget): Manual p50/p95/p99/p99.9/max 0.287/0.290/0.407/0.588/4.340%; Chordal 0.287/0.384/0.494/0.695/2.394%; Global Mix enabled 0.290/0.401/0.481/0.719/2.215%; all three 0/20,000 deadline misses. An earlier repeat had one Chordal maximum outlier above the budget, which did not recur. Native memory is 31,216 B; browser effect state is 31,188 B; fixed latency is zero and processing allocates nothing. Isolated desktop timing is not a target-device guarantee.",
+        "diff_check": "make diff-check passed on 2026-11-27."
+      },
+      "remaining": "Human listening, direct FM9 comparison, sustained target-device performance, and exact Mark II Turbo/installed firmware applicability remain unverified."
+    },
     {
       "name": "Fractal FM9-family Global Mix — Chorus subset",
       "status": "Current and older manufacturer block lists recorded; project-only Modulation ID 16 opt-in implemented and automated native, browser, Windows, and callback checks pass. Manual checks and other eligible blocks remain.",

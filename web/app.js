@@ -273,6 +273,7 @@ const EFFECT_NAMES = [
   "Modulated Small Hall · project-authored",
   "Modulated Large Hall · project-authored Fender control roles",
   "Pitch Ring Mod · project-authored monophonic tracking",
+  "Fractal Resonator · project-authored, not a pitch-tracked synth",
 ];
 const phaseInvertByEffect = new Uint8Array(EFFECT_NAMES.length);
 const DEFAULT_PARAMETERS = {
@@ -497,6 +498,16 @@ const DEFAULT_PARAMETERS = {
   toneMasterSmallHall: [0.25, 3.2, 0, 0.6, 0.3, 0.15, 0, 0, 0],
   toneMasterModulatedLargeHall: [0.28, 6.5, 1, 0.74, 0.23, 0.2, -1.5, -0.5, 0],
   pitchRingMod: [1, 110, 0.55, 0.5, 0],
+  // Serialized as the ResonatorParameters fields in the stable worklet ABI order.
+  resonator: [
+    0, 0, 1, 110, 164.81, 220, 329.63, 110,
+    0.55, 0.55, 0.55, 0.55,
+    2, 2, 2, 2,
+    0.4, 0.4, 0.4, 0.4,
+    -0.75, -0.25, 0.25, 0.75,
+    1, 1, 1, 1, 0,
+    0.8, 1, 1, 1, 0.35, 0, 0, 0, 0, 0,
+  ],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2441,6 +2452,12 @@ const pitchRingModControls = [
   document.querySelector("#pitch-ring-mod-mix"),
   document.querySelector("#pitch-ring-mod-level"),
 ];
+const resonatorControls = Array.from(
+  document.querySelectorAll("[data-resonator-parameter]"),
+).sort((left, right) =>
+  Number(left.dataset.resonatorParameter) -
+  Number(right.dataset.resonatorParameter),
+);
 const filteredDelayTime = document.querySelector("#filtered-delay-time-ms");
 const filteredDelayTimeValue = document.querySelector("#filtered-delay-time-ms-value");
 const filteredDelayTimeMode = document.querySelector("#filtered-delay-time-mode");
@@ -8213,6 +8230,32 @@ function updatePitchRingMod() {
   }
 }
 
+function updateResonator() {
+  const values = Array(39);
+  resonatorControls.forEach((control) => {
+    const index = Number(control.dataset.resonatorParameter);
+    const value = Number(control.value);
+    values[index] = Number.isFinite(value) ? value : 0;
+    const output = control.parentElement.querySelector("output");
+    if (!output) return;
+    if (index === 2) output.value = `${value.toFixed(2)}×`;
+    else if (index >= 3 && index <= 7) output.value = `${value.toFixed(2)} Hz`;
+    else if (index >= 8 && index <= 11) output.value = value.toFixed(2);
+    else if (index >= 12 && index <= 15) output.value = value.toFixed(1);
+    else if (index >= 16 && index <= 19) output.value = value.toFixed(2);
+    else if (index >= 20 && index <= 23) output.value = value.toFixed(2);
+    else if (index === 33) output.value = `${Math.round(value * 100)}%`;
+    else if (index === 34 || index === 36) output.value = `${value.toFixed(1)} dB`;
+    else if (index === 37) output.value = value >= 0.5 ? "On" : "Off";
+    else if (index === 38) output.value = `${value.toFixed(0)} pp`;
+    else output.value = value.toFixed(2);
+  });
+  if (values.some((value) => !Number.isFinite(value))) return;
+  DEFAULT_PARAMETERS.resonator = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "resonator", value: values });
+  }
+}
 function updateFilteredDelay() {
   const timeMode = Number(filteredDelayTimeMode.value);
   const tempoBpm = Number(filteredDelayTempoBpm.value);
@@ -8445,6 +8488,10 @@ for (const control of pitchRingModControls) {
   control.addEventListener("input", updatePitchRingMod);
   control.addEventListener("change", updatePitchRingMod);
 }
+for (const control of resonatorControls) {
+  control.addEventListener("input", updateResonator);
+  control.addEventListener("change", updateResonator);
+}
 for (const input of [filteredDelayTime, filteredDelayFeedback, filteredDelayMix,
   filteredDelayLowCut, filteredDelayHighCut]) {
   input.addEventListener("input", updateFilteredDelay);
@@ -8625,6 +8672,39 @@ function readFloatWave(bytes) {
   return { samples, channels, sampleRate, frames: samples.length / channels };
 }
 
+let browserSmokeBarrierSequence = 0;
+function waitForBrowserSmokeWorkletBarrier(expectedActive) {
+  if (!workletNode) {
+    return Promise.reject(new Error("Browser smoke worklet is unavailable."));
+  }
+  const port = workletNode.port;
+  const token = `browser-smoke-${++browserSmokeBarrierSequence}`;
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      port.removeEventListener("message", onMessage);
+      reject(new Error("Timed out waiting for the browser smoke worklet barrier."));
+    }, 5000);
+    const onMessage = (event) => {
+      if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+      clearTimeout(timeout);
+      port.removeEventListener("message", onMessage);
+      const active = Boolean(event.data.active);
+      if (expectedActive !== undefined && active !== expectedActive) {
+        reject(new Error(
+          `Browser smoke expected worklet active=${expectedActive}, got ${active}.`,
+        ));
+        return;
+      }
+      resolve(active);
+    };
+    port.addEventListener("message", onMessage);
+    port.postMessage({ type: "test-barrier", token });
+  });
+}
+async function stopBrowserSmokePlaybackAndWait() {
+  stopSource(false);
+  await waitForBrowserSmokeWorkletBarrier(false);
+}
 async function waitForCapture(control, expectedSamples) {
   const started = performance.now();
   while (Atomics.load(control, 1) === 0) {
@@ -10887,6 +10967,7 @@ async function runMercatorDistortionBrowserSmokeTest(reference, captureView, cap
     });
     updateMercatorDistortion();
     const checkboxes = [...document.querySelectorAll("[data-effect]")];
+    await stopBrowserSmokePlaybackAndWait();
     checkboxes.forEach((checkbox, index) => {
       checkbox.checked = testEnabled[index];
       workletNode.port.postMessage({ type: "enable", index, value: testEnabled[index] });
@@ -10907,6 +10988,7 @@ async function runMercatorDistortionBrowserSmokeTest(reference, captureView, cap
     stopSource(false);
     const actual = new Float32Array(captureBuffer);
     let peak = 0;
+      await stopBrowserSmokePlaybackAndWait();
     let activeSamples = 0;
     for (const sample of actual) {
       const magnitude = Math.abs(sample);
@@ -18460,8 +18542,8 @@ async function runBrowserSelfTest() {
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 117 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 117 || effectRows.length !== 117 ||
+    const expectedEffectIds = Array.from({ length: 123 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 123 || effectRows.length !== 123 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -18592,10 +18674,15 @@ async function runBrowserSelfTest() {
                   effectRows[121]?.dataset.category !== "modulation" ||
                   effectRows[121]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
                   DEFAULT_PARAMETERS.pitchRingMod.join(",") !== "1,110,0.55,0.5,0" ||
+                  !EFFECT_NAMES[122]?.startsWith("Fractal Resonator · project-authored, not a pitch-tracked synth") ||
+                  effectRows[122]?.dataset.category !== "filter" ||
+                  effectRows[122]?.querySelector(".effect-category-tag")?.textContent !== "Filters & wah" ||
+                  DEFAULT_PARAMETERS.resonator.join(",") !== "0,0,1,110,164.81,220,329.63,110,0.55,0.55,0.55,0.55,2,2,2,2,0.4,0.4,0.4,0.4,-0.75,-0.25,0.25,0.75,1,1,1,1,0,0.8,1,1,1,0.35,0,0,0,0,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
                  initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
-                  initialEffectState[118] || initialEffectState[119] ||
+                   initialEffectState[118] || initialEffectState[119] || initialEffectState[120] ||
+                      initialEffectState[121] || initialEffectState[122] ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -18632,7 +18719,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                   throw new Error(`The effect picker must list 122 ordered, categorized effects (IDs 0–121), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, both Tone Master halls, and Pitch Ring Mod; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[121]}, row121=${effectRows[121]?.dataset.category}/${effectRows[121]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[121]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                     throw new Error(`The effect picker must list 123 ordered, categorized effects (IDs 0–122), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, both Tone Master halls, Pitch Ring Mod, and Fractal Resonator; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[122]}, row122=${effectRows[122]?.dataset.category}/${effectRows[122]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[122]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -20375,6 +20462,8 @@ async function runBrowserSelfTest() {
     parityEnabled[120] = false;
     // Pitch Ring Mod has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[121] = false;
+    // Fractal Resonator has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[122] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -21234,6 +21323,24 @@ async function runBrowserSelfTest() {
           document.title = "PASS · TabletFX Fractal Resonator Input Gain browser test";
           return;
         }
+        if (new URLSearchParams(location.search).get("selftest") === "fractal-resonator") {
+          testResult.textContent = "Checking Fractal Resonator Global Mix with local guitar playback…";
+          const resonatorGlobalMixSmoke = await runResonatorBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            channels: reference.channels,
+            frames: reference.frames,
+            resonatorGlobalMix: resonatorGlobalMixSmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Fractal Resonator browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "fractal-diatonic-custom-scale") {
           testResult.textContent = "Checking the custom-scale harmonizer browser Play with local guitar audio…";
           const customScaleSmoke = await runFractalDiatonicCustomScaleBrowserSmokeTest(
@@ -22055,6 +22162,10 @@ async function runBrowserSelfTest() {
       pitchRingModSmoke = await runPitchRingModBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
+      testResult.textContent = "Checking Fractal Resonator with local guitar playback…";
+      resonatorSmoke = await runResonatorBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -22133,6 +22244,7 @@ async function runBrowserSelfTest() {
       toneMasterSmallHall: toneMasterSmallHallSmoke,
       toneMasterModulatedLargeHall: toneMasterModulatedLargeHallSmoke,
       pitchRingMod: pitchRingModSmoke,
+      resonator: resonatorSmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

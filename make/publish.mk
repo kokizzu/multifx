@@ -527,3 +527,10 @@ bench-fractal-phaser-global-mix:
 .PHONY: publish-plan-fractal-global-mix-delay
 publish-plan-fractal-global-mix-delay:
 	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint fractal-global-mix-delay
+.PHONY: publish-fractal-resonator-effect-plan stage-fractal-resonator-effect publish-fractal-resonator-effect
+publish-fractal-resonator-effect-plan:
+	$(PYTHON) scripts/publish_checkpoint.py plan --checkpoint "fractal-resonator-effect"
+stage-fractal-resonator-effect:
+	$(PYTHON) scripts/publish_checkpoint.py stage --checkpoint "fractal-resonator-effect"
+publish-fractal-resonator-effect:
+	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "fractal-resonator-effect"

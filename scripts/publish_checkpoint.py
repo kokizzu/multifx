@@ -1030,6 +1030,27 @@ FOUR_BAND_RESONATOR_CHECKPOINT_PATHS = (
     "LATENCY_AND_QUALITY.md",
     "scripts/publish_checkpoint.py",
 )
+FRACTAL_RESONATOR_EFFECT_CHECKPOINT_PATHS = (
+    "apps/resonator_bench.cpp",
+    "CMakeLists.txt",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "include/tabletfx/effects.hpp",
+    "include/tabletfx/effects/resonator.hpp",
+    "src/effects/resonator.cpp",
+    "tests/test_resonator.cpp",
+    "src/web/wasm_chain.cpp",
+    "scripts/checkpoint_line_selectors.py",
+    "scripts/test_checkpoint_line_selectors.py",
+    "scripts/test_checkpoint_line_replacements.py",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+    "research-state.json",
+    "make/publish.mk",
+    "scripts/publish_checkpoint.py",
+)
 FRACTAL_RESONATOR_INPUT_GAIN_CHECKPOINT_PATHS = (
     "apps/offline_render.cpp",
     "include/tabletfx/effects/four_band_resonator.hpp",
@@ -4147,6 +4168,10 @@ def select_patch_hunks(diff: str, markers: tuple[str, ...]) -> tuple[str, int, i
     return "".join(header + [line for hunk in selected for line in hunk]), len(hunks), len(selected)
 
 
+CHECKPOINTS["fractal-resonator-effect"] = (
+    FRACTAL_RESONATOR_EFFECT_CHECKPOINT_PATHS,
+    "feat: add project-authored Fractal Resonator",
+)  # publish this feature as one bounded primary-branch checkpoint
 PARTIAL_CHECKPOINT_HUNKS["phaser-stage-controls"] = {
     "EFFECTS_MATRIX.md": ("4/6/8/10/12 stages",),
     "FLAGSHIP_EFFECT_COMPARISON.md": (
