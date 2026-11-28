@@ -56,6 +56,63 @@ void test_modulation_spreads_repeat_energy_and_stereo_phase() {
     std::size_t right_active = 0;
     bool stereo_differs = false;
     bool synced_channels = true;
+void test_stereo_memory_delay_times_are_independent_only_when_enabled() {
+    tabletfx::ModulatedDelayParameters linked_parameters;
+    linked_parameters.time_ms = 4.0F;
+    linked_parameters.right_time_ms = 8.0F;
+    linked_parameters.independent_stereo_times = false;
+    linked_parameters.feedback = 0.0F;
+    linked_parameters.mix = 1.0F;
+    linked_parameters.depth_ms = 0.0F;
+    tabletfx::ModulatedDelay linked(1000.0F, 2, 100.0F, linked_parameters);
+    std::array<float, 20> linked_audio{};
+    linked_audio[0] = 1.0F;
+    linked_audio[1] = 1.0F;
+    linked.process(linked_audio, 2);
+    require(std::abs(linked_audio[8] - 1.0F) < 1.0e-6F &&
+                std::abs(linked_audio[9] - 1.0F) < 1.0e-6F,
+            "linked stereo timing must retain the left time on both channels");
+
+    linked_parameters.independent_stereo_times = true;
+    tabletfx::ModulatedDelay independent(1000.0F, 2, 100.0F,
+                                         linked_parameters);
+    std::array<float, 20> independent_audio{};
+    independent_audio[0] = 1.0F;
+    independent_audio[1] = 1.0F;
+    independent.process(independent_audio, 2);
+    require(std::abs(independent_audio[8] - 1.0F) < 1.0e-6F &&
+                std::abs(independent_audio[9]) < 1.0e-6F &&
+                std::abs(independent_audio[17] - 1.0F) < 1.0e-6F,
+            "independent stereo timing must delay right-channel repeats separately");
+
+    std::array<float, 128> linked_signal{};
+    std::array<float, 128> independent_signal{};
+    for (std::size_t frame = 0; frame < linked_signal.size() / 2U; ++frame) {
+        const float left = static_cast<float>((frame * 17U) % 31U) / 31.0F - 0.5F;
+        const float right = static_cast<float>((frame * 11U) % 29U) / 29.0F - 0.5F;
+        linked_signal[frame * 2U] = left;
+        linked_signal[frame * 2U + 1U] = right;
+        independent_signal[frame * 2U] = left;
+        independent_signal[frame * 2U + 1U] = right;
+    }
+    linked.reset();
+    independent.reset();
+    linked.process(linked_signal, 2);
+    independent.process(independent_signal, 2);
+    float left_channel_difference = 0.0F;
+    float right_channel_difference = 0.0F;
+    for (std::size_t frame = 0; frame < linked_signal.size() / 2U; ++frame) {
+        left_channel_difference = std::max(
+            left_channel_difference,
+            std::abs(linked_signal[frame * 2U] - independent_signal[frame * 2U]));
+        right_channel_difference = std::max(
+            right_channel_difference,
+            std::abs(linked_signal[frame * 2U + 1U] - independent_signal[frame * 2U + 1U]));
+    }
+    require(left_channel_difference == 0.0F && right_channel_difference > 1.0e-3F,
+            "independent right timing must change only the right channel");
+}
+
     for (std::size_t frame = 3; frame < 14; ++frame) {
         const float left = stereo[frame * 2U];
         const float right = stereo[frame * 2U + 1U];
@@ -366,3 +423,4 @@ int main() {
         return EXIT_FAILURE;
     }
 }
+        test_stereo_memory_delay_times_are_independent_only_when_enabled();

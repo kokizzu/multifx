@@ -499,6 +499,7 @@ const DEFAULT_PARAMETERS = {
   modulatedDelay: [350, 0.25, 0.25, 0.8, 2, 0, 180, -24],
   memoryDelay: [350, 0.25, 0.25, 0.8, 2, 0, 0, -24, 0, 0, 0, 0],
   toneMasterSmallHall: [0.25, 3.2, 0, 0.6, 0.3, 0.15, 0, 0, 0],
+  memoryDelay: [350, 0.25, 0.25, 0.8, 2, 0, 0, -24, 0, 0, 0, 0, 350, 0],
   toneMasterModulatedLargeHall: [0.28, 6.5, 1, 0.74, 0.23, 0.2, -1.5, -0.5, 0],
   pitchRingMod: [1, 110, 0.55, 0.5, 0],
   // Serialized as the ResonatorParameters fields in the stable worklet ABI order.
@@ -2405,6 +2406,10 @@ const modulatedDelayTriggerThresholdValue = document.querySelector("#modulated-d
 const fenderMemoryDelayTimeMode = document.querySelector("#fender-memory-delay-time-mode");
 const fenderMemoryDelayTime = document.querySelector("#fender-memory-delay-time-ms");
 const fenderMemoryDelayTimeValue = document.querySelector("#fender-memory-delay-time-ms-value");
+const fenderMemoryDelayIndependent = document.querySelector("#fender-memory-delay-independent-stereo");
+const fenderMemoryDelayRightTime = document.querySelector("#fender-memory-delay-right-time-ms");
+const fenderMemoryDelayRightTimeValue = document.querySelector("#fender-memory-delay-right-time-ms-value");
+const fenderMemoryDelayRightDivision = document.querySelector("#fender-memory-delay-right-tap-division");
 const fenderMemoryDelayTempo = document.querySelector("#fender-memory-delay-tempo-bpm");
 const fenderMemoryDelayTempoValue = document.querySelector("#fender-memory-delay-tempo-bpm-value");
 const fenderMemoryDelayDivision = document.querySelector("#fender-memory-delay-tap-division");
@@ -2424,11 +2429,12 @@ const fenderMemoryDelayRateValue = document.querySelector("#fender-memory-delay-
 const fenderMemoryDelayWaveform = document.querySelector("#fender-memory-delay-waveform");
 const fenderMemoryDelaySpillover = document.querySelector("#fender-memory-delay-spillover");
 const fenderMemoryDelayControls = [
-  fenderMemoryDelayTimeMode, fenderMemoryDelayTime, fenderMemoryDelayTempo,
-  fenderMemoryDelayDivision, fenderMemoryDelayFeedback, fenderMemoryDelayMix,
-  fenderMemoryDelayDepth, fenderMemoryDelayGain, fenderMemoryDelayGrit,
-  fenderMemoryDelayMode, fenderMemoryDelayRate, fenderMemoryDelayWaveform,
-  fenderMemoryDelaySpillover,
+  fenderMemoryDelayTimeMode, fenderMemoryDelayTime, fenderMemoryDelayIndependent,
+  fenderMemoryDelayRightTime, fenderMemoryDelayRightDivision,
+  fenderMemoryDelayTempo, fenderMemoryDelayDivision, fenderMemoryDelayFeedback,
+  fenderMemoryDelayMix, fenderMemoryDelayDepth, fenderMemoryDelayGain,
+  fenderMemoryDelayGrit, fenderMemoryDelayMode, fenderMemoryDelayRate,
+  fenderMemoryDelayWaveform, fenderMemoryDelaySpillover,
 ];
 const toneMasterSmallHallControls = [
   document.querySelector("#tone-master-small-hall-level"),
@@ -8168,16 +8174,27 @@ function updateModulatedDelay() {
 function updateFenderMemoryDelay() {
   const timeMode = Number(fenderMemoryDelayTimeMode.value);
   const tempoBpm = Number(fenderMemoryDelayTempo.value);
-  const division = Number(fenderMemoryDelayDivision.value);
+  const leftDivision = Number(fenderMemoryDelayDivision.value);
+  const rightDivision = Number(fenderMemoryDelayRightDivision.value);
+  const independentStereoTimes = fenderMemoryDelayIndependent.checked;
   const tapRatios = [1, 1.5, 2 / 3, 0.5, 0.75, 1 / 3, 0.25];
   const requestedTimeMs = timeMode === 1
     ? 60000 / tempoBpm * (tapRatios[division] || 1)
     : Number(fenderMemoryDelayTime.value);
-  const timeMs = Math.max(1, Math.min(2000, requestedTimeMs));
+  const requestedRightTimeMs = !independentStereoTimes
+    ? requestedLeftTimeMs
+    : timeMode === 1
+      ? 60000 / tempoBpm * (tapRatios[rightDivision] || 1)
+      : Number(fenderMemoryDelayRightTime.value);
+  const timeMs = Math.max(1, Math.min(2000, requestedLeftTimeMs));
+  const rightTimeMs = Math.max(1, Math.min(2000, requestedRightTimeMs));
   fenderMemoryDelayTime.disabled = timeMode === 1;
+  fenderMemoryDelayRightTime.disabled = !independentStereoTimes || timeMode === 1;
   fenderMemoryDelayTempo.disabled = timeMode !== 1;
   fenderMemoryDelayDivision.disabled = timeMode !== 1;
-  fenderMemoryDelayTimeValue.value = `${timeMs.toFixed(0)} ms${timeMs < requestedTimeMs ? " · capped" : ""}`;
+  fenderMemoryDelayRightDivision.disabled = !independentStereoTimes || timeMode !== 1;
+  fenderMemoryDelayTimeValue.value = `${timeMs.toFixed(0)} ms${timeMs < requestedLeftTimeMs ? " · capped" : ""}`;
+  fenderMemoryDelayRightTimeValue.value = `${rightTimeMs.toFixed(0)} ms${rightTimeMs < requestedRightTimeMs ? " · capped" : ""}`;
   fenderMemoryDelayTempoValue.value = `${tempoBpm.toFixed(0)} BPM`;
   const values = [
     timeMs,
@@ -8728,13 +8745,15 @@ for (const input of [modulatedDelayTime, modulatedDelayFeedback, modulatedDelayM
   input.addEventListener("change", updateModulatedDelay);
 }
 modulatedDelayWaveform.addEventListener("change", updateModulatedDelay);
-for (const input of [fenderMemoryDelayTime, fenderMemoryDelayTempo,
+for (const input of [fenderMemoryDelayTime, fenderMemoryDelayRightTime,
+  fenderMemoryDelayTempo,
   fenderMemoryDelayFeedback, fenderMemoryDelayMix, fenderMemoryDelayDepth,
   fenderMemoryDelayGain, fenderMemoryDelayGrit, fenderMemoryDelayRate]) {
   input.addEventListener("input", updateFenderMemoryDelay);
   input.addEventListener("change", updateFenderMemoryDelay);
 }
-for (const input of [fenderMemoryDelayTimeMode, fenderMemoryDelayDivision,
+for (const input of [fenderMemoryDelayTimeMode, fenderMemoryDelayIndependent,
+  fenderMemoryDelayRightDivision, fenderMemoryDelayDivision,
   fenderMemoryDelayMode, fenderMemoryDelayWaveform, fenderMemoryDelaySpillover]) {
   input.addEventListener("change", updateFenderMemoryDelay);
 }
@@ -16657,6 +16676,21 @@ async function runFractalChromaticHarmonizerBrowserSmokeTest(reference, captureV
         }
       }
     }
+    if (!fenderMemoryDelayRightTime.disabled ||
+        !fenderMemoryDelayRightDivision.disabled) {
+      throw new Error("Fender Memory Delay must keep right-side controls disabled while stereo timing is linked.");
+    }
+    fenderMemoryDelayIndependent.checked = true;
+    fenderMemoryDelayTimeMode.value = "1";
+    fenderMemoryDelayTempo.value = "300";
+    fenderMemoryDelayDivision.value = "0";
+    fenderMemoryDelayRightDivision.value = "3";
+    updateFenderMemoryDelay();
+    if (DEFAULT_PARAMETERS.memoryDelay[0] !== 200 ||
+        DEFAULT_PARAMETERS.memoryDelay[12] !== 100 ||
+        fenderMemoryDelayRightDivision.disabled) {
+      throw new Error(`Fender Memory Delay independent tempo divisions failed: left=${DEFAULT_PARAMETERS.memoryDelay[0]}, right=${DEFAULT_PARAMETERS.memoryDelay[12]}.`);
+    }
 
     await audioContext.resume();
     stopSource(false);
@@ -18320,8 +18354,8 @@ async function runFenderMemoryDelayBrowserSmokeTest(reference, captureView, capt
     if (row?.dataset.category !== "delay" ||
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
         !row.querySelector(".effect-name")?.textContent.includes("Memory Delay") ||
-        !checkbox || checkbox.checked || fenderMemoryDelayControls.length !== 13 ||
-        DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0" ||
+        !checkbox || checkbox.checked || fenderMemoryDelayControls.length !== 16 ||
+        DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0,350,0" ||
         effectMemory.length !== EFFECT_NAMES.length ||
         effectMemory[effectIndex] < expectedRingBytes ||
         effectMemory[effectIndex] >= expectedRingBytes + 8192) {
@@ -18359,15 +18393,21 @@ async function runFenderMemoryDelayBrowserSmokeTest(reference, captureView, capt
     );
     const capture = async (mode) => {
       [fenderMemoryDelayTimeMode.value, fenderMemoryDelayTime.value,
-        fenderMemoryDelayTempo.value, fenderMemoryDelayDivision.value,
+        fenderMemoryDelayRightTime.value, fenderMemoryDelayTempo.value,
+        fenderMemoryDelayDivision.value, fenderMemoryDelayRightDivision.value,
         fenderMemoryDelayFeedback.value, fenderMemoryDelayMix.value,
         fenderMemoryDelayDepth.value, fenderMemoryDelayGain.value,
         fenderMemoryDelayGrit.value, fenderMemoryDelayMode.value,
         fenderMemoryDelayRate.value, fenderMemoryDelayWaveform.value] =
         ["0", "40", "120", "0", "40", "60", "0", "0", "0",
           String(mode), "0.8", "0"];
+      fenderMemoryDelayIndependent.checked = independentStereoTimes;
       fenderMemoryDelaySpillover.checked = false;
       updateFenderMemoryDelay();
+      if (independentStereoTimes !== !fenderMemoryDelayRightTime.disabled) {
+        throw new Error("Fender Memory Delay right-time control does not match the stereo link selection.");
+      }
+      await waitForBrowserSmokeWorkletBarrier(false);
       workletNode.port.postMessage({ type: "reset" });
       workletNode.port.postMessage({ type: "capture-reset" });
       Atomics.store(captureView, 0, 0);
@@ -18398,8 +18438,10 @@ async function runFenderMemoryDelayBrowserSmokeTest(reference, captureView, capt
     }
     const inputDifferenceRms = Math.sqrt(inputDifferenceSquares / Math.max(1, chorus.length));
     const modeDifferenceRms = Math.sqrt(modeDifferenceSquares / Math.max(1, chorus.length));
-    if (peak < 1.0e-5 || inputDifferenceRms < 1.0e-4 || modeDifferenceRms < 1.0e-5) {
-      throw new Error(`Fender Memory Delay Play captures failed: peak=${peak}, inputDiff=${inputDifferenceRms}, modeDiff=${modeDifferenceRms}, memory=${effectMemory[effectIndex]}.`);
+    const rightStereoChangeRms = Math.sqrt(rightStereoChangeSquares / Math.max(1, chorus.length / 2));
+    if (peak < 1.0e-5 || inputDifferenceRms < 1.0e-4 || modeDifferenceRms < 1.0e-5 ||
+        rightStereoChangeRms < 1.0e-5) {
+      throw new Error(`Fender Memory Delay Play captures failed: peak=${peak}, inputDiff=${inputDifferenceRms}, modeDiff=${modeDifferenceRms}, rightStereoChange=${rightStereoChangeRms}, memory=${effectMemory[effectIndex]}.`);
     }
     return {
       category: "Delay",
@@ -19209,6 +19251,7 @@ async function runEuclideanDelayBrowserSmokeTest(
               effectRows[90]?.querySelector(".effect-category-tag")?.textContent !== "Modulation" ||
               !EFFECT_NAMES[91]?.startsWith("Poly Sustain") ||
               effectRows[91]?.dataset.category !== "delay" ||
+  let fenderMemoryDelaySmoke = null;
               effectRows[91]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
               !EFFECT_NAMES[92]?.startsWith("Step Filter Delay") ||
               effectRows[92]?.dataset.category !== "delay" ||
@@ -19283,6 +19326,7 @@ async function runEuclideanDelayBrowserSmokeTest(
                  effectRows[118]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
                  DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0" ||
                  !EFFECT_NAMES[119]?.startsWith("Modulated Small Hall · project-authored") ||
+                  DEFAULT_PARAMETERS.memoryDelay.join(",") !== "350,0.25,0.25,0.8,2,0,0,-24,0,0,0,0,350,0" ||
                  effectRows[119]?.dataset.category !== "reverb" ||
                  effectRows[119]?.querySelector(".effect-category-tag")?.textContent !== "Reverb" ||
                  DEFAULT_PARAMETERS.toneMasterSmallHall.join(",") !== "0.25,3.2,0,0.6,0.3,0.15,0,0,0" ||

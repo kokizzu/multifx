@@ -46,6 +46,7 @@ ModulatedDelay::ModulatedDelay(float sample_rate, std::uint16_t channels,
 
     configure(parameters);
     current_time_samples_ = target_time_samples_;
+    current_right_time_samples_ = target_right_time_samples_;
     current_feedback_ = parameters_.feedback;
     current_mix_ = parameters_.mix;
     current_rate_hz_ = parameters_.rate_hz;
@@ -76,13 +77,27 @@ void ModulatedDelay::configure(ModulatedDelayParameters parameters) noexcept {
                                  kMinimumTimeMs,
                                  std::min(kMaximumTimeMs, max_delay_ms_));
     parameters.feedback = bounded(parameters.feedback, 0.25F,
+    parameters.right_time_ms = bounded(
+        parameters.right_time_ms, parameters.time_ms, kMinimumTimeMs,
+        std::min(kMaximumTimeMs, max_delay_ms_));
+    if (!parameters.independent_stereo_times) {
+        parameters.right_time_ms = parameters.time_ms;
+    }
                                   0.0F, kMaximumFeedback);
     parameters.mix = bounded(parameters.mix, 0.25F, 0.0F, 1.0F);
     parameters.rate_hz = bounded(parameters.rate_hz, 0.8F, 0.05F,
                                  kMaximumRateHz);
-    const float available_depth_ms = std::max(
-        0.0F, std::min(parameters.time_ms - kMinimumTimeMs,
-                       max_delay_ms_ - parameters.time_ms));
+    const auto available_depth_for_time = [this](float time_ms) noexcept {
+        return std::max(0.0F, std::min(time_ms - kMinimumTimeMs,
+                                       max_delay_ms_ - time_ms));
+    };
+    const float effective_right_time =
+        channels_ == 2U && parameters.independent_stereo_times
+            ? parameters.right_time_ms
+            : parameters.time_ms;
+    const float available_depth_ms = std::min(
+        available_depth_for_time(parameters.time_ms),
+        available_depth_for_time(effective_right_time));
     parameters.depth_ms = bounded(parameters.depth_ms, 2.0F, 0.0F,
                                   std::min(kMaximumDepthMs, available_depth_ms));
     parameters.stereo_spread_degrees = bounded(
@@ -116,12 +131,17 @@ void ModulatedDelay::configure(ModulatedDelayParameters parameters) noexcept {
                   static_cast<float>(ramp_total_);
     spread_step_ = (parameters.stereo_spread_degrees - current_spread_degrees_) /
                    static_cast<float>(ramp_total_);
+    const float new_right_time_samples =
+        static_cast<float>(samples_for_ms(parameters.right_time_ms));
     const float new_input_gain = std::pow(10.0F, parameters.input_gain_db / 20.0F);
     input_gain_step_ = (new_input_gain - current_input_gain_) /
                        static_cast<float>(ramp_total_);
     const float new_grit_amplitude = parameters.grit_percent / 100.0F *
                                      kMaximumGritNoiseAmplitude;
     grit_amplitude_step_ = (new_grit_amplitude - current_grit_amplitude_) /
+    right_time_step_ =
+        (new_right_time_samples - current_right_time_samples_) /
+        static_cast<float>(ramp_total_);
                            static_cast<float>(ramp_total_);
     const float new_vibrato_blend = parameters.mode == ModulatedDelayMode::vibrato
                                         ? 1.0F
@@ -245,6 +265,7 @@ void ModulatedDelay::reset() noexcept {
     rate_step_ = 0.0F;
     depth_step_ = 0.0F;
     spread_step_ = 0.0F;
+    current_right_time_samples_ = target_right_time_samples_;
     input_gain_step_ = 0.0F;
     grit_amplitude_step_ = 0.0F;
     vibrato_blend_step_ = 0.0F;
@@ -310,7 +331,10 @@ float ModulatedDelay::delay_samples_for_channel(std::uint16_t channel) const noe
     }
     const float modulation = modulation_value(channel_phase) * current_depth_samples_;
     const float maximum = static_cast<float>(capacity_frames_ - 2U);
-    return std::clamp(current_time_samples_ + modulation, 1.0F, maximum);
+    const float base_time = channels_ == 2U && channel == 1U
+                                ? current_right_time_samples_
+                                : current_time_samples_;
+    return std::clamp(base_time + modulation, 1.0F, maximum);
 }
 
 void ModulatedDelay::advance_ramps() noexcept {
@@ -337,6 +361,7 @@ void ModulatedDelay::advance_ramps() noexcept {
         current_rate_hz_ += rate_step_;
         current_depth_samples_ += depth_step_;
         current_spread_degrees_ += spread_step_;
+        current_right_time_samples_ = target_right_time_samples_;
         current_input_gain_ += input_gain_step_;
         current_grit_amplitude_ += grit_amplitude_step_;
         current_vibrato_blend_ += vibrato_blend_step_;
@@ -344,3 +369,4 @@ void ModulatedDelay::advance_ramps() noexcept {
 }
 
 } // namespace tabletfx
+        current_right_time_samples_ += right_time_step_;

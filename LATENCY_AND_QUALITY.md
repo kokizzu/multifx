@@ -883,9 +883,11 @@ The isolated benchmark uses AMD Ryzen 9 5950X Release, 48 kHz stereo, 128-frame 
 
 | Profile | p50 | p95 | p99 | Max | Native state | Deadline misses |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Default Chorus | 0.264% | 0.284% | 0.431% | 4.236% | 768,256 B | 0/20,000 |
-| Gain + Grit Chorus | 0.240% | 0.318% | 0.362% | 1.236% | 768,256 B | 0/20,000 |
-| Gain + Grit Vibrato | 0.240% | 0.329% | 0.381% | 1.759% | 768,256 B | 0/20,000 |
+| Default Chorus | 0.221% | 0.222% | 0.284% | 1.474% | 768,272 B | 0/20,000 |
+| Gain + Grit Chorus | 0.231% | 0.235% | 0.299% | 0.600% | 768,272 B | 0/20,000 |
+| Gain + Grit Vibrato | 0.231% | 0.294% | 0.324% | 1.014% | 768,272 B | 0/20,000 |
+| Linked stereo timing | 0.231% | 0.235% | 0.297% | 2.219% | 768,272 B | 0/20,000 |
+| Independent stereo timing | 0.231% | 0.235% | 0.310% | 1.092% | 768,272 B | 0/20,000 |
 
 The browser/WASM local prerecorded Guitar-TECHS stereo DI test measured 768,216 B and passed two audible Play captures with distinct input and Chorus/Vibrato responses. `make test`, `make web-build`, `make web-browser-test`, `make windows-cross-build`, and `make bench` pass. These isolated desktop timings do not predict tablet performance. Human listening and target-device measurements remain open.
 

@@ -38,6 +38,8 @@ struct ModulatedDelayParameters {
 /*
  * Project-authored modulated feedback delay. A free-running or input-triggered
  * low-frequency oscillator offsets the read time; the direct signal remains
+    float right_time_ms = 350.0F;
+    bool independent_stereo_times = false;
  * immediate. Numeric bounds/defaults and the extra Random/Triggered Ramp modes
  * are project choices, not copied from any one manufacturer's algorithm.
  */

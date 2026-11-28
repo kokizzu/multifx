@@ -3958,9 +3958,12 @@ public:
         float time_ms, float feedback, float mix, float rate_hz,
         float depth_ms, std::uint32_t waveform, float spread_degrees,
         float trigger_threshold_db, float input_gain_db, float grit_percent,
-        std::uint32_t mode, std::uint32_t spillover) noexcept {
+        std::uint32_t mode, std::uint32_t spillover, float right_time_ms,
+        std::uint32_t independent_stereo_times) noexcept {
         auto parameters = fender_memory_delay_->parameters();
         parameters.time_ms = time_ms;
+        parameters.right_time_ms = right_time_ms;
+        parameters.independent_stereo_times = independent_stereo_times != 0U;
         parameters.feedback = feedback;
         parameters.mix = mix;
         parameters.rate_hz = rate_hz;
@@ -5467,6 +5470,21 @@ TABLETFX_WASM_EXPORT void tf_chain_set_modulated_delay(
         as_chain(opaque)->configure_modulated_delay(
             time_ms, feedback, mix, rate_hz, depth_ms, waveform,
             spread_degrees, trigger_threshold_db);
+    }
+}
+
+TABLETFX_WASM_EXPORT void tf_chain_set_fender_memory_delay(
+    void* opaque, float time_ms, float feedback, float mix, float rate_hz,
+    float depth_ms, std::uint32_t waveform, float spread_degrees,
+    float trigger_threshold_db, float input_gain_db, float grit_percent,
+    std::uint32_t mode, std::uint32_t spillover, float right_time_ms,
+    std::uint32_t independent_stereo_times) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_fender_memory_delay(
+            time_ms, feedback, mix, rate_hz, depth_ms, waveform,
+            spread_degrees, trigger_threshold_db, input_gain_db,
+            grit_percent, mode, spillover, right_time_ms,
+            independent_stereo_times);
     }
 }
 

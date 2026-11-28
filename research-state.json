@@ -42,8 +42,8 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fender Tone Master Pro",
-    "next_feature": "Continue with the documented Fender gaps, prioritizing independent left/right timing and tap divisions for the existing Memory Delay; preserve linked timing as its default and do not copy Studio Delay bounds. Then continue source-backed Line 6 Stadium, Fractal, Melofty, and XRecer gaps one tested feature checkpoint at a time.",
+    "next_device": "Fractal FM9 Mark II Turbo",
+    "next_feature": "Memory Delay's optional independent left/right times and tap divisions are implemented and browser-tested. Next integrate the documented Fractal FM9-family Flanger Auto Depth choices into the existing Modulation row, with project-authored mappings, default OFF, and a callback CPU measurement; then continue only with exact-source gaps that publish enough model-specific control behavior.",
     "qualification": "Maintain exact-model and firmware qualifications, source URLs, categorized placement, project-authored control labels, CPU/memory/latency measurements, and manual-test remainder. The full browser suite has historical intermittent Global Mix capture failures; a successful run does not eliminate them. Keep expression-volume, footswitch-display, and general-research cursors untouched."
   },
   "completed_checkpoints": [
@@ -1369,8 +1369,8 @@
     },
     {
       "name": "Fender Tone Master Pro Memory Delay",
-      "status": "Verified exact-model controls; project-authored categorized Delay picker ID 118 and automated native/browser/Windows/performance checks complete; human and device checks remain.",
-      "date": "2026-11-26",
+      "status": "Verified exact-model controls; project-authored categorized Delay picker ID 118 now supports optional independent L/R times/tap divisions, with native/browser/Windows/performance checks complete; human and device checks remain.",
+      "date": "2026-11-28",
       "picker_index": 118,
       "category": "Delay",
       "official_source": {
@@ -1378,14 +1378,14 @@
         "revision": "Model Guide v1.1.100 / Rev. A, printed p. 46; firmware history checked through v1.8.87 dated 2026-11-23; installed firmware unknown.",
         "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
         "firmware_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
-        "qualification": "Most numeric bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo has independent L/R times/tap divisions; the project links them."
+        "qualification": "Most numeric bounds/defaults, modulation rate/waveform, DSP, latency, and memory are not published. Stereo has independent L/R times/tap divisions; the project links them by default and offers an opt-in independent mode."
       },
-      "project_controls": "Project-authored Delay ID 118 with linked stereo delay time, wet-path Gain/Grit, Chorus/Vibrato, two-second storage cap, immediate dry path, and Spillover tail behavior. Not Fender settings, DSP, or sound parity.",
+      "project_controls": "Project-authored Delay ID 118 with linked stereo time by default and optional separate right time/tap division under shared tempo, wet-path Gain/Grit, Chorus/Vibrato, two-second storage cap, immediate dry path, and Spillover tail behavior. Not Fender settings, DSP, or sound parity.",
       "verification": {
-        "native": "make test passes 119/119 CTests and 13 fixture-safety tests.",
-        "browser": "make web-build and make web-browser-test pass; full HeadlessChrome browser/native run and local prerecorded stereo Guitar-TECHS DI Play captures pass.",
+        "native": "make test passes 130/130 CTests and 13 fixture-safety tests; focused stereo regression proves identical left-channel output and different right-channel timing for identical stereo input.",
+        "browser": "make web-build and full HeadlessChrome browser/native run pass; local prerecorded stereo Guitar-TECHS DI Play captures verify the categorized picker, input path, Chorus/Vibrato distinction, and independent-right-time response.",
         "windows": "make windows-cross-build passes Windows MinGW core/offline renderer.",
-        "benchmark": "Native state 768,256 B (768,024 B ring), browser state 768,216 B; zero process allocations and deadline misses. Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default Chorus p50/p95/p99/max 0.264/0.284/0.431/4.236%, Gain+Grit Chorus 0.240/0.318/0.362/1.236%, Gain+Grit Vibrato 0.240/0.329/0.381/1.759% of 2.667 ms callback.",
+        "benchmark": "Native state 768,272 B (768,024 B ring), browser state 768,236 B; zero process allocations and deadline misses. Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default Chorus p50/p95/p99/max 0.221/0.222/0.284/1.474%, Gain+Grit Chorus 0.231/0.235/0.299/0.600%, Gain+Grit Vibrato 0.231/0.294/0.324/1.014%, linked stereo 0.231/0.235/0.297/2.219%, independent stereo 0.231/0.235/0.310/1.092% of the 2.667 ms callback; 0/20,000 misses.",
         "diff_check": "make diff-check passes; no workflow files are included."
       },
       "remaining": "Human listening, physical Tone Master Pro comparison, installed firmware, and target-device timing remain open."

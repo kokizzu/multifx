@@ -537,3 +537,13 @@ stage-fractal-resonator-effect:
 	$(PYTHON) scripts/publish_checkpoint.py stage --checkpoint "fractal-resonator-effect"
 publish-fractal-resonator-effect:
 	$(PYTHON) scripts/publish_checkpoint.py publish --checkpoint "fractal-resonator-effect"
+
+.PHONY: test-fender-memory-delay web-test-fender-memory-delay bench-fender-memory-delay
+test-fender-memory-delay:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_modulated_delay_tests
+
+web-test-fender-memory-delay: test-fender-memory-delay web-build
+	$(PYTHON) scripts/web.py test
+
+bench-fender-memory-delay:
+	$(PYTHON) scripts/run_cmake.py bench-fender-memory-delay

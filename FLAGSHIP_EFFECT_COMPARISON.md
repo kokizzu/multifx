@@ -803,8 +803,8 @@ This is a targeted cross-check of the six requested flagships, not a fresh one-b
 - [x] Fractal FM9-family Multitap Delay Global Mix: November 2026 guide checked at printed pp. 4 and 62–68; categorized Delay picker ID 72 keeps a default-off project-only offset. Focused native tests, local-DI browser/WASM Play, Windows MinGW build, and isolated CPU/memory report pass; the manufacturer equation remains undocumented.
 - [x] Fractal FM9-family Phaser Global Mix subset is implemented and automatically verified on existing Modulation picker ID 18; see the current checkpoint below.
 - [ ] Continue the Fractal guide's other Global Mix-eligible blocks in order: Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay. Verify each algorithm's own documented Mix behavior before choosing any project control.
-- [x] Fender Tone Master Pro Memory Delay: categorized Delay picker ID 118, native/WASM tests and local-DI Play captures, Windows build, bounded memory, and isolated CPU report complete; human listening/device checks remain.
 - [x] Fender Tone Master Pro Modulated Small Hall: categorized Reverb picker ID 119, native/browser local-DI Play, Windows build, and isolated CPU/memory checks complete; human listening/device checks remain.
+- [x] Fender Tone Master Pro Memory Delay: categorized Delay picker ID 118, default-linked and optional independent L/R times/tap divisions, native/WASM tests and local-DI Play captures, Windows build, bounded memory, and isolated CPU report complete; human listening/device checks remain.
 - [x] Fractal FM9-family Plex Shift: rechecked the November 2026 guide (printed pp. 87–90); added and tested a bounded project-authored subset on existing Delay picker ID 76. It is distinct from note tracking and Fractal's Plex Detune algorithm. Human listening/device checks remain open.
 - [ ] Revisit exact-model documents for AXOM MAX, Prime, Stadium Pitch Ring Mod, and XR1 when readable algorithm/control tables become available.
 

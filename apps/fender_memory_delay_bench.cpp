@@ -223,9 +223,18 @@ int main() {
     vibrato.grit_percent = 100.0F;
     Profile gain_grit_vibrato{"gain-grit-vibrato", vibrato};
 
+    tabletfx::ModulatedDelayParameters linked_times = gritty_chorus;
+    linked_times.time_ms = 400.0F;
+    linked_times.right_time_ms = 700.0F;
+    Profile linked_stereo_times{"linked-stereo-times", linked_times};
+    linked_times.independent_stereo_times = true;
+    Profile independent_stereo_times{"independent-stereo-times", linked_times};
+
     bool okay = true;
     okay = run_profile(default_chorus, source, cpu, ring_bytes_estimate) && okay;
     okay = run_profile(gain_grit_chorus, source, cpu, ring_bytes_estimate) && okay;
     okay = run_profile(gain_grit_vibrato, source, cpu, ring_bytes_estimate) && okay;
+    okay = run_profile(linked_stereo_times, source, cpu, ring_bytes_estimate) && okay;
+    okay = run_profile(independent_stereo_times, source, cpu, ring_bytes_estimate) && okay;
     return okay ? EXIT_SUCCESS : EXIT_FAILURE;
 }

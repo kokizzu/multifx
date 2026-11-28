@@ -181,6 +181,17 @@ def bench_headrush_phase_invert(cmake: str) -> None:
     run([str(executable)])
 
 
+def bench_fender_memory_delay(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_fender_memory_delay_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_fender_memory_delay_bench"
+    )
+    run([str(executable)])
+
+
 def bench_fractal_flanger_vco(cmake: str) -> None:
     build(cmake)
     print(f"CPU: {cpu_name()}")
@@ -287,6 +298,8 @@ def main() -> None:
         )
         run([str(tone_master_3d_benchmark)])
         fractal_surround_delay_benchmark = BUILD_DIR / (
+                  "bench-fractal-global-mix-flanger",
+                  "bench-fender-memory-delay",
             "tabletfx_fractal_surround_delay_bench.exe"
             if os.name == "nt"
             else "tabletfx_fractal_surround_delay_bench"
@@ -393,6 +406,8 @@ def bench_fractal_megatap_global_mix(cmake: str) -> None:
     run([str(executable)])
 
 
+    elif action == "bench-fender-memory-delay":
+        bench_fender_memory_delay(cmake)
 def bench_fractal_multitap_global_mix(cmake: str) -> None:
     build(cmake)
     print(f"CPU: {cpu_name()}")
