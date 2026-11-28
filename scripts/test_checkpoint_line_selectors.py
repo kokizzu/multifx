@@ -114,6 +114,29 @@ index 1234567..7654321 100644
         self.assertEqual(staged.count("+count = 127;"), 0)
         self.assertEqual(staged.count("+count = 125;"), 1)
 
+    def test_scoped_replacement_accepts_unique_staged_value_without_scope_markers(self) -> None:
+        operation = {
+            "replace": {
+                "current": "+count = 127;",
+                "selected": "+count = 125;",
+                "scope_start": "+target effect starts",
+                "scope_end": "+target effect ends",
+                "allow_staged_value_without_scope": True,
+            }
+        }
+        staged = self.select(
+            "@@ -3,0 +3 @@ another staged hunk\n+count = 125;\n",
+            (operation,),
+        )
+        self.assertEqual(staged.count("+count = 125;"), 1)
+
+        with self.assertRaisesRegex(LineSelectionError, "exactly once"):
+            self.select(
+                "@@ -3,0 +3 @@ first staged hunk\n+count = 125;\n"
+                "@@ -9,0 +10 @@ second staged hunk\n+count = 125;\n",
+                (operation,),
+            )
+
     def test_duplicate_exact_line_is_ambiguous(self) -> None:
         with self.assertRaisesRegex(LineSelectionError, "listed multiplicity"):
             self.select(
@@ -1023,5 +1046,234 @@ class EssexVibeSelectorTests(unittest.TestCase):
                              for line in selected.splitlines()), 8)
 
 
+class EuclideanDelaySelectorTests(unittest.TestCase):
+    def test_stable_hunk_context_survives_staged_count_changes(self):
+        operations = (
+            {
+                "span": {
+                    "hunk_context": "@@ -20,",
+                    "start": "+shared block starts",
+                    "end": "+Euclidean-only body",
+                }
+            },
+        )
+        before = (
+            "diff --git a/shared.cpp b/shared.cpp\n"
+            "--- a/shared.cpp\n+++ b/shared.cpp\n"
+            "@@ -10,0 +10,3 @@ first\n"
+            "+shared block starts\n+wrong block\n+Euclidean-only body\n"
+            "@@ -20,0 +20,4 @@ second\n"
+            "+Synth Texture Reverb\n+shared block starts\n"
+            "+Euclidean-only body\n+adjacent future code\n"
+        )
+        selected = select_exact_line_operations(before, operations)
+        self.assertIn("+Euclidean-only body", selected)
+        self.assertNotIn("Synth Texture Reverb", selected)
+        self.assertNotIn("wrong block", selected)
+
+        staged = before.replace("@@ -20,0 +20,4 @@", "@@ -20,0 +20,2 @@")
+        staged = staged.replace(
+            "+Synth Texture Reverb\n+shared block starts\n"
+            "+Euclidean-only body\n+adjacent future code\n",
+            "+Synth Texture Reverb\n+shared block starts\n"
+            "+Euclidean-only body\n",
+        )
+        selected_staged = select_exact_line_operations(staged, operations)
+        self.assertIn("+Euclidean-only body", selected_staged)
+        self.assertNotIn("Synth Texture Reverb", selected_staged)
+
+    def test_euclidean_wasm_selector_excludes_adjacent_synth(self):
+        from checkpoint_line_selectors import select_checkpoint_line_patch
+
+        hunks = {
+            "@@ -3,2 +3,4 @@": (
+                '+#include "tabletfx/effects/euclidean_delay.hpp"',
+                '+#include "tabletfx/effects/synth_texture_reverb.hpp"',
+            ),
+            "@@ -646,2 +652,54 @@ public:": (
+                "+        if (index == 125U) {",
+                "+            if (!enabled) {",
+                "+                euclidean_delay_enabled_ = false;",
+                "+            }",
+                "+            return true;",
+                "+        }",
+                "+        if (index == 126U) {",
+                "+            synth_texture_reverb_enabled_ = true;",
+                "+        }",
+            ),
+            "@@ -1023,2 +1081,25 @@ public:": (
+                "+        if (index == 125U) {",
+                "+            euclidean_delay_->process(",
+                "+            return;",
+                "+        }",
+                "+        if (index == 126U) {",
+                "+            synth_texture_reverb_->process(",
+                "+        }",
+            ),
+            "@@ -1099,2 +1180,3 @@ public:": (
+                "+        if (euclidean_delay_) euclidean_delay_->reset();",
+            ),
+            "@@ -3991,2 +4105,85 @@ public:": (
+                "+    void configure_euclidean_delay_filters(float low_cut_hz,",
+                "+        euclidean_delay_parameters_ = parameters;",
+                "+    }",
+                "+    void configure_synth_texture_reverb(",
+                "+        synth_texture_reverb_parameters_ = parameters;",
+                "+    }",
+                "+    void configure_euclidean_delay(float step_time_ms, float steps,",
+                "+        euclidean_delay_parameters_ = parameters;",
+                "+    }",
+            ),
+            "@@ -4224,2 +4421,3 @@ public:": (
+                "+        if (euclidean_delay_) bytes += euclidean_delay_->memory_bytes();",
+            ),
+            "@@ -4421,2 +4619,17 @@ public:": (
+                "+        if (index == 125U) {",
+                "+            if (!euclidean_delay_) return 0U;",
+                "+        }",
+                "+        if (index == 126U) {",
+                "+            if (!synth_texture_reverb_) return 0U;",
+                "+        }",
+            ),
+            "@@ -4471,2 +4684,4 @@ private:": (
+                "+        case 125U: return euclidean_delay_enabled_ && euclidean_delay_ != nullptr;",
+                "+        case 126U: return synth_texture_reverb_enabled_ && synth_texture_reverb_ != nullptr;",
+            ),
+            "@@ -4521,2 +4736,7 @@ private:": (
+                "+    std::unique_ptr<tabletfx::EuclideanDelay> euclidean_delay_;",
+                "+    tabletfx::EuclideanDelayParameters euclidean_delay_parameters_{};",
+                "+    std::unique_ptr<tabletfx::effects::SynthTextureReverb> synth_texture_reverb_;",
+            ),
+            "@@ -4557,2 +4777,3 @@ private:": (
+                "+    bool euclidean_delay_enabled_ = false;",
+            ),
+            "@@ -6478,2 +6729,26 @@ TABLETFX_WASM_EXPORT void tf_chain_set_essex_vibe(": (
+                "+TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(",
+                "+        chain->configure_euclidean_delay(",
+                "+}",
+                "+TABLETFX_WASM_EXPORT void tf_chain_set_synth_texture_reverb(",
+            ),
+        }
+        diff = [
+            "diff --git a/src/web/wasm_chain.cpp b/src/web/wasm_chain.cpp",
+            "--- a/src/web/wasm_chain.cpp",
+            "+++ b/src/web/wasm_chain.cpp",
+        ]
+        for header, lines in hunks.items():
+            diff.append(header)
+            diff.extend(lines)
+        selected = select_checkpoint_line_patch(
+            "euclidean-delay", "src/web/wasm_chain.cpp", "\n".join(diff) + "\n"
+        )
+        self.assertIn('+#include "tabletfx/effects/euclidean_delay.hpp"', selected)
+        self.assertIn("+        case 125U:", selected)
+        self.assertIn("+TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(", selected)
+        self.assertNotIn("synth_texture_reverb", selected)
+
+    def test_euclidean_research_selector_keeps_cursor_and_delay_only(self):
+        from checkpoint_line_selectors import select_checkpoint_line_patch
+
+        diff = "\n".join((
+            "diff --git a/research-state.json b/research-state.json",
+            "--- a/research-state.json",
+            "+++ b/research-state.json",
+            "@@ -7 +7 @@",
+            '+  "previous_checkpoint_commit": "0d5804262e69d43a8a191dc353488cd1dfe71549",',
+            "@@ -9,2 +9 @@",
+            '-    "name": "Fractal FM9-family Global Mix — Phaser subset",',
+            '-    "status": "previous status",',
+            '+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",',
+            "@@ -12 +10,0 @@",
+            '-    "picker_index": 68,',
+            "@@ -13,0 +12 @@",
+            '+    "picker_index": 125,',
+            "@@ -15,5 +14,9 @@",
+            '-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",',
+            '-      "revision": "old revision",',
+            '-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",',
+            '-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",',
+            '-      "qualification": "old qualification",',
+            '+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",',
+            '+      "revision": "reviewed revision",',
+            '+      "urls": [',
+            '+        "https://line6.com/helix-stadium-models/",',
+            '+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",',
+            '+        "https://manuals.line6.com/en/helix-stadium/live/the-blocks",',
+            '+        "https://kb.line6.com/helix-stadium-1-4-release-notes"',
+            '+      ],',
+            '+      "qualification": "The catalogue identifies a Mono/Stereo Line 6 Original Euclidean Delay, first appearing in 1.0. The accessible manual provides common Delay controls but no model-specific parameter table, ranges, defaults, topology, CPU cost, or latency. No settings or parity are inferred.",',
+            "@@ -21,2 +24,3 @@",
+            '-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",',
+            '-    "project_controls": "Old controls",',
+            '+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",',
+            '+    "project_controls": "Project controls",',
+            '+    "status": "Implemented as default-disabled Delay picker ID 125/display number 126. Project-authored functional coverage only; no Line 6 settings, DSP, or sound parity.",',
+            "@@ -24,6 +28,13 @@",
+            '-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",',
+            '+      "native": "make test-euclidean-delay passed focused defaults and bounds.",',
+            '+    }',
+            "@@ -33,6 +44,6 @@",
+            '-    "next_device": "Fractal FM9 Mark II Turbo",',
+            '-    "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors.",',
+            '+    "next_device": "HeadRush Prime",',
+            '+    "next_feature": "Integrate and validate the project-authored Prime Drum Machine prototype under Loop & performance, then continue the ordered source-backed Prime, Fender, Line 6 Stadium, Fractal, Melofty, and XRecer gaps. Complete, test, and publish one feature checkpoint at a time.",',
+            '+    "qualification": "Maintain exact-model and firmware qualifications, source URLs, categorized placement, project-authored control labels, CPU/memory/latency measurements, and manual-test remainder. The full browser suite has historical intermittent Global Mix capture failures; a successful run does not eliminate them. Keep expression-volume, footswitch-display, and general-research cursors untouched.",',
+            "@@ -36 +47,0 @@",
+            '-    "next_feature": "After this Studio Pan Delay ID 123 checkpoint reaches main, publish the local Essex Vibe at ID 124 as the next standalone checkpoint; continue stable picker order only after each commit is on main.",',
+            "@@ -1713,0 +1727,8 @@",
+            '+      "name": "unrelated prior audit",',
+            '+      "name": "unrelated prior audit tail",',
+            '+      "name": "unrelated future audit",',
+            '+      "name": "Line 6 Helix Stadium XL — Euclidean Delay",',
+            '+      "date": "2026-11-27",',
+            '+      "qualification": "no parity",',
+            '+      "verification": {',
+            '+        "smoke": true',
+            '+      }',
+            '+    }',
+            "@@ -1740,2 +1868 @@",
+            '-    "name": "Fractal FM9-family Global Mix — Phaser subset",',
+            '+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",',
+            "@@ -1743 +1869,0 @@",
+            '-    "picker_index": 68,',
+            "@@ -1744,0 +1871 @@",
+            '+    "picker_index": 125,',
+            "@@ -1746,5 +1873,9 @@",
+            '-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",',
+            '-      "revision": "old revision",',
+            '-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",',
+            '-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",',
+            '-      "qualification": "old qualification",',
+            '+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",',
+            '+      "revision": "reviewed revision",',
+            '+      "urls": [',
+            '+        "https://line6.com/helix-stadium-models/",',
+            '+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",',
+            '+        "https://manuals.line6.com/en/helix-stadium/live/the-blocks",',
+            '+        "https://kb.line6.com/helix-stadium-1-4-release-notes"',
+            '+      ],',
+            '+      "qualification": "The catalogue identifies a Mono/Stereo Line 6 Original Euclidean Delay, first appearing in 1.0. The accessible manual provides common Delay controls but no model-specific parameter table, ranges, defaults, topology, CPU cost, or latency. No settings or parity are inferred.",',
+            "@@ -1752,2 +1883,3 @@",
+            '-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",',
+            '-    "project_controls": "Old controls",',
+            '+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",',
+            '+    "project_controls": "Project controls",',
+            '+    "status": "Implemented as default-disabled Delay picker ID 125/display number 126. Project-authored functional coverage only; no Line 6 settings, DSP, or sound parity.",',
+            "@@ -1755,7 +1887,13 @@",
+            '-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",',
+            '+      "native": "make test-euclidean-delay passed focused defaults and bounds.",',
+            '+    }',
+            "@@ -1987,2 +2129,23 @@",
+            '+      "name": "HeadRush Prime current catalog and controls audit",',
+        )) + "\n"
+        selected = select_checkpoint_line_patch(
+            "euclidean-delay", "research-state.json", diff
+        )
+        self.assertIn('"name": "Line 6 Helix Stadium XL — Euclidean Delay"', selected)
+        self.assertIn('"next_device": "HeadRush Prime"', selected)
+        self.assertIn('-    "next_device": "Fractal FM9 Mark II Turbo",', selected)
+        self.assertNotIn("unrelated prior audit", selected)
+        self.assertNotIn("unrelated future audit", selected)
+        self.assertNotIn("HeadRush Prime current catalog", selected)
 if __name__ == "__main__":
     unittest.main(verbosity=2)

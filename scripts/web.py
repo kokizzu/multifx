@@ -252,6 +252,7 @@ def build_web() -> None:
         "_tf_chain_set_tone_master_small_hall",
         "_tf_chain_set_tone_master_modulated_large_hall",
         "_tf_chain_set_essex_vibe",
+        "_tf_chain_set_euclidean_delay",
         "_tf_chain_set_filtered_delay",
         "_tf_chain_set_sweep_delay",
         "_tf_chain_set_wah", "_tf_chain_set_tremolo",
@@ -387,6 +388,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "volume_pan.cpp"),
         str(ROOT / "src" / "effects" / "studio_pan_delay.cpp"),
         str(ROOT / "src" / "effects" / "essex_vibe.cpp"),
+        str(ROOT / "src" / "effects" / "euclidean_delay.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
         str(ROOT / "src" / "level_meter.cpp"),
@@ -794,6 +796,7 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  fractal_megatap_global_mix_only: bool = False,
                  fractal_multitap_global_mix_only: bool = False) -> None:
     compiler = emscripten_cpp()
+                 euclidean_delay_only: bool = False,
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
     chrome = shutil.which("google-chrome")
@@ -1330,6 +1333,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         LocalWebHandler.request_paths = []
         if stadium_delay_trails_only:
             url = base_url + "/web/index.html?selftest=stadium-delay-trails"
+        if euclidean_delay_only:
+            url = base_url + "/web/index.html?selftest=euclidean-delay"
         elif stadium_dynamics_sidechain_only:
             url = base_url + "/web/index.html?selftest=stadium-dynamics-sidechain"
         elif formant_control_lfo_only:
@@ -1757,6 +1762,7 @@ def main() -> None:
         "test-fractal-diatonic-harmonizer",
         "test-fractal-resonator-input-gain",
         "inspect-build-path", "inspect-smoke-path",
+        "test-euclidean-delay",
     ))
         "test-fractal-global-mix-chorus",
         "test-fractal-global-mix-flanger",
@@ -1775,6 +1781,8 @@ def main() -> None:
         "test-fractal-multitap-global-mix",
     elif action == "test-stadium-delay-trails":
         browser_test(stadium_delay_trails_only=True)
+    elif action == "test-euclidean-delay":
+        browser_test(euclidean_delay_only=True)
     elif action == "test-stadium-dynamics-sidechain":
         browser_test(stadium_dynamics_sidechain_only=True)
     elif action == "test-formant-control-lfo":

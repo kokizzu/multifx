@@ -1039,3 +1039,15 @@ HeadlessChrome 151 played local prerecorded stereo guitar audio through Essex Vi
 ## Essex Vibe processor optimization rerun (2026-11-28)
 
 The native review removed an unused phase accumulator and its per-frame update. Native state decreased from 1,128 B to 1,120 B; the all-pass recurrence remains the active phase source. The latest `make bench-essex-vibe` rerun on AMD Ryzen 9 5950X Release at 48 kHz stereo/128 frames (2.667 ms callback) measured p50/p95/p99/p99.9/max load of **0.084/0.0844125/0.105/0.253875/0.946163%** (maximum 25.231 µs; finite output). Native tests verify no processing-time allocation, and fixed algorithmic latency remains zero. A full `make web-test` passed on 2026-11-28, including the optimized local-guitar browser/WASM path; active effect state was 1,116 B, chain state 82,545,444 B, and linear memory stayed fixed at 100,663,296 B. An earlier full browser run had an unrelated Global Mix capture failure; the successful rerun does not rule out suite repeatability issues. These desktop processor timings do not predict target-device performance.
+## Line 6 Helix Stadium Euclidean Delay processor-call benchmark (2026-11-27)
+
+Ryzen 9 5950X, Release build, 48 kHz stereo, 128 frames per callback (2.6667 ms deadline), 3,000 warm-up and 20,000 measured callbacks. Native effect state is 768,216 B, including a 768,000 B stereo ring; fixed latency is zero and `process()` uses zero allocations. Percentages are isolated processor-call duration relative to the callback deadline.
+
+| Pattern | p50 | p95 | p99 | p99.9 | Maximum | Deadline misses |
+|---|---:|---:|---:|---:|---:|---:|
+| Default, 3/8 pulses | 0.1455% | 0.1541% | 0.2404% | 0.3915% | 0.9657% | 0/20,000 |
+| Sparse, 1/16 pulses | 0.1451% | 0.1522% | 0.1537% | 0.3626% | 0.5299% | 0/20,000 |
+| Dense, 8/16 pulses | 0.1451% | 0.1526% | 0.1538% | 0.3600% | 0.7729% | 0/20,000 |
+| Muted, 0/16 pulses | 0.1455% | 0.1530% | 0.2246% | 0.3649% | 0.9773% | 0/20,000 |
+
+These are desktop measurements, not an Android/Linux or Windows device estimate. The browser chain keeps a fixed 100,663,296 B WASM heap; Euclidean Delay's 768,160 B browser state is allocated only while enabled. Full-chain CPU and physical listening remain unmeasured.

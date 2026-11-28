@@ -6,34 +6,46 @@
   "workflow": "flagship-effects-categorized",
   "previous_checkpoint_commit": "3214f3da1c0ac85b498be7ba6175397c9eba5bf8",
   "latest_audit": {
-    "name": "Fractal FM9-family Global Mix — Phaser subset",
-    "status": "The November 2026 Blocks Guide lists Phaser for shared Global Mix up to ±50% and documents Phaser Mix/Global Mix controls, but not the Phaser-specific combination equation or most ranges/defaults. The project-only option on categorized Modulation picker ID 18 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+  "previous_checkpoint_commit": "0d5804262e69d43a8a191dc353488cd1dfe71549",
+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",
     "date": "2026-11-27",
-    "picker_index": 68,
     "category": "Delay",
+    "picker_index": 125,
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 57–58; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The current guide lists Megatap for shared Global Mix up to ±50% and identifies its Mix/Level/Balance/Global Mix controls, but does not publish the Megatap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",
+      "revision": "Catalogue checked 2026-11-27; live Effects manual selector v1.4 Rev D; hardware 1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
+      "urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://manuals.line6.com/en/helix-stadium/live/the-blocks",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+      ],
+      "qualification": "The catalogue identifies a Mono/Stereo Line 6 Original Euclidean Delay, first appearing in 1.0. The accessible manual provides common Delay controls but no model-specific parameter table, ranges, defaults, topology, CPU cost, or latency. No settings or parity are inferred."
     },
-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",
-    "project_controls": "Existing categorized Delay picker ID 68 has a default-off project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",
+    "project_controls": "Step Time 10–2,000 ms (125 ms default); Steps 1–16 (8); Pulses 0–Steps (3); Rotation 0–Steps−1 (0); Feedback 0–0.85 (0.25); Mix 0–100% (25%); Output Level −24…+12 dB (0 dB). Project-authored bounded delay line and Euclidean pulse gate; no Line 6 algorithm or settings claim.",
+    "status": "Implemented as default-disabled Delay picker ID 125/display number 126. Project-authored functional coverage only; no Line 6 settings, DSP, or sound parity.",
     "verification": {
-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",
-      "browser": "make web-test-fractal-megatap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 68, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0108016722.",
-      "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Megatap benchmark.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. 16-tap p50/p95/p99/p99.9/max: default 0.2985/0.3731/0.4995/0.7545/28.4089%; +20 pp stored/disabled 0.2981/0.3518/0.4995/0.6015/28.9875%; +20 pp enabled 0.2959/0.3079/0.4939/0.6810/20.0769%. 64 taps: 0.9878/1.1513/1.6380/1.8548/26.4637%; mono: 0.2460/0.4234/0.4440/0.6679/20.0510%. All 0/20,000 callback misses; measured effect state 1,028,132 B and no process allocations."
-    },
-    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
+      "native": "make test-euclidean-delay passed focused defaults, bounds, pattern/rotation, pulse density, mono/stereo, reset, partition continuity, invalid samples, and no process allocation. make test passed 13 fixture-safety checks and 128/128 CTest cases.",
+      "browser": "make web-test-euclidean-delay passed HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. It checked Delay category, ID 125, defaults/bounds, pulse slots, rotation, silence between pulses, bypass identity, deterministic reset, lazy WASM storage, and the stored bypass tail (first-window RMS 0.0199466; later-window RMS 0.00073736). Active effect state 768,208 B; default disabled state 0 B; active chain 82,495,724 B; fixed WASM heap 100,663,296 B.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured; 2.667 ms callback deadline. Default p50/p95/p99/p99.9/max 0.1455/0.1541/0.2404/0.3915/0.9657%; sparse 1/16 0.1451/0.1522/0.1537/0.3626/0.5299%; dense 8/16 0.1451/0.1526/0.1538/0.3600/0.7729%; muted 0/16 0.1455/0.1530/0.2246/0.3649/0.9773%. All profiles 0/20,000 deadline misses and no processing allocations; native state 768,216 B; fixed dry latency 0 frames.",
+      "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows runtime/UI validation.",
+      "diff": "make diff-check passed; no workflow files changed.",
+      "full_browser_suite": "Full make web-test passed on 2026-11-28 after worklet synchronization was added to the Essex Vibe browser smoke; Euclidean Delay local-guitar Play and browser/native comparison passed. Earlier Fractal/Synth Global Mix capture failures remain historical repeatability observations; one clean run does not eliminate them.",
+      "remaining": [
+        "Human listening and comparison against Helix Stadium XL",
+        "Installed firmware and exact on-device effect behavior",
+        "Target-device CPU and latency measurements",
+        "Full browser suite repeatability issue in unrelated Fractal Global Mix captures"
+      ]
+    }
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "Fractal FM9 Mark II Turbo",
-    "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
+    "next_device": "HeadRush Prime",
+    "next_feature": "Integrate and validate the project-authored Prime Drum Machine prototype under Loop & performance, then continue the ordered source-backed Prime, Fender, Line 6 Stadium, Fractal, Melofty, and XRecer gaps. Complete, test, and publish one feature checkpoint at a time.",
+    "qualification": "Maintain exact-model and firmware qualifications, source URLs, categorized placement, project-authored control labels, CPU/memory/latency measurements, and manual-test remainder. The full browser suite has historical intermittent Global Mix capture failures; a successful run does not eliminate them. Keep expression-volume, footswitch-display, and general-research cursors untouched."
   },
-    "next_feature": "After this Studio Pan Delay ID 123 checkpoint reaches main, publish the local Essex Vibe at ID 124 as the next standalone checkpoint; continue stable picker order only after each commit is on main.",
   "completed_checkpoints": [
     {
       "name": "Fender Tone Master Pro Studio Delay — project-authored Studio Pan Delay",
@@ -1711,6 +1723,38 @@
         "Target-device timing",
         "Manufacturer Phaser Global Mix equation remains undocumented"
       ]
+      "name": "Line 6 Helix Stadium XL — Euclidean Delay",
+      "date": "2026-11-27",
+      "category": "Delay",
+      "picker_index": 125,
+      "official_source": {
+        "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",
+        "revision": "Catalogue checked 2026-11-27; live Effects manual selector v1.4 Rev D; hardware 1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
+        "urls": [
+          "https://line6.com/helix-stadium-models/",
+          "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+          "https://manuals.line6.com/en/helix-stadium/live/the-blocks",
+          "https://kb.line6.com/helix-stadium-1-4-release-notes"
+        ],
+        "qualification": "The catalogue identifies a Mono/Stereo Line 6 Original Euclidean Delay, first appearing in 1.0. The accessible manual provides common Delay controls but no model-specific parameter table, ranges, defaults, topology, CPU cost, or latency. No settings or parity are inferred."
+      },
+      "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",
+      "project_controls": "Step Time 10–2,000 ms (125 ms default); Steps 1–16 (8); Pulses 0–Steps (3); Rotation 0–Steps−1 (0); Feedback 0–0.85 (0.25); Mix 0–100% (25%); Output Level −24…+12 dB (0 dB). Project-authored bounded delay line and Euclidean pulse gate; no Line 6 algorithm or settings claim.",
+      "status": "Implemented as default-disabled Delay picker ID 125/display number 126. Project-authored functional coverage only; no Line 6 settings, DSP, or sound parity.",
+      "verification": {
+        "native": "make test-euclidean-delay passed focused defaults, bounds, pattern/rotation, pulse density, mono/stereo, reset, partition continuity, invalid samples, and no process allocation. make test passed 13 fixture-safety checks and 128/128 CTest cases.",
+        "browser": "make web-test-euclidean-delay passed HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. It checked Delay category, ID 125, defaults/bounds, pulse slots, rotation, silence between pulses, bypass identity, deterministic reset, lazy WASM storage, and the stored bypass tail (first-window RMS 0.0199466; later-window RMS 0.00073736). Active effect state 768,208 B; default disabled state 0 B; active chain 82,495,724 B; fixed WASM heap 100,663,296 B.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured; 2.667 ms callback deadline. Default p50/p95/p99/p99.9/max 0.1455/0.1541/0.2404/0.3915/0.9657%; sparse 1/16 0.1451/0.1522/0.1537/0.3626/0.5299%; dense 8/16 0.1451/0.1526/0.1538/0.3600/0.7729%; muted 0/16 0.1455/0.1530/0.2246/0.3649/0.9773%. All profiles 0/20,000 deadline misses and no processing allocations; native state 768,216 B; fixed dry latency 0 frames.",
+        "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows runtime/UI validation.",
+        "diff": "make diff-check passed; no workflow files changed.",
+        "full_browser_suite": "Full make web-test passed on 2026-11-28 after worklet synchronization was added to the Essex Vibe browser smoke; Euclidean Delay local-guitar Play and browser/native comparison passed. Earlier Fractal/Synth Global Mix capture failures remain historical repeatability observations; one clean run does not eliminate them.",
+        "remaining": [
+          "Human listening and comparison against Helix Stadium XL",
+          "Installed firmware and exact on-device effect behavior",
+          "Target-device CPU and latency measurements",
+          "Full browser suite repeatability issue in unrelated Fractal Global Mix captures"
+        ]
+      }
     }
   ],
   "previous_checkpoint": {
@@ -1737,28 +1781,38 @@
     "remaining": "Human listening, physical FM9 comparison, exact Mark II Turbo applicability, installed firmware, target-device timing, and the manufacturer's Global Mix equation remain open."
   },
   "current_checkpoint": {
-    "name": "Fractal FM9-family Global Mix — Phaser subset",
-    "status": "The November 2026 Blocks Guide lists Phaser for shared Global Mix up to ±50% and documents Phaser Mix/Global Mix controls, but not the Phaser-specific combination equation or most ranges/defaults. The project-only option on categorized Modulation picker ID 18 passes native, local-guitar browser/WASM, Windows MinGW, and CPU/memory checks. No Fractal parity is claimed.",
+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",
     "date": "2026-11-27",
-    "picker_index": 68,
     "category": "Delay",
+    "picker_index": 125,
     "official_source": {
-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",
-      "revision": "Blocks Guide cover dated November 2026, printed pp. 4 and 57–58; FM9 downloads list v12.0 dated 2026-07-07 for Original/Turbo; installed firmware unknown.",
-      "url": "https://www.fractalaudio.com/downloads/manuals/fas-guides/Fractal-Audio-Blocks-Guide.pdf",
-      "firmware_url": "https://www.fractalaudio.com/fm9-downloads/",
-      "qualification": "The current guide lists Megatap for shared Global Mix up to ±50% and identifies its Mix/Level/Balance/Global Mix controls, but does not publish the Megatap combination equation or most parameter ranges/defaults. The FM9 downloads page does not name Mark II Turbo separately; exact SKU and installed firmware applicability remain unknown."
+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",
+      "revision": "Catalogue checked 2026-11-27; live Effects manual selector v1.4 Rev D; hardware 1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
+      "urls": [
+        "https://line6.com/helix-stadium-models/",
+        "https://manuals.line6.com/en/helix-stadium/live/effect-blocks",
+        "https://manuals.line6.com/en/helix-stadium/live/the-blocks",
+        "https://kb.line6.com/helix-stadium-1-4-release-notes"
+      ],
+      "qualification": "The catalogue identifies a Mono/Stereo Line 6 Original Euclidean Delay, first appearing in 1.0. The accessible manual provides common Delay controls but no model-specific parameter table, ranges, defaults, topology, CPU cost, or latency. No settings or parity are inferred."
     },
-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",
-    "project_controls": "Existing categorized Delay picker ID 68 has a default-off project-only opt-in and an offset slider of −50…+50 percentage points (default 0). When enabled, effective Mix is clamp(base Mix + offset, 0, 1), with base Mix preserved. This is not the shared Fractal setting or a verified Fractal Mix law.",
+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",
+    "project_controls": "Step Time 10–2,000 ms (125 ms default); Steps 1–16 (8); Pulses 0–Steps (3); Rotation 0–Steps−1 (0); Feedback 0–0.85 (0.25); Mix 0–100% (25%); Output Level −24…+12 dB (0 dB). Project-authored bounded delay line and Euclidean pulse gate; no Line 6 algorithm or settings claim.",
+    "status": "Implemented as default-disabled Delay picker ID 125/display number 126. Project-authored functional coverage only; no Line 6 settings, DSP, or sound parity.",
     "verification": {
-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",
-      "browser": "make web-test-fractal-megatap-global-mix passes HeadlessChrome 151 Play on local prerecorded stereo Guitar-TECHS DI. It checks Delay category/picker ID 68, default Off/0 pp, ±50 pp bounds, disabled-offset RMS difference 0, and enabled +20 pp RMS difference 0.0108016722.",
-      "windows": "make windows-cross-build compiles the Windows MinGW core, offline renderer, and Megatap benchmark.",
-      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up and 20,000 measured callbacks. 16-tap p50/p95/p99/p99.9/max: default 0.2985/0.3731/0.4995/0.7545/28.4089%; +20 pp stored/disabled 0.2981/0.3518/0.4995/0.6015/28.9875%; +20 pp enabled 0.2959/0.3079/0.4939/0.6810/20.0769%. 64 taps: 0.9878/1.1513/1.6380/1.8548/26.4637%; mono: 0.2460/0.4234/0.4440/0.6679/20.0510%. All 0/20,000 callback misses; measured effect state 1,028,132 B and no process allocations.",
-      "diff_check": "make test passes 123/123 CTest and 13 fixture-safety tests; make diff-check passes. No GitHub workflow files changed."
-    },
-    "remaining": "Human listening, physical FM9 Mark II Turbo comparison, exact model/firmware applicability, target-device timing, and the Megatap Global Mix equation remain open."
+      "native": "make test-euclidean-delay passed focused defaults, bounds, pattern/rotation, pulse density, mono/stereo, reset, partition continuity, invalid samples, and no process allocation. make test passed 13 fixture-safety checks and 128/128 CTest cases.",
+      "browser": "make web-test-euclidean-delay passed HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. It checked Delay category, ID 125, defaults/bounds, pulse slots, rotation, silence between pulses, bypass identity, deterministic reset, lazy WASM storage, and the stored bypass tail (first-window RMS 0.0199466; later-window RMS 0.00073736). Active effect state 768,208 B; default disabled state 0 B; active chain 82,495,724 B; fixed WASM heap 100,663,296 B.",
+      "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 3,000 warm-up/20,000 measured; 2.667 ms callback deadline. Default p50/p95/p99/p99.9/max 0.1455/0.1541/0.2404/0.3915/0.9657%; sparse 1/16 0.1451/0.1522/0.1537/0.3626/0.5299%; dense 8/16 0.1451/0.1526/0.1538/0.3600/0.7729%; muted 0/16 0.1455/0.1530/0.2246/0.3649/0.9773%. All profiles 0/20,000 deadline misses and no processing allocations; native state 768,216 B; fixed dry latency 0 frames.",
+      "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows runtime/UI validation.",
+      "diff": "make diff-check passed; no workflow files changed.",
+      "full_browser_suite": "Full make web-test passed on 2026-11-28 after worklet synchronization was added to the Essex Vibe browser smoke; Euclidean Delay local-guitar Play and browser/native comparison passed. Earlier Fractal/Synth Global Mix capture failures remain historical repeatability observations; one clean run does not eliminate them.",
+      "remaining": [
+        "Human listening and comparison against Helix Stadium XL",
+        "Installed firmware and exact on-device effect behavior",
+        "Target-device CPU and latency measurements",
+        "Full browser suite repeatability issue in unrelated Fractal Global Mix captures"
+      ]
+    }
   },
   "next_research": [
     {

@@ -328,6 +328,7 @@ PUBLISH_CHECKPOINTS += fractal-megatap-global-mix
 PUBLISH_CHECKPOINTS += fractal-multitap-global-mix
 PUBLISH_CHECKPOINTS += fractal-phaser-global-mix
 PUBLISH_CHECKPOINTS += essex-vibe
+PUBLISH_CHECKPOINTS += euclidean-delay
 
 .PHONY: $(foreach checkpoint,$(PUBLISH_CHECKPOINTS),publish-$(checkpoint)-plan stage-$(checkpoint) publish-$(checkpoint))
 

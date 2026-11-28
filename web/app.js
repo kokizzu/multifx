@@ -275,6 +275,7 @@ const EFFECT_NAMES = [
   "Pitch Ring Mod · project-authored monophonic tracking",
   "Fractal Resonator · project-authored, not a pitch-tracked synth",
   "Studio Pan Delay · project-authored",
+  "Euclidean Delay · project-authored controls",
 ];
 const phaseInvertByEffect = new Uint8Array(EFFECT_NAMES.length);
 const DEFAULT_PARAMETERS = {
@@ -510,6 +511,7 @@ const DEFAULT_PARAMETERS = {
     0.8, 1, 1, 1, 0.35, 0, 0, 0, 0, 0,
   ],
   studioPanDelay: [350, 0.25, 0.25, 0.5, 0.75, 0],
+  euclideanDelay: [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2469,6 +2471,18 @@ const essexVibeControls = [
   document.querySelector("#essex-vibe-stages"),
   document.querySelector("#essex-vibe-spread"),
   document.querySelector("#essex-vibe-level"),
+];
+const euclideanDelayControls = [
+  document.querySelector("#euclidean-delay-step-time"),
+  document.querySelector("#euclidean-delay-steps"),
+  document.querySelector("#euclidean-delay-pulses"),
+  document.querySelector("#euclidean-delay-rotation"),
+  document.querySelector("#euclidean-delay-feedback"),
+  document.querySelector("#euclidean-delay-mix"),
+  document.querySelector("#euclidean-delay-level"),
+  document.querySelector("#euclidean-delay-low-cut"),
+  document.querySelector("#euclidean-delay-high-cut"),
+  document.querySelector("#euclidean-delay-trails"),
 ];
 const resonatorControls = Array.from(
   document.querySelectorAll("[data-resonator-parameter]"),
@@ -8301,6 +8315,52 @@ function updateEssexVibe() {
     workletNode.port.postMessage({ type: "essex-vibe", value: values });
   }
 }
+function updateEuclideanDelay() {
+  const steps = Math.max(1, Math.min(16, Math.round(
+    Number(euclideanDelayControls[1].value),
+  )));
+  euclideanDelayControls[1].value = String(steps);
+  euclideanDelayControls[2].max = String(steps);
+  euclideanDelayControls[3].max = String(steps - 1);
+  euclideanDelayControls[2].value = String(Math.min(
+    steps, Math.max(0, Math.round(Number(euclideanDelayControls[2].value))),
+  ));
+  euclideanDelayControls[3].value = String(Math.min(
+    steps - 1, Math.max(0, Math.round(Number(euclideanDelayControls[3].value))),
+  ));
+  const values = [
+    Number(euclideanDelayControls[0].value),
+    steps,
+    Number(euclideanDelayControls[2].value),
+    Number(euclideanDelayControls[3].value),
+    Number(euclideanDelayControls[4].value),
+    Number(euclideanDelayControls[5].value) / 100,
+    Number(euclideanDelayControls[6].value),
+    Number(euclideanDelayControls[7].value),
+    Number(euclideanDelayControls[8].value),
+    euclideanDelayControls[9].checked ? 1 : 0,
+  ];
+  const formats = [
+    (value) => `${Math.round(value)} ms`,
+    null,
+    null,
+    null,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} dB`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${Math.round(value)} Hz`,
+    null,
+  ];
+  euclideanDelayControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output && formats[index]) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.euclideanDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "euclidean-delay", value: values });
+  }
+}
 function updateResonator() {
   const values = Array(39);
   resonatorControls.forEach((control) => {
@@ -8562,6 +8622,10 @@ for (const control of pitchRingModControls) {
 for (const control of studioPanDelayControls) {
   control.addEventListener("input", updateStudioPanDelay);
   control.addEventListener("change", updateStudioPanDelay);
+}
+for (const control of euclideanDelayControls) {
+  control.addEventListener("input", updateEuclideanDelay);
+  control.addEventListener("change", updateEuclideanDelay);
 }
 for (const control of resonatorControls) {
   control.addEventListener("input", updateResonator);
@@ -18924,6 +18988,48 @@ async function runEssexVibeBrowserSmokeTest(
     }
   }
 }
+async function runEuclideanDelayBrowserSmokeTest(
+  reference, captureView, captureBuffer,
+) {
+  const effectIndex = 125;
+  const previousEffectState = enabledEffects();
+  const previousValues = euclideanDelayControls.map((control) =>
+    control.type === "checkbox" ? control.checked : control.value,
+  );
+  const previousParameters = [...DEFAULT_PARAMETERS.euclideanDelay];
+  const previousCategory = effectCategoryFilter.value;
+  const previousSearch = effectSearch.value;
+  let trailsSilenceSource = null;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Euclidean Delay smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)
+      ?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const defaults = "125,8,3,0,0.25,0.25,0,20,20000,0";
+    const uiDefaults = [
+      euclideanDelayControls[0]?.value,
+      euclideanDelayControls[1]?.value,
+      euclideanDelayControls[2]?.value,
+      euclideanDelayControls[3]?.value,
+      euclideanDelayControls[4]?.value,
+      euclideanDelayControls[5]?.value,
+      euclideanDelayControls[6]?.value,
+      euclideanDelayControls[7]?.value,
+      euclideanDelayControls[8]?.value,
+      euclideanDelayControls[9]?.checked,
+    ].join(",");
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Euclidean Delay") ||
+        !checkbox || checkbox.checked || euclideanDelayControls.length !== 10 ||
+        EFFECT_NAMES.length !== 126 || effectMemory.length !== EFFECT_NAMES.length ||
+  let euclideanDelaySmoke = null;
+    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 126 || effectRows.length !== 126 ||
               [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
   let essexVibeSmoke = null;
     const expectedEffectIds = Array.from({ length: 125 }, (_, index) => index);
@@ -20834,6 +20940,8 @@ async function runEssexVibeBrowserSmokeTest(
     // Fractal Resonator has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[122] = false;
     parityEnabled[123] = false;
+    // Euclidean Delay has a focused local guitar Play smoke and no offline CLI stage.
+    parityEnabled[125] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -21300,6 +21408,22 @@ async function runEssexVibeBrowserSmokeTest(
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+        if (new URLSearchParams(location.search).get("selftest") === "euclidean-delay") {
+          testResult.textContent = "Checking project-authored Euclidean Delay with local guitar playback…";
+          const euclideanDelaySmoke = await runEuclideanDelayBrowserSmokeTest(
+            reference, captureView, captureBuffer,
+          );
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            euclideanDelay: euclideanDelaySmoke,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Euclidean Delay browser test";
+          return;
+        }
         if (new URLSearchParams(location.search).get("selftest") === "1") {
           if (!modulationTap || modulationTap.disabled || !workletNode) {
             throw new Error("The global modulation TAP control must be ready with the audio chain.");
@@ -22542,6 +22666,10 @@ async function runEssexVibeBrowserSmokeTest(
       );
       testResult.textContent = "Checking Essex Vibe with local guitar playback…";
       essexVibeSmoke = await runEssexVibeBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
+      testResult.textContent = "Checking Euclidean Delay with local guitar playback…";
+      euclideanDelaySmoke = await runEuclideanDelayBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
     stopSource(false);

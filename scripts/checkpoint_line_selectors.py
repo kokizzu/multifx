@@ -640,9 +640,10 @@ def select_exact_line_operations(
     both markers must occur exactly once in one zero-context hunk. A span can
     instead use ``line_count`` to select a fixed number of diff operations
     beginning with its unique start marker. A bounded span can also name an
-    exact ``hunk_header`` and a 1-based ``end_occurrence`` for a repeated
     closing line. Every selected line must be an added/deleted operation;
     ``end_exclusive`` may leave the end marker out of the selected range. An
+    exact ``hunk_header`` or stable ``hunk_context`` prefix and a 1-based
+    ``end_occurrence`` for a repeated closing line. Every selected line must be an added/deleted operation;
     optional ``expected_line_count`` makes marker boundaries fail closed if
     the block changes. Missing, ambiguous, overlapping, or stale selectors
     fail closed.
@@ -741,6 +742,14 @@ def select_exact_line_operations(
             or span.get("hunk_header") is not None
         ):
             raise LineSelectionError("span hunk_headers must be a unique non-empty list")
+        hunk_context = span.get("hunk_context")
+        if hunk_context is not None and (
+            not isinstance(hunk_context, str)
+            or not hunk_context
+            or span.get("hunk_header") is not None
+            or hunk_headers is not None
+        ):
+            raise LineSelectionError("span hunk_context must be non-empty and exclusive")
     for selected_range in ranges:
         if (
             not isinstance(selected_range, dict)
@@ -822,6 +831,10 @@ def select_exact_line_operations(
             or (
                 "allow_cross_hunk_staged" in replacement
                 and not isinstance(replacement["allow_cross_hunk_staged"], bool)
+            )
+            or (
+                "allow_staged_value_without_scope" in replacement
+                and not isinstance(replacement["allow_staged_value_without_scope"], bool)
             )
             or (
                 replacement.get("allow_cross_hunk_staged", False)
@@ -925,20 +938,43 @@ def select_exact_line_operations(
         scoped_headers = replacement.get("hunk_headers", ())
         scope_bounds: tuple[int, int, int] | None = None
         if "scope_start" in replacement:
-            scope_markers = []
-            for marker in (replacement["scope_start"], replacement["scope_end"]):
-                marker_matches = [
-                    (hunk_index, line_index)
-                    for hunk_index, (header_line, body) in enumerate(hunks)
-                    if (
-                        (scoped_header is None and not scoped_headers)
-                        or header_line.rstrip("\n") == scoped_header
-                        or header_line.rstrip("\n") in scoped_headers
-                    )
-                    for line_index, line in enumerate(body)
-                    if line.rstrip("\n") == marker
-                ]
-                if len(marker_matches) != 1:
+            current_value_present = any(
+                line.rstrip("\n") == replacement["current"]
+                for header_line, body in hunks
+                if (
+                    (scoped_header is None and not scoped_headers)
+                    or header_line.rstrip("\n") == scoped_header
+                    or header_line.rstrip("\n") in scoped_headers
+                )
+                for line in body
+            )
+            if not (
+                not current_value_present
+                and replacement.get("allow_staged_value_without_scope", False)
+            ):
+                scope_markers = []
+                for marker in (replacement["scope_start"], replacement["scope_end"]):
+                    marker_matches = [
+                        (hunk_index, line_index)
+                        for hunk_index, (header_line, body) in enumerate(hunks)
+                        if (
+                            (scoped_header is None and not scoped_headers)
+                            or header_line.rstrip("\n") == scoped_header
+                            or header_line.rstrip("\n") in scoped_headers
+                        )
+                        for line_index, line in enumerate(body)
+                        if line.rstrip("\n") == marker
+                    ]
+                    if len(marker_matches) != 1:
+                        raise LineSelectionError(
+                            "replacement scope markers must each occur exactly once; "
+                            f"marker={marker!r}, found={len(marker_matches)}"
+                        )
+                    scope_markers.append(marker_matches[0])
+                if (
+                    scope_markers[0][0] != scope_markers[1][0]
+                    or scope_markers[0][1] > scope_markers[1][1]
+                ):
                     raise LineSelectionError(
                         "replacement scope markers must each occur exactly once; "
                         f"marker={marker!r}, found={len(marker_matches)}"
@@ -991,6 +1027,16 @@ def select_exact_line_operations(
                 if line.rstrip("\n") == replacement["selected"]
                 and in_replacement_scope(hunk_index, line_index)
             ]
+            if (
+                replacement.get("allow_staged_value_without_scope", False)
+                and "scope_start" in replacement
+                and not current_matches
+                and len(selected_matches) != 1
+            ):
+                raise LineSelectionError(
+                    "staged replacement value must occur exactly once without its scope markers; "
+                    f"found={len(selected_matches)}"
+                )
             if allow_cross_hunk_staged and len(selected_matches) != 1:
                 raise LineSelectionError(
                     "staged replacement value must occur exactly once; "
@@ -1110,13 +1156,17 @@ def select_exact_line_operations(
             if (
                 span.get("hunk_header") is None
                 and span.get("hunk_headers") is None
+                and span.get("hunk_context") is None
             )
             or header_line.rstrip("\n") == span.get("hunk_header")
             or header_line.rstrip("\n") in span.get("hunk_headers", ())
+                span.get("hunk_context") is not None
+                and header_line.rstrip("\n").startswith(span["hunk_context"])
         ]
         if (
             span.get("hunk_header") is not None
             or span.get("hunk_headers") is not None
+            or span.get("hunk_context") is not None
         ) and len(eligible_hunks) != 1:
             raise LineSelectionError(
                 "span hunk header must occur once; "
@@ -1507,6 +1557,253 @@ PARTIAL_CHECKPOINT_LINE_SELECTORS["essex-vibe"] = {
         "+            and in_replacement_scope(hunk_index, line_index)",
         "+                and in_replacement_scope(hunk_index, line_index)",
         {"span": {"start": '+PARTIAL_CHECKPOINT_LINE_SELECTORS["essex-vibe"] = {', "end": "+}", "end_after_start": True}},
+    ),
+}
+PARTIAL_CHECKPOINT_LINE_SELECTORS["euclidean-delay"] = {
+    "CMakeLists.txt": (
+        "+    src/effects/euclidean_delay.cpp",
+        "+add_executable(tabletfx_euclidean_delay_bench apps/euclidean_delay_bench.cpp)",
+        "+target_link_libraries(tabletfx_euclidean_delay_bench PRIVATE tabletfx_core)",
+        "+    add_executable(tabletfx_euclidean_delay_tests tests/test_euclidean_delay.cpp)",
+        "+    target_link_libraries(tabletfx_euclidean_delay_tests PRIVATE tabletfx_core)",
+        "+    add_test(NAME tabletfx_euclidean_delay_tests COMMAND tabletfx_euclidean_delay_tests)",
+    ),
+    "EFFECTS_MATRIX.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium Euclidean Delay — project-authored implementation", "line_count": 3}},
+    ),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium XL — Euclidean Delay (2026-11-28)", "line_count": 9}},
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium XL — Euclidean Delay (2026-11-28)", "line_count": 12}},
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium Euclidean Delay processor-call benchmark (2026-11-27)", "line_count": 12}},
+    ),
+    "Makefile": (
+        "+include make/effects.mk",
+        "+include make/research.mk",
+    ),
+    "RESEARCH.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium Euclidean Delay (2026-11-27)", "line_count": 5}},
+    ),
+    "include/tabletfx/effects.hpp": (
+        '+#include "tabletfx/effects/euclidean_delay.hpp"',
+    ),
+    "make/publish.mk": (
+        "+PUBLISH_CHECKPOINTS += euclidean-delay",
+    ),
+    "scripts/publish_checkpoint.py": (
+        {"span": {"start": "+EUCLIDEAN_DELAY_CHECKPOINT_PATHS = (", "end": "+)", "end_after_start": True, "expected_line_count": 29}},
+        {"span": {"start": '+CHECKPOINTS["euclidean-delay"] = (', "end": "+)", "end_after_start": True, "expected_line_count": 4}},
+        {"span": {"start": '+PARTIAL_CHECKPOINT_HUNKS["euclidean-delay"] = {', "end": "+}", "end_after_start": True, "expected_line_count": 23}},
+    ),
+    "research-state.json": (
+        '+  "previous_checkpoint_commit": "0d5804262e69d43a8a191dc353488cd1dfe71549",',
+        {
+            "span": {
+                "hunk_context": "@@ -9,",
+                "start": '-    "name": "Fractal FM9-family Global Mix — Phaser subset",',
+                "line_count": 2,
+            }
+        },
+        {"span": {"hunk_context": "@@ -9,", "start": '+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",', "line_count": 1}},
+        {"span": {"hunk_context": "@@ -12 ", "start": '-    "picker_index": 68,', "line_count": 1}},
+        {"span": {"hunk_context": "@@ -13,", "start": '+    "picker_index": 125,', "line_count": 1}},
+        {"span": {"hunk_headers": ["@@ -15,5 +14,9 @@", "@@ -15,8 +15,13 @@"], "start": '-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",', "line_count_by_header": {"@@ -15,5 +14,9 @@": 5, "@@ -15,8 +15,13 @@": 6}}},
+        {"span": {"hunk_headers": ["@@ -15,5 +14,9 @@", "@@ -15,8 +15,13 @@"], "start": '+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",', "line_count_by_header": {"@@ -15,5 +14,9 @@": 9, "@@ -15,8 +15,13 @@": 10}}},
+        {"span": {"hunk_headers": ["@@ -21,2 +24,3 @@", "@@ -15,8 +15,13 @@"], "start": '-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",', "line_count": 2}},
+        {"span": {"hunk_headers": ["@@ -21,2 +24,3 @@", "@@ -15,8 +15,13 @@"], "start": '+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",', "line_count": 3}},
+        {
+            "span": {
+                "hunk_context": "@@ -24,",
+                "start": '-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",',
+                "end": '+    }',
+                "end_after_start": True,
+            }
+        },
+        {"span": {"hunk_context": "@@ -33,", "start": '-    "next_device": "Fractal FM9 Mark II Turbo",', "line_count": 2}},
+        {"span": {"hunk_context": "@@ -33,", "start": '+    "next_device": "HeadRush Prime",', "line_count": 3}},
+        '-    "next_feature": "After this Studio Pan Delay ID 123 checkpoint reaches main, publish the local Essex Vibe at ID 124 as the next standalone checkpoint; continue stable picker order only after each commit is on main.",',
+        {
+            "span": {
+                "hunk_context": "@@ -1713,",
+                "start": '+      "name": "Line 6 Helix Stadium XL — Euclidean Delay",',
+                "end": "+      }",
+                "end_after_start": True,
+            }
+        },
+        {
+            "span": {
+                "hunk_context": "@@ -1740,",
+                "start": '-    "name": "Fractal FM9-family Global Mix — Phaser subset",',
+                "end": '+    "name": "Line 6 Helix Stadium XL — Euclidean Delay",',
+                "end_after_start": True,
+            }
+        },
+        {"span": {"hunk_context": "@@ -1743 ", "start": '-    "picker_index": 68,', "line_count": 1}},
+        {"span": {"hunk_context": "@@ -1744,", "start": '+    "picker_index": 125,', "line_count": 1}},
+        {"span": {"hunk_headers": ["@@ -1746,5 +1873,9 @@", "@@ -1746,8 +1789,13 @@"], "start": '-      "title": "Fractal Audio Systems Blocks Guide and FM9 downloads",', "line_count_by_header": {"@@ -1746,5 +1873,9 @@": 5, "@@ -1746,8 +1789,13 @@": 6}}},
+        {"span": {"hunk_headers": ["@@ -1746,5 +1873,9 @@", "@@ -1746,8 +1789,13 @@"], "start": '+      "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",', "line_count_by_header": {"@@ -1746,5 +1873,9 @@": 9, "@@ -1746,8 +1789,13 @@": 10}}},
+        {"span": {"hunk_headers": ["@@ -1752,2 +1883,3 @@", "@@ -1746,8 +1789,13 @@"], "start": '-    "documented_controls": "Global Mix is an opt-in to the shared Effects Mix offset, up to ±50%. Megatap also lists Mix, Level, Balance, Bypass/Bypass Mode, Input Select/Gain, Kill Dry, and spillover. The guide does not state how Global Mix combines with Megatap Mix.",', "line_count": 2}},
+        {"span": {"hunk_headers": ["@@ -1752,2 +1883,3 @@", "@@ -1746,8 +1789,13 @@"], "start": '+    "documented_controls": "Mono/Stereo listing and category identity only; exact model-specific controls and numeric values are not published in the checked manual.",', "line_count": 3}},
+        {
+            "span": {
+                "hunk_context": "@@ -1755,",
+                "start": '-      "native": "make test-fractal-megatap-global-mix passes focused defaults, disabled identity, offset, clamps, storage, and zero-process-allocation coverage; make test passes all 123 CTest cases.",',
+                "end": '+    }',
+                "end_after_start": True,
+            }
+        },
+    ),
+    "scripts/checkpoint_line_selectors.py": (
+        {"span": {"hunk_context": "@@ -825,", "start": "+            or (", "line_count": 4}},
+        {"span": {"hunk_context": "@@ -928,", "start": "-            scope_markers = []", "line_count": 51}},
+        {"span": {"hunk_context": "@@ -993,", "start": "+            if (", "line_count": 10}},
+        {
+            "span": {
+                "start": '+PARTIAL_CHECKPOINT_LINE_SELECTORS["euclidean-delay"] = {',
+                "end": "+}",
+                "end_after_start": True,
+            }
+        },
+        '-    exact ``hunk_header`` and a 1-based ``end_occurrence`` for a repeated',
+        '+    exact ``hunk_header`` or stable ``hunk_context`` prefix and a 1-based',
+        '+    ``end_occurrence`` for a repeated closing line. Every selected line must be an added/deleted operation;',
+        {
+            "span": {
+                "start": '+        hunk_context = span.get("hunk_context")',
+                "end": '+            raise LineSelectionError("span hunk_context must be non-empty and exclusive")',
+                "end_after_start": True,
+            }
+        },
+        '+                and span.get("hunk_context") is None',
+        '+                span.get("hunk_context") is not None',
+        '+                and header_line.rstrip("\\n").startswith(span["hunk_context"])',
+        '+            or span.get("hunk_context") is not None',
+    ),
+    "scripts/test_checkpoint_line_selectors.py": (
+        {
+            "span": {
+                "start": '+class EuclideanDelaySelectorTests(unittest.TestCase):',
+                "end": '+        self.assertNotIn("HeadRush Prime current catalog", selected)',
+                "end_after_start": True,
+            }
+        },
+        {"span": {"hunk_context": "@@ -116,", "start": "+    def test_scoped_replacement_accepts_unique_staged_value_without_scope_markers(self) -> None:", "line_count": 23}},
+    ),
+    "src/web/wasm_chain.cpp": (
+        '+#include "tabletfx/effects/euclidean_delay.hpp"',
+        {
+            "span": {
+                "hunk_context": "@@ -646,",
+                "start": "+        if (index == 125U) {",
+                "end": "+        }",
+                "end_after_start": True,
+            }
+        },
+        {
+            "span": {
+                "hunk_context": "@@ -1023,",
+                "start": "+        if (index == 125U) {",
+                "end": "+            return;",
+                "end_after_start": True,
+            }
+        },
+        "+        if (euclidean_delay_) euclidean_delay_->reset();",
+        {
+            "span": {
+                "hunk_context": "@@ -3991,",
+                "start": "+    void configure_euclidean_delay_filters(float low_cut_hz,",
+                "end": "+    }",
+                "end_after_start": True,
+            }
+        },
+        {
+            "span": {
+                "hunk_context": "@@ -3991,",
+                "start": "+    void configure_euclidean_delay(float step_time_ms, float steps,",
+                "end": "+    }",
+                "end_after_start": True,
+            }
+        },
+        "+        if (euclidean_delay_) bytes += euclidean_delay_->memory_bytes();",
+        {
+            "span": {
+                "hunk_context": "@@ -4421,",
+                "start": "+        if (index == 125U) {",
+                "end": "+        }",
+                "end_after_start": True,
+            }
+        },
+        "+        case 125U: return euclidean_delay_enabled_ && euclidean_delay_ != nullptr;",
+        "+    std::unique_ptr<tabletfx::EuclideanDelay> euclidean_delay_;",
+        "+    tabletfx::EuclideanDelayParameters euclidean_delay_parameters_{};",
+        "+    bool euclidean_delay_enabled_ = false;",
+        {
+            "span": {
+                "hunk_context": "@@ -6478,",
+                "start": "+TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(",
+                "end": "+}",
+                "end_after_start": True,
+            }
+        },
+    ),
+    "scripts/run_cmake.py": (
+        '+            "bench-euclidean-delay",',
+        '+    elif action == "bench-euclidean-delay":',
+        "+        bench_euclidean_delay(cmake)",
+        {"span": {"start": "+def bench_euclidean_delay(cmake: str) -> None:", "line_count": 10}},
+    ),
+    "scripts/web.py": (
+        '+        "_tf_chain_set_euclidean_delay",',
+        '+        str(ROOT / "src" / "effects" / "euclidean_delay.cpp"),',
+        "+                 euclidean_delay_only: bool = False,",
+        "+        if euclidean_delay_only:",
+        '+            url = base_url + "/web/index.html?selftest=euclidean-delay"',
+        '+        "test-euclidean-delay",',
+        '+    elif action == "test-euclidean-delay":',
+        "+        browser_test(euclidean_delay_only=True)",
+    ),
+    "web/audio-worklet.js": (
+        '+EFFECTS.push("euclidean-delay");',
+        {"span": {"start": "+      this.configureEuclideanDelay(", "line_count": 4}},
+        {"span": {"start": "+  configureEuclideanDelay(values) {", "line_count": 7}},
+        {"span": {"start": '+        } else if (index === EFFECTS.indexOf("euclidean-delay")) {', "line_count": 10}},
+        '+    } else if (message.type === "euclidean-delay" && this.ready) {',
+        "+      this.configureEuclideanDelay(message.value);",
+    ),
+    "web/app.js": (
+        '+  "Euclidean Delay · project-authored controls",',
+        "+  euclideanDelay: [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],",
+        {"span": {"start": "+const euclideanDelayControls = [", "line_count": 12}},
+        {"span": {"start": "+function updateEuclideanDelay() {", "line_count": 46}},
+        {"span": {"start": "+for (const control of euclideanDelayControls) {", "line_count": 4}},
+        {"span": {"start": "+async function runEuclideanDelayBrowserSmokeTest(", "line_count": 38}},
+        {"replace": {
+            "current": "+        EFFECT_NAMES.length !== 127 || effectMemory.length !== EFFECT_NAMES.length ||",
+            "selected": "+        EFFECT_NAMES.length !== 126 || effectMemory.length !== EFFECT_NAMES.length ||",
+            "scope_start": "+async function runEuclideanDelayBrowserSmokeTest(",
+            "scope_end": '+      throw new Error(`Euclidean Delay picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.euclideanDelay.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);',
+            "allow_staged_value_without_scope": True,
+        }},
+        "+  let euclideanDelaySmoke = null;",
+        {"replace": {
+            "current": "+    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);",
+            "selected": "+    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);",
+        }},
+        {"replace": {
+            "current": "+    if (EFFECT_NAMES.length !== 127 || effectRows.length !== 127 ||",
+            "selected": "+    if (EFFECT_NAMES.length !== 126 || effectRows.length !== 126 ||",
+        }},
+        "+    // Euclidean Delay has a focused local guitar Play smoke and no offline CLI stage.",
+        "+    parityEnabled[125] = false;",
+        {"span": {"start": '+        if (new URLSearchParams(location.search).get("selftest") === "euclidean-delay") {', "line_count": 16}},
+        {"span": {"start": '+      testResult.textContent = "Checking Euclidean Delay with local guitar playback…";', "line_count": 4}},
+    ),
+    "web/index.html": (
+        '+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="125"><span class="effect-number">126</span><span class="effect-name">Euclidean Delay · project-authored controls</span><span class="effect-default">125 ms · 8 steps · 3 pulses · disabled by default</span><span class="effect-category-tag">Delay</span></label>',
+        {"span": {"start": '+      <div class="effect-parameter-group" aria-label="Euclidean Delay controls">', "line_count": 16}},
     ),
 }
 def select_checkpoint_line_patch(checkpoint: str, path: str, diff: str) -> str | None:

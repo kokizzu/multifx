@@ -1,6 +1,7 @@
 #include "tabletfx/effect.hpp"
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
+#include "tabletfx/effects/euclidean_delay.hpp"
 #include "tabletfx/effects/resonator.hpp"
 #include "tabletfx/effects/studio_pan_delay.hpp"
 #include "tabletfx/effects/essex_vibe.hpp"
@@ -644,6 +645,31 @@ public:
             essex_vibe_enabled_ = enabled;
             return true;
         }
+        if (index == 125U) {
+            if (!enabled) {
+                euclidean_delay_enabled_ = false;
+                if (euclidean_delay_ && !euclidean_delay_parameters_.trails) {
+                    euclidean_delay_->reset();
+                    euclidean_delay_.reset();
+                }
+                return true;
+            }
+            if (!euclidean_delay_) {
+                try {
+                    euclidean_delay_ =
+                        std::make_unique<tabletfx::EuclideanDelay>(
+                            static_cast<float>(sample_rate_),
+                            euclidean_delay_parameters_);
+                } catch (...) {
+                    euclidean_delay_enabled_ = false;
+                    return false;
+                }
+            } else {
+                euclidean_delay_->configure(euclidean_delay_parameters_);
+            }
+            euclidean_delay_enabled_ = true;
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -1021,6 +1047,15 @@ public:
                 essex_vibe_->process(
                     std::span<float>(output_.data(), samples), channels_);
             }
+        if (index == 125U) {
+            if (euclidean_delay_ && euclidean_delay_enabled_) {
+                euclidean_delay_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            } else if (euclidean_delay_) {
+                euclidean_delay_->process_bypassed(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
         if (index >= effects_.size()) {
             return;
         }
@@ -1097,6 +1132,7 @@ public:
         resonator_->reset();
         studio_pan_delay_->reset();
         essex_vibe_->reset();
+        if (euclidean_delay_) euclidean_delay_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -3989,6 +4025,64 @@ public:
         parameters.level = level;
         essex_vibe_->configure(essex_vibe_->sample_rate(), parameters);
     }
+    void configure_euclidean_delay_filters(float low_cut_hz,
+                                           float high_cut_hz,
+                                           std::uint32_t trails) noexcept {
+        auto parameters = euclidean_delay_parameters_;
+        const auto bounded_float = [](float value, float fallback,
+                                      float minimum, float maximum) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return std::clamp(value, minimum, maximum);
+        };
+        parameters.low_cut_hz = bounded_float(
+            low_cut_hz, parameters.low_cut_hz, 20.0F, 2000.0F);
+        parameters.high_cut_hz = bounded_float(
+            high_cut_hz, parameters.high_cut_hz, 1000.0F, 20000.0F);
+        parameters.trails = trails != 0U;
+        euclidean_delay_parameters_ = parameters;
+        if (euclidean_delay_) {
+            euclidean_delay_->configure(parameters);
+            if (!euclidean_delay_enabled_ && !parameters.trails) {
+                euclidean_delay_->reset();
+                euclidean_delay_.reset();
+            }
+        }
+    }
+    void configure_euclidean_delay(float step_time_ms, float steps,
+                                   float pulses, float rotation,
+                                   float feedback, float mix,
+                                   float level_db) noexcept {
+        auto parameters = euclidean_delay_parameters_;
+        const auto bounded_float = [](float value, float fallback,
+                                      float minimum, float maximum) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            return std::clamp(value, minimum, maximum);
+        };
+        parameters.step_time_ms = bounded_float(
+            step_time_ms, parameters.step_time_ms, 10.0F, 2000.0F);
+        const auto bounded_integer = [](float value, std::uint8_t fallback,
+                                        std::uint8_t minimum,
+                                        std::uint8_t maximum) noexcept {
+            if (!std::isfinite(value)) return fallback;
+            const float bounded = std::clamp(
+                value, static_cast<float>(minimum),
+                static_cast<float>(maximum));
+            return static_cast<std::uint8_t>(std::lround(bounded));
+        };
+        parameters.steps = bounded_integer(steps, parameters.steps, 1U, 16U);
+        parameters.pulses = bounded_integer(
+            pulses, parameters.pulses, 0U, parameters.steps);
+        parameters.rotation = bounded_integer(
+            rotation, parameters.rotation, 0U,
+            static_cast<std::uint8_t>(parameters.steps - 1U));
+        parameters.feedback = bounded_float(
+            feedback, parameters.feedback, 0.0F, 0.85F);
+        parameters.mix = bounded_float(mix, parameters.mix, 0.0F, 1.0F);
+        parameters.level_db = bounded_float(
+            level_db, parameters.level_db, -24.0F, 12.0F);
+        euclidean_delay_parameters_ = parameters;
+        if (euclidean_delay_) euclidean_delay_->configure(parameters);
+    }
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -4222,6 +4316,7 @@ public:
         bytes += resonator_->memory_bytes();
         bytes += studio_pan_delay_->memory_bytes();
         bytes += essex_vibe_->memory_bytes();
+        if (euclidean_delay_) bytes += euclidean_delay_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4419,6 +4514,13 @@ public:
             return bytes > std::numeric_limits<std::uint32_t>::max()
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
+        if (index == 125U) {
+            if (!euclidean_delay_) return 0U;
+            const std::size_t bytes = euclidean_delay_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4469,6 +4571,7 @@ private:
         case 122U: return resonator_enabled_;
         case 123U: return studio_pan_delay_enabled_;
         case 124U: return essex_vibe_enabled_;
+        case 125U: return euclidean_delay_enabled_ && euclidean_delay_ != nullptr;
         default: return false;
         }
     }
@@ -4519,6 +4622,8 @@ private:
     std::unique_ptr<tabletfx::Resonator> resonator_;
     std::unique_ptr<tabletfx::StudioPanDelay> studio_pan_delay_;
     std::unique_ptr<tabletfx::EssexVibe> essex_vibe_;
+    std::unique_ptr<tabletfx::EuclideanDelay> euclidean_delay_;
+    tabletfx::EuclideanDelayParameters euclidean_delay_parameters_{};
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4555,6 +4660,7 @@ private:
     bool resonator_enabled_ = false;
     bool studio_pan_delay_enabled_ = false;
     bool essex_vibe_enabled_ = false;
+    bool euclidean_delay_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -6476,4 +6582,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_essex_vibe(
         as_chain(opaque)->configure_essex_vibe(
             rate_hz, depth, trem, stages, spread, level);
     }
+TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(
+    void* opaque, float step_time_ms, float steps, float pulses,
+    float rotation, float feedback, float mix, float level_db,
+    float low_cut_hz, float high_cut_hz, std::uint32_t trails) noexcept {
+    if (opaque != nullptr) {
+        auto* chain = as_chain(opaque);
+        chain->configure_euclidean_delay(
+            step_time_ms, steps, pulses, rotation, feedback, mix, level_db);
+        chain->configure_euclidean_delay_filters(
+            low_cut_hz, high_cut_hz, trails);
+    }
+}
 } // extern "C"

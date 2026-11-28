@@ -46,6 +46,7 @@ EFFECTS.push("pitch-ring-mod");
 EFFECTS.push("resonator");
 EFFECTS.push("studio-pan-delay");
 EFFECTS.push("essex-vibe");
+EFFECTS.push("euclidean-delay");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -653,6 +654,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       );
       this.configureStudioPanDelay(
         parameters.studioPanDelay || [350, 0.25, 0.25, 0.5, 0.75, 0],
+      );
+      this.configureEuclideanDelay(
+        parameters.euclideanDelay ||
+          [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],
       );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -1299,6 +1304,13 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     this.module._tf_chain_set_studio_pan_delay(this.chain, ...values);
   }
 
+  configureEuclideanDelay(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        values.length !== 10) {
+      return;
+    }
+    this.module._tf_chain_set_euclidean_delay(this.chain, ...values);
+  }
   configureEnhancer(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
       return;
@@ -1377,6 +1389,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
             memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
           });
         } else if (index === EFFECTS.indexOf("studio-pan-delay")) {
+          const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
+            this.chain, index,
+          );
+          this.port.postMessage({
+            type: "effect-memory",
+            index,
+            effectMemoryBytes,
+            memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+          });
+        } else if (index === EFFECTS.indexOf("euclidean-delay")) {
           const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
             this.chain, index,
           );
@@ -1653,6 +1675,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureStudioPanDelay(message.value);
     } else if (message.type === "essex-vibe" && this.ready) {
       this.configureEssexVibe(message.value);
+    } else if (message.type === "euclidean-delay" && this.ready) {
+      this.configureEuclideanDelay(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

@@ -232,6 +232,7 @@
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="122"><span class="effect-number">123</span><span class="effect-name">Fractal Resonator · project-authored, not a pitch-tracked synth</span><span class="effect-default">Four feedback-fed band-pass voices · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="123"><span class="effect-number">124</span><span class="effect-name">Studio Pan Delay · project-authored</span><span class="effect-default">350 ms · 25% wet · 0.5 Hz pan · disabled by default</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="125"><span class="effect-number">126</span><span class="effect-name">Euclidean Delay · project-authored controls</span><span class="effect-default">125 ms · 8 steps · 3 pulses · disabled by default</span><span class="effect-category-tag">Delay</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -673,6 +674,22 @@
           <label class="mix-control" for="studio-pan-delay-pan-mode"><span>Pan Mode</span><select id="studio-pan-delay-pan-mode"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Envelope</option></select></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 / Rev A lists Studio Delay Time, Feedback, Mix, Pan Rate, Pan Depth, and Pan Mode (Sine, Tri, Env). The guide omits numeric Pan Rate/Depth bounds, defaults, and DSP; the ranges and values here are project choices. This implements a fixed-time stereo feedback delay with panned repeats and does not claim Fender sound parity.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Euclidean Delay controls">
+        <h3>Euclidean Delay · project-authored</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="euclidean-delay-step-time"><span>Step Time</span><output id="euclidean-delay-step-time-value" for="euclidean-delay-step-time">125 ms</output><input id="euclidean-delay-step-time" type="range" min="10" max="2000" step="1" value="125"></label>
+          <label class="mix-control" for="euclidean-delay-steps"><span>Steps</span><output id="euclidean-delay-steps-value" for="euclidean-delay-steps">8</output><input id="euclidean-delay-steps" type="range" min="1" max="16" step="1" value="8"></label>
+          <label class="mix-control" for="euclidean-delay-pulses"><span>Pulses</span><output id="euclidean-delay-pulses-value" for="euclidean-delay-pulses">3</output><input id="euclidean-delay-pulses" type="range" min="0" max="8" step="1" value="3"></label>
+          <label class="mix-control" for="euclidean-delay-rotation"><span>Rotation</span><output id="euclidean-delay-rotation-value" for="euclidean-delay-rotation">0</output><input id="euclidean-delay-rotation" type="range" min="0" max="7" step="1" value="0"></label>
+          <label class="mix-control" for="euclidean-delay-feedback"><span>Feedback</span><output id="euclidean-delay-feedback-value" for="euclidean-delay-feedback">25%</output><input id="euclidean-delay-feedback" type="range" min="0" max="0.85" step="0.01" value="0.25"></label>
+          <label class="mix-control" for="euclidean-delay-mix"><span>Mix</span><output id="euclidean-delay-mix-value" for="euclidean-delay-mix">25%</output><input id="euclidean-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="euclidean-delay-level"><span>Output Level</span><output id="euclidean-delay-level-value" for="euclidean-delay-level">0.0 dB</output><input id="euclidean-delay-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
+          <label class="mix-control" for="euclidean-delay-low-cut"><span>Low Cut · project-authored</span><output id="euclidean-delay-low-cut-value" for="euclidean-delay-low-cut">20 Hz</output><input id="euclidean-delay-low-cut" type="range" min="20" max="2000" step="10" value="20"></label>
+          <label class="mix-control" for="euclidean-delay-high-cut"><span>High Cut · project-authored</span><output id="euclidean-delay-high-cut-value" for="euclidean-delay-high-cut">20,000 Hz</output><input id="euclidean-delay-high-cut" type="range" min="1000" max="20000" step="100" value="20000"></label>
+          <label class="mix-control" for="euclidean-delay-trails"><span>Trails · project-authored</span><input id="euclidean-delay-trails" type="checkbox"></label>
+        </div>
+        <p class="hint">The Helix Stadium model catalog lists a Mono/Stereo Euclidean Delay first listed in version 1.0, but the accessible effect manual omits its model-specific controls, ranges, defaults, and DSP. These bounded controls and defaults are project-authored choices; this implementation does not claim Line 6 parameter, DSP, or sound parity. Pulses and rotation are bounded by the selected step count. At unusually high sample rates, the 2 MiB delay buffer may shorten the effective maximum step time.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Essex Vibe controls">
         <h3>Essex Vibe · project-authored control mapping</h3>

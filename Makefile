@@ -85,4 +85,6 @@ web-serve: web-build
 diff-check:
 	$(PYTHON) scripts/check_repo_diff.py
 
+include make/effects.mk
+include make/research.mk
 include make/publish.mk
