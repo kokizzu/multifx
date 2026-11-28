@@ -233,6 +233,7 @@
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="123"><span class="effect-number">124</span><span class="effect-name">Studio Pan Delay · project-authored</span><span class="effect-default">350 ms · 25% wet · 0.5 Hz pan · disabled by default</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="125"><span class="effect-number">126</span><span class="effect-name">Euclidean Delay · project-authored controls</span><span class="effect-default">125 ms · 8 steps · 3 pulses · disabled by default</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="126"><span class="effect-number">127</span><span class="effect-name">Synth Texture Reverb · project-authored</span><span class="effect-default">25% mix · 0.45 texture · 4.5 s decay · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -683,6 +684,19 @@
           <label class="mix-control" for="euclidean-delay-pulses"><span>Pulses</span><output id="euclidean-delay-pulses-value" for="euclidean-delay-pulses">3</output><input id="euclidean-delay-pulses" type="range" min="0" max="8" step="1" value="3"></label>
           <label class="mix-control" for="euclidean-delay-rotation"><span>Rotation</span><output id="euclidean-delay-rotation-value" for="euclidean-delay-rotation">0</output><input id="euclidean-delay-rotation" type="range" min="0" max="7" step="1" value="0"></label>
           <label class="mix-control" for="euclidean-delay-feedback"><span>Feedback</span><output id="euclidean-delay-feedback-value" for="euclidean-delay-feedback">25%</output><input id="euclidean-delay-feedback" type="range" min="0" max="0.85" step="0.01" value="0.25"></label>
+      <div class="effect-parameter-group" aria-label="Synth Texture Reverb controls">
+        <h3>Synth Texture Reverb · project-authored</h3>
+        <p class="hint">Fender’s Tone Master Pro firmware v1.8.45 adds Cirrostratus Synthverb to Reverb; Fender describes synth-infused reverb but does not publish its parameters here. Every control, range, default, oscillator palette, and DSP on this panel is project-authored and makes no Fender parameter, algorithm, or sound-parity claim.</p>
+        <div class="gain-controls">
+          <label class="mix-control"><span>Mix</span><output></output><input id="synth-texture-reverb-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control"><span>Texture</span><output></output><input id="synth-texture-reverb-texture" type="range" min="0" max="100" step="1" value="45"></label>
+          <label class="mix-control"><span>Decay</span><output></output><input id="synth-texture-reverb-decay" type="range" min="0.2" max="12" step="0.1" value="4.5"></label>
+          <label class="mix-control"><span>Damping</span><output></output><input id="synth-texture-reverb-damping" type="range" min="500" max="18000" step="100" value="7200"></label>
+          <label class="mix-control"><span>Level</span><output></output><input id="synth-texture-reverb-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
+          <label class="mix-control"><span>Envelope Release</span><output></output><input id="synth-texture-reverb-release" type="range" min="20" max="2000" step="10" value="240"></label>
+          <label class="mix-control"><span>Spillover</span><input id="synth-texture-reverb-spillover" type="checkbox"></label>
+        </div>
+      </div>
           <label class="mix-control" for="euclidean-delay-mix"><span>Mix</span><output id="euclidean-delay-mix-value" for="euclidean-delay-mix">25%</output><input id="euclidean-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>
           <label class="mix-control" for="euclidean-delay-level"><span>Output Level</span><output id="euclidean-delay-level-value" for="euclidean-delay-level">0.0 dB</output><input id="euclidean-delay-level" type="range" min="-24" max="12" step="0.1" value="0"></label>
           <label class="mix-control" for="euclidean-delay-low-cut"><span>Low Cut · project-authored</span><output id="euclidean-delay-low-cut-value" for="euclidean-delay-low-cut">20 Hz</output><input id="euclidean-delay-low-cut" type="range" min="20" max="2000" step="10" value="20"></label>

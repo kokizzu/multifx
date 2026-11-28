@@ -42,6 +42,166 @@ index 1234567..7654321 100644
         self.assertNotIn("unrelatedFutureGuard", selected)
         self.assertNotIn("anotherFutureGuard", selected)
 
+
+class SynthTextureReverbSelectorTests(unittest.TestCase):
+    def test_cmake_selector_excludes_the_adjacent_fractal_benchmark(self):
+        diff = """diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1234567..7654321 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -155,4 +156,9 @@ target_link_libraries(tabletfx_euclidean_delay_bench PRIVATE tabletfx_core)
++add_executable(tabletfx_fractal_three_voice_synth_mix_bench
++    apps/fractal_three_voice_synth_mix_bench.cpp)
++target_link_libraries(tabletfx_fractal_three_voice_synth_mix_bench PRIVATE tabletfx_core)
++
++add_executable(tabletfx_synth_texture_reverb_bench
++    apps/synth_texture_reverb_bench.cpp)
++target_link_libraries(tabletfx_synth_texture_reverb_bench PRIVATE tabletfx_core)
+"""
+        operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "synth-texture-reverb"
+        ]["CMakeLists.txt"][1:4]
+        selected = select_exact_line_operations(diff, operations)
+        self.assertIn("tabletfx_synth_texture_reverb_bench", selected)
+        self.assertNotIn("fractal_three_voice_synth_mix_bench", selected)
+
+    def test_run_cmake_selector_excludes_neighboring_benchmarks(self):
+        operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "synth-texture-reverb"
+        ]["scripts/run_cmake.py"]
+        diff = """diff --git a/scripts/run_cmake.py b/scripts/run_cmake.py
+index 1234567..7654321 100644
+--- a/scripts/run_cmake.py
++++ b/scripts/run_cmake.py
+@@ -236,0 +268,16 @@ def main() -> None:
++            "bench-fractal-three-voice-synth-mix",
++            "bench-synth-texture-reverb",
++            "bench-fractal-mix",
+@@ -352,0 +424,4 @@ def main() -> None:
++    elif action == "bench-synth-texture-reverb":
++        bench_synth_texture_reverb(cmake)
++    elif action == "bench-fractal-three-voice-synth-mix":
++        bench_fractal_three_voice_synth_mix(cmake)
+@@ -411,0 +487,62 @@ def bench_fractal_phaser_global_mix(cmake: str) -> None:
++def bench_fractal_phaser_global_mix(cmake: str) -> None:
++    existing_neighbor()
++
++def bench_synth_texture_reverb(cmake: str) -> None:
++    build(cmake)
++    print(f"CPU: {cpu_name()}")
++    executable = BUILD_DIR / (
++        "tabletfx_synth_texture_reverb_bench.exe"
++        if os.name == "nt"
++        else "tabletfx_synth_texture_reverb_bench"
++    )
++    run([str(executable)])
++
++def bench_fractal_three_voice_synth_mix(cmake: str) -> None:
++    existing_neighbor()
+"""
+        selected = select_exact_line_operations(diff, operations)
+        self.assertIn('"bench-synth-texture-reverb"', selected)
+        self.assertIn("def bench_synth_texture_reverb", selected)
+        self.assertNotIn("bench-fractal-three-voice-synth-mix", selected)
+        self.assertNotIn("bench-fractal-mix", selected)
+
+    def test_wasm_count_selector_adds_only_the_new_effect_slot(self):
+        operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "synth-texture-reverb"
+        ]["src/web/wasm_chain.cpp"]
+        replacement_operation = next(
+            operation
+            for operation in operations
+            if isinstance(operation, dict) and "replace" in operation
+        )
+        diff = """diff --git a/src/web/wasm_chain.cpp b/src/web/wasm_chain.cpp
+index 1234567..7654321 100644
+--- a/src/web/wasm_chain.cpp
++++ b/src/web/wasm_chain.cpp
+@@ -471 +474 @@ public:
+-    return effects_.size() + 29;
++    return effects_.size() + 33;
+"""
+        selected = select_exact_line_operations(
+            diff, (replacement_operation,)
+        )
+        self.assertIn("return effects_.size() + 30;", selected)
+        self.assertNotIn("return effects_.size() + 33;", selected)
+        self.assertNotIn("return effects_.size() + 35;", selected)
+
+        staged = """diff --git a/src/web/wasm_chain.cpp b/src/web/wasm_chain.cpp
+index 1234567..7654321 100644
+--- a/src/web/wasm_chain.cpp
++++ b/src/web/wasm_chain.cpp
+@@ -471 +472 @@ public:
+-    return effects_.size() + 29;
++    return effects_.size() + 30;
+"""
+        selected_staged = select_exact_line_operations(
+            staged, (replacement_operation,)
+        )
+        self.assertIn("+    return effects_.size() + 30;", selected_staged)
+        self.assertNotIn("+    return effects_.size() + 33;", selected_staged)
+
+    def test_picker_count_selector_stops_at_the_synth_checkpoint(self):
+        operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "synth-texture-reverb"
+        ]["web/app.js"]
+        replacement_operation = next(
+            operation
+            for operation in operations
+            if isinstance(operation, dict)
+            and "replace" in operation
+            and operation["replace"]["before"].startswith(
+                "-    const expectedEffectIds ="
+            )
+        )
+        diff = """diff --git a/web/app.js b/web/app.js
+index 1234567..7654321 100644
+--- a/web/app.js
++++ b/web/app.js
+@@ -19031,2 +20540,29 @@ async function runEuclideanDelayBrowserSmokeTest(
+-    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);
++-    const obsoleteCheckpointGuard = false;
++    const futureModelGuard = true;
++    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);
++    const anotherFutureModelGuard = true;
++    const thirdFutureModelGuard = true;
+"""
+        selected = select_exact_line_operations(diff, (replacement_operation,))
+        self.assertIn("length: 127", selected)
+        self.assertNotIn("futureModelGuard", selected)
+        self.assertNotIn("obsoleteCheckpointGuard", selected)
+
+    def test_picker_count_selector_accepts_its_adjacent_staged_hunks(self):
+        operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "synth-texture-reverb"
+        ]["web/app.js"]
+        replacement_operation = next(
+            operation
+            for operation in operations
+            if isinstance(operation, dict)
+            and "replace" in operation
+            and operation["replace"]["before"].startswith(
+                "-    const expectedEffectIds ="
+            )
+        )
+        staged = """diff --git a/web/app.js b/web/app.js
+index 1234567..7654321 100644
+--- a/web/app.js
++++ b/web/app.js
+@@ -19031,2 +19073,0 @@ async function runEuclideanDelayBrowserSmokeTest(
+-    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);
+@@ -19033,0 +19075,2 @@ async function runEuclideanDelayBrowserSmokeTest(
++    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);
+"""
+        selected = select_exact_line_operations(
+            staged, (replacement_operation,)
+        )
+        self.assertIn("length: 127", selected)
+        self.assertNotIn("+    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);", selected)
+        self.assertIn("-    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);", selected)
+
     def select(self, body: str, operations: tuple[str, ...]) -> str:
         return select_exact_line_operations(
             "diff --git a/shared.txt b/shared.txt\n"

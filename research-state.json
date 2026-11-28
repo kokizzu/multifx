@@ -70,6 +70,21 @@
         "diff_check": "make diff-check passed after the Studio Pan Delay documentation/state updates; no workflow files changed."
       },
       "remaining": "Tap Division/tempo, Mod Rate/Depth/Mode, Low/High Cut, Spillover, and exact Envelope behavior remain unimplemented or undocumented; installed firmware, physical Fender comparison, human listening, and Android/Windows target-device timing remain manual/unverified."
+    {
+      "name": "Fender Tone Master Pro Cirrostratus Synthverb concept — project-authored Synth Texture Reverb",
+      "status": "Verified project-authored concept implementation; automated checks pass, while Fender parameter/DSP/tracking/sound parity and listening/device checks remain open. Reverb picker ID 126 / display row 127, default-off. Project controls/defaults: Mix 0.25 (0–1), Texture 0.45 (0–1), Decay 4.5 s (0.2–12 s), Damping 7.2 kHz (500 Hz to Nyquist-aware ceiling), Level 0 dB (−24 to +12 dB), Envelope Release 240 ms (20–2,000 ms), Spillover Off. Fixed-frequency amplitude-excited texture does not track input pitch. Dry path reports zero fixed latency; process() allocates nothing and takes no lock. Active native/WASM memory 43,104/42,976 B; disabled WASM effect memory 0 B. Ryzen 9 5950X Release, 48 kHz stereo/128 frames: default callback use p50/p95/p99/p99.9/max 0.2722/0.2824/0.4733/0.5483/1.2578%; dense texture/long decay 0.2722/0.2786/0.3038/0.5198/9.4458%; both 0/20,000 deadline misses. make test passed 129/129 CTest plus 13 fixture checks; full make web-test and Windows MinGW cross-build passed. Hardware listening/device checks remain open.",
+      "date": "2026-11-27",
+      "picker_index": 126,
+      "category": "Reverb",
+      "official_source": {
+        "title": "Fender Tone Master Pro firmware history and v1.8 effects article",
+        "revision": "Firmware v1.8.45 (2026-06-03) introduced Cirrostratus Synthverb; current listed firmware is v1.8.87 (2026-11-23). The linked Model Guide v1.1.100 predates this model; installed device firmware is unknown.",
+        "url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "downloads_url": "https://www.fender.com/articles/instruments/the-latest-tone-master-pro-update-is-here",
+        "qualification": "The official article gives only a qualitative synth-texture/reverb description and no model-specific controls, numeric ranges/defaults, DSP, tracking behavior, or measured latency. This is a project-authored concept implementation, not Fender parameter, DSP, tracking, or sound parity."
+      }
+    },
+    {
     },
       "name": "Fractal FM9-family Resonator block — project-authored four-voice filter",
       "status": "Verified; native, browser/WASM, and Windows MinGW automation passes; manual/device checks remain",

@@ -2,6 +2,7 @@
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/euclidean_delay.hpp"
+#include "tabletfx/effects/synth_texture_reverb.hpp"
 #include "tabletfx/effects/resonator.hpp"
 #include "tabletfx/effects/studio_pan_delay.hpp"
 #include "tabletfx/effects/essex_vibe.hpp"
@@ -468,7 +469,7 @@ public:
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept {
-    return effects_.size() + 29;
+    return effects_.size() + 30;
     }
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
@@ -668,6 +669,33 @@ public:
                 euclidean_delay_->configure(euclidean_delay_parameters_);
             }
             euclidean_delay_enabled_ = true;
+            return true;
+        }
+        if (index == 126U) {
+            if (!enabled) {
+                synth_texture_reverb_enabled_ = false;
+                if (synth_texture_reverb_ &&
+                    !synth_texture_reverb_parameters_.spillover) {
+                    synth_texture_reverb_->reset();
+                    synth_texture_reverb_.reset();
+                }
+                return true;
+            }
+            if (!synth_texture_reverb_) {
+                try {
+                    synth_texture_reverb_ = std::make_unique<
+                        tabletfx::effects::SynthTextureReverb>(
+                            static_cast<float>(sample_rate_), channels_,
+                            synth_texture_reverb_parameters_);
+                } catch (...) {
+                    synth_texture_reverb_enabled_ = false;
+                    return false;
+                }
+            } else {
+                synth_texture_reverb_->configure(
+                    synth_texture_reverb_parameters_);
+            }
+            synth_texture_reverb_enabled_ = true;
             return true;
         }
         if (index >= effects_.size()) {
@@ -1056,6 +1084,17 @@ public:
                     std::span<float>(output_.data(), samples), channels_);
             }
             return;
+        if (index == 126U) {
+            if (synth_texture_reverb_enabled_ && synth_texture_reverb_) {
+                synth_texture_reverb_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            } else if (synth_texture_reverb_ &&
+                       synth_texture_reverb_parameters_.spillover) {
+                synth_texture_reverb_->process_bypassed(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -4048,6 +4087,27 @@ public:
             }
         }
     }
+    void configure_synth_texture_reverb(
+        float mix, float texture, float decay_seconds, float damping_hz,
+        float level_db, float envelope_release_ms,
+        std::uint32_t spillover) noexcept {
+        auto parameters = synth_texture_reverb_parameters_;
+        parameters.mix = mix;
+        parameters.texture = texture;
+        parameters.decay_seconds = decay_seconds;
+        parameters.damping_hz = damping_hz;
+        parameters.level_db = level_db;
+        parameters.envelope_release_ms = envelope_release_ms;
+        parameters.spillover = spillover != 0U;
+        synth_texture_reverb_parameters_ = parameters;
+        if (synth_texture_reverb_) {
+            synth_texture_reverb_->configure(parameters);
+            if (!synth_texture_reverb_enabled_ && !parameters.spillover) {
+                synth_texture_reverb_->reset();
+                synth_texture_reverb_.reset();
+            }
+        }
+    }
     void configure_euclidean_delay(float step_time_ms, float steps,
                                    float pulses, float rotation,
                                    float feedback, float mix,
@@ -4521,6 +4581,13 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 126U) {
+            if (!synth_texture_reverb_) return 0U;
+            const std::size_t bytes = synth_texture_reverb_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4572,6 +4639,7 @@ private:
         case 123U: return studio_pan_delay_enabled_;
         case 124U: return essex_vibe_enabled_;
         case 125U: return euclidean_delay_enabled_ && euclidean_delay_ != nullptr;
+        case 126U: return synth_texture_reverb_enabled_ && synth_texture_reverb_ != nullptr;
         default: return false;
         }
     }
@@ -4624,6 +4692,9 @@ private:
     std::unique_ptr<tabletfx::EssexVibe> essex_vibe_;
     std::unique_ptr<tabletfx::EuclideanDelay> euclidean_delay_;
     tabletfx::EuclideanDelayParameters euclidean_delay_parameters_{};
+    std::unique_ptr<tabletfx::effects::SynthTextureReverb> synth_texture_reverb_;
+    tabletfx::effects::SynthTextureReverbParameters synth_texture_reverb_parameters_{};
+    bool synth_texture_reverb_enabled_ = false;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -6592,6 +6663,16 @@ TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(
             step_time_ms, steps, pulses, rotation, feedback, mix, level_db);
         chain->configure_euclidean_delay_filters(
             low_cut_hz, high_cut_hz, trails);
+    }
+}
+TABLETFX_WASM_EXPORT void tf_chain_set_synth_texture_reverb(
+    void* opaque, float mix, float texture, float decay_seconds,
+    float damping_hz, float level_db, float envelope_release_ms,
+    std::uint32_t spillover) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_synth_texture_reverb(
+            mix, texture, decay_seconds, damping_hz, level_db,
+            envelope_release_ms, spillover);
     }
 }
 } // extern "C"

@@ -1486,6 +1486,30 @@ FRACTAL_CHORUS_DELAY_RANGE_CHECKPOINT_PATHS = (
 VOLUME_PAN_CHECKPOINT_PATHS = (
     "apps/offline_render.cpp",
     "CMakeLists.txt",
+SYNTH_TEXTURE_REVERB_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/synth_texture_reverb_bench.cpp",
+    "include/tabletfx/effects/synth_texture_reverb.hpp",
+    "make/effects.mk",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/checkpoint_line_selectors.py",
+    "scripts/publish_checkpoint.py",
+    "scripts/test_checkpoint_line_selectors.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/synth_texture_reverb.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_synth_texture_reverb.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+
+
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",
     "IMPLEMENTATION_CHECKLIST.md",
@@ -3428,6 +3452,10 @@ CHECKPOINTS = {
         STEREO_FILTER_CHECKPOINT_PATHS,
         "feat: add categorized Stereo Filter",
     ),
+    "synth-texture-reverb": (
+        SYNTH_TEXTURE_REVERB_CHECKPOINT_PATHS,
+        "feat: add Synth Texture Reverb",
+    ),
     "step-tremolo": (
         STEP_TREMOLO_CHECKPOINT_PATHS,
         "feat: add categorized Step Tremolo",
@@ -4276,6 +4304,61 @@ def stage_checkpoint_paths(checkpoint: str, paths: list[str]) -> None:
         verify_partial_staging(checkpoint, pre_staged)
         partial = PARTIAL_CHECKPOINT_HUNKS.get(checkpoint, {})
         # Checkpoint-untracked-recovery: git diff omits untracked files, so stage
+PARTIAL_CHECKPOINT_HUNKS["synth-texture-reverb"] = {
+    "CMakeLists.txt": (
+        "tabletfx_synth_texture_reverb_bench",
+        "tabletfx_synth_texture_reverb_tests",
+        "src/effects/synth_texture_reverb.cpp",
+    ),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        "**Current project-authored Fender Cirrostratus Synthverb concept (2026-11-27):**",
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        "The project-authored Cirrostratus Synthverb concept is implemented and automated-tested at Reverb picker ID 126",
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        "## Fender Tone Master Pro Cirrostratus Synthverb concept (2026-11-27)",
+    ),
+    "make/effects.mk": (
+        "test-synth-texture-reverb:",
+        "web-test-synth-texture-reverb:",
+        "bench-synth-texture-reverb:",
+    ),
+    "research-state.json": (
+        "Fender Tone Master Pro Cirrostratus Synthverb concept — project-authored Synth Texture Reverb",
+    ),
+    "scripts/checkpoint_line_selectors.py": (
+        'PARTIAL_CHECKPOINT_LINE_SELECTORS["synth-texture-reverb"]',
+    ),
+    "scripts/publish_checkpoint.py": (
+        "SYNTH_TEXTURE_REVERB_CHECKPOINT_PATHS",
+        'CHECKPOINTS["synth-texture-reverb"]',
+        'PARTIAL_CHECKPOINT_HUNKS["synth-texture-reverb"]',
+    ),
+    "scripts/run_cmake.py": (
+        "bench_synth_texture_reverb",
+        "bench-synth-texture-reverb",
+    ),
+    "scripts/test_checkpoint_line_selectors.py": (
+        "class SynthTextureReverbSelectorTests",
+    ),
+    "web/audio-worklet.js": (
+        'EFFECTS.push("synth-texture-reverb");',
+        "configureSynthTextureReverb",
+        'message.type === "synth-texture-reverb"',
+    ),
+    "web/index.html": (
+        "Synth Texture Reverb · project-authored",
+        "Synth Texture Reverb controls",
+    ),
+}
+
+from checkpoint_line_selectors import (
+    PARTIAL_CHECKPOINT_LINE_SELECTORS,
+    select_checkpoint_line_patch,
+)
+
+
         # an explicitly listed new checkpoint file before inspecting its diff.
         status = git("status", "--porcelain=v1", "--untracked-files=all")
         untracked = {

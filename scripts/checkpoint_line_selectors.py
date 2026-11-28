@@ -1806,6 +1806,202 @@ PARTIAL_CHECKPOINT_LINE_SELECTORS["euclidean-delay"] = {
         {"span": {"start": '+      <div class="effect-parameter-group" aria-label="Euclidean Delay controls">', "line_count": 16}},
     ),
 }
+PARTIAL_CHECKPOINT_LINE_SELECTORS["synth-texture-reverb"] = {
+    "CMakeLists.txt": (
+        "+    src/effects/synth_texture_reverb.cpp",
+        "+add_executable(tabletfx_synth_texture_reverb_bench",
+        "+    apps/synth_texture_reverb_bench.cpp)",
+        "+target_link_libraries(tabletfx_synth_texture_reverb_bench PRIVATE tabletfx_core)",
+        "+    add_executable(tabletfx_synth_texture_reverb_tests",
+        "+        tests/test_synth_texture_reverb.cpp)",
+        "+    target_link_libraries(tabletfx_synth_texture_reverb_tests PRIVATE tabletfx_core)",
+        "+    add_test(NAME tabletfx_synth_texture_reverb_tests",
+        "+        COMMAND tabletfx_synth_texture_reverb_tests)",
+    ),
+    "make/publish.mk": (
+        "+PUBLISH_CHECKPOINTS += synth-texture-reverb",
+    ),
+    "scripts/web.py": (
+        '+        "_tf_chain_set_synth_texture_reverb",',
+        '+        str(ROOT / "src" / "effects" / "synth_texture_reverb.cpp"),',
+        "+                 synth_texture_reverb_only: bool = False) -> None:",
+        "+    compiler = emscripten_cpp()",
+        "+        elif synth_texture_reverb_only:",
+        '+            url = base_url + "/web/index.html?selftest=synth-texture-reverb"',
+        '+        "test-synth-texture-reverb",',
+        '+    elif action == "test-synth-texture-reverb":',
+        "+        browser_test(synth_texture_reverb_only=True)",
+    ),
+    "scripts/run_cmake.py": (
+        '+            "bench-synth-texture-reverb",',
+        '+    elif action == "bench-synth-texture-reverb":',
+        "+        bench_synth_texture_reverb(cmake)",
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -411,0 +487,62 @@ def bench_fractal_phaser_global_mix(cmake: str) -> None:",
+                    "@@ -411,0 +415,10 @@ def bench_fractal_phaser_global_mix(cmake: str) -> None:",
+                ],
+                "start": "+def bench_synth_texture_reverb(cmake: str) -> None:",
+                "line_count": 10,
+            }
+        },
+    ),
+    "scripts/checkpoint_line_selectors.py": (
+        {
+            "span": {
+                "start": '+PARTIAL_CHECKPOINT_LINE_SELECTORS["synth-texture-reverb"] = {',
+                "line_count": 196,
+            }
+        },
+    ),
+    "src/web/wasm_chain.cpp": (
+        '+#include "tabletfx/effects/synth_texture_reverb.hpp"',
+        {
+            "replace": {
+                "before": "-    return effects_.size() + 29;",
+                "current": "+    return effects_.size() + 33;",
+                "selected": "+    return effects_.size() + 30;",
+                "hunk_headers": [
+                    "@@ -471 +474 @@ public:",
+                    "@@ -471 +472 @@ public:",
+                ],
+                "allow_intervening_added_lines": True,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -672,0 +676,27 @@ public:",
+                    "@@ -672,0 +674,27 @@ public:",
+                ],
+                "start": "+        if (index == 126U) {",
+                "line_count": 27,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -1058,0 +1091,12 @@ public:",
+                    "@@ -1058,0 +1087,11 @@ public:",
+                ],
+                "start": "+        if (index == 126U) {",
+                "line_count": 11,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -4050,0 +4128,23 @@ public:",
+                    "@@ -4050,0 +4090,21 @@ public:",
+                ],
+                "start": "+    void configure_synth_texture_reverb(",
+                "line_count": 21,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -4523,0 +4626,7 @@ public:",
+                    "@@ -4523,0 +4584,7 @@ public:",
+                ],
+                "start": "+        if (index == 126U) {",
+                "line_count": 7,
+            }
+        },
+        "+        case 126U: return synth_texture_reverb_enabled_ && synth_texture_reverb_ != nullptr;",
+        "+    std::unique_ptr<tabletfx::effects::SynthTextureReverb> synth_texture_reverb_;",
+        "+    tabletfx::effects::SynthTextureReverbParameters synth_texture_reverb_parameters_{};",
+        "+    bool synth_texture_reverb_enabled_ = false;",
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -6596,0 +6742,10 @@ TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(",
+                    "@@ -6596,0 +6668,10 @@ TABLETFX_WASM_EXPORT void tf_chain_set_euclidean_delay(",
+                ],
+                "start": "+TABLETFX_WASM_EXPORT void tf_chain_set_synth_texture_reverb(",
+                "line_count": 10,
+            }
+        },
+    ),
+    "web/app.js": (
+        '+  "Synth Texture Reverb · project-authored controls",',
+        "+  synthTextureReverb: [0.25, 0.45, 4.5, 7200, 0, 240, 0],",
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -2474,0 +2557,9 @@ const essexVibeControls = [",
+                    "@@ -2474,0 +2477,9 @@ const essexVibeControls = [",
+                ],
+                "start": "+const synthTextureReverbControls = [",
+                "line_count": 9,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -8317,0 +8497,30 @@ function updateEssexVibe() {",
+                    "@@ -8317,0 +8329,28 @@ function updateEssexVibe() {",
+                ],
+                "start": "+function updateSynthTextureReverb() {",
+                "line_count": 28,
+            }
+        },
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -8629,0 +8849,8 @@ for (const control of euclideanDelayControls) {",
+                    "@@ -8629,0 +8669,4 @@ for (const control of euclideanDelayControls) {",
+                ],
+                "start": "+for (const control of synthTextureReverbControls) {",
+                "line_count": 4,
+            }
+        },
+        {
+            "replace": {
+                "before": "-    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);",
+                "current": "+    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);",
+                "selected": "+    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);",
+                "hunk_header": "@@ -19031,2 +20540,29 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                "allow_intervening_changes": True,
+                "allow_cross_hunk_staged": True,
+            }
+        },
+        {
+            "replace": {
+                "before": "-    if (EFFECT_NAMES.length !== 126 || effectRows.length !== 126 ||",
+                "current": "+    if (EFFECT_NAMES.length !== 127 || effectRows.length !== 127 ||",
+                "selected": "+    if (EFFECT_NAMES.length !== 127 || effectRows.length !== 127 ||",
+                "hunk_header": "@@ -19031,2 +20540,29 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                "allow_intervening_changes": True,
+                "allow_cross_hunk_staged": True,
+            }
+        },
+        {
+            "replace": {
+                "before": '-    if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119,120" || effectCount.value !== `10 of ${effectRows.length}` ||',
+                "current": '+      if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119,120,126" || effectCount.value !== `11 of ${effectRows.length}` ||',
+                "selected": '+      if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119,120,126" || effectCount.value !== `11 of ${effectRows.length}` ||',
+                "hunk_headers": [
+                    "@@ -20594 +22145 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                    "@@ -20594 +20637 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                ],
+            }
+        },
+        "+        // Synth Texture Reverb has a focused local guitar Play smoke and no offline CLI stage.",
+        "+        parityEnabled[126] = false;",
+        {
+            "span": {
+                "hunk_headers": [
+                    "@@ -21410,0 +22968,205 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                    "@@ -21410,0 +21456,205 @@ async function runEuclideanDelayBrowserSmokeTest(",
+                ],
+                "start": '+      if (new URLSearchParams(location.search).get("selftest") === "synth-texture-reverb") {',
+                "line_count": 205,
+            }
+        },
+    ),
+}
 def select_checkpoint_line_patch(checkpoint: str, path: str, diff: str) -> str | None:
     """Apply a checkpoint/path exact-line selector, or return None if absent."""
     operations = PARTIAL_CHECKPOINT_LINE_SELECTORS.get(checkpoint, {}).get(path)

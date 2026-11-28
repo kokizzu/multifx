@@ -25,6 +25,7 @@ add_library(tabletfx_core
     src/effects/mono_guitar_synth.cpp
     src/effects/fractal_three_voice_synth.cpp
     src/effects/euclidean_delay.cpp
+    src/effects/synth_texture_reverb.cpp
     src/effects/pitch_feedback_delay.cpp
     src/effects/feedback_generator.cpp
     src/effects/shimmer_reverb.cpp
@@ -153,6 +154,9 @@ target_link_libraries(tabletfx_fractal_diatonic_harmonizer_bench PRIVATE tabletf
 
 add_executable(tabletfx_euclidean_delay_bench apps/euclidean_delay_bench.cpp)
 target_link_libraries(tabletfx_euclidean_delay_bench PRIVATE tabletfx_core)
+add_executable(tabletfx_synth_texture_reverb_bench
+    apps/synth_texture_reverb_bench.cpp)
+target_link_libraries(tabletfx_synth_texture_reverb_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_feedback_generator_bench
     apps/feedback_generator_bench.cpp)
 target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
@@ -368,6 +372,11 @@ if(BUILD_TESTING)
     add_executable(tabletfx_euclidean_delay_tests tests/test_euclidean_delay.cpp)
     target_link_libraries(tabletfx_euclidean_delay_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_euclidean_delay_tests COMMAND tabletfx_euclidean_delay_tests)
+    add_executable(tabletfx_synth_texture_reverb_tests
+        tests/test_synth_texture_reverb.cpp)
+    target_link_libraries(tabletfx_synth_texture_reverb_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_synth_texture_reverb_tests
+        COMMAND tabletfx_synth_texture_reverb_tests)
     add_executable(tabletfx_enhancer_tests tests/test_enhancer.cpp)
     target_link_libraries(tabletfx_enhancer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_enhancer_tests COMMAND tabletfx_enhancer_tests)

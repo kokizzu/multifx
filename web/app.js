@@ -276,6 +276,7 @@ const EFFECT_NAMES = [
   "Fractal Resonator · project-authored, not a pitch-tracked synth",
   "Studio Pan Delay · project-authored",
   "Euclidean Delay · project-authored controls",
+  "Synth Texture Reverb · project-authored controls",
 ];
 const phaseInvertByEffect = new Uint8Array(EFFECT_NAMES.length);
 const DEFAULT_PARAMETERS = {
@@ -512,6 +513,7 @@ const DEFAULT_PARAMETERS = {
   ],
   studioPanDelay: [350, 0.25, 0.25, 0.5, 0.75, 0],
   euclideanDelay: [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],
+  synthTextureReverb: [0.25, 0.45, 4.5, 7200, 0, 240, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2471,6 +2473,15 @@ const essexVibeControls = [
   document.querySelector("#essex-vibe-stages"),
   document.querySelector("#essex-vibe-spread"),
   document.querySelector("#essex-vibe-level"),
+];
+const synthTextureReverbControls = [
+  document.querySelector("#synth-texture-reverb-mix"),
+  document.querySelector("#synth-texture-reverb-texture"),
+  document.querySelector("#synth-texture-reverb-decay"),
+  document.querySelector("#synth-texture-reverb-damping"),
+  document.querySelector("#synth-texture-reverb-level"),
+  document.querySelector("#synth-texture-reverb-release"),
+  document.querySelector("#synth-texture-reverb-spillover"),
 ];
 const euclideanDelayControls = [
   document.querySelector("#euclidean-delay-step-time"),
@@ -8315,6 +8326,34 @@ function updateEssexVibe() {
     workletNode.port.postMessage({ type: "essex-vibe", value: values });
   }
 }
+function updateSynthTextureReverb() {
+  const values = [
+    Number(synthTextureReverbControls[0].value) / 100,
+    Number(synthTextureReverbControls[1].value) / 100,
+    Number(synthTextureReverbControls[2].value),
+    Number(synthTextureReverbControls[3].value),
+    Number(synthTextureReverbControls[4].value),
+    Number(synthTextureReverbControls[5].value),
+    synthTextureReverbControls[6].checked ? 1 : 0,
+  ];
+  const formats = [
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(1)} s`,
+    (value) => `${Math.round(value)} Hz`,
+    (value) => `${value.toFixed(1)} dB`,
+    (value) => `${Math.round(value)} ms`,
+    (value) => value >= 0.5 ? "On" : "Off",
+  ];
+  synthTextureReverbControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output && formats[index]) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.synthTextureReverb = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "synth-texture-reverb", value: values });
+  }
+}
 function updateEuclideanDelay() {
   const steps = Math.max(1, Math.min(16, Math.round(
     Number(euclideanDelayControls[1].value),
@@ -8626,6 +8665,10 @@ for (const control of studioPanDelayControls) {
 for (const control of euclideanDelayControls) {
   control.addEventListener("input", updateEuclideanDelay);
   control.addEventListener("change", updateEuclideanDelay);
+}
+for (const control of synthTextureReverbControls) {
+  control.addEventListener("input", updateSynthTextureReverb);
+  control.addEventListener("change", updateSynthTextureReverb);
 }
 for (const control of resonatorControls) {
   control.addEventListener("input", updateResonator);
@@ -19028,9 +19071,9 @@ async function runEuclideanDelayBrowserSmokeTest(
         !checkbox || checkbox.checked || euclideanDelayControls.length !== 10 ||
         EFFECT_NAMES.length !== 126 || effectMemory.length !== EFFECT_NAMES.length ||
   let euclideanDelaySmoke = null;
-    const expectedEffectIds = Array.from({ length: 126 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 126 || effectRows.length !== 126 ||
               [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
+    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 127 || effectRows.length !== 127 ||
   let essexVibeSmoke = null;
     const expectedEffectIds = Array.from({ length: 125 }, (_, index) => index);
     if (EFFECT_NAMES.length !== 125 || effectRows.length !== 125 ||
@@ -20591,7 +20634,7 @@ async function runEuclideanDelayBrowserSmokeTest(
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const reverbIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-    if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119,120" || effectCount.value !== `10 of ${effectRows.length}` ||
+      if (reverbIds.join(",") !== "28,29,30,31,57,58,77,79,119,120,126" || effectCount.value !== `11 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Reverb filter must include Room, Hall, Plate, Spring, Shimmer, Convolution, Celestial, Cloud Reverb, Modulated Small Hall, and Modulated Large Hall without changing enabled state.");
     }
@@ -20942,6 +20985,8 @@ async function runEuclideanDelayBrowserSmokeTest(
     parityEnabled[123] = false;
     // Euclidean Delay has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[125] = false;
+        // Synth Texture Reverb has a focused local guitar Play smoke and no offline CLI stage.
+        parityEnabled[126] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -21408,6 +21453,211 @@ async function runEuclideanDelayBrowserSmokeTest(
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+      if (new URLSearchParams(location.search).get("selftest") === "synth-texture-reverb") {
+        testResult.textContent = "Checking project-authored Synth Texture Reverb with local guitar playback…";
+        const initialEffectState = enabledEffects();
+        const previousValues = synthTextureReverbControls.map((control, index) =>
+          index === 6 ? control.checked : control.value,
+        );
+        const previousParameters = [...DEFAULT_PARAMETERS.synthTextureReverb];
+        const previousCategory = effectCategoryFilter.value;
+        const previousSearch = effectSearch.value;
+        const samplesToCapture = Math.min(
+          reference.samples.length,
+          Math.max(1, Math.floor(audioContext.sampleRate * 0.9) * reference.channels),
+        );
+        let barrierSequence = 0;
+        let memorySequence = 0;
+        const waitForWorkletBarrier = (expectedActive) => new Promise((resolve, reject) => {
+          const port = workletNode.port;
+          const token = `synth-texture-reverb-${++barrierSequence}`;
+          const timeout = setTimeout(() => {
+            port.removeEventListener("message", onMessage);
+            reject(new Error("Timed out waiting for the Synth Texture Reverb worklet barrier."));
+          }, 5000);
+          const onMessage = (event) => {
+            if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+            clearTimeout(timeout);
+            port.removeEventListener("message", onMessage);
+            const active = Boolean(event.data.active);
+            if (expectedActive !== undefined && active !== expectedActive) {
+              reject(new Error(
+                `Synth Texture Reverb expected worklet active=${expectedActive}, got ${active}.`,
+              ));
+              return;
+            }
+            resolve(active);
+          };
+          port.addEventListener("message", onMessage);
+          port.postMessage({ type: "test-barrier", token });
+        });
+        const readEffectMemory = () => new Promise((resolve, reject) => {
+          const port = workletNode.port;
+          const token = `synth-texture-reverb-memory-${++memorySequence}`;
+          const timeout = setTimeout(() => {
+            port.removeEventListener("message", onMessage);
+            reject(new Error("Timed out waiting for Synth Texture Reverb memory."));
+          }, 5000);
+          const onMessage = (event) => {
+            if (event.data?.type !== "test-effect-memory-result" || event.data.token !== token) return;
+            clearTimeout(timeout);
+            port.removeEventListener("message", onMessage);
+            resolve(Number(event.data.bytes));
+          };
+          port.addEventListener("message", onMessage);
+          port.postMessage({
+            type: "test-effect-memory",
+            token,
+            index: 126,
+          });
+        });
+        const setEffectState = (state) => {
+          effectRows.forEach((row, index) => {
+            const control = row.querySelector("[data-effect]");
+            if (!control || control.checked === Boolean(state[index])) return;
+            control.checked = Boolean(state[index]);
+            control.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+        };
+        const capture = async (enabled, parameters) => {
+          const uiValues = [
+            parameters[0] * 100,
+            parameters[1] * 100,
+            parameters[2],
+            parameters[3],
+            parameters[4],
+            parameters[5],
+          ];
+          synthTextureReverbControls.forEach((control, index) => {
+            if (index === 6) control.checked = parameters[6] >= 0.5;
+            else control.value = String(uiValues[index]);
+          });
+          updateSynthTextureReverb();
+          const state = Array(effectRows.length).fill(false);
+          state[126] = enabled;
+          setEffectState(state);
+          stopSource(false);
+          await waitForWorkletBarrier(false);
+          workletNode.port.postMessage({ type: "reset" });
+          workletNode.port.postMessage({ type: "capture-reset" });
+          await waitForWorkletBarrier(false);
+          Atomics.store(captureView, 0, 0);
+          Atomics.store(captureView, 1, 0);
+          playbackOffset = 0;
+          playButton.click();
+          await Promise.race([
+            playTask,
+            new Promise((_, reject) => setTimeout(
+              () => reject(new Error("Timed out starting Synth Texture Reverb playback.")), 5000,
+            )),
+          ]);
+          await waitForWorkletBarrier(true);
+          await waitForCapture(captureView, samplesToCapture);
+          stopSource(false);
+          await waitForWorkletBarrier(false);
+          return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+        };
+        const compare = (left, right) => {
+          let maxError = 0;
+          let sumSquares = 0;
+          const length = Math.min(left.length, right.length);
+          for (let index = 0; index < length; index += 1) {
+            const difference = Math.abs(left[index] - right[index]);
+            maxError = Math.max(maxError, difference);
+            sumSquares += difference * difference;
+          }
+          return {
+            maxError,
+            rmsError: length === 0 ? 0 : Math.sqrt(sumSquares / length),
+          };
+        };
+        try {
+          const row = effectRows[126];
+          if (effectRows.length !== 127 || row?.dataset.category !== "reverb" ||
+              row.querySelector(".effect-category-tag")?.textContent.trim() !== "Reverb" ||
+              initialEffectState[126] ||
+              DEFAULT_PARAMETERS.synthTextureReverb.join(",") !== "0.25,0.45,4.5,7200,0,240,0" ||
+              synthTextureReverbControls.length !== 7) {
+            throw new Error("Synth Texture Reverb picker/category/default/disabled state is incorrect.");
+          }
+          effectCategoryFilter.value = "reverb";
+          effectSearch.value = "synth texture reverb";
+          updateEffectBrowser();
+          if (row.hidden) throw new Error("Synth Texture Reverb is missing from the Reverb category filter.");
+
+          const defaultMemoryBytes = await readEffectMemory();
+          const disabledCapture = await capture(false, [0.25, 0.45, 4.5, 7200, 0, 240, 0]);
+          const zeroMixCapture = await capture(true, [0, 0.45, 4.5, 7200, 0, 240, 0]);
+          const zeroMixIdentity = compare(
+            zeroMixCapture,
+            disabledCapture,
+          );
+          const activeParameters = [0.75, 0.8, 5.2, 5400, -1, 450, 0];
+          const activeCapture = await capture(true, activeParameters);
+          const activeMemoryBytes = await readEffectMemory();
+          const wetDifference = compare(
+            activeCapture,
+            reference.samples.subarray(0, samplesToCapture),
+          );
+          const disabledAgain = await capture(false, activeParameters);
+          const disabledMemoryBytes = await readEffectMemory();
+          const disabledAgainIdentity = compare(
+            disabledAgain,
+            disabledCapture,
+          );
+          if (!disabledCapture.every(Number.isFinite) ||
+              !zeroMixCapture.every(Number.isFinite) ||
+              !activeCapture.every(Number.isFinite) ||
+              defaultMemoryBytes !== 0 || activeMemoryBytes <= 0 || disabledMemoryBytes !== 0 ||
+              zeroMixIdentity.maxError > 5e-6 ||
+              disabledAgainIdentity.maxError > 5e-6 || wetDifference.rmsError < 1e-4 ||
+              DEFAULT_PARAMETERS.synthTextureReverb.join(",") !== activeParameters.join(",")) {
+            throw new Error(`Synth Texture Reverb smoke failed: ${JSON.stringify({
+              defaultMemoryBytes,
+              activeMemoryBytes,
+              disabledMemoryBytes,
+              zeroMixIdentity,
+              disabledAgainIdentity,
+              wetDifference,
+              parameters: DEFAULT_PARAMETERS.synthTextureReverb,
+            })}`);
+          }
+          const focusedReport = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            effectIndex: 126,
+            category: row.dataset.category,
+            pickerRows: effectRows.length,
+            defaultMemoryBytes,
+            activeMemoryBytes,
+            disabledMemoryBytes,
+            zeroMixIdentity,
+            disabledAgainIdentity,
+            activeParameters: DEFAULT_PARAMETERS.synthTextureReverb,
+            wetDifference,
+            frames: samplesToCapture / reference.channels,
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(focusedReport);
+          document.title = "PASS · TabletFX Synth Texture Reverb browser test";
+          return;
+        } finally {
+          stopSource(false);
+          synthTextureReverbControls.forEach((control, index) => {
+            if (index === 6) control.checked = Boolean(previousValues[index]);
+            else control.value = String(previousValues[index]);
+          });
+          updateSynthTextureReverb();
+          DEFAULT_PARAMETERS.synthTextureReverb = previousParameters;
+          setEffectState(initialEffectState);
+          effectCategoryFilter.value = previousCategory;
+          effectSearch.value = previousSearch;
+          updateEffectBrowser();
+          workletNode.port.postMessage({ type: "reset" });
+          await waitForWorkletBarrier(false);
+        }
+      }
         if (new URLSearchParams(location.search).get("selftest") === "euclidean-delay") {
           testResult.textContent = "Checking project-authored Euclidean Delay with local guitar playback…";
           const euclideanDelaySmoke = await runEuclideanDelayBrowserSmokeTest(

@@ -47,6 +47,7 @@ EFFECTS.push("resonator");
 EFFECTS.push("studio-pan-delay");
 EFFECTS.push("essex-vibe");
 EFFECTS.push("euclidean-delay");
+EFFECTS.push("synth-texture-reverb");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -1355,6 +1356,15 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       });
       return;
       return;
+
+  configureSynthTextureReverb(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        values.length !== 7) {
+      return;
+    }
+    this.module._tf_chain_set_synth_texture_reverb(this.chain, ...values);
+  }
+
     }
     if (message.type === "active") {
       this.active = Boolean(message.value);
@@ -1755,6 +1765,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     } else if (message.type === "fractal-three-voice-synth" && this.ready) {
       this.configureFractalThreeVoiceSynth(message.value);
     } else if (message.type === "enhancer" && this.ready) {
+    } else if (message.type === "synth-texture-reverb" && this.ready) {
+      this.configureSynthTextureReverb(message.value);
       this.configureEnhancer(message.value);
     } else if (message.type === "resonant-delay" && this.ready) {
       this.configureResonantDelay(message.value);
