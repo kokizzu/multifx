@@ -1,10 +1,47 @@
 import hashlib
 import unittest
 
-from checkpoint_line_selectors import LineSelectionError, select_exact_line_operations
+from checkpoint_line_selectors import (
+    LineSelectionError,
+    PARTIAL_CHECKPOINT_LINE_SELECTORS,
+    select_exact_line_operations,
+)
 
 
 class ExactLineSelectorTests(unittest.TestCase):
+    def test_replacement_can_select_unique_lines_across_other_hunk_changes(self):
+        diff = """diff --git a/example.js b/example.js
+index 1234567..7654321 100644
+--- a/example.js
++++ b/example.js
+@@ -1,2 +1,3 @@ fixture
+-const count = 123;
+-const obsolete = true;
++const unrelatedFutureGuard = true;
++const count = 127;
++const anotherFutureGuard = true;
+"""
+        selected = select_exact_line_operations(
+            diff,
+            (
+                {
+                    "replace": {
+                        "before": "-const count = 123;",
+                        "current": "+const count = 127;",
+                        "selected": "+const count = 124;",
+                        "hunk_header": "@@ -1,2 +1,3 @@ fixture",
+                        "allow_intervening_changes": True,
+                    }
+                },
+            ),
+        )
+        self.assertIn("-const count = 123;", selected)
+        self.assertIn("+const count = 124;", selected)
+        self.assertNotIn("const count = 127;", selected)
+        self.assertNotIn("obsolete", selected)
+        self.assertNotIn("unrelatedFutureGuard", selected)
+        self.assertNotIn("anotherFutureGuard", selected)
+
     def select(self, body: str, operations: tuple[str, ...]) -> str:
         return select_exact_line_operations(
             "diff --git a/shared.txt b/shared.txt\n"
@@ -87,6 +124,213 @@ class ExactLineSelectorTests(unittest.TestCase):
                 "+feature ends\n",
                 ({"span": {"start": "+feature starts", "end": "+feature ends"}},),
             )
+
+
+    def test_span_accepts_reviewed_start_multiplicity_alternatives(self) -> None:
+        operation = {
+            "span": {
+                "hunk_headers": ["@@ -9,0 +9,1 @@", "@@ -10,0 +10,3 @@"],
+                "start": "+    {",
+                "line_count": 1,
+                "start_occurrence": 1,
+                "expected_start_count": [1, 3],
+            }
+        }
+        for header, count in (
+            ("@@ -9,0 +9,1 @@", 1),
+            ("@@ -10,0 +10,3 @@", 3),
+        ):
+            diff = (
+                "diff --git a/state.json b/state.json\n"
+                "index 1111111..2222222 100644\n"
+                "--- a/state.json\n"
+                "+++ b/state.json\n"
+                f"{header}\n"
+                + "+    {\n" * count
+            )
+            selected = self.select(diff, (operation,))
+            self.assertEqual(selected.count("+    {\n"), 1)
+
+    def test_studio_app_selector_has_exact_id123_scope(self) -> None:
+        app_operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "fender-studio-delay-pan"
+        ]["web/app.js"]
+        studio_spans = [
+            operation["span"]
+            for operation in app_operations
+            if isinstance(operation, dict)
+            and operation.get("span", {}).get("start") in {
+                "+async function runStudioPanDelayBrowserSmokeTest(",
+                "+    await processorReady;",
+                '+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");',
+            }
+        ]
+        self.assertEqual([span["line_count"] for span in studio_spans], [9, 4, 147])
+        span_lengths = {
+            operation["span"]["start"]: operation["span"]["line_count"]
+            for operation in app_operations
+            if isinstance(operation, dict)
+            and "span" in operation
+            and "line_count" in operation["span"]
+        }
+        self.assertEqual(span_lengths["+const studioPanDelayControls = ["], 8)
+        replacements = [
+            operation["replace"]
+            for operation in app_operations
+            if isinstance(operation, dict) and "replace" in operation
+        ]
+        expected_ids = next(
+            replacement
+            for replacement in replacements
+            if "expectedEffectIds" in replacement["selected"]
+        )
+        self.assertIn("length: 123", expected_ids["before"])
+        self.assertIn("length: 127", expected_ids["current"])
+        self.assertIn("length: 124", expected_ids["selected"])
+        picker_error = next(
+            replacement
+            for replacement in replacements
+            if "effect picker must list 124" in replacement["selected"]
+        )
+        self.assertIn("IDs 0–123", picker_error["selected"])
+        self.assertIn("Studio Pan Delay", picker_error["selected"])
+        self.assertNotIn("Essex Vibe", picker_error["selected"])
+        self.assertNotIn("Euclidean Delay", picker_error["selected"])
+        self.assertNotIn("Synth Texture Reverb", picker_error["selected"])
+        exact_lines = {
+            operation
+            for operation in app_operations
+            if isinstance(operation, str)
+        }
+        self.assertIn("+    parityEnabled[123] = false;", exact_lines)
+        self.assertIn("+      studioPanDelay: studioPanDelaySmoke,", exact_lines)
+        self.assertTrue(
+            any(
+                isinstance(operation, dict)
+                and operation.get("span", {}).get("start")
+                == '+      testResult.textContent = "Checking Studio Pan Delay with local guitar playback…";'
+                and operation["span"].get("line_count") == 4
+                for operation in app_operations
+            )
+        )
+
+        for operation in app_operations:
+            if isinstance(operation, str):
+                selected = operation
+            elif "span" in operation:
+                selected = str(operation["span"])
+            elif "replace" in operation:
+                selected = operation["replace"]["selected"]
+            else:
+                self.fail(f"unsupported Studio app selector operation: {operation!r}")
+            self.assertNotIn("Essex Vibe", selected)
+            self.assertNotIn("Euclidean Delay", selected)
+            self.assertNotIn("Synth Texture Reverb", selected)
+
+    def test_studio_checklist_and_state_select_only_id123(self) -> None:
+        selectors = PARTIAL_CHECKPOINT_LINE_SELECTORS["fender-studio-delay-pan"]
+        checklist_line = selectors["IMPLEMENTATION_CHECKLIST.md"][0]
+        self.assertIn("picker ID 123", checklist_line)
+        self.assertTrue(checklist_line.endswith("physical listening remain manual."))
+        state_span = selectors["research-state.json"][0]["span"]
+        self.assertEqual(state_span["start"], "+    {")
+        self.assertEqual(state_span["line_count"], 24)
+        self.assertEqual(state_span["start_occurrence"], 1)
+        self.assertEqual(state_span["expected_start_count"], [1, 3])
+        self.assertIn("2026-11-28", selectors["FLAGSHIP_EFFECT_COMPARISON.md"][0]["span"]["start"])
+        self.assertIn("2026-11-28", selectors["LATENCY_AND_QUALITY.md"][0]["span"]["start"])
+
+        state_body = [
+            state_span["start"],
+            '+      "name": "Fender Tone Master Pro Studio Delay — project-authored Studio Pan Delay",',
+        ]
+        state_body.extend(f"+      \"field_{index}\": {index}," for index in range(1, 22))
+        state_body.extend((
+            "+    },",
+            "+    {",
+            '+      "name": "Fender Tone Master Pro Cirrostratus Synthverb — ID 126",',
+        ))
+        state_body.extend(f"+      \"future_{index}\": {index}," for index in range(1, 13))
+        state_body.append("+    {")
+        selected_state = self.select(
+            "@@ -37,0 +49,39 @@\n"
+            + "\n".join(state_body)
+            + "\n@@ -100,0 +140,1 @@\n"
+            + '+      "name": "Fender Tone Master Pro Cirrostratus Synthverb — ID 126",\n',
+            (selectors["research-state.json"][0],),
+        )
+        self.assertIn("Studio Pan Delay", selected_state)
+        self.assertNotIn("Cirrostratus", selected_state)
+
+        cursor_selector = selectors["research-state.json"][1]
+        cursor_replacement = cursor_selector["replace"]
+        self.assertIn("Essex Vibe", cursor_replacement["selected"])
+        self.assertNotIn("already-integrated", cursor_replacement["selected"])
+        cursor_diff = (
+            "diff --git a/research-state.json b/research-state.json\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/research-state.json\n"
+            "+++ b/research-state.json\n"
+            "@@ -33,3 +44,3 @@\n"
+            + cursor_replacement["before"]
+            + "\n-    \"next_device\": \"Unrelated device\",\n"
+            + "+    \"next_device\": \"Line 6 Helix Stadium XL\",\n"
+            + cursor_replacement["current"]
+            + "\n"
+        )
+        selected_cursor = self.select(cursor_diff, (cursor_selector,))
+        self.assertIn(cursor_replacement["selected"], selected_cursor)
+        self.assertNotIn("Unrelated device", selected_cursor)
+        self.assertNotIn("already-integrated", selected_cursor)
+
+    def test_studio_function_span_excludes_neighboring_future_smokes(self) -> None:
+        app_operations = PARTIAL_CHECKPOINT_LINE_SELECTORS[
+            "fender-studio-delay-pan"
+        ]["web/app.js"]
+        spans = [
+            operation["span"]
+            for operation in app_operations
+            if isinstance(operation, dict) and "span" in operation
+            and operation["span"].get("start") in {
+                "+async function runStudioPanDelayBrowserSmokeTest(",
+                "+    await processorReady;",
+                '+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");',
+            }
+        ]
+        self.assertEqual([span["line_count"] for span in spans], [9, 4, 147])
+        body_span = next(span for span in spans if span["start"] == "+    await processorReady;")
+        self.assertEqual(body_span["line_count"], 4)
+        row_span = next(span for span in spans if span["start"].startswith("+    const row = document.querySelector("))
+        self.assertEqual(row_span["start_occurrence"], 1)
+        self.assertEqual(row_span["expected_start_count"], [1, 3])
+        body = [spans[0]["start"]]
+        body.extend(f"+  // Studio Pan Delay setup {index}" for index in range(2, 10))
+        body.extend((
+            "@@ -18538,2 +19495,4 @@ async function runBrowserSelfTest() {",
+            spans[1]["start"],
+        ))
+        body.extend(f"+  // Studio Pan Delay guard {index}" for index in range(2, 5))
+        body.extend((
+            "@@ -18541,23 +19500,1068 @@ async function runBrowserSelfTest() {",
+            spans[2]["start"],
+        ))
+        body.extend((spans[2]["start"], spans[2]["start"]))
+        body.extend(f"+  // Studio Pan Delay test {index}" for index in range(2, 148))
+        body.append("+async function runEssexVibeBrowserSmokeTest(")
+        patch = self.select(
+            "diff --git a/shared.txt b/shared.txt\n"
+            "index 1111111..2222222 100644\n"
+            "--- a/shared.txt\n"
+            "+++ b/shared.txt\n"
+            "@@ -18526,11 +19485,9 @@ async function runPitchRingModBrowserSmokeTest(\n"
+            + "\n".join(body)
+            + "\n",
+            tuple({"span": span} for span in spans),
+        )
+        self.assertIn("+async function runStudioPanDelayBrowserSmokeTest(\n", patch)
+        self.assertIn("+    await processorReady;\n", patch)
+        self.assertIn(row_span["start"] + "\n", patch)
+        self.assertNotIn("runEssexVibeBrowserSmokeTest", patch)
 
 
 class BoundedSpanSelectorTests(unittest.TestCase):

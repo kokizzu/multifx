@@ -114,6 +114,7 @@ add_library(tabletfx_core
     src/wav.cpp
     src/effects/volume_pedal.cpp
     src/effects/volume_pan.cpp
+    src/effects/studio_pan_delay.cpp
     src/effects/stereo_filter.cpp
     src/effects/wah.cpp
     src/level_meter.cpp
@@ -154,6 +155,8 @@ target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
 
 add_executable(tabletfx_resonator_bench apps/resonator_bench.cpp)
 target_link_libraries(tabletfx_resonator_bench PRIVATE tabletfx_core)
+add_executable(tabletfx_studio_pan_delay_bench apps/studio_pan_delay_bench.cpp)
+target_link_libraries(tabletfx_studio_pan_delay_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_shuffling_looper_bench
     apps/shuffling_looper_bench.cpp)
 target_link_libraries(tabletfx_shuffling_looper_bench PRIVATE tabletfx_core)
@@ -320,6 +323,9 @@ if(BUILD_TESTING)
     add_executable(tabletfx_resonator_tests tests/test_resonator.cpp)
     target_link_libraries(tabletfx_resonator_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_resonator_tests COMMAND tabletfx_resonator_tests)
+    add_executable(tabletfx_studio_pan_delay_tests tests/test_studio_pan_delay.cpp)
+    target_link_libraries(tabletfx_studio_pan_delay_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_studio_pan_delay_tests COMMAND tabletfx_studio_pan_delay_tests)
     add_executable(tabletfx_diatonic_harmonizer_tests tests/test_diatonic_harmonizer.cpp)
     target_link_libraries(tabletfx_diatonic_harmonizer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_diatonic_harmonizer_tests COMMAND tabletfx_diatonic_harmonizer_tests)

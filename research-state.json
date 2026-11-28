@@ -31,10 +31,34 @@
   "continuation_cursor": {
     "task": "categorized flagship effects",
     "next_device": "Fractal FM9 Mark II Turbo",
-    "next_feature": "Audit the existing Multitap Delay at category Delay against the November 2026 Blocks Guide, then implement its documented Global Mix-eligible controls as a project-only feature where semantics are clear. Continue Phaser, Pitch, Plex Delay, Resonator, Reverb, Synth, and Ten-Tap Delay one at a time. Verify each model-specific Mix law and algorithm before implementing; do not infer Fractal settings or parity. Then continue exact-model HeadRush Prime, Melofty AXOM MAX, Fender Tone Master Pro, Line 6 Helix Stadium XL, and XRecer XR1 gaps. Do not add Prime Global EQ before independent output routes exist or XR1 FX loops before a real routing host exists.",
     "qualification": "Preserve exact-model and firmware qualifications, source URLs, categorized picker placement, project-authored control semantics, and no-parity claims. Keep browser/WASM and Windows cross-build checks separate from native Windows UI/runtime; hardware listening and target-device timing remain open. Do not touch expression-volume, footswitch-display, or general-research cursors."
   },
+    "next_feature": "After this Studio Pan Delay ID 123 checkpoint reaches main, publish the local Essex Vibe at ID 124 as the next standalone checkpoint; continue stable picker order only after each commit is on main.",
   "completed_checkpoints": [
+    {
+      "name": "Fender Tone Master Pro Studio Delay — project-authored Studio Pan Delay",
+      "status": "Software checkpoint verified locally; publishing this stable picker ID before later local IDs. Project-authored fixed-time stereo delay with Sine/Triangle/Envelope pan modes, 30–2,000 ms Time (350 ms default), Feedback 0.25, Mix 25%, Pan Rate 0.5 Hz, Pan Depth 75%; other defaults/ranges and Envelope curve are not Fender specifications.",
+      "date": "2026-11-28",
+      "picker_index": 123,
+      "category": "Delay",
+      "official_source": {
+        "title": "Tone Master Pro Model Guide and firmware history",
+        "revision": "Model Guide v1.1.100 / Rev. A, printed p. 50; firmware v1.6.34 documents Studio Delay Time 30–2,000 ms; current listed v1.8.87 is dated 2026-11-23 and its notes do not mention Studio Delay. Installed device firmware is unknown.",
+        "url": "https://www.fmicassets.com/Damroot/Original/10018/OM_2274900000_TONE-MASTER-PRO-Model-Guide_English.pdf",
+        "downloads_url": "https://support.fender.com/hc/en-us/articles/46768129660315-Fender-Tone-Master-Pro-Firmware-and-Pro-Control-App-Updates",
+        "qualification": "Fender documents Time, Tap Division, Feedback, Mix, Low/High Cut, Mod Rate/Depth/Mode, Pan Rate/Depth/Mode, and Spillover, but numeric defaults/ranges and the Envelope response are not documented. This implementation is project-authored and does not claim Fender settings, DSP, or sound parity."
+      },
+      "documented_controls": "Studio Delay: Time, Tap Division, Feedback, Mix, Low Cut, High Cut, Mod Rate, Mod Depth, Mod Mode, Pan Rate, Pan Depth, Pan Mode, Spillover. Only Time 30–2,000 ms is documented in checked firmware notes.",
+      "project_controls": "Time 30–2,000 ms (350); Feedback 0–0.9 (0.25); Mix 0–100% (25); Pan Rate 0.05–20 Hz (0.5); Pan Depth 0–100% (75); Sine/Triangle/Envelope. Two-second stereo ring is prepared only on activation; wet repeats follow Time; no tempo division, delay-time modulation, tone cuts, or Spillover.",
+      "verification": {
+        "native": "The current local worktree make test passed documentation checks, 13 fixture-safety checks, and 129/129 CTests, including Studio Pan Delay defaults, bounds, stereo repeats, pan modes, reset, block partitioning, memory preparation, and no process allocation. IDs 124–126 are later uncommitted effects and remain separate checkpoints.",
+        "browser": "Full make web-test passed in the current working tree with 127 picker rows; this stable ID123 checkpoint contains IDs 0–123 (124 rows). Local stereo prerecorded Guitar-TECHS DI Play activated Studio Pan Delay with wet/dry RMS difference 0.227378, zero reset replay difference, and browser/native chain comparison. Active effect state is 768,224 B in the fixed 100,663,296 B WASM heap; 208 B while disabled/unprepared.",
+        "windows": "The current local worktree make windows-cross-build passed for the MinGW shared core and offline renderer; native Windows UI/runtime is not covered. IDs 124–126 remain separate checkpoints.",
+        "benchmark": "AMD Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2.6667 ms deadline, 2,000 warm-up and 20,000 measured callbacks; 0/20,000 misses. Sine p50/p95/p99/p99.9/max 0.0979/0.1223/0.1526/0.3761/2.5156%; Triangle 0.0979/0.0990/0.1511/0.3296/0.7181%; Envelope 0.0979/0.0990/0.1005/0.3068/0.4448%. Native state 768,288 B; fixed latency 0 samples; process allocation none.",
+        "diff_check": "make diff-check passed after the Studio Pan Delay documentation/state updates; no workflow files changed."
+      },
+      "remaining": "Tap Division/tempo, Mod Rate/Depth/Mode, Low/High Cut, Spillover, and exact Envelope behavior remain unimplemented or undocumented; installed firmware, physical Fender comparison, human listening, and Android/Windows target-device timing remain manual/unverified."
+    },
       "name": "Fractal FM9-family Resonator block — project-authored four-voice filter",
       "status": "Verified; native, browser/WASM, and Windows MinGW automation passes; manual/device checks remain",
       "date": "2026-11-27",

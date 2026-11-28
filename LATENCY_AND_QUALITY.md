@@ -1017,3 +1017,16 @@ All maxima remain below the callback deadline; the larger opt-in maxima are sche
 Release build on AMD Ryzen 9 5950X, 48 kHz stereo, 128 frames per callback (2.6667 ms deadline), 20,000 measured callbacks per profile. Native owned state is 31,208 B; fixed algorithmic latency is zero; processing performs no allocation. A repeat run measured Manual p50/p95/p99/p99.9/max at **0.297/0.413/0.460/0.726/2.110%** of the deadline and Chordal at **0.297/0.362/0.473/0.884/2.348%**, with **0/20,000** deadline misses in both profiles. The first run had one Chordal maximum outlier (2,846 µs; one miss); it did not recur on repeat. Treat the tail maxima as host timing outliers requiring target-device measurement, not as a real-time guarantee. Browser/WASM reports 31,176 B for the effect; the test environment uses a fixed 100,663,296 B linear memory for the full chain. No Fractal processor utilization, sound, or latency comparison is implied.
 
 After adding the optional project Global Mix offset (off by default), a fresh 20,000-callback run measured Manual p50/p95/p99/p99.9/max at **0.287/0.290/0.407/0.588/4.340%**, Chordal at **0.287/0.384/0.494/0.695/2.394%**, and Global Mix enabled at **0.290/0.401/0.481/0.719/2.215%** of the same callback deadline. All three had zero deadline misses. Native owned state is now **31,216 B** and browser/WASM effect state is **31,188 B**; fixed algorithmic latency remains zero and processing remains allocation-free. The enabled profile is not a controlled incremental-cost comparison because host scheduling varies between runs; these figures describe project processor-call load only.
+## Fender Tone Master Pro Studio Pan Delay — 2026-11-28
+
+The active processor uses a fixed 2-second stereo ring. Native memory is 768,288 B; browser/WASM reports 208 B while bypassed/unprepared and 768,224 B while active, including the 768,016 B ring. Activation allocates through the explicit prepare path; `process()` remains allocation-free. Fixed signal latency is 0 samples.
+
+On AMD Ryzen 9 5950X Release at 48 kHz stereo with 128-frame callbacks (2.667 ms), repeat-run callback load was:
+
+| Pan mode | p50 | p95 | p99 | p99.9 | max |
+|---|---:|---:|---:|---:|---:|
+| Sine | 0.0979% | 0.1223% | 0.1526% | 0.3761% | 2.5156% |
+| Triangle | 0.0979% | 0.0990% | 0.1511% | 0.3296% | 0.7181% |
+| Envelope | 0.0979% | 0.0990% | 0.1005% | 0.3068% | 0.4448% |
+
+The 20,000-callback run had no deadline misses. Browser/WASM local guitar playback changed output RMS by 0.227378 relative to dry, and reset replay difference was 0. The browser result validates control plumbing and deterministic reset, not Fender algorithm or sound parity. These desktop figures do not predict Android, Windows, or other target-device timing.

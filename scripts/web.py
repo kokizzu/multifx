@@ -384,6 +384,7 @@ def build_web() -> None:
         str(ROOT / "src" / "effects" / "poly_sustain.cpp"),
         str(ROOT / "src" / "effects" / "step_filter_delay.cpp"),
         str(ROOT / "src" / "effects" / "volume_pan.cpp"),
+        str(ROOT / "src" / "effects" / "studio_pan_delay.cpp"),
         str(ROOT / "src" / "effects" / "volume_pedal.cpp"),
         str(ROOT / "src" / "effects" / "wah.cpp"),
         str(ROOT / "src" / "level_meter.cpp"),

@@ -274,6 +274,7 @@ const EFFECT_NAMES = [
   "Modulated Large Hall · project-authored Fender control roles",
   "Pitch Ring Mod · project-authored monophonic tracking",
   "Fractal Resonator · project-authored, not a pitch-tracked synth",
+  "Studio Pan Delay · project-authored",
 ];
 const phaseInvertByEffect = new Uint8Array(EFFECT_NAMES.length);
 const DEFAULT_PARAMETERS = {
@@ -508,6 +509,7 @@ const DEFAULT_PARAMETERS = {
     1, 1, 1, 1, 0,
     0.8, 1, 1, 1, 0.35, 0, 0, 0, 0, 0,
   ],
+  studioPanDelay: [350, 0.25, 0.25, 0.5, 0.75, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2451,6 +2453,14 @@ const pitchRingModControls = [
   document.querySelector("#pitch-ring-mod-tracking-confidence"),
   document.querySelector("#pitch-ring-mod-mix"),
   document.querySelector("#pitch-ring-mod-level"),
+];
+const studioPanDelayControls = [
+  document.querySelector("#studio-pan-delay-time"),
+  document.querySelector("#studio-pan-delay-feedback"),
+  document.querySelector("#studio-pan-delay-mix"),
+  document.querySelector("#studio-pan-delay-pan-rate"),
+  document.querySelector("#studio-pan-delay-pan-depth"),
+  document.querySelector("#studio-pan-delay-pan-mode"),
 ];
 const resonatorControls = Array.from(
   document.querySelectorAll("[data-resonator-parameter]"),
@@ -8230,6 +8240,33 @@ function updatePitchRingMod() {
   }
 }
 
+function updateStudioPanDelay() {
+  const values = [
+    Number(studioPanDelayControls[0].value),
+    Number(studioPanDelayControls[1].value),
+    Number(studioPanDelayControls[2].value) / 100,
+    Number(studioPanDelayControls[3].value),
+    Number(studioPanDelayControls[4].value) / 100,
+    Number(studioPanDelayControls[5].value),
+  ];
+  const formats = [
+    (value) => `${Math.round(value)} ms`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(2)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => ["Sine", "Triangle", "Envelope"][value] || "Sine",
+  ];
+  studioPanDelayControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.studioPanDelay = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "studio-pan-delay", value: values });
+  }
+}
+
 function updateResonator() {
   const values = Array(39);
   resonatorControls.forEach((control) => {
@@ -8487,6 +8524,10 @@ for (const control of toneMasterModulatedLargeHallControls) {
 for (const control of pitchRingModControls) {
   control.addEventListener("input", updatePitchRingMod);
   control.addEventListener("change", updatePitchRingMod);
+}
+for (const control of studioPanDelayControls) {
+  control.addEventListener("input", updateStudioPanDelay);
+  control.addEventListener("change", updateStudioPanDelay);
 }
 for (const control of resonatorControls) {
   control.addEventListener("input", updateResonator);
@@ -18422,7 +18463,7 @@ async function runPitchRingModBrowserSmokeTest(
         row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
         !row.querySelector(".effect-name")?.textContent.includes("Pitch Ring Mod") ||
         !checkbox || checkbox.checked || pitchRingModControls.length !== 5 ||
-        EFFECT_NAMES.length !== 122 || effectMemory.length !== EFFECT_NAMES.length ||
+        EFFECT_NAMES.length <= effectIndex || effectMemory.length !== EFFECT_NAMES.length ||
         DEFAULT_PARAMETERS.pitchRingMod.join(",") !== "1,110,0.55,0.5,0" ||
         effectMemory[effectIndex] <= 0 || effectMemory[effectIndex] >= 8192) {
       throw new Error(`Pitch Ring Mod picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.pitchRingMod.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
@@ -18465,7 +18506,7 @@ async function runPitchRingModBrowserSmokeTest(
       playbackOffset = 0;
       playButton.click();
       await waitForCapture(captureView, samplesToCapture);
-      stopSource(false);
+      await stopBrowserSmokePlaybackAndWait();
       return new Float32Array(captureBuffer).slice(0, samplesToCapture);
     };
     const normalCarrier = await capture([1, 110, 0.2, 1, 0]);
@@ -18535,15 +18576,26 @@ async function runBrowserSelfTest() {
   let toneMasterModulatedLargeHallSmoke = null;
   let pitchRingModSmoke = null;
   try {
+async function runStudioPanDelayBrowserSmokeTest(
+  reference, captureView, captureBuffer,
+) {
+  const effectIndex = 123;
+  const previousEffectState = enabledEffects();
+  const previousValues = studioPanDelayControls.map((control) => control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.studioPanDelay];
+  const previousCategory = effectCategoryFilter.value;
+  const previousSearch = effectSearch.value;
     if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
       throw new Error("The test server must enable cross-origin isolation for audio capture.");
     }
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Studio Pan Delay smoke requires the local stereo guitar DI fixture.");
     const effectRows = [...effectsList.querySelectorAll(".effect-row")];
     const initialEffectState = enabledEffects();
     const effectIds = effectRows.map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
     const knownCategories = new Set([...effectCategoryFilter.options].map((option) => option.value));
-    const expectedEffectIds = Array.from({ length: 123 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 123 || effectRows.length !== 123 ||
         effectIds.join(",") !== expectedEffectIds.join(",") || initialEffectState[28] ||
         EFFECT_NAMES[64] !== "Auto-Swell Delay · project-authored" ||
         EFFECT_NAMES[65] !== "Shuffling Looper · project-authored" ||
@@ -18562,6 +18614,155 @@ async function runBrowserSelfTest() {
               EFFECT_NAMES[78] !== "Three-Voice Tracked Synth · project-authored" ||
                fractalThreeVoiceSynthControls.length !== 35 ||
               fractalThreeVoiceSynthControls[33]?.id !== "fractal-three-voice-synth-input-tracking" ||
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const unpreparedEffectMemoryBytes = effectMemory[effectIndex];
+    if (row?.dataset.category !== "delay" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Delay" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Studio Pan Delay") ||
+        !checkbox || checkbox.checked || studioPanDelayControls.length !== 6 ||
+        EFFECT_NAMES.length <= effectIndex || effectMemory.length !== EFFECT_NAMES.length ||
+        DEFAULT_PARAMETERS.studioPanDelay.join(",") !== "350,0.25,0.25,0.5,0.75,0" ||
+        unpreparedEffectMemoryBytes <= 0 || unpreparedEffectMemoryBytes > 1024) {
+      throw new Error(`Studio Pan Delay picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.studioPanDelay.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [studioPanDelayControls[0], "30", "2000"],
+      [studioPanDelayControls[1], "0", "0.9"],
+      [studioPanDelayControls[2], "0", "100"],
+      [studioPanDelayControls[3], "0.05", "20"],
+      [studioPanDelayControls[4], "0", "100"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Studio Pan Delay project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+    if (studioPanDelayControls[5].options.length !== 3 ||
+        [...studioPanDelayControls[5].options].map((option) => option.textContent).join(",") !== "Sine,Triangle,Envelope") {
+      throw new Error("Studio Pan Delay must expose the Sine, Triangle, and Envelope pan modes.");
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "delay";
+    effectSearch.value = "studio pan delay";
+    updateEffectBrowser();
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.8) * reference.channels),
+    );
+    const expectedDelayRingBytes = Math.min(
+      Math.ceil(audioContext.sampleRate * 2) + 2,
+      (2 * 1024 * 1024) / (2 * Float32Array.BYTES_PER_ELEMENT),
+    ) * 2 * Float32Array.BYTES_PER_ELEMENT;
+    let activeEffectMemoryBytes = unpreparedEffectMemoryBytes;
+    const waitForStudioDelayMemory = async () => {
+      const start = performance.now();
+      while (effectMemory[effectIndex] - unpreparedEffectMemoryBytes <
+             expectedDelayRingBytes * 0.95 && performance.now() - start < 3000) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      activeEffectMemoryBytes = effectMemory[effectIndex];
+      const ringBytes = activeEffectMemoryBytes - unpreparedEffectMemoryBytes;
+      if (ringBytes < expectedDelayRingBytes * 0.95 ||
+          ringBytes > expectedDelayRingBytes * 1.05 + 4096) {
+        throw new Error(`Studio Pan Delay activation memory mismatch: default=${unpreparedEffectMemoryBytes}, active=${activeEffectMemoryBytes}, expectedRing=${expectedDelayRingBytes}.`);
+      }
+      return activeEffectMemoryBytes;
+    };
+    const capture = async (parameters) => {
+      const uiValues = [
+        parameters[0], parameters[1], parameters[2] * 100,
+        parameters[3], parameters[4] * 100, parameters[5],
+      ];
+      studioPanDelayControls.forEach((control, index) => {
+        control.value = String(uiValues[index]);
+      });
+      updateStudioPanDelay();
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        const enabled = index === 0 || index === effectIndex;
+        box.checked = enabled;
+        workletNode.port.postMessage({ type: "enable", index, value: enabled });
+      });
+      await waitForStudioDelayMemory();
+      await waitForBrowserSmokeWorkletBarrier();
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      await waitForBrowserSmokeWorkletBarrier();
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      await stopBrowserSmokePlaybackAndWait();
+      return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+    };
+    const difference = (left, right) => {
+      let squareSum = 0;
+      let peak = 0;
+      for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
+        const delta = left[index] - right[index];
+        squareSum += delta * delta;
+        peak = Math.max(peak, Math.abs(delta));
+      }
+      return {
+        rms: Math.sqrt(squareSum / Math.max(1, Math.min(left.length, right.length))),
+        peak,
+      };
+    };
+    const dry = await capture([80, 0.3, 0, 1.5, 1, 1]);
+    const wetParameters = [80, 0.3, 0.65, 1.5, 1, 1];
+    const wet = await capture(wetParameters);
+    const repeated = await capture(wetParameters);
+    const wetDifference = difference(wet, dry);
+    const resetDifference = difference(wet, repeated);
+    const peak = wet.reduce((maximum, sample) => Math.max(maximum, Math.abs(sample)), 0);
+    if (!(peak > 0.001) || !(wetDifference.rms > 0.00001) ||
+        !(wetDifference.peak > 0.0001) || resetDifference.rms > 0.00001 ||
+        resetDifference.peak > 0.0001 ||
+        wet.some((sample) => !Number.isFinite(sample))) {
+      throw new Error(`Studio Pan Delay Play/reset check failed: peak=${peak}, wetRms=${wetDifference.rms}, wetPeak=${wetDifference.peak}, resetRms=${resetDifference.rms}, resetPeak=${resetDifference.peak}.`);
+    }
+    return {
+      effectIndex,
+      category: "Delay",
+      delayTimeMs: wetParameters[0],
+      mix: wetParameters[2],
+      panRateHz: wetParameters[3],
+      panDepth: wetParameters[4],
+      panMode: "Triangle",
+      peak,
+      wetDifferenceRms: wetDifference.rms,
+      resetDifferenceRms: resetDifference.rms,
+      unpreparedEffectMemoryBytes,
+      effectMemoryBytes: activeEffectMemoryBytes,
+      delayRingBytes: activeEffectMemoryBytes - unpreparedEffectMemoryBytes,
+      expectedDelayRingBytes,
+    };
+  } finally {
+    stopSource(false);
+    studioPanDelayControls.forEach((control, index) => {
+      control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.studioPanDelay = previousParameters;
+    updateStudioPanDelay();
+    effectCategoryFilter.value = previousCategory;
+    effectSearch.value = previousSearch;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+    }
+  }
+}
+
+    const expectedEffectIds = Array.from({ length: 124 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 124 || effectRows.length !== 124 ||
               [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
                fractalThreeVoiceSynthControls[34]?.id !== "fractal-three-voice-synth-output-level-db" ||
                fractalThreeVoiceSynthControls[34]?.min !== "-24" ||
@@ -18678,6 +18879,10 @@ async function runBrowserSelfTest() {
                   effectRows[122]?.dataset.category !== "filter" ||
                   effectRows[122]?.querySelector(".effect-category-tag")?.textContent !== "Filters & wah" ||
                   DEFAULT_PARAMETERS.resonator.join(",") !== "0,0,1,110,164.81,220,329.63,110,0.55,0.55,0.55,0.55,2,2,2,2,0.4,0.4,0.4,0.4,-0.75,-0.25,0.25,0.75,1,1,1,1,0,0.8,1,1,1,0.35,0,0,0,0,0" ||
+                   !EFFECT_NAMES[123]?.startsWith("Studio Pan Delay · project-authored") ||
+                   effectRows[123]?.dataset.category !== "delay" ||
+                   effectRows[123]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+                   DEFAULT_PARAMETERS.studioPanDelay.join(",") !== "350,0.25,0.25,0.5,0.75,0" ||
                 toneMasterPro3DChorusMode.value !== "0" ||
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
                  initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
@@ -18719,7 +18924,7 @@ async function runBrowserSelfTest() {
               initialEffectState[65] ||
          effectRows.some((row) => !knownCategories.has(row.dataset.category) ||
           !row.querySelector(".effect-category-tag"))) {
-                     throw new Error(`The effect picker must list 123 ordered, categorized effects (IDs 0–122), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, Memory Delay, both Tone Master halls, Pitch Ring Mod, and Fractal Resonator; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[122]}, row122=${effectRows[122]?.dataset.category}/${effectRows[122]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[122]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
+                     throw new Error(`The effect picker must list 124 ordered, categorized effects (IDs 0–123), including Fractal Diatonic Harmony, 3D Chorus, Surround Delay, both Tone Master halls, Pitch Ring Mod, Fractal Resonator, and Studio Pan Delay; existing effect IDs and optional-disabled defaults must stay stable. names=${EFFECT_NAMES.length}, rows=${effectRows.length}, ids=${effectIds.length}/${effectIds.at(-1)}, memory=${effectMemory.length}/${effectMemory[123]}, row123=${effectRows[123]?.dataset.category}/${effectRows[123]?.querySelector(".effect-category-tag")?.textContent}, enabled=${initialEffectState[123]}, audio=${audioStatus.textContent}/${audioStatus.dataset.state}.`);
      }
       const rockBoxDistRanges = [
         [rockBoxDistControls[0], "0", "1"],
@@ -20464,6 +20669,7 @@ async function runBrowserSelfTest() {
     parityEnabled[121] = false;
     // Fractal Resonator has a focused local guitar Play smoke and no offline CLI stage.
     parityEnabled[122] = false;
+    parityEnabled[123] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -22166,6 +22372,10 @@ async function runBrowserSelfTest() {
       resonatorSmoke = await runResonatorBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
+      testResult.textContent = "Checking Studio Pan Delay with local guitar playback…";
+      const studioPanDelaySmoke = await runStudioPanDelayBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
     stopSource(false);
     tunerReference.value = "440";
     updateTunerSettings();
@@ -22245,6 +22455,7 @@ async function runBrowserSelfTest() {
       toneMasterModulatedLargeHall: toneMasterModulatedLargeHallSmoke,
       pitchRingMod: pitchRingModSmoke,
       resonator: resonatorSmoke,
+      studioPanDelay: studioPanDelaySmoke,
       noteGenerator: { frequencyHz: generatedFrequency, rms: generatedRms },
       tuner: tunerReading,
       tunerDetectionMs,

@@ -2,6 +2,7 @@
 #include "tabletfx/channel_conversion.hpp"
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/resonator.hpp"
+#include "tabletfx/effects/studio_pan_delay.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
@@ -166,11 +167,14 @@ public:
                   static_cast<std::uint16_t>(channels))),
           pitch_ring_mod_(std::make_unique<tabletfx::effects::PitchRingMod>(
               static_cast<float>(sample_rate),
-              static_cast<std::uint16_t>(channels))) {
         effects_.reserve(96);
         effects_.push_back({std::make_unique<tabletfx::Gain>(
           resonator_(std::make_unique<tabletfx::Resonator>(
+              static_cast<std::uint16_t>(channels))),
               static_cast<float>(sample_rate))),
+          studio_pan_delay_(std::make_unique<tabletfx::StudioPanDelay>(
+              static_cast<float>(sample_rate),
+              tabletfx::StudioPanDelayParameters{.bypass = true})) {
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
                             false});
         effects_.push_back({std::make_unique<tabletfx::VolumePedal>(
@@ -460,8 +464,8 @@ public:
     }
 
     [[nodiscard]] std::size_t effect_count() const noexcept {
+    return effects_.size() + 29;
     }
-    return effects_.size() + 28;
 
     [[nodiscard]] float* input_data() noexcept { return input_.data(); }
     [[nodiscard]] float* work_data() noexcept { return work_.data(); }
@@ -624,6 +628,12 @@ public:
         }
         if (index == 122U) {
             resonator_enabled_ = enabled;
+            return true;
+        }
+        if (index == 123U) {
+            if (enabled && !studio_pan_delay_->prepare()) return false;
+            studio_pan_delay_enabled_ = enabled;
+            studio_pan_delay_->set_bypass(!enabled);
             return true;
         }
         if (index >= effects_.size()) {
@@ -993,6 +1003,11 @@ public:
             }
             return;
         }
+        if (index == 123U) {
+            studio_pan_delay_->process(
+                std::span<float>(output_.data(), samples), channels_);
+            return;
+        }
         if (index >= effects_.size()) {
             return;
         }
@@ -1067,6 +1082,7 @@ public:
         tone_master_modulated_large_hall_->reset();
         pitch_ring_mod_->reset();
         resonator_->reset();
+        studio_pan_delay_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -3931,6 +3947,21 @@ public:
         resonator_->set_parameters(parameters);
     }
 
+    void configure_studio_pan_delay(float delay_time_ms, float feedback,
+                                    float mix, float pan_rate_hz,
+                                    float pan_depth,
+                                    std::uint32_t pan_mode) noexcept {
+        auto parameters = studio_pan_delay_->parameters();
+        parameters.delay_time_ms = delay_time_ms;
+        parameters.feedback = feedback;
+        parameters.mix = mix;
+        parameters.pan_rate_hz = pan_rate_hz;
+        parameters.pan_depth = pan_depth;
+        parameters.pan_mode = static_cast<tabletfx::StudioDelayPanMode>(
+            std::min(pan_mode, 2U));
+        parameters.bypass = !studio_pan_delay_enabled_;
+        studio_pan_delay_->configure(parameters);
+    }
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -4162,6 +4193,7 @@ public:
         bytes += tone_master_modulated_large_hall_->memory_bytes();
         bytes += pitch_ring_mod_->memory_bytes();
         bytes += resonator_->memory_bytes();
+        bytes += studio_pan_delay_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4348,6 +4380,12 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 123U) {
+            const std::size_t bytes = studio_pan_delay_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4396,6 +4434,7 @@ private:
         case 120U: return tone_master_modulated_large_hall_enabled_;
         case 121U: return pitch_ring_mod_enabled_;
         case 122U: return resonator_enabled_;
+        case 123U: return studio_pan_delay_enabled_;
         default: return false;
         }
     }
@@ -4444,6 +4483,7 @@ private:
         tone_master_modulated_large_hall_;
     std::unique_ptr<tabletfx::effects::PitchRingMod> pitch_ring_mod_;
     std::unique_ptr<tabletfx::Resonator> resonator_;
+    std::unique_ptr<tabletfx::StudioPanDelay> studio_pan_delay_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4478,6 +4518,7 @@ private:
     bool tone_master_small_hall_enabled_ = false;
     bool pitch_ring_mod_enabled_ = false;
     bool resonator_enabled_ = false;
+    bool studio_pan_delay_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -6382,6 +6423,14 @@ TABLETFX_WASM_EXPORT void tf_chain_set_resonator(
     void* opaque, const float* values, std::uint32_t value_count) noexcept {
     if (opaque != nullptr) {
         as_chain(opaque)->configure_resonator(values, value_count);
+    }
+}
+TABLETFX_WASM_EXPORT void tf_chain_set_studio_pan_delay(
+    void* opaque, float delay_time_ms, float feedback, float mix,
+    float pan_rate_hz, float pan_depth, std::uint32_t pan_mode) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_studio_pan_delay(
+            delay_time_ms, feedback, mix, pan_rate_hz, pan_depth, pan_mode);
     }
 }
 } // extern "C"

@@ -53,6 +53,7 @@
 #include "tabletfx/effects/step_tremolo.hpp"
 #include "tabletfx/effects/stereo_filter.hpp"
 #include "tabletfx/effects/volume_pan.hpp"
+#include "tabletfx/effects/studio_pan_delay.hpp"
 #include "tabletfx/effects/shuffling_looper.hpp"
 #include "tabletfx/effects/ten_tap_delay.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"

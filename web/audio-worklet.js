@@ -44,6 +44,7 @@ EFFECTS.push("tone-master-small-hall");
 EFFECTS.push("tone-master-modulated-large-hall");
 EFFECTS.push("pitch-ring-mod");
 EFFECTS.push("resonator");
+EFFECTS.push("studio-pan-delay");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -648,6 +649,9 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           1, 1, 1, 1, 0,
           0.8, 1, 1, 1, 0.35, 0, 0, 0, 0, 0,
         ],
+      );
+      this.configureStudioPanDelay(
+        parameters.studioPanDelay || [350, 0.25, 0.25, 0.5, 0.75, 0],
       );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -1286,6 +1290,14 @@ class TabletFxProcessor extends AudioWorkletProcessor {
     }
   }
 
+  configureStudioPanDelay(values) {
+    if (!this.module || !this.chain || !Array.isArray(values) ||
+        values.length !== 6) {
+      return;
+    }
+    this.module._tf_chain_set_studio_pan_delay(this.chain, ...values);
+  }
+
   configureEnhancer(values) {
     if (!this.module || !this.chain || !Array.isArray(values) || values.length !== 11) {
       return;
@@ -1354,6 +1366,16 @@ class TabletFxProcessor extends AudioWorkletProcessor {
           });
         } else if (index === EFFECTS.indexOf("fractal-chromatic-harmonizer") ||
                    index === EFFECTS.indexOf("fractal-diatonic-harmonizer")) {
+          const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
+            this.chain, index,
+          );
+          this.port.postMessage({
+            type: "effect-memory",
+            index,
+            effectMemoryBytes,
+            memoryBytes: this.module._tf_chain_memory_bytes(this.chain),
+          });
+        } else if (index === EFFECTS.indexOf("studio-pan-delay")) {
           const effectMemoryBytes = this.module._tf_chain_effect_memory_bytes(
             this.chain, index,
           );
@@ -1626,6 +1648,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configurePitchRingMod(message.value);
     } else if (message.type === "resonator" && this.ready) {
       this.configureResonator(message.value);
+    } else if (message.type === "studio-pan-delay" && this.ready) {
+      this.configureStudioPanDelay(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {
