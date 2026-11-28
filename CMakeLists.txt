@@ -26,6 +26,7 @@ add_library(tabletfx_core
     src/effects/fractal_three_voice_synth.cpp
     src/effects/euclidean_delay.cpp
     src/effects/synth_texture_reverb.cpp
+    src/effects/prime_drum_machine.cpp
     src/effects/pitch_feedback_delay.cpp
     src/effects/feedback_generator.cpp
     src/effects/shimmer_reverb.cpp
@@ -161,6 +162,9 @@ add_executable(tabletfx_feedback_generator_bench
     apps/feedback_generator_bench.cpp)
 target_link_libraries(tabletfx_feedback_generator_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_prime_drum_machine_bench
+    apps/prime_drum_machine_bench.cpp)
+target_link_libraries(tabletfx_prime_drum_machine_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_resonator_bench apps/resonator_bench.cpp)
 target_link_libraries(tabletfx_resonator_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_studio_pan_delay_bench apps/studio_pan_delay_bench.cpp)
@@ -377,6 +381,11 @@ if(BUILD_TESTING)
     target_link_libraries(tabletfx_synth_texture_reverb_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_synth_texture_reverb_tests
         COMMAND tabletfx_synth_texture_reverb_tests)
+    add_executable(tabletfx_prime_drum_machine_tests
+        tests/test_prime_drum_machine.cpp)
+    target_link_libraries(tabletfx_prime_drum_machine_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_prime_drum_machine_tests
+        COMMAND tabletfx_prime_drum_machine_tests)
     add_executable(tabletfx_enhancer_tests tests/test_enhancer.cpp)
     target_link_libraries(tabletfx_enhancer_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_enhancer_tests COMMAND tabletfx_enhancer_tests)

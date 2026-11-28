@@ -235,6 +235,7 @@ def main() -> None:
             "bench-essex-vibe",
             "bench-euclidean-delay",
             "bench-synth-texture-reverb",
+            "bench-prime-drum-machine",
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
                   "bench-pitch-ring-mod", "bench-headrush-phaser-stereo",
@@ -353,6 +354,8 @@ def main() -> None:
         bench_essex_vibe(cmake)
     elif action == "bench-synth-texture-reverb":
         bench_synth_texture_reverb(cmake)
+    elif action == "bench-prime-drum-machine":
+        bench_prime_drum_machine(cmake)
     elif action == "bench-euclidean-delay":
         bench_euclidean_delay(cmake)
 
@@ -422,6 +425,15 @@ def bench_synth_texture_reverb(cmake: str) -> None:
     )
     run([str(executable)])
 
+def bench_prime_drum_machine(cmake: str) -> None:
+    build(cmake)
+    print(f"CPU: {cpu_name()}")
+    executable = BUILD_DIR / (
+        "tabletfx_prime_drum_machine_bench.exe"
+        if os.name == "nt"
+        else "tabletfx_prime_drum_machine_bench"
+    )
+    run([str(executable)])
 def bench_euclidean_delay(cmake: str) -> None:
     build(cmake)
     print(f"CPU: {cpu_name()}")

@@ -1,5 +1,13 @@
 # Latency, quality, and DSP-load protocol
 
+## HeadRush Prime Drum Machine project-authored generator (2026-11-28)
+
+The Prime User Guide v5.0.0 and v5.2.0 cumulative notes identify a Drum Machine feature and list 16 kits/134 styles but do not publish its numeric controls, defaults, DSP use, latency, or CPU budget. TabletFX's separate synthesized rhythm source is a project implementation at Loop & performance picker ID 127; it does not load samples and starts disabled. Its four styles, bounds, defaults, and synthesis are project choices.
+
+At 48 kHz stereo, the native object owns 49,504 B and the active browser/WASM effect reports 49,480 B; the disabled effect allocates 0 B. The output adds zero fixed frames of latency. `process()` allocates no memory. HeadlessChrome 151 with the local stereo Guitar-TECHS DI reports stopped-path identity RMS error 1.8718e−16 and generated-pattern difference RMS 0.0320189. The complete browser test retains its fixed 100,663,296 B WASM heap; these figures are incremental effect state, not whole-browser memory.
+
+On an AMD Ryzen 9 5950X Release build, 48 kHz stereo with 128-frame callbacks (2.6667 ms), after 2,000 warm-up and 10,000 measured callbacks, the generated-style profile used 0.179/0.183/0.258/0.491/1.814% of the deadline at p50/p95/p99/p99.9/max. There were 0/10,000 misses and no processing allocations. This isolated desktop processor-call result excludes host scheduling and the rest of the chain; Android, Linux live-route, and Windows runtime timing remain unmeasured. The MinGW Windows cross-build passes but does not verify a native Windows UI or audio device.
+
 ## Line 6 Helix Stadium Dynamics Sidechain project mode (2026-11-27)
 
 The live [Stadium Effects manual](https://manuals.line6.com/en/helix-stadium/live/effect-blocks) selector lists v1.4 Rev D / v1.3 Rev B / v1.2. It describes Sidechain for all Dynamics models except Feedbacker, defaulting Off/block input, with examples of Instrument, Mic, Return, USB, and S/PDIF source levels. The complete source list and selector ranges are not published. [Hardware v1.4 release notes](https://kb.line6.com/helix-stadium-1-4-release-notes) list v1.4.2 dated 2026-10-27 but do not mention Sidechain; installed hardware firmware is unknown. TabletFX exposes only the project-authored Studio Compressor's Block Input default or Pre-effect Dry Chain detector source. No external buses, sidechain filter, extra audio buffer, fixed latency, or processing allocation is added. Native effect state is 64 B; browser effect state is 60 B. The browser test reports 81,694,296 B for the entire chain, not incremental sidechain storage.

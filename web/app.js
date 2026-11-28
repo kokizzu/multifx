@@ -514,6 +514,7 @@ const DEFAULT_PARAMETERS = {
   studioPanDelay: [350, 0.25, 0.25, 0.5, 0.75, 0],
   euclideanDelay: [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],
   synthTextureReverb: [0.25, 0.45, 4.5, 7200, 0, 240, 0],
+  primeDrumMachine: [120, 0.25, 1, 0.65, 0, 0.75, 0.65, 0.35, 0.30, 0, 0.5, 0, 0.12, 0, 1, 0],
   filteredDelay: [350, 0.25, 0.25, 120, 6000, 0, 120, 4],
   sweepDelay: [350, 0.25, 0.25, 250, 6000, 1.2, 0.5, 0, 90, 1, 0, 120, 4],
   drive: 3,
@@ -2483,6 +2484,30 @@ const synthTextureReverbControls = [
   document.querySelector("#synth-texture-reverb-release"),
   document.querySelector("#synth-texture-reverb-spillover"),
 ];
+const primeDrumMachineControls = [
+  document.querySelector("#prime-drum-machine-tempo"),
+  document.querySelector("#prime-drum-machine-mix"),
+  document.querySelector("#prime-drum-machine-volume"),
+  document.querySelector("#prime-drum-machine-intensity"),
+  document.querySelector("#prime-drum-machine-groove"),
+  document.querySelector("#prime-drum-machine-kick"),
+  document.querySelector("#prime-drum-machine-snare"),
+  document.querySelector("#prime-drum-machine-cymbal"),
+  document.querySelector("#prime-drum-machine-tom"),
+  document.querySelector("#prime-drum-machine-eq"),
+  document.querySelector("#prime-drum-machine-timbre"),
+  document.querySelector("#prime-drum-machine-tuning"),
+  document.querySelector("#prime-drum-machine-reverb"),
+  document.querySelector("#prime-drum-machine-drive"),
+  document.querySelector("#prime-drum-machine-bars"),
+  document.querySelector("#prime-drum-machine-style"),
+];
+const primeDrumMachineStart = document.querySelector("#prime-drum-machine-start");
+const primeDrumMachineStop = document.querySelector("#prime-drum-machine-stop");
+const primeDrumMachineVariation = document.querySelector("#prime-drum-machine-variation");
+const primeDrumMachineAccent = document.querySelector("#prime-drum-machine-accent");
+const primeDrumMachineFill = document.querySelector("#prime-drum-machine-fill");
+const primeDrumMachineStatus = document.querySelector("#prime-drum-machine-status");
 const euclideanDelayControls = [
   document.querySelector("#euclidean-delay-step-time"),
   document.querySelector("#euclidean-delay-steps"),
@@ -8354,6 +8379,73 @@ function updateSynthTextureReverb() {
     workletNode.port.postMessage({ type: "synth-texture-reverb", value: values });
   }
 }
+function updatePrimeDrumMachine() {
+  const values = [
+    Number(primeDrumMachineControls[0].value),
+    Number(primeDrumMachineControls[1].value) / 100,
+    Number(primeDrumMachineControls[2].value) / 100,
+    Number(primeDrumMachineControls[3].value) / 100,
+    Number(primeDrumMachineControls[4].value) / 100,
+    Number(primeDrumMachineControls[5].value) / 100,
+    Number(primeDrumMachineControls[6].value) / 100,
+    Number(primeDrumMachineControls[7].value) / 100,
+    Number(primeDrumMachineControls[8].value) / 100,
+    Number(primeDrumMachineControls[9].value),
+    Number(primeDrumMachineControls[10].value) / 100,
+    Number(primeDrumMachineControls[11].value),
+    Number(primeDrumMachineControls[12].value) / 100,
+    Number(primeDrumMachineControls[13].value) / 100,
+    Number(primeDrumMachineControls[14].value),
+    Number(primeDrumMachineControls[15].value),
+  ];
+  const formats = [
+    (value) => `${Math.round(value)} BPM`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value > 0 ? "+" : ""}${value.toFixed(1)} dB`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value > 0 ? "+" : ""}${value.toFixed(1)} semitones`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value} bar${value === 1 ? "" : "s"}`,
+    (value) => ["Rock", "Pop", "Shuffle", "Half-time"][value] || "Rock",
+  ];
+  primeDrumMachineControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output && formats[index]) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.primeDrumMachine = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "prime-drum-machine", value: values });
+  }
+}
+function sendPrimeDrumMachineCommand(control, value = 1) {
+  if (!workletNode) {
+    primeDrumMachineStatus.value = "Load local audio before starting the drum pattern.";
+    return;
+  }
+  if (control === 0 && value !== 0) {
+    const checkbox = document.querySelector('[data-effect="127"]');
+    if (checkbox && !checkbox.checked) {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+  workletNode.port.postMessage({
+    type: "prime-drum-machine-control", control, value,
+  });
+  if (control === 0) {
+    primeDrumMachineStatus.value = value
+      ? "Pattern armed; press Play to hear the processed output."
+      : "Stopped; the short drum tail will decay.";
+  }
+}
 function updateEuclideanDelay() {
   const steps = Math.max(1, Math.min(16, Math.round(
     Number(euclideanDelayControls[1].value),
@@ -8670,6 +8762,20 @@ for (const control of synthTextureReverbControls) {
   control.addEventListener("input", updateSynthTextureReverb);
   control.addEventListener("change", updateSynthTextureReverb);
 }
+for (const control of primeDrumMachineControls) {
+  control.addEventListener("input", updatePrimeDrumMachine);
+  control.addEventListener("change", updatePrimeDrumMachine);
+}
+primeDrumMachineStart.addEventListener("click", () =>
+  sendPrimeDrumMachineCommand(0, 1));
+primeDrumMachineStop.addEventListener("click", () =>
+  sendPrimeDrumMachineCommand(0, 0));
+primeDrumMachineVariation.addEventListener("change", () =>
+  sendPrimeDrumMachineCommand(2, primeDrumMachineVariation.checked ? 1 : 0));
+primeDrumMachineAccent.addEventListener("click", () =>
+  sendPrimeDrumMachineCommand(3, 1));
+primeDrumMachineFill.addEventListener("click", () =>
+  sendPrimeDrumMachineCommand(4, 1));
 for (const control of resonatorControls) {
   control.addEventListener("input", updateResonator);
   control.addEventListener("change", updateResonator);
@@ -19200,7 +19306,21 @@ async function runEuclideanDelayBrowserSmokeTest(
                initialEffectState[111] || initialEffectState[112] || initialEffectState[113] ||
                  initialEffectState[114] || initialEffectState[116] || initialEffectState[117] ||
                    initialEffectState[118] || initialEffectState[119] || initialEffectState[120] ||
-                      initialEffectState[121] || initialEffectState[122] ||
+                      initialEffectState[121] || initialEffectState[122] || initialEffectState[123] ||
+                     initialEffectState[124] || initialEffectState[125] || initialEffectState[126] ||
+                    !EFFECT_NAMES[125]?.startsWith("Euclidean Delay · project-authored controls") ||
+                    effectRows[125]?.dataset.category !== "delay" ||
+                    effectRows[125]?.querySelector(".effect-category-tag")?.textContent !== "Delay" ||
+                     !EFFECT_NAMES[126]?.startsWith("Synth Texture Reverb · project-authored controls") ||
+                     effectRows[126]?.dataset.category !== "reverb" ||
+                     effectRows[126]?.querySelector(".effect-category-tag")?.textContent !== "Reverb" ||
+                     !EFFECT_NAMES[127]?.startsWith("Drum Machine · project-authored patterns") ||
+                     effectRows[127]?.dataset.category !== "loop" ||
+                     effectRows[127]?.querySelector(".effect-category-tag")?.textContent !== "Loop & performance" ||
+                     DEFAULT_PARAMETERS.primeDrumMachine.join(",") !== "120,0.25,1,0.65,0,0.75,0.65,0.35,0.3,0,0.5,0,0.12,0,1,0" ||
+                     primeDrumMachineControls.length !== 16 ||
+                     DEFAULT_PARAMETERS.euclideanDelay.join(",") !== "125,8,3,0,0.25,0.25,0,20,20000,0" ||
+                     euclideanDelayControls.length !== 10 ||
         initialEffectState[64] || initialEffectState[65] || initialEffectState[66] ||
          initialEffectState[67] || initialEffectState[68] ||
          initialEffectState[69] || initialEffectState[70] ||
@@ -20552,7 +20672,7 @@ async function runEuclideanDelayBrowserSmokeTest(
     effectCategoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
     const loopIds = effectRows.filter((row) => !row.hidden)
       .map((row) => Number(row.querySelector("[data-effect]").dataset.effect));
-                    if (loopIds.join(",") !== "60,65,98" || effectCount.value !== `3 of ${effectRows.length}` ||
+    if (loopIds.join(",") !== "60,65,98,127" || effectCount.value !== `4 of ${effectRows.length}` ||
         JSON.stringify(enabledEffects()) !== JSON.stringify(initialEffectState)) {
       throw new Error("The Loop & performance category must list all three loopers and preserve the current chain state.");
     }
@@ -20987,6 +21107,8 @@ async function runEuclideanDelayBrowserSmokeTest(
     parityEnabled[125] = false;
         // Synth Texture Reverb has a focused local guitar Play smoke and no offline CLI stage.
         parityEnabled[126] = false;
+    // Prime Drum Machine is a generator with no offline CLI parity stage.
+    parityEnabled[127] = false;
     const activeProcessorIndices = parityEnabled
         .map((enabled, index) => enabled && index > 0 && index !== 94 && index !== 95
         ? index : -1)
@@ -21453,6 +21575,155 @@ async function runEuclideanDelayBrowserSmokeTest(
      ));
      await prepareProcessor(testOptions);
      await ensureConvolutionIRLoaded();
+      if (new URLSearchParams(location.search).get("selftest") === "prime-drum-machine") {
+        testResult.textContent = "Checking the project-authored Drum Machine with local guitar playback…";
+        const initialEffectState = enabledEffects();
+        const previousValues = primeDrumMachineControls.map((control) => control.value);
+        const previousVariation = primeDrumMachineVariation.checked;
+        const previousParameters = [...DEFAULT_PARAMETERS.primeDrumMachine];
+        const previousCategory = effectCategoryFilter.value;
+        const previousSearch = effectSearch.value;
+        const row = effectRows[127];
+        if (!audioContext || !decodedAudio || decodedAudio.numberOfChannels !== 2 ||
+            !reference || reference.channels !== 2 || !row || row.dataset.category !== "loop" ||
+            row.querySelector(".effect-category-tag")?.textContent.trim() !== "Loop & performance" ||
+            !EFFECT_NAMES[127]?.startsWith("Drum Machine · project-authored patterns") ||
+            DEFAULT_PARAMETERS.primeDrumMachine.join(",") !==
+              "120,0.25,1,0.65,0,0.75,0.65,0.35,0.3,0,0.5,0,0.12,0,1,0" ||
+            primeDrumMachineControls.length !== 16 || initialEffectState[127] ||
+            effectMemory[127] !== 0) {
+          throw new Error("Drum Machine category, defaults, or disabled memory state is invalid.");
+        }
+        effectCategoryFilter.value = "loop";
+        effectSearch.value = "drum machine";
+        updateEffectBrowser();
+        if (row.hidden) throw new Error("The categorized picker cannot find Drum Machine under Loop & performance.");
+        const waitForBarrier = (token) => new Promise((resolve, reject) => {
+          const port = workletNode.port;
+          const timeout = setTimeout(() => {
+            port.removeEventListener("message", onMessage);
+            reject(new Error("Timed out waiting for Drum Machine worklet synchronization."));
+          }, 5000);
+          const onMessage = (event) => {
+            if (event.data?.type !== "test-barrier-ack" || event.data.token !== token) return;
+            clearTimeout(timeout);
+            port.removeEventListener("message", onMessage);
+            resolve();
+          };
+          port.addEventListener("message", onMessage);
+          port.postMessage({ type: "test-barrier", token });
+        });
+        const setEffectState = (state) => {
+          effectRows.forEach((effectRow, index) => {
+            const box = effectRow.querySelector("[data-effect]");
+            if (!box || box.checked === Boolean(state[index])) return;
+            box.checked = Boolean(state[index]);
+            box.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+        };
+        let captureSequence = 0;
+        let memorySequence = 0;
+        const readMemory = () => new Promise((resolve, reject) => {
+          const token = `prime-drum-machine-memory-${++memorySequence}`;
+          const timeout = setTimeout(() => {
+            workletNode.port.removeEventListener("message", onMessage);
+            reject(new Error("Timed out reading Drum Machine memory."));
+          }, 5000);
+          const onMessage = (event) => {
+            if (event.data?.type !== "test-effect-memory-result" || event.data.token !== token) return;
+            clearTimeout(timeout);
+            workletNode.port.removeEventListener("message", onMessage);
+            resolve(Number(event.data.bytes));
+          };
+          workletNode.port.addEventListener("message", onMessage);
+          workletNode.port.postMessage({ type: "test-effect-memory", token, index: 127 });
+        });
+        const samplesToCapture = Math.min(
+          reference.samples.length,
+          Math.max(1, Math.floor(audioContext.sampleRate * 2.2) * reference.channels),
+        );
+        const capture = async (state) => {
+          setEffectState(state);
+          const token = `prime-drum-machine-${++captureSequence}`;
+          await waitForBarrier(token);
+          workletNode.port.postMessage({ type: "reset" });
+          workletNode.port.postMessage({ type: "capture-reset" });
+          await waitForBarrier(`${token}-reset`);
+          Atomics.store(captureView, 0, 0);
+          Atomics.store(captureView, 1, 0);
+          playbackOffset = 0;
+          playButton.click();
+          await Promise.race([
+            playTask,
+            new Promise((_, reject) => setTimeout(
+              () => reject(new Error("Timed out starting local guitar playback for Drum Machine.")),
+              5000,
+            )),
+          ]);
+          await waitForCapture(captureView, samplesToCapture);
+          stopSource(false);
+          return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+        };
+        const rmsDifference = (left, right) => {
+          let total = 0;
+          for (let i = 0; i < left.length; i += 1) {
+            const delta = left[i] - right[i];
+            total += delta * delta;
+          }
+          return Math.sqrt(total / Math.max(1, left.length));
+        };
+        try {
+          updatePrimeDrumMachine();
+          const baselineState = Array(effectRows.length).fill(false);
+          baselineState[0] = true;
+          baselineState[127] = false;
+          const dry = await capture(baselineState);
+          const stoppedState = Array(effectRows.length).fill(false);
+          stoppedState[0] = true;
+          stoppedState[127] = true;
+          const stopped = await capture(stoppedState);
+          sendPrimeDrumMachineCommand(0, 1);
+          await waitForBarrier(`prime-drum-machine-start-${++captureSequence}`);
+          const activeMemory = await readMemory();
+          const active = await capture(stoppedState);
+          const stoppedIdentity = rmsDifference(dry, stopped);
+          const activeDifference = rmsDifference(dry, active);
+          if (stoppedIdentity > 1e-7 || activeDifference < 1e-5 || activeMemory < 40000) {
+            throw new Error(`Drum Machine behavior failed: stopped identity ${stoppedIdentity}, active RMS difference ${activeDifference}, memory ${activeMemory} B.`);
+          }
+          const report = {
+            result: "passed",
+            browser: navigator.userAgent,
+            sampleRate: audioContext.sampleRate,
+            picker: { index: 127, category: "Loop & performance", defaultDisabled: true },
+            projectDefaults: DEFAULT_PARAMETERS.primeDrumMachine,
+            stoppedIdentityRms: stoppedIdentity,
+            activePatternRmsDifference: activeDifference,
+            disabledMemoryBytes: effectMemory[127],
+            activeMemoryBytes: activeMemory,
+            fixedLatencyFrames: 0,
+            localFixture: "stereo prerecorded Guitar-TECHS DI",
+          };
+          testResult.dataset.status = "passed";
+          testResult.textContent = JSON.stringify(report);
+          document.title = "PASS · TabletFX Drum Machine browser test";
+          return;
+        } finally {
+          stopSource(false);
+          sendPrimeDrumMachineCommand(0, 0);
+          primeDrumMachineControls.forEach((control, index) => {
+            control.value = previousValues[index];
+          });
+          primeDrumMachineVariation.checked = previousVariation;
+          updatePrimeDrumMachine();
+          DEFAULT_PARAMETERS.primeDrumMachine = previousParameters;
+          setEffectState(initialEffectState);
+          effectCategoryFilter.value = previousCategory;
+          effectSearch.value = previousSearch;
+          updateEffectBrowser();
+          workletNode.port.postMessage({ type: "reset" });
+        }
+      }
       if (new URLSearchParams(location.search).get("selftest") === "synth-texture-reverb") {
         testResult.textContent = "Checking project-authored Synth Texture Reverb with local guitar playback…";
         const initialEffectState = enabledEffects();

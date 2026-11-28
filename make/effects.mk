@@ -19,3 +19,13 @@ web-test-synth-texture-reverb: test-synth-texture-reverb web-build
 
 bench-synth-texture-reverb:
 	$(PYTHON) scripts/run_cmake.py bench-synth-texture-reverb
+
+.PHONY: test-prime-drum-machine web-test-prime-drum-machine bench-prime-drum-machine
+test-prime-drum-machine:
+	$(PYTHON) scripts/run_cmake.py test --test-filter tabletfx_prime_drum_machine_tests
+
+web-test-prime-drum-machine: test-prime-drum-machine web-build
+	$(PYTHON) scripts/web.py test-prime-drum-machine
+
+bench-prime-drum-machine:
+	$(PYTHON) scripts/run_cmake.py bench-prime-drum-machine

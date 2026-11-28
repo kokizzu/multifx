@@ -701,6 +701,29 @@ public:
         if (index >= effects_.size()) {
             return false;
         }
+        if (index == 127U) {
+            if (!enabled) {
+                prime_drum_machine_enabled_ = false;
+                if (prime_drum_machine_) {
+                    prime_drum_machine_->reset();
+                    prime_drum_machine_.reset();
+                }
+                return true;
+            }
+            if (!prime_drum_machine_) {
+                try {
+                    prime_drum_machine_ = std::make_unique<
+                        tabletfx::effects::DrumMachine>(
+                            static_cast<float>(sample_rate_), channels_,
+                            prime_drum_machine_parameters_);
+                } catch (...) {
+                    prime_drum_machine_enabled_ = false;
+                    return false;
+                }
+            }
+            prime_drum_machine_enabled_ = true;
+            return true;
+        }
         if ((index >= 28U && index <= 31U) && effects_[index].enabled && !enabled) {
             bool spillover = false;
             switch (index) {
@@ -1101,6 +1124,13 @@ public:
         if (!effects_[index].enabled && index != 38U && index != 64U) {
             effects_[index].effect->process_bypassed(
                 std::span<float>(work_.data(), samples), channels_);
+        if (index == 127U) {
+            if (prime_drum_machine_enabled_ && prime_drum_machine_) {
+                prime_drum_machine_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
+            return;
+        }
             return;
         }
         effects_[index].effect->process(std::span<float>(work_.data(), samples), channels_);
@@ -1178,6 +1208,7 @@ public:
         chromatic_pitch_delay_->reset();
         cabinet_ir_.reset();
         octave_divider_.reset();
+        if (prime_drum_machine_) prime_drum_machine_->reset();
         double_take_.reset();
         xr1_global_eq_.reset();
         stadium_seven_band_peq_.reset();
@@ -4148,6 +4179,47 @@ public:
                                   std::uint32_t time_mode, float tempo_bpm,
                                   std::uint32_t division) noexcept {
         auto* effect = static_cast<tabletfx::FilteredDelay*>(
+
+    void configure_prime_drum_machine(
+        double tempo_bpm, float mix, float volume, float intensity,
+        float groove, float kick_mix, float snare_mix, float cymbal_mix,
+        float tom_mix, float eq_db, float timbre, float tuning_semitones,
+        float reverb, float drive, std::uint32_t length_bars,
+        std::uint32_t style) noexcept {
+        auto parameters = prime_drum_machine_parameters_;
+        parameters.tempo_bpm = tempo_bpm;
+        parameters.mix = mix;
+        parameters.volume = volume;
+        parameters.intensity = intensity;
+        parameters.groove = groove;
+        parameters.kick_mix = kick_mix;
+        parameters.snare_mix = snare_mix;
+        parameters.cymbal_mix = cymbal_mix;
+        parameters.tom_mix = tom_mix;
+        parameters.eq_db = eq_db;
+        parameters.timbre = timbre;
+        parameters.tuning_semitones = tuning_semitones;
+        parameters.reverb = reverb;
+        parameters.drive = drive;
+        parameters.length_bars = static_cast<std::uint8_t>(length_bars);
+        parameters.style = static_cast<tabletfx::effects::DrumMachineStyle>(style);
+        prime_drum_machine_parameters_ = parameters;
+        if (prime_drum_machine_) prime_drum_machine_->configure(parameters);
+    }
+
+    void control_prime_drum_machine(std::uint32_t control,
+                                    std::uint32_t value) noexcept {
+        if (!prime_drum_machine_) return;
+        switch (control) {
+        case 0U: prime_drum_machine_->set_running(value != 0U); break;
+        case 1U: prime_drum_machine_->set_muted(value != 0U); break;
+        case 2U: prime_drum_machine_->set_variation(value != 0U); break;
+        case 3U: if (value != 0U) prime_drum_machine_->trigger_accent(); break;
+        case 4U: if (value != 0U) prime_drum_machine_->trigger_fill(); break;
+        default: break;
+        }
+    }
+
             effects_[41].effect.get());
         auto parameters = effect->parameters();
         parameters.time_ms = time_ms;
@@ -4418,6 +4490,7 @@ public:
         if (index == 96U) {
             const std::size_t bytes = stereo_filter_->memory_bytes();
             return bytes > std::numeric_limits<std::uint32_t>::max()
+        if (prime_drum_machine_) bytes += prime_drum_machine_->memory_bytes();
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
@@ -4630,6 +4703,13 @@ private:
         case 114U: return stadium_seven_band_peq_enabled_;
         case 115U: return fractal_diatonic_harmonizer_enabled_;
         case 116U: return tone_master_pro_3d_chorus_enabled_;
+        if (index == 127U) {
+            if (!prime_drum_machine_) return 0U;
+            const std::size_t bytes = prime_drum_machine_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
+        }
         case 117U: return fractal_surround_delay_enabled_;
         case 118U: return fender_memory_delay_enabled_;
         case 119U: return tone_master_small_hall_enabled_;
@@ -4682,6 +4762,7 @@ private:
     tabletfx::MutantFilter mutant_filter_;
     tabletfx::ToneMasterPro3DChorus tone_master_pro_3d_chorus_;
     tabletfx::FractalSurroundDelay fractal_surround_delay_;
+        case 127U: return prime_drum_machine_enabled_ && prime_drum_machine_ != nullptr;
     std::unique_ptr<tabletfx::ModulatedDelay> fender_memory_delay_;
     std::unique_ptr<tabletfx::ToneMasterSmallHallReverb> tone_master_small_hall_;
     std::unique_ptr<tabletfx::ToneMasterModulatedLargeHallReverb>
@@ -4737,6 +4818,9 @@ private:
     bool xr1_global_eq_enabled_ = false;
     bool stadium_seven_band_peq_enabled_ = false;
 };
+    std::unique_ptr<tabletfx::effects::DrumMachine> prime_drum_machine_;
+    tabletfx::effects::DrumMachineParameters prime_drum_machine_parameters_{};
+    bool prime_drum_machine_enabled_ = false;
 
 WasmChain* as_chain(void* opaque) noexcept {
     return static_cast<WasmChain*>(opaque);
@@ -6676,3 +6760,22 @@ TABLETFX_WASM_EXPORT void tf_chain_set_synth_texture_reverb(
     }
 }
 } // extern "C"
+TABLETFX_WASM_EXPORT void tf_chain_set_prime_drum_machine(
+    void* opaque, double tempo_bpm, float mix, float volume, float intensity,
+    float groove, float kick_mix, float snare_mix, float cymbal_mix,
+    float tom_mix, float eq_db, float timbre, float tuning_semitones,
+    float reverb, float drive, std::uint32_t length_bars,
+    std::uint32_t style) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_prime_drum_machine(
+            tempo_bpm, mix, volume, intensity, groove, kick_mix, snare_mix,
+            cymbal_mix, tom_mix, eq_db, timbre, tuning_semitones, reverb,
+            drive, length_bars, style);
+    }
+}
+TABLETFX_WASM_EXPORT void tf_chain_prime_drum_machine_control(
+    void* opaque, std::uint32_t control, std::uint32_t value) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->control_prime_drum_machine(control, value);
+    }
+}

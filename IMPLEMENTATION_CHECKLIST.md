@@ -2,6 +2,16 @@
 
 Status marks in the first column mean: [x] implemented and verified, [~] partially implemented with verified tests, and [ ] not complete. The native/browser test columns are tracked separately; human hardware checks remain open where marked.
 
+## HeadRush Prime Drum Machine — categorized project-authored generator (2026-11-28)
+
+- [x] Checked Prime User Guide v5.0.0 §§4.11.2–4.11.5 (printed pp. 44–47), cumulative v5.2.0 firmware notes, and the official Drum Machine support article. The guide names pattern/count-in, tempo/fill, Accent, kit, and style controls, but does not publish numeric ranges/defaults. The listed v5.2.0 release does not establish installed device firmware.
+- [x] Added a deterministic, sample-free project-authored generator at Loop & performance picker ID 127/display number 128. It is disabled by default and uses four original styles and project-owned tempo, phrase, mix, tone, and performance controls. It is not Prime/BFD content or Prime algorithm/settings parity.
+- [x] `make test-prime-drum-machine` passes 1/1 focused CTest, including defaults/bounds, mono/stereo output, timing and variation behavior, reset, finite recovery, supported sample-rate handling, and zero processing allocations.
+- [x] `make web-test-prime-drum-machine` passes HeadlessChrome 151 on the local prerecorded stereo Guitar-TECHS DI. It verifies Loop & performance placement, ID/defaults, chain-state preservation, stopped identity (RMS error 1.87e−16), active generator output (difference RMS 0.03202), lazy storage (0 B disabled; 49,480 B active), zero fixed latency, and browser/native chain comparison.
+- [x] `make bench-prime-drum-machine` on Ryzen 9 5950X Release, 48 kHz stereo/128 frames (2.667 ms deadline), 2,000 warm-up and 10,000 measured callbacks: p50/p95/p99/p99.9/max 0.179/0.183/0.258/0.491/1.814%; 0/10,000 deadline misses; 49,504 B native object; zero processing allocations. Desktop timing is not a target-device guarantee.
+- [x] `make windows-cross-build` compiles the MinGW shared core and offline renderer. This is not native Windows UI/runtime testing.
+- [ ] Human listening, Prime hardware comparison, installed-firmware confirmation, and target-device CPU/latency checks remain manual.
+
 ## XRecer XR1 FX Loop host-routing feasibility (2026-11-27)
 
 - [x] Checked the live XRecer FAQ on 2026-11-27: it documents two physical FX loops, SEND 1/2 and RETURN 1/2, and an FX Loop block with Send Level, Return Level, and dry/returned Mix. The linked user-manual portal did not expose a readable manual copy during this audit.

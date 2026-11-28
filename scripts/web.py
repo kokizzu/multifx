@@ -799,7 +799,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
                  fractal_multitap_global_mix_only: bool = False) -> None:
     compiler = emscripten_cpp()
                  euclidean_delay_only: bool = False,
-                 synth_texture_reverb_only: bool = False) -> None:
+                 synth_texture_reverb_only: bool = False,
+                 prime_drum_machine_only: bool = False) -> None:
     compiler = emscripten_cpp()
     if compiler is None or not (WEB_BUILD_DIR / "tabletfx_wasm.js").is_file():
         raise SystemExit("Build the browser module first with `make web-build`")
@@ -1370,6 +1371,8 @@ def browser_test(*, volume_pan_only: bool = False, stereo_filter_only: bool = Fa
         elif fender_flanger_tap_division_only:
             url = base_url + "/web/index.html?selftest=fender-flanger-tap-division"
         elif fender_phaser_90_tap_division_only:
+        elif prime_drum_machine_only:
+            url = base_url + "/web/index.html?selftest=prime-drum-machine"
             url = base_url + "/web/index.html?selftest=fender-phaser-90-tap-division"
         elif fractal_chorus_tempo_only:
             url = base_url + "/web/index.html?selftest=fractal-chorus-tempo"
@@ -1840,6 +1843,7 @@ def main() -> None:
     elif action == "test-fractal-bias-trem":
         browser_test(fractal_bias_trem_only=True)
     elif action == "test-fender-vibratone":
+        "test-prime-drum-machine",
         browser_test(vibratone_only=True)
     elif action == "test-fender-universe-vibe":
     elif action == "test-fractal-global-mix-chorus":
@@ -1860,6 +1864,8 @@ def main() -> None:
     elif action == "test-fractal-chromatic-harmonizer":
         browser_test(fractal_chromatic_harmonizer_only=True)
     elif action == "test-fractal-diatonic-harmonizer":
+    elif action == "test-prime-drum-machine":
+        browser_test(prime_drum_machine_only=True)
         browser_test(fractal_diatonic_harmonizer_only=True)
     elif action == "test-fractal-resonator-input-gain":
         browser_test(fractal_resonator_input_gain_only=True)

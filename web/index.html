@@ -234,6 +234,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="125"><span class="effect-number">126</span><span class="effect-name">Euclidean Delay · project-authored controls</span><span class="effect-default">125 ms · 8 steps · 3 pulses · disabled by default</span><span class="effect-category-tag">Delay</span></label>
         <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="126"><span class="effect-number">127</span><span class="effect-name">Synth Texture Reverb · project-authored</span><span class="effect-default">25% mix · 0.45 texture · 4.5 s decay · disabled by default</span><span class="effect-category-tag">Reverb</span></label>
+        <label class="effect-row" data-category="loop"><input type="checkbox" data-effect="127"><span class="effect-number">128</span><span class="effect-name">Drum Machine · project-authored patterns</span><span class="effect-default">Stopped · 120 BPM · disabled by default</span><span class="effect-category-tag">Loop &amp; performance</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -695,6 +696,36 @@
           <label class="mix-control"><span>Level</span><output></output><input id="synth-texture-reverb-level" type="range" min="-24" max="12" step="0.5" value="0"></label>
           <label class="mix-control"><span>Envelope Release</span><output></output><input id="synth-texture-reverb-release" type="range" min="20" max="2000" step="10" value="240"></label>
           <label class="mix-control"><span>Spillover</span><input id="synth-texture-reverb-spillover" type="checkbox"></label>
+        </div>
+      </div>
+      <div class="effect-parameter-group" aria-label="Project-authored Drum Machine controls">
+        <h3>Drum Machine · project-authored</h3>
+        <p>Procedural kick, snare, cymbal, and tom patterns. These controls do not reproduce Prime’s BFD kits or factory styles. Enable this row, then start the pattern before pressing Play.</p>
+        <div class="gain-controls">
+          <label class="mix-control" for="prime-drum-machine-tempo"><span>Tempo</span><output for="prime-drum-machine-tempo">120 BPM</output><input id="prime-drum-machine-tempo" type="range" min="40" max="300" step="1" value="120"></label>
+          <label class="mix-control" for="prime-drum-machine-mix"><span>Mix</span><output for="prime-drum-machine-mix">25%</output><input id="prime-drum-machine-mix" type="range" min="0" max="100" step="1" value="25"></label>
+          <label class="mix-control" for="prime-drum-machine-volume"><span>Volume</span><output for="prime-drum-machine-volume">100%</output><input id="prime-drum-machine-volume" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mix-control" for="prime-drum-machine-intensity"><span>Intensity</span><output for="prime-drum-machine-intensity">65%</output><input id="prime-drum-machine-intensity" type="range" min="0" max="100" step="1" value="65"></label>
+          <label class="mix-control" for="prime-drum-machine-groove"><span>Groove</span><output for="prime-drum-machine-groove">0%</output><input id="prime-drum-machine-groove" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="prime-drum-machine-style"><span>Pattern (project)</span><output>Rock</output><select id="prime-drum-machine-style"><option value="0" selected>Rock</option><option value="1">Pop</option><option value="2">Shuffle</option><option value="3">Half-time</option></select></label>
+          <label class="mix-control" for="prime-drum-machine-bars"><span>Phrase length (project)</span><output for="prime-drum-machine-bars">1 bar</output><input id="prime-drum-machine-bars" type="range" min="1" max="4" step="1" value="1"></label>
+          <label class="mix-control" for="prime-drum-machine-kick"><span>Kick mix (project)</span><output for="prime-drum-machine-kick">75%</output><input id="prime-drum-machine-kick" type="range" min="0" max="100" step="1" value="75"></label>
+          <label class="mix-control" for="prime-drum-machine-snare"><span>Snare mix (project)</span><output for="prime-drum-machine-snare">65%</output><input id="prime-drum-machine-snare" type="range" min="0" max="100" step="1" value="65"></label>
+          <label class="mix-control" for="prime-drum-machine-cymbal"><span>Cymbal mix (project)</span><output for="prime-drum-machine-cymbal">35%</output><input id="prime-drum-machine-cymbal" type="range" min="0" max="100" step="1" value="35"></label>
+          <label class="mix-control" for="prime-drum-machine-tom"><span>Tom mix (project)</span><output for="prime-drum-machine-tom">30%</output><input id="prime-drum-machine-tom" type="range" min="0" max="100" step="1" value="30"></label>
+          <label class="mix-control" for="prime-drum-machine-eq"><span>EQ (project)</span><output for="prime-drum-machine-eq">0.0 dB</output><input id="prime-drum-machine-eq" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="prime-drum-machine-timbre"><span>Timbre (project)</span><output for="prime-drum-machine-timbre">50%</output><input id="prime-drum-machine-timbre" type="range" min="0" max="100" step="1" value="50"></label>
+          <label class="mix-control" for="prime-drum-machine-tuning"><span>Tuning (project)</span><output for="prime-drum-machine-tuning">0.0 semitones</output><input id="prime-drum-machine-tuning" type="range" min="-12" max="12" step="0.5" value="0"></label>
+          <label class="mix-control" for="prime-drum-machine-reverb"><span>Reverb (project)</span><output for="prime-drum-machine-reverb">12%</output><input id="prime-drum-machine-reverb" type="range" min="0" max="100" step="1" value="12"></label>
+          <label class="mix-control" for="prime-drum-machine-drive"><span>Drive (project)</span><output for="prime-drum-machine-drive">0%</output><input id="prime-drum-machine-drive" type="range" min="0" max="100" step="1" value="0"></label>
+        </div>
+        <div class="button-row">
+          <button class="button" id="prime-drum-machine-start" type="button">Start pattern</button>
+          <button class="button" id="prime-drum-machine-stop" type="button">Stop</button>
+          <label><input id="prime-drum-machine-variation" type="checkbox"> Variation (project)</label>
+          <button class="button" id="prime-drum-machine-accent" type="button">Accent</button>
+          <button class="button" id="prime-drum-machine-fill" type="button">Fill</button>
+          <output id="prime-drum-machine-status" aria-live="polite">Stopped</output>
         </div>
       </div>
           <label class="mix-control" for="euclidean-delay-mix"><span>Mix</span><output id="euclidean-delay-mix-value" for="euclidean-delay-mix">25%</output><input id="euclidean-delay-mix" type="range" min="0" max="100" step="1" value="25"></label>

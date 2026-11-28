@@ -4,13 +4,13 @@
   "repository": "https://github.com/kokizzu/multifx",
   "primary_branch": "main",
   "workflow": "flagship-effects-categorized",
-  "previous_checkpoint_commit": "3214f3da1c0ac85b498be7ba6175397c9eba5bf8",
+  "previous_checkpoint_commit": "7daffa073cc2ef31db113eb4b3231be9ecb2b847",
   "latest_audit": {
-  "previous_checkpoint_commit": "0d5804262e69d43a8a191dc353488cd1dfe71549",
-    "name": "Line 6 Helix Stadium XL — Euclidean Delay",
-    "date": "2026-11-27",
-    "category": "Delay",
-    "picker_index": 125,
+    "name": "HeadRush Prime — Drum Machine project-authored generator",
+    "date": "2026-11-28",
+    "category": "Loop & performance",
+    "picker_index": 127,
+    "display_number": 128,
     "official_source": {
       "title": "Helix Stadium model catalogue, Effects manual, Blocks manual, and 1.4 release notes",
       "revision": "Catalogue checked 2026-11-27; live Effects manual selector v1.4 Rev D; hardware 1.4.2 release notes dated 2026-10-27; installed firmware unknown.",
@@ -42,8 +42,8 @@
   },
   "continuation_cursor": {
     "task": "categorized flagship effects",
-    "next_device": "HeadRush Prime",
-    "next_feature": "Integrate and validate the project-authored Prime Drum Machine prototype under Loop & performance, then continue the ordered source-backed Prime, Fender, Line 6 Stadium, Fractal, Melofty, and XRecer gaps. Complete, test, and publish one feature checkpoint at a time.",
+    "next_device": "Fender Tone Master Pro",
+    "next_feature": "Continue with the documented Fender gaps, prioritizing independent left/right timing and tap divisions for the existing Memory Delay; preserve linked timing as its default and do not copy Studio Delay bounds. Then continue source-backed Line 6 Stadium, Fractal, Melofty, and XRecer gaps one tested feature checkpoint at a time.",
     "qualification": "Maintain exact-model and firmware qualifications, source URLs, categorized placement, project-authored control labels, CPU/memory/latency measurements, and manual-test remainder. The full browser suite has historical intermittent Global Mix capture failures; a successful run does not eliminate them. Keep expression-volume, footswitch-display, and general-research cursors untouched."
   },
   "completed_checkpoints": [
@@ -1821,6 +1821,38 @@
       "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows runtime/UI validation.",
       "diff": "make diff-check passed; no workflow files changed.",
       "full_browser_suite": "Full make web-test passed on 2026-11-28 after worklet synchronization was added to the Essex Vibe browser smoke; Euclidean Delay local-guitar Play and browser/native comparison passed. Earlier Fractal/Synth Global Mix capture failures remain historical repeatability observations; one clean run does not eliminate them.",
+    },
+    {
+      "name": "HeadRush Prime — Drum Machine project-authored generator",
+      "date": "2026-11-28",
+      "category": "Loop & performance",
+      "picker_index": 127,
+      "display_number": 128,
+      "official_source": {
+        "title": "HeadRush Prime User Guide, firmware notes, and Drum Machine support article",
+        "revision": "User Guide v5.0.0 §§4.11.2–4.11.5, printed pp. 44–47; cumulative firmware notes v5.2.0 dated October 2026; installed device firmware unknown.",
+        "urls": [
+          "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+          "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+          "https://support.headrushfx.com/en/support/solutions/articles/69000875010-headrush-fx-drum-machine-setup-and-troubleshooting"
+        ],
+        "qualification": "The guide identifies Drum Machine pattern/count-in and tempo/fill functions, Accent controls, and kit/style controls but no numeric ranges/defaults. Notes v5.2.0 list 16 kits and 134 styles; installed firmware remains unknown. No Prime settings, algorithm, DSP, or sound parity is claimed."
+      },
+      "documented_controls": "Pattern/count-in and tempo/fill functions; Accent controls; kit/style controls include Tuning, per-instrument Mixes, Length, Drive, Reverb, Volume, Timbre, Intensity, Groove-Mod, and Groove. Numeric ranges/defaults are unpublished in the checked guide.",
+      "project_controls": "Default-disabled deterministic sample-free generator at picker ID 127/display 128. Original Rock/Pop/Shuffle/Half-time styles; project-authored tempo 40–300 BPM (120), phrase length 1–4 bars (1), Mix 0–100% (25%), Volume, Intensity, Groove, voice balances, EQ, Timbre, Tuning, Reverb, Drive, transport, variation, accent, and fill. Not Prime/BFD kits, factory styles, or complete Prime count-in/auto-tempo/auto-fill behavior.",
+      "status": "Automated implementation is complete; human/device verification remains. Categorized at picker ID 127/display 128 in Loop & performance, disabled by default.",
+      "verification": {
+        "native": "make test-prime-drum-machine passed focused CTest 1/1, including defaults/bounds, mono/stereo, sample-rate handling, pattern timing/variation, reset, finite recovery, and zero process allocation.",
+        "browser": "make web-test-prime-drum-machine passed HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. Stopped identity RMS error 1.8718e−16; active generator difference RMS 0.0320189; disabled storage 0 B; active effect memory 49,480 B; fixed latency 0 frames; browser/native chain comparison passed.",
+        "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up/10,000 measured callbacks and 2.667 ms deadline: p50/p95/p99/p99.9/max 0.179/0.183/0.258/0.491/1.814%; 0/10,000 misses; native memory 49,504 B; zero process allocations.",
+        "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows UI/runtime testing.",
+        "diff": "make diff-check passed; no GitHub workflow changes.",
+        "remaining": [
+          "Human listening and comparison against a physical Prime",
+          "Installed device firmware",
+          "Android/Linux/Windows target-device timing and device UI/audio checks"
+        ]
+      }
       "remaining": [
         "Human listening and comparison against Helix Stadium XL",
         "Installed firmware and exact on-device effect behavior",
@@ -1840,7 +1872,7 @@
         "https://support.headrushfx.com/en/support/solutions/articles/69000875010-headrush-fx-drum-machine-setup-and-troubleshooting",
         "https://www.headrushfx.com/downloads"
       ],
-      "status": "Prime v5.0 documents Drum Machine pattern/count-in, auto-tempo/fill, accent, kit, groove, and intensity controls; v5.2.0 notes list 16 kits and 134 styles but do not publish numeric ranges/defaults. A project-authored generator prototype exists only in isolated files and is not yet compiled, integrated, or validated. Review identified behavior, sample-rate buffer, callback benchmark, and insert-placement issues before adoption.",
+      "status": "Implemented and verified a project-authored, default-disabled drum generator in Loop & performance at ID 127/display number 128. Prime v5.0 documents pattern/count-in, auto-tempo/fill, accent, kit, groove, and intensity controls; v5.2.0 notes list 16 kits and 134 styles but publish no numeric ranges/defaults. Native tests, categorized local-guitar browser/WASM playback, Windows MinGW cross-build, and the isolated callback benchmark pass. The feature uses no Prime/BFD samples or factory patterns and does not claim Prime DSP, controls, or sound parity.",
       "known_controls": "Manufacturer control names include Next Pattern, Count-In, Auto-Tempo, Fill Select/Auto Fill/Auto Fill Rate, Accent Select/One-Shot/Quantize/Volume, kit Tuning/Mixes/Length/Drive/Reverb/Volume/Timbre, and style Intensity/Groove-Mod/Groove. The project prototype uses its own patterns and controls; it does not reproduce Prime BFD samples/kits/styles or the complete fill/count-in/auto-tempo workflow.",
       "qualification": "Keep the prototype project-authored and categorized under Loop & performance only if its audio routing is appropriate. Verify usable phrase/variation behavior, supported sample rates, bounded output, real callback input, and CPU/memory before marking implementation complete. Installed device firmware is unknown."
     },
@@ -1857,6 +1889,38 @@
         "https://www.youtube.com/watch?v=uHdfP6vwLb8",
         "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf"
       ],
+  "current_checkpoint": {
+    "name": "HeadRush Prime — Drum Machine project-authored generator",
+    "date": "2026-11-28",
+    "category": "Loop & performance",
+    "picker_index": 127,
+    "display_number": 128,
+    "official_source": {
+      "title": "HeadRush Prime User Guide, firmware notes, and Drum Machine support article",
+      "revision": "User Guide v5.0.0 §§4.11.2–4.11.5, printed pp. 44–47; cumulative firmware notes v5.2.0 dated October 2026; installed device firmware unknown.",
+      "urls": [
+        "https://cdn.inmusicbrands.com/Software/SGEE/5/HeadRush%20Prime%20-%20User%20Guide%20-%20v5.0.0.pdf",
+        "https://cdn.inmusicbrands.com/Software/SGEE/52/READ%20ME%20-%20HeadRush%20Prime%20Firmware%20Update%20Instructions%20v5.2.0.pdf",
+        "https://support.headrushfx.com/en/support/solutions/articles/69000875010-headrush-fx-drum-machine-setup-and-troubleshooting"
+      ],
+      "qualification": "The guide identifies Drum Machine pattern/count-in and tempo/fill functions, Accent controls, and kit/style controls but no numeric ranges/defaults. Notes v5.2.0 list 16 kits and 134 styles; installed firmware remains unknown. No Prime settings, algorithm, DSP, or sound parity is claimed."
+    },
+    "documented_controls": "Pattern/count-in and tempo/fill functions; Accent controls; kit/style controls include Tuning, per-instrument Mixes, Length, Drive, Reverb, Volume, Timbre, Intensity, Groove-Mod, and Groove. Numeric ranges/defaults are unpublished in the checked guide.",
+    "project_controls": "Default-disabled deterministic sample-free generator at picker ID 127/display 128. Original Rock/Pop/Shuffle/Half-time styles; project-authored tempo 40–300 BPM (120), phrase length 1–4 bars (1), Mix 0–100% (25%), Volume, Intensity, Groove, voice balances, EQ, Timbre, Tuning, Reverb, Drive, transport, variation, accent, and fill. Not Prime/BFD kits, factory styles, or complete Prime count-in/auto-tempo/auto-fill behavior.",
+    "status": "Automated implementation is complete; human/device verification remains. Categorized at picker ID 127/display 128 in Loop & performance, disabled by default.",
+    "verification": {
+      "native": "make test-prime-drum-machine passed focused CTest 1/1, including defaults/bounds, mono/stereo, sample-rate handling, pattern timing/variation, reset, finite recovery, and zero process allocation.",
+      "browser": "make web-test-prime-drum-machine passed HeadlessChrome 151 with local prerecorded stereo Guitar-TECHS DI. Stopped identity RMS error 1.8718e−16; active generator difference RMS 0.0320189; disabled storage 0 B; active effect memory 49,480 B; fixed latency 0 frames; browser/native chain comparison passed.",
+      "benchmark": "Ryzen 9 5950X Release, 48 kHz stereo/128 frames, 2,000 warm-up/10,000 measured callbacks and 2.667 ms deadline: p50/p95/p99/p99.9/max 0.179/0.183/0.258/0.491/1.814%; 0/10,000 misses; native memory 49,504 B; zero process allocations.",
+      "windows": "make windows-cross-build compiled the MinGW shared core and offline renderer; this is not native Windows UI/runtime testing.",
+      "diff": "make diff-check passed; no GitHub workflow changes.",
+      "remaining": [
+        "Human listening and comparison against a physical Prime",
+        "Installed device firmware",
+        "Android/Linux/Windows target-device timing and device UI/audio checks"
+      ]
+    }
+  },
       "status": "Drop Tune now has a partial project-authored workflow in the existing Pitch ID 22 shifter; focused browser Play, native suite, Windows cross-build, and desktop benchmark pass. Official v5.0.1 documents Legacy/Refined; v5.0 video identifies a −12-semitone lower limit. Exact current controls/defaults, mix, polyphony, algorithm latency, DSP, and v5.2-specific behavior remain unknown. Up Tune has no verified control table; no separate Up Tune implementation is warranted while generic transposition covers the broad function.",
       "known_controls": "Drop Tune: v5.0.1 Mode Legacy/Refined; official v5.0 video reports a −12-semitone lower range and reduced latency without a numeric value. Up Tune: presence in Pitch FX and introduction in v5.0.0 verified; exact range/controls/defaults/polyphony unknown. Exact full Drop Tune bounds/defaults/mix/polyphony unknown. Alternate official Prime User Guide v5.0.0 printed p.24 shows an Orange Phaser example with Rate 0.6 Hz, Stereo ON, Sync OFF; these are example values only, not numeric ranges/defaults. C-Verb controls are already covered in the existing project. No new Prime effect has a safe complete parameter table.",
       "qualification": "Project Drop Tune is uniform whole-signal transposition at −1…−12 semitones, full wet, reusing one existing shifter. It is not string-specific tuning or a recreation of Prime algorithms. Preset/scene persistence is not implemented. Keep manufacturer unknowns and manual/device checks open."

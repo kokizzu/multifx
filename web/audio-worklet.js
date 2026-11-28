@@ -48,6 +48,7 @@ EFFECTS.push("studio-pan-delay");
 EFFECTS.push("essex-vibe");
 EFFECTS.push("euclidean-delay");
 EFFECTS.push("synth-texture-reverb");
+EFFECTS.push("prime-drum-machine");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -659,6 +660,10 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureEuclideanDelay(
         parameters.euclideanDelay ||
           [125, 8, 3, 0, 0.25, 0.25, 0, 20, 20000, 0],
+      );
+      this.configurePrimeDrumMachine(
+        parameters.primeDrumMachine ||
+          [120, 0.25, 1, 0.65, 0, 0.75, 0.65, 0.35, 0.30, 0, 0.5, 0, 0.12, 0, 1, 0],
       );
       const effectMemoryBytes = [];
       for (let i = 0; i < EFFECTS.length; i += 1) {
@@ -1687,6 +1692,12 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureEssexVibe(message.value);
     } else if (message.type === "euclidean-delay" && this.ready) {
       this.configureEuclideanDelay(message.value);
+    } else if (message.type === "prime-drum-machine" && this.ready) {
+      this.configurePrimeDrumMachine(message.value);
+    } else if (message.type === "prime-drum-machine-control" && this.ready) {
+      this.module._tf_chain_prime_drum_machine_control(
+        this.chain, Number(message.control), Number(message.value),
+      );
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {
