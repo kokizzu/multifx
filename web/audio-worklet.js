@@ -45,6 +45,7 @@ EFFECTS.push("tone-master-modulated-large-hall");
 EFFECTS.push("pitch-ring-mod");
 EFFECTS.push("resonator");
 EFFECTS.push("studio-pan-delay");
+EFFECTS.push("essex-vibe");
 const EFFECT_PIPELINE_EFFECT_COUNT = 96;
 const FIRST_EXTRA_EFFECT_INDEX = 96;
 const OUTPUT_LEVEL_INDEX = 94;
@@ -1650,6 +1651,8 @@ class TabletFxProcessor extends AudioWorkletProcessor {
       this.configureResonator(message.value);
     } else if (message.type === "studio-pan-delay" && this.ready) {
       this.configureStudioPanDelay(message.value);
+    } else if (message.type === "essex-vibe" && this.ready) {
+      this.configureEssexVibe(message.value);
     } else if (message.type === "filtered-delay" && this.ready) {
       this.module._tf_chain_set_filtered_delay(this.chain, ...message.value);
     } else if (message.type === "sweep-delay" && this.ready) {

@@ -3,6 +3,7 @@
 #include "tabletfx/effects.hpp"
 #include "tabletfx/effects/resonator.hpp"
 #include "tabletfx/effects/studio_pan_delay.hpp"
+#include "tabletfx/effects/essex_vibe.hpp"
 #include "tabletfx/effects/clean_boost.hpp"
 #include "tabletfx/effects/chorus.hpp"
 #include "tabletfx/effects/dimension_chorus.hpp"
@@ -176,6 +177,8 @@ public:
               static_cast<float>(sample_rate),
               tabletfx::StudioPanDelayParameters{.bypass = true})) {
                                 0.0F, static_cast<float>(sample_rate), 10.0F),
+          essex_vibe_(std::make_unique<tabletfx::EssexVibe>(
+              static_cast<float>(sample_rate))) {
                             false});
         effects_.push_back({std::make_unique<tabletfx::VolumePedal>(
                                 static_cast<float>(sample_rate)),
@@ -636,6 +639,11 @@ public:
             studio_pan_delay_->set_bypass(!enabled);
             return true;
         }
+        if (index == 124U) {
+            if (!enabled) essex_vibe_->reset();
+            essex_vibe_enabled_ = enabled;
+            return true;
+        }
         if (index >= effects_.size()) {
             return false;
         }
@@ -1008,6 +1016,11 @@ public:
                 std::span<float>(output_.data(), samples), channels_);
             return;
         }
+        if (index == 124U) {
+            if (essex_vibe_enabled_) {
+                essex_vibe_->process(
+                    std::span<float>(output_.data(), samples), channels_);
+            }
         if (index >= effects_.size()) {
             return;
         }
@@ -1083,6 +1096,7 @@ public:
         pitch_ring_mod_->reset();
         resonator_->reset();
         studio_pan_delay_->reset();
+        essex_vibe_->reset();
         stereo_filter_->reset();
         step_tremolo_->reset();
         deluxe_looper_->reset();
@@ -1117,6 +1131,7 @@ public:
         for (EffectEntry& entry : effects_) {
             entry.effect->reset_modulation_phase();
         }
+        essex_vibe_->reset_modulation_phase();
     }
 
     [[nodiscard]] float meter_peak(std::uint32_t index) const noexcept {
@@ -3962,6 +3977,18 @@ public:
         parameters.bypass = !studio_pan_delay_enabled_;
         studio_pan_delay_->configure(parameters);
     }
+    void configure_essex_vibe(float rate_hz, float depth, float trem,
+                              std::uint32_t stages, float spread,
+                              float level) noexcept {
+        tabletfx::EssexVibeParameters parameters;
+        parameters.rate_hz = rate_hz;
+        parameters.depth = depth;
+        parameters.trem = trem;
+        parameters.stages = static_cast<std::uint8_t>(stages == 1U ? 1U : 2U);
+        parameters.spread = spread;
+        parameters.level = level;
+        essex_vibe_->configure(essex_vibe_->sample_rate(), parameters);
+    }
     void configure_filtered_delay(float time_ms, float feedback, float mix,
                                   float low_cut_hz, float high_cut_hz,
                                   std::uint32_t time_mode, float tempo_bpm,
@@ -4194,6 +4221,7 @@ public:
         bytes += pitch_ring_mod_->memory_bytes();
         bytes += resonator_->memory_bytes();
         bytes += studio_pan_delay_->memory_bytes();
+        bytes += essex_vibe_->memory_bytes();
         bytes += stereo_filter_->memory_bytes();
         bytes += step_tremolo_->memory_bytes();
         bytes += deluxe_looper_->memory_bytes();
@@ -4386,6 +4414,11 @@ public:
                        ? std::numeric_limits<std::uint32_t>::max()
                        : static_cast<std::uint32_t>(bytes);
         }
+        if (index == 124U) {
+            const std::size_t bytes = essex_vibe_->memory_bytes();
+            return bytes > std::numeric_limits<std::uint32_t>::max()
+                       ? std::numeric_limits<std::uint32_t>::max()
+                       : static_cast<std::uint32_t>(bytes);
         if (index >= effects_.size()) {
             return 0;
         }
@@ -4435,6 +4468,7 @@ private:
         case 121U: return pitch_ring_mod_enabled_;
         case 122U: return resonator_enabled_;
         case 123U: return studio_pan_delay_enabled_;
+        case 124U: return essex_vibe_enabled_;
         default: return false;
         }
     }
@@ -4484,6 +4518,7 @@ private:
     std::unique_ptr<tabletfx::effects::PitchRingMod> pitch_ring_mod_;
     std::unique_ptr<tabletfx::Resonator> resonator_;
     std::unique_ptr<tabletfx::StudioPanDelay> studio_pan_delay_;
+    std::unique_ptr<tabletfx::EssexVibe> essex_vibe_;
     std::unique_ptr<tabletfx::effects::FractalChromaticHarmonizer>
         fractal_chromatic_harmonizer_;
     std::unique_ptr<tabletfx::effects::FractalDiatonicHarmonizer>
@@ -4519,6 +4554,7 @@ private:
     bool pitch_ring_mod_enabled_ = false;
     bool resonator_enabled_ = false;
     bool studio_pan_delay_enabled_ = false;
+    bool essex_vibe_enabled_ = false;
     bool fractal_chromatic_harmonizer_enabled_ = false;
     bool fractal_diatonic_harmonizer_enabled_ = false;
     bool xr1_global_eq_enabled_ = false;
@@ -6433,4 +6469,11 @@ TABLETFX_WASM_EXPORT void tf_chain_set_studio_pan_delay(
             delay_time_ms, feedback, mix, pan_rate_hz, pan_depth, pan_mode);
     }
 }
+TABLETFX_WASM_EXPORT void tf_chain_set_essex_vibe(
+    void* opaque, float rate_hz, float depth, float trem,
+    std::uint32_t stages, float spread, float level) noexcept {
+    if (opaque != nullptr) {
+        as_chain(opaque)->configure_essex_vibe(
+            rate_hz, depth, trem, stages, spread, level);
+    }
 } // extern "C"

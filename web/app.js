@@ -2462,6 +2462,14 @@ const studioPanDelayControls = [
   document.querySelector("#studio-pan-delay-pan-depth"),
   document.querySelector("#studio-pan-delay-pan-mode"),
 ];
+const essexVibeControls = [
+  document.querySelector("#essex-vibe-rate"),
+  document.querySelector("#essex-vibe-depth"),
+  document.querySelector("#essex-vibe-trem"),
+  document.querySelector("#essex-vibe-stages"),
+  document.querySelector("#essex-vibe-spread"),
+  document.querySelector("#essex-vibe-level"),
+];
 const resonatorControls = Array.from(
   document.querySelectorAll("[data-resonator-parameter]"),
 ).sort((left, right) =>
@@ -8267,6 +8275,32 @@ function updateStudioPanDelay() {
   }
 }
 
+function updateEssexVibe() {
+  const values = [
+    Number(essexVibeControls[0].value),
+    Number(essexVibeControls[1].value) / 100,
+    Number(essexVibeControls[2].value) / 100,
+    Number(essexVibeControls[3].value),
+    Number(essexVibeControls[4].value) / 100,
+    Number(essexVibeControls[5].value),
+  ];
+  const formats = [
+    (value) => `${value.toFixed(2)} Hz`,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${Math.round(value * 100)}%`,
+    null,
+    (value) => `${Math.round(value * 100)}%`,
+    (value) => `${value.toFixed(2)}×`,
+  ];
+  essexVibeControls.forEach((control, index) => {
+    const output = control.parentElement.querySelector("output");
+    if (output && formats[index]) output.value = formats[index](values[index]);
+  });
+  DEFAULT_PARAMETERS.essexVibe = values;
+  if (workletNode) {
+    workletNode.port.postMessage({ type: "essex-vibe", value: values });
+  }
+}
 function updateResonator() {
   const values = Array(39);
   resonatorControls.forEach((control) => {
@@ -18761,9 +18795,139 @@ async function runStudioPanDelayBrowserSmokeTest(
   }
 }
 
-    const expectedEffectIds = Array.from({ length: 124 }, (_, index) => index);
-    if (EFFECT_NAMES.length !== 124 || effectRows.length !== 124 ||
+async function runEssexVibeBrowserSmokeTest(
+  reference, captureView, captureBuffer,
+) {
+  const effectIndex = 124;
+  const previousEffectState = enabledEffects();
+  const previousValues = essexVibeControls.map((control) => control.value);
+  const previousParameters = [...DEFAULT_PARAMETERS.essexVibe];
+  const previousCategory = effectCategoryFilter.value;
+  const previousSearch = effectSearch.value;
+  try {
+    await processorReady;
+    if (!workletNode || !decodedAudio || !audioContext ||
+        decodedAudio.numberOfChannels !== 2 || reference.channels !== 2) {
+      throw new Error("Essex Vibe smoke requires the local stereo guitar DI fixture.");
+    }
+    const row = document.querySelector(`[data-effect="${effectIndex}"]`)?.closest(".effect-row");
+    const checkbox = row?.querySelector("[data-effect]");
+    const defaults = "0.8,0.65,0,2,0,1";
+    if (row?.dataset.category !== "modulation" ||
+        row.querySelector(".effect-category-tag")?.textContent.trim() !== "Modulation" ||
+        !row.querySelector(".effect-name")?.textContent.startsWith("Essex Vibe") ||
+        !checkbox || checkbox.checked || essexVibeControls.length !== 6 ||
+        EFFECT_NAMES.length !== 125 || effectMemory.length !== EFFECT_NAMES.length ||
+        DEFAULT_PARAMETERS.essexVibe.join(",") !== defaults ||
+        effectMemory[effectIndex] <= 0 || effectMemory[effectIndex] > 2048) {
+      throw new Error(`Essex Vibe picker/default/memory check failed: category=${row?.dataset.category}, parameters=${DEFAULT_PARAMETERS.essexVibe.join(",")}, memory=${effectMemory.length}/${effectMemory[effectIndex]}.`);
+    }
+    for (const [control, minimum, maximum] of [
+      [essexVibeControls[0], "0.05", "12"],
+      [essexVibeControls[1], "0", "100"],
+      [essexVibeControls[2], "0", "100"],
+      [essexVibeControls[4], "0", "100"],
+      [essexVibeControls[5], "0", "2"],
+    ]) {
+      if (control.min !== minimum || control.max !== maximum) {
+        throw new Error(`Essex Vibe project bounds mismatch for ${control.id}: ${control.min}..${control.max}.`);
+      }
+    }
+    if ([...essexVibeControls[3].options].map((option) => option.value).join(",") !== "1,2") {
+      throw new Error("Essex Vibe must offer the one-stage and two-stage choices.");
+    }
+
+    await audioContext.resume();
+    stopSource(false);
+    effectCategoryFilter.value = "modulation";
+    effectSearch.value = "essex vibe";
+    updateEffectBrowser();
+    const samplesToCapture = Math.min(
+      reference.samples.length,
+      Math.max(1, Math.floor(audioContext.sampleRate * 0.6) * reference.channels),
+    );
+    const capture = async (enabled, parameters) => {
+      const uiValues = [
+        parameters[0], parameters[1] * 100, parameters[2] * 100,
+        parameters[3], parameters[4] * 100, parameters[5],
+      ];
+      essexVibeControls.forEach((control, index) => {
+        control.value = String(uiValues[index]);
+      });
+      updateEssexVibe();
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        const shouldEnable = index === 0 || (index === effectIndex && enabled);
+        box.checked = shouldEnable;
+        workletNode.port.postMessage({ type: "enable", index, value: shouldEnable });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      workletNode.port.postMessage({ type: "capture-reset" });
+      Atomics.store(captureView, 0, 0);
+      Atomics.store(captureView, 1, 0);
+      playbackOffset = 0;
+      playButton.click();
+      await waitForCapture(captureView, samplesToCapture);
+      stopSource(false);
+      return new Float32Array(captureBuffer).slice(0, samplesToCapture);
+    };
+    const dry = await capture(false, [0.8, 0.65, 0, 2, 0, 1]);
+    const activeParameters = [3.2, 0.9, 0.35, 2, 0.8, 1];
+    const wet = await capture(true, activeParameters);
+    const repeated = await capture(true, activeParameters);
+    let differenceSquares = 0;
+    let resetDifferenceSquares = 0;
+    let peak = 0;
+    for (let i = 0; i < wet.length; i += 1) {
+      const difference = wet[i] - dry[i];
+      const resetDifference = wet[i] - repeated[i];
+      differenceSquares += difference * difference;
+      resetDifferenceSquares += resetDifference * resetDifference;
+      peak = Math.max(peak, Math.abs(wet[i]));
+    }
+    const wetDifferenceRms = Math.sqrt(differenceSquares / Math.max(1, wet.length));
+    const resetDifferenceRms = Math.sqrt(resetDifferenceSquares / Math.max(1, wet.length));
+    if (!(peak > 0.001) || !(wetDifferenceRms > 0.00001) ||
+        resetDifferenceRms > 0.00001 ||
+        wet.some((sample) => !Number.isFinite(sample))) {
+      throw new Error(`Essex Vibe Play/reset check failed: peak=${peak}, wetRms=${wetDifferenceRms}, resetRms=${resetDifferenceRms}.`);
+    }
+    return {
+      effectIndex,
+      category: "Modulation",
+      parameters: activeParameters,
+      peak,
+      wetDifferenceRms,
+      resetDifferenceRms,
+      effectMemoryBytes: effectMemory[effectIndex],
+      chainMemoryBytes,
+      wasmLinearMemoryBytes: wasmMemoryBytes,
+    };
+  } finally {
+    await stopBrowserSmokePlaybackAndWait();
+    essexVibeControls.forEach((control, index) => {
+      control.value = previousValues[index];
+    });
+    DEFAULT_PARAMETERS.essexVibe = previousParameters;
+    updateEssexVibe();
+    effectCategoryFilter.value = previousCategory;
+    effectSearch.value = previousSearch;
+    updateEffectBrowser();
+    if (workletNode) {
+      [...document.querySelectorAll("[data-effect]")].forEach((box, index) => {
+        box.checked = previousEffectState[index];
+        workletNode.port.postMessage({
+          type: "enable", index, value: previousEffectState[index],
+        });
+      });
+      workletNode.port.postMessage({ type: "reset" });
+      await waitForBrowserSmokeWorkletBarrier();
+    }
+  }
+}
               [...(fractalThreeVoiceSynthControls[33]?.options || [])].map((option) => option.textContent).join(",") !== "Guitar,Bass" ||
+  let essexVibeSmoke = null;
+    const expectedEffectIds = Array.from({ length: 125 }, (_, index) => index);
+    if (EFFECT_NAMES.length !== 125 || effectRows.length !== 125 ||
                fractalThreeVoiceSynthControls[34]?.id !== "fractal-three-voice-synth-output-level-db" ||
                fractalThreeVoiceSynthControls[34]?.min !== "-24" ||
                fractalThreeVoiceSynthControls[34]?.max !== "12" ||
@@ -22374,6 +22538,10 @@ async function runStudioPanDelayBrowserSmokeTest(
       );
       testResult.textContent = "Checking Studio Pan Delay with local guitar playback…";
       const studioPanDelaySmoke = await runStudioPanDelayBrowserSmokeTest(
+        reference, captureView, captureBuffer,
+      );
+      testResult.textContent = "Checking Essex Vibe with local guitar playback…";
+      essexVibeSmoke = await runEssexVibeBrowserSmokeTest(
         reference, captureView, captureBuffer,
       );
     stopSource(false);

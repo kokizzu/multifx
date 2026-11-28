@@ -232,6 +232,7 @@ def main() -> None:
         "action",
         choices=("bench-fractal-global-mix-delay", "bench-fractal-surround-delay", "bench-fractal-megatap-global-mix", "bench-fractal-multitap-global-mix", "bench-fractal-phaser-global-mix", "configure", "build", "test", "bench",
                  "bench-fractal-diatonic-harmonizer",
+            "bench-essex-vibe",
                   "bench-feedback-generator", "bench-shuffling-looper",
                    "bench-fractal-chorus-tempo", "bench-fender-tremolo-duty-cycle",
                   "bench-pitch-ring-mod", "bench-headrush-phaser-stereo",
@@ -346,6 +347,8 @@ def main() -> None:
         bench_fractal_multitap_global_mix(cmake)
     elif action == "bench-fractal-phaser-global-mix":
         bench_fractal_phaser_global_mix(cmake)
+    elif action == "bench-essex-vibe":
+        bench_essex_vibe(cmake)
 
 
 def bench_fractal_global_mix_delay(cmake: str) -> None:

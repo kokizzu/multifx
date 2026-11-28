@@ -800,6 +800,18 @@ def select_exact_line_operations(
                 )
             )
             or (
+                ("scope_start" in replacement) != ("scope_end" in replacement)
+                or (
+                    "scope_start" in replacement
+                    and (
+                        not isinstance(replacement["scope_start"], str)
+                        or not replacement["scope_start"].startswith(("+", "-"))
+                        or not isinstance(replacement["scope_end"], str)
+                        or not replacement["scope_end"].startswith(("+", "-"))
+                    )
+                )
+            )
+            or (
                 "allow_intervening_added_lines" in replacement
                 and not isinstance(replacement["allow_intervening_added_lines"], bool)
             )
@@ -911,6 +923,44 @@ def select_exact_line_operations(
     for replacement in replacements:
         scoped_header = replacement.get("hunk_header")
         scoped_headers = replacement.get("hunk_headers", ())
+        scope_bounds: tuple[int, int, int] | None = None
+        if "scope_start" in replacement:
+            scope_markers = []
+            for marker in (replacement["scope_start"], replacement["scope_end"]):
+                marker_matches = [
+                    (hunk_index, line_index)
+                    for hunk_index, (header_line, body) in enumerate(hunks)
+                    if (
+                        (scoped_header is None and not scoped_headers)
+                        or header_line.rstrip("\n") == scoped_header
+                        or header_line.rstrip("\n") in scoped_headers
+                    )
+                    for line_index, line in enumerate(body)
+                    if line.rstrip("\n") == marker
+                ]
+                if len(marker_matches) != 1:
+                    raise LineSelectionError(
+                        "replacement scope markers must each occur exactly once; "
+                        f"marker={marker!r}, found={len(marker_matches)}"
+                    )
+                scope_markers.append(marker_matches[0])
+            if (
+                scope_markers[0][0] != scope_markers[1][0]
+                or scope_markers[0][1] > scope_markers[1][1]
+            ):
+                raise LineSelectionError(
+                    "replacement scope markers must bound one ordered hunk span"
+                )
+            scope_bounds = (
+                scope_markers[0][0], scope_markers[0][1], scope_markers[1][1]
+            )
+
+        def in_replacement_scope(hunk_index: int, line_index: int) -> bool:
+            return scope_bounds is None or (
+                hunk_index == scope_bounds[0]
+                and scope_bounds[1] <= line_index <= scope_bounds[2]
+            )
+
         current_matches = [
             (hunk_index, line_index)
             for hunk_index, (header_line, body) in enumerate(hunks)
@@ -921,6 +971,7 @@ def select_exact_line_operations(
             )
             for line_index, line in enumerate(body)
             if line.rstrip("\n") == replacement["current"]
+            and in_replacement_scope(hunk_index, line_index)
         ]
         if not current_matches:
             # Verification receives the staged, already-selected value. Accept
@@ -938,6 +989,7 @@ def select_exact_line_operations(
                 or header_line.rstrip("\n") in scoped_headers
                 for line_index, line in enumerate(body)
                 if line.rstrip("\n") == replacement["selected"]
+                and in_replacement_scope(hunk_index, line_index)
             ]
             if allow_cross_hunk_staged and len(selected_matches) != 1:
                 raise LineSelectionError(
@@ -1344,6 +1396,119 @@ PARTIAL_CHECKPOINT_LINE_SELECTORS["fractal-resonator-effect"].update({
 })
 
 
+PARTIAL_CHECKPOINT_LINE_SELECTORS["essex-vibe"] = {
+    "CMakeLists.txt": (
+        "+    src/effects/essex_vibe.cpp",
+        "+add_executable(tabletfx_essex_vibe_bench apps/essex_vibe_bench.cpp)",
+        "+target_link_libraries(tabletfx_essex_vibe_bench PRIVATE tabletfx_core)",
+        "+    add_executable(tabletfx_essex_vibe_tests tests/test_essex_vibe.cpp)",
+        "+    target_link_libraries(tabletfx_essex_vibe_tests PRIVATE tabletfx_core)",
+        "+    add_test(NAME tabletfx_essex_vibe_tests COMMAND tabletfx_essex_vibe_tests)",
+    ),
+    "FLAGSHIP_EFFECT_COMPARISON.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium XL — Essex Vibe implementation checkpoint (2026-11-27)", "line_count": 5}},
+    ),
+    "IMPLEMENTATION_CHECKLIST.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium XL — Essex Vibe (2026-11-27)", "line_count": 8}},
+    ),
+    "LATENCY_AND_QUALITY.md": (
+        {"span": {"start": "+## Line 6 Helix Stadium Essex Vibe — 2026-11-27", "line_count": 3}},
+        {"span": {"start": "+## Essex Vibe browser/WASM playback checkpoint (2026-11-27)", "line_count": 3}},
+        {"span": {"start": "+## Essex Vibe processor optimization rerun (2026-11-28)", "line_count": 3}},
+    ),
+    "make/publish.mk": (
+        "+PUBLISH_CHECKPOINTS += essex-vibe",
+    ),
+    "research-state.json": (
+        {"span": {"start": '+      "feature": "Essex Vibe categorized browser/WASM processor",', "line_count": 30}},
+    ),
+    "scripts/publish_checkpoint.py": (
+        {"span": {"start": "+ESSEX_VIBE_CHECKPOINT_PATHS = (", "end": "+)", "end_after_start": True}},
+        {"span": {"start": '+CHECKPOINTS["essex-vibe"] = (', "end": "+)", "end_after_start": True}},
+        {"span": {"start": '+PARTIAL_CHECKPOINT_HUNKS["essex-vibe"] = {', "end": "+}", "end_after_start": True}},
+    ),
+    "scripts/run_cmake.py": (
+        '+            "bench-essex-vibe",',
+        '+    elif action == "bench-essex-vibe":',
+        "+        bench_essex_vibe(cmake)",
+    ),
+    "scripts/web.py": (
+        '+        "_tf_chain_set_essex_vibe",',
+        '+        str(ROOT / "src" / "effects" / "essex_vibe.cpp"),',
+    ),
+    "src/web/wasm_chain.cpp": (
+        '+#include "tabletfx/effects/essex_vibe.hpp"',
+        {"span": {"start": "+          essex_vibe_(std::make_unique<tabletfx::EssexVibe>(", "line_count": 2}},
+        {"span": {"hunk_headers": ["@@ -638,0 +648,57 @@ public:", "@@ -638,0 +642,5 @@ public:"], "start": "+        if (index == 124U) {", "line_count": 5}},
+        {"span": {"hunk_headers": ["@@ -1010,0 +1077,28 @@ public:", "@@ -1010,0 +1019,5 @@ public:"], "start": "+        if (index == 124U) {", "line_count": 5}},
+        "+        essex_vibe_->reset();",
+        "+        essex_vibe_->reset_modulation_phase();",
+        {"span": {"start": "+    void configure_essex_vibe(float rate_hz, float depth, float trem,", "line_count": 12}},
+        "+        bytes += essex_vibe_->memory_bytes();",
+        {"span": {"hunk_headers": ["@@ -4388,0 +4615,20 @@ public:", "@@ -4388,0 +4417,5 @@ public:"], "start": "+        if (index == 124U) {", "line_count": 5}},
+        "+        case 124U: return essex_vibe_enabled_;",
+        "+    std::unique_ptr<tabletfx::EssexVibe> essex_vibe_;",
+        "+    bool essex_vibe_enabled_ = false;",
+        {"span": {"start": "+TABLETFX_WASM_EXPORT void tf_chain_set_essex_vibe(", "line_count": 7}},
+    ),
+    "web/app.js": (
+        {"span": {"start": "+const essexVibeControls = [", "line_count": 8}},
+        {"span": {"start": "+function updateEssexVibe() {", "line_count": 26}},
+        {"span": {"start": "+async function runEssexVibeBrowserSmokeTest(", "line_count": 129}},
+        {
+            "replace": {
+                "current": "+        EFFECT_NAMES.length !== 127 || effectMemory.length !== EFFECT_NAMES.length ||",
+                "selected": "+        EFFECT_NAMES.length !== 125 || effectMemory.length !== EFFECT_NAMES.length ||",
+                "hunk_headers": [
+                    "@@ -18764,2 +19647,922 @@ async function runStudioPanDelayBrowserSmokeTest(",
+                    "@@ -18764,2 +18799,129 @@ async function runStudioPanDelayBrowserSmokeTest(",
+                ],
+                "scope_start": "+async function runEssexVibeBrowserSmokeTest(",
+                "scope_end": "+      throw new Error(\"Essex Vibe must offer the one-stage and two-stage choices.\");",
+                "current_occurrence": 1,
+                "expected_current_count": 1,
+            }
+        },
+        {
+            "replace": {
+                "before": "-    const expectedEffectIds = Array.from({ length: 124 }, (_, index) => index);",
+                "current": "+    const expectedEffectIds = Array.from({ length: 127 }, (_, index) => index);",
+                "selected": "+    const expectedEffectIds = Array.from({ length: 125 }, (_, index) => index);",
+                "hunk_header": "@@ -18764,2 +19647,922 @@ async function runStudioPanDelayBrowserSmokeTest(",
+                "allow_intervening_changes": True,
+                "allow_cross_hunk_staged": True,
+            }
+        },
+        {
+            "replace": {
+                "before": "-    if (EFFECT_NAMES.length !== 124 || effectRows.length !== 124 ||",
+                "current": "+    if (EFFECT_NAMES.length !== 127 || effectRows.length !== 127 ||",
+                "selected": "+    if (EFFECT_NAMES.length !== 125 || effectRows.length !== 125 ||",
+                "hunk_header": "@@ -18764,2 +19647,922 @@ async function runStudioPanDelayBrowserSmokeTest(",
+                "allow_intervening_changes": True,
+                "allow_cross_hunk_staged": True,
+            }
+        },
+        "+  let essexVibeSmoke = null;",
+        {"span": {"start": '+      testResult.textContent = "Checking Essex Vibe with local guitar playback…";', "line_count": 4}},
+    ),
+    "web/audio-worklet.js": (
+        '+EFFECTS.push("essex-vibe");',
+        '+    } else if (message.type === "essex-vibe" && this.ready) {',
+        "+      this.configureEssexVibe(message.value);",
+    ),
+    "web/index.html": (
+        '+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>',
+        {"span": {"start": '+      <div class="effect-parameter-group" aria-label="Essex Vibe controls">', "line_count": 12}},
+    ),
+    "scripts/checkpoint_line_selectors.py": (
+        {"span": {"hunk_header": "@@ -801,0 +802,12 @@ def select_exact_line_operations(", "start": "+            or (", "line_count": 12}},
+        {"span": {"hunk_header": "@@ -913,0 +926,38 @@ def select_exact_line_operations(", "start": "+        scope_bounds: tuple[int, int, int] | None = None", "line_count": 38}},
+        "+            and in_replacement_scope(hunk_index, line_index)",
+        "+                and in_replacement_scope(hunk_index, line_index)",
+        {"span": {"start": '+PARTIAL_CHECKPOINT_LINE_SELECTORS["essex-vibe"] = {', "end": "+}", "end_after_start": True}},
+    ),
+}
 def select_checkpoint_line_patch(checkpoint: str, path: str, diff: str) -> str | None:
     """Apply a checkpoint/path exact-line selector, or return None if absent."""
     operations = PARTIAL_CHECKPOINT_LINE_SELECTORS.get(checkpoint, {}).get(path)

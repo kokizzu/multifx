@@ -4624,6 +4624,54 @@ def partial_checkpoint_context(checkpoint: str, path: str) -> int:
     return PARTIAL_CHECKPOINT_CONTEXT.get(checkpoint, {}).get(path, 1)
 
 
+ESSEX_VIBE_CHECKPOINT_PATHS = (
+    "CMakeLists.txt",
+    "FLAGSHIP_EFFECT_COMPARISON.md",
+    "IMPLEMENTATION_CHECKLIST.md",
+    "LATENCY_AND_QUALITY.md",
+    "apps/essex_vibe_bench.cpp",
+    "include/tabletfx/effects/essex_vibe.hpp",
+    "make/publish.mk",
+    "research-state.json",
+    "scripts/publish_checkpoint.py",
+    "scripts/checkpoint_line_selectors.py",
+    "scripts/test_checkpoint_line_selectors.py",
+    "scripts/run_cmake.py",
+    "scripts/web.py",
+    "src/effects/essex_vibe.cpp",
+    "src/web/wasm_chain.cpp",
+    "tests/test_essex_vibe.cpp",
+    "web/app.js",
+    "web/audio-worklet.js",
+    "web/index.html",
+)
+CHECKPOINTS["essex-vibe"] = (
+    ESSEX_VIBE_CHECKPOINT_PATHS,
+    "feat: add categorized Essex Vibe",
+)
+PARTIAL_CHECKPOINT_HUNKS["essex-vibe"] = {
+    "CMakeLists.txt": ("src/effects/essex_vibe.cpp", "tabletfx_essex_vibe"),
+    "FLAGSHIP_EFFECT_COMPARISON.md": ("## Line 6 Helix Stadium XL — Essex Vibe",),
+    "IMPLEMENTATION_CHECKLIST.md": ("## Line 6 Helix Stadium XL — Essex Vibe",),
+    "LATENCY_AND_QUALITY.md": ("Essex Vibe",),
+    "make/publish.mk": ("PUBLISH_CHECKPOINTS += essex-vibe",),
+    "research-state.json": ("Line 6 Helix Stadium XL — Essex Vibe",),
+    "scripts/publish_checkpoint.py": (
+        "ESSEX_VIBE_CHECKPOINT_PATHS",
+        'CHECKPOINTS["essex-vibe"]',
+        'PARTIAL_CHECKPOINT_HUNKS["essex-vibe"]',
+    ),
+    "scripts/test_checkpoint_line_selectors.py": (
+        "class EssexVibeSelectorTests",
+        "test_scoped_replacement_excludes_repeated_lines_and_is_idempotent",
+    ),
+    "scripts/run_cmake.py": ("bench-essex-vibe",),
+    "scripts/web.py": ("test-essex-vibe",),
+    "src/web/wasm_chain.cpp": ("essex_vibe",),
+    "web/audio-worklet.js": ("essex-vibe",),
+    "web/app.js": ("runEssexVibeBrowserSmokeTest", "essex-vibe"),
+    "web/index.html": ("essex-vibe-rate", "Essex Vibe"),
+}
 FRACTAL_GLOBAL_MIX_CHORUS_CHECKPOINT_PATHS = (
     "EFFECTS_MATRIX.md",
     "FLAGSHIP_EFFECT_COMPARISON.md",

@@ -1985,6 +1985,36 @@
       "status": "The v5.2.0 cumulative notes retain the v5.0.1 Drop Tune Legacy/Refined selector; Refined is described as improving tracking speed and tonal quality. Prime v5.0.0 also documents a Drum Machine with fill/count-in, auto-tempo/fill, accent, kit, groove, and intensity controls. No later release-note change to these features was found. The v5.2.0 User Guide is officially listed, but the 11.7 MB PDF and all verified official links point to the same unreadable CDN copy.",
       "known_controls": "Drop Tune exposes Legacy and Refined; no numeric range/default, algorithm details, latency, or polyphony are stated. Drum Machine controls include Next Pattern, Count-In, Auto-Tempo, Fill Select/Auto Fill/Auto Fill Rate, accent Select/One-Shot/Quantize/Volume, kit Tuning/mixes/Length/Drive/Reverb/Volume/Timbre, and style Intensity/Groove-Mod/Groove. Screen values are examples, not specified bounds/defaults; its 16 kits and 134 styles are proprietary content.",
       "qualification": "The project has a related Drop Tune workflow but does not reproduce Prime's Legacy/Refined algorithms. A project-authored mode can only be labeled as such. The Drum Machine would require new project-authored patterns/sounds and cannot reuse HeadRush content. Prime-specific synth, sequencer, and acoustic block parameter tables remain unverified; installed firmware is unknown."
+      "feature": "Essex Vibe categorized browser/WASM processor",
+      "date": "2026-11-28",
+      "picker_index": 124,
+      "category": "Modulation",
+      "official_sources": [
+        {
+          "title": "Helix Stadium Effects manual",
+          "revision": "v1.4 Rev D",
+          "url": "https://manuals.line6.com/en/helix-stadium/live/effect-blocks"
+        },
+        {
+          "title": "Helix Stadium 1.4 release notes",
+          "url": "https://kb.line6.com/helix-stadium-1-4-release-notes"
+        },
+        {
+          "title": "Helix Stadium model list",
+          "url": "https://line6.com/helix-stadium-models/"
+        }
+      ],
+      "documented_controls": "Rate, Depth, Trem, Stages (one or two), stereo-only Spread, and Level; Rate can follow system tempo for note values. Numeric bounds/defaults are not stated in the manual table.",
+      "project_controls": "Rate 0.8 Hz, Depth 0.65, Trem 0, two stages, Spread 0, unity Level; all numeric defaults and ranges are project-authored. Disabled by default.",
+      "verification": {
+        "native": "make test passed 129/129 CTest cases plus 13 audio-fixture safety checks; the focused Essex Vibe test is included.",
+         "browser": "Full make web-test passed on 2026-11-28 and includes HeadlessChrome local prerecorded stereo guitar Play/reset smoke; wet/dry RMS difference 0.1674; reset/replay difference 0; active effect state 1,116 B; chain state 82,545,444 B; fixed WASM linear memory 100,663,296 B. An earlier full-suite run had an unrelated Global Mix capture failure; this successful rerun does not rule out repeatability issues.",
+        "windows": "make windows-cross-build passed.",
+         "benchmark": "Latest make bench-essex-vibe on Ryzen 9 5950X Release, 48 kHz stereo/128-frame callbacks (2.667 ms): p50/p95/p99/p99.9/max 0.084/0.0844125/0.105/0.253875/0.946163%; max 25.231 µs with finite output; native state 1,120 B; no fixed latency or processing allocation.",
+        "diff_check": "make diff-check passed; no workflow files changed."
+      },
+      "remaining": "Human listening, comparison against a physical Helix Stadium XL, and target-device timing remain manual. No Line 6 algorithm, circuit, settings, DSP, or sound parity is claimed."
+    },
     }
   ],
   "constraints": [

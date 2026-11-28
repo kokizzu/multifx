@@ -75,6 +75,45 @@ index 1234567..7654321 100644
         self.assertIn("-old project-only default\n", patch)
         self.assertIn("+new project-only default\n", patch)
 
+    def test_scoped_replacement_excludes_repeated_lines_and_is_idempotent(self) -> None:
+        operation = {
+            "replace": {
+                "current": "+count = 127;",
+                "selected": "+count = 125;",
+                "hunk_headers": ["@@ -1,0 +1,7 @@ controls"],
+                "scope_start": "+target effect starts",
+                "scope_end": "+target effect ends",
+                "current_occurrence": 1,
+                "expected_current_count": 1,
+            }
+        }
+        source = self.select(
+            "@@ -1,0 +1,7 @@ controls\n"
+            "+other effect starts\n"
+            "+count = 127;\n"
+            "+target effect starts\n"
+            "+count = 127;\n"
+            "+target effect ends\n"
+            "+other effect ends\n"
+            "+count = 127;\n",
+            (operation,),
+        )
+        self.assertEqual(source.count("+count = 127;"), 0)
+        self.assertEqual(source.count("+count = 125;"), 1)
+        staged = self.select(
+            "@@ -1,0 +1,7 @@ controls\n"
+            "+other effect starts\n"
+            "+count = 127;\n"
+            "+target effect starts\n"
+            "+count = 125;\n"
+            "+target effect ends\n"
+            "+other effect ends\n"
+            "+count = 127;\n",
+            (operation,),
+        )
+        self.assertEqual(staged.count("+count = 127;"), 0)
+        self.assertEqual(staged.count("+count = 125;"), 1)
+
     def test_duplicate_exact_line_is_ambiguous(self) -> None:
         with self.assertRaisesRegex(LineSelectionError, "listed multiplicity"):
             self.select(
@@ -884,6 +923,104 @@ class AppCheckpointSelectorTests(unittest.TestCase):
             "Synth Texture Reverb",
         ):
             self.assertNotIn(forbidden, selected)
+
+
+class EssexVibeSelectorTests(unittest.TestCase):
+    def test_essex_picker_panel_excludes_adjacent_effects(self) -> None:
+        from checkpoint_line_selectors import select_checkpoint_line_patch
+
+        essex_row = '+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>'
+        diff = "\n".join((
+            "diff --git a/web/index.html b/web/index.html",
+            "--- a/web/index.html",
+            "+++ b/web/index.html",
+            "@@ -233,2 +233,5 @@",
+            essex_row,
+            '+        <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="125"><span class="effect-number">126</span><span class="effect-name">Euclidean Delay · project-authored controls</span><span class="effect-default">125 ms · 8 steps · disabled by default</span><span class="effect-category-tag">Delay</span></label>',
+            '+        <label class="effect-row" data-category="reverb"><input type="checkbox" data-effect="126"><span class="effect-number">127</span><span class="effect-name">Synth Texture Reverb · project-authored</span><span class="effect-default">25% mix · disabled by default</span><span class="effect-category-tag">Reverb</span></label>',
+            "@@ -675,2 +686,43 @@",
+            '+      <div class="effect-parameter-group" aria-label="Essex Vibe controls">',
+            "+        <h3>Essex Vibe · project-authored control mapping</h3>",
+            "+        <div class=\"gain-controls\">",
+            "+          <label>Rate</label>",
+            "+          <label>Depth</label>",
+            "+          <label>Trem</label>",
+            "+          <label>Stages</label>",
+            "+          <label>Stereo Spread</label>",
+            "+          <label>Level</label>",
+            "+        </div>",
+            "+        <p class=\"hint\">Project-authored control bounds and no parity claim.</p>",
+            "+      </div>",
+            '+      <div class="effect-parameter-group" aria-label="Euclidean Delay controls">',
+            "+        <h3>Euclidean Delay</h3>",
+            '+      <div class="effect-parameter-group" aria-label="Synth Texture Reverb controls">',
+            "+        <h3>Synth Texture Reverb</h3>",
+        )) + "\n"
+
+        selected = select_checkpoint_line_patch("essex-vibe", "web/index.html", diff)
+
+        self.assertIsNotNone(selected)
+        self.assertIn(essex_row, selected)
+        self.assertIn('aria-label="Essex Vibe controls"', selected)
+        self.assertNotIn("Euclidean Delay", selected)
+        self.assertNotIn("Synth Texture Reverb", selected)
+        self.assertNotIn('data-effect="125"', selected)
+        self.assertNotIn('data-effect="126"', selected)
+
+    def test_essex_comparison_selects_refreshed_record_only(self):
+        from checkpoint_line_selectors import select_checkpoint_line_patch
+
+        diff = """diff --git a/FLAGSHIP_EFFECT_COMPARISON.md b/FLAGSHIP_EFFECT_COMPARISON.md
+--- a/FLAGSHIP_EFFECT_COMPARISON.md
++++ b/FLAGSHIP_EFFECT_COMPARISON.md
+@@ -1,0 +1,7 @@
++## Line 6 Helix Stadium XL — Essex Vibe implementation checkpoint (2026-11-27)
++
++Official source paragraph with current Essex Vibe documentation.
++
++Refreshed TabletFX browser result; target-device timing remain manual.
++## Fender Orbit
++Adjacent comparison content.
+"""
+        selected = select_checkpoint_line_patch(
+            "essex-vibe", "FLAGSHIP_EFFECT_COMPARISON.md", diff
+        )
+        self.assertIn(
+            "+Refreshed TabletFX browser result; target-device timing remain manual.",
+            selected,
+        )
+        self.assertNotIn("+## Fender Orbit", selected)
+        self.assertEqual(sum(line.startswith("+") and not line.startswith("+++")
+                             for line in selected.splitlines()), 5)
+
+    def test_essex_checklist_selects_all_entries_only(self):
+        from checkpoint_line_selectors import select_checkpoint_line_patch
+
+        diff = """diff --git a/IMPLEMENTATION_CHECKLIST.md b/IMPLEMENTATION_CHECKLIST.md
+--- a/IMPLEMENTATION_CHECKLIST.md
++++ b/IMPLEMENTATION_CHECKLIST.md
+@@ -1,0 +1,10 @@
++## Line 6 Helix Stadium XL — Essex Vibe (2026-11-27)
++
++- [x] Verify the exact model controls.
++- [x] Keep project choices labeled.
++- [x] Register the native processor.
++- [x] Add categorized browser controls.
++- [x] Run native and browser checks.
++- [x] No Line 6 circuit, algorithm, parameter, or sound parity is claimed.
++## Fender Orbit
++Adjacent checklist content.
+"""
+        selected = select_checkpoint_line_patch(
+            "essex-vibe", "IMPLEMENTATION_CHECKLIST.md", diff
+        )
+        self.assertIn(
+            "+- [x] No Line 6 circuit, algorithm, parameter, or sound parity is claimed.",
+            selected,
+        )
+        self.assertNotIn("+## Fender Orbit", selected)
+        self.assertEqual(sum(line.startswith("+") and not line.startswith("+++")
+                             for line in selected.splitlines()), 8)
 
 
 if __name__ == "__main__":

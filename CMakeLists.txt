@@ -73,6 +73,7 @@ add_library(tabletfx_core
     src/effects/pugilist.cpp
     src/effects/mercator_distortion.cpp
     src/effects/vibe.cpp
+    src/effects/essex_vibe.cpp
     src/effects/multi_delay.cpp
     src/effects/plex_delay.cpp
     src/effects/celestial_reverb.cpp
@@ -184,6 +185,8 @@ add_executable(tabletfx_tone_master_pro_3d_chorus_bench
     apps/tone_master_pro_3d_chorus_bench.cpp)
 target_link_libraries(tabletfx_tone_master_pro_3d_chorus_bench PRIVATE tabletfx_core)
 
+add_executable(tabletfx_essex_vibe_bench apps/essex_vibe_bench.cpp)
+target_link_libraries(tabletfx_essex_vibe_bench PRIVATE tabletfx_core)
 add_executable(tabletfx_fractal_surround_delay_bench
     apps/fractal_surround_delay_bench.cpp)
 target_link_libraries(tabletfx_fractal_surround_delay_bench PRIVATE tabletfx_core)
@@ -226,6 +229,9 @@ target_link_libraries(tabletfx_fender_harmonic_tremolo_mode_bench PRIVATE tablet
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(tabletfx_essex_vibe_tests tests/test_essex_vibe.cpp)
+    target_link_libraries(tabletfx_essex_vibe_tests PRIVATE tabletfx_core)
+    add_test(NAME tabletfx_essex_vibe_tests COMMAND tabletfx_essex_vibe_tests)
     add_executable(tabletfx_tests tests/test_dsp.cpp)
     target_link_libraries(tabletfx_tests PRIVATE tabletfx_core)
     add_test(NAME tabletfx_tests COMMAND tabletfx_tests)

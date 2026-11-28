@@ -231,6 +231,7 @@
         <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="121"><span class="effect-number">122</span><span class="effect-name">Pitch Ring Mod · project-authored monophonic tracking</span><span class="effect-default">1× carrier · 50% mix · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
         <label class="effect-row" data-category="filter"><input type="checkbox" data-effect="122"><span class="effect-number">123</span><span class="effect-name">Fractal Resonator · project-authored, not a pitch-tracked synth</span><span class="effect-default">Four feedback-fed band-pass voices · disabled by default</span><span class="effect-category-tag">Filters &amp; wah</span></label>
         <label class="effect-row" data-category="delay"><input type="checkbox" data-effect="123"><span class="effect-number">124</span><span class="effect-name">Studio Pan Delay · project-authored</span><span class="effect-default">350 ms · 25% wet · 0.5 Hz pan · disabled by default</span><span class="effect-category-tag">Delay</span></label>
+        <label class="effect-row" data-category="modulation"><input type="checkbox" data-effect="124"><span class="effect-number">125</span><span class="effect-name">Essex Vibe · project-authored controls</span><span class="effect-default">0.8 Hz · 2 stages · disabled by default</span><span class="effect-category-tag">Modulation</span></label>
       </div>
       <p id="effects-empty" class="effects-empty" hidden>No processors match this search.</p>
       <div class="gain-controls">
@@ -672,6 +673,18 @@
           <label class="mix-control" for="studio-pan-delay-pan-mode"><span>Pan Mode</span><select id="studio-pan-delay-pan-mode"><option value="0" selected>Sine</option><option value="1">Triangle</option><option value="2">Envelope</option></select></label>
         </div>
         <p class="hint">Fender’s Tone Master Pro Model Guide v1.1.100 / Rev A lists Studio Delay Time, Feedback, Mix, Pan Rate, Pan Depth, and Pan Mode (Sine, Tri, Env). The guide omits numeric Pan Rate/Depth bounds, defaults, and DSP; the ranges and values here are project choices. This implements a fixed-time stereo feedback delay with panned repeats and does not claim Fender sound parity.</p>
+      </div>
+      <div class="effect-parameter-group" aria-label="Essex Vibe controls">
+        <h3>Essex Vibe · project-authored control mapping</h3>
+        <div class="gain-controls">
+          <label class="mix-control" for="essex-vibe-rate"><span>Rate</span><output id="essex-vibe-rate-value" for="essex-vibe-rate">0.80 Hz</output><input id="essex-vibe-rate" type="range" min="0.05" max="12" step="0.01" value="0.8"></label>
+          <label class="mix-control" for="essex-vibe-depth"><span>Depth</span><output id="essex-vibe-depth-value" for="essex-vibe-depth">65%</output><input id="essex-vibe-depth" type="range" min="0" max="100" step="1" value="65"></label>
+          <label class="mix-control" for="essex-vibe-trem"><span>Trem</span><output id="essex-vibe-trem-value" for="essex-vibe-trem">0%</output><input id="essex-vibe-trem" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="essex-vibe-stages"><span>Stages</span><select id="essex-vibe-stages"><option value="1">1</option><option value="2" selected>2</option></select></label>
+          <label class="mix-control" for="essex-vibe-spread"><span>Stereo Spread</span><output id="essex-vibe-spread-value" for="essex-vibe-spread">0%</output><input id="essex-vibe-spread" type="range" min="0" max="100" step="1" value="0"></label>
+          <label class="mix-control" for="essex-vibe-level"><span>Level</span><output id="essex-vibe-level-value" for="essex-vibe-level">1.00×</output><input id="essex-vibe-level" type="range" min="0" max="2" step="0.01" value="1"></label>
+        </div>
+        <p class="hint">Line 6’s Helix Stadium release notes list Rate, Depth, Trem, Stages (1 or 2), stereo-only Spread, and Level, but do not publish numeric bounds, defaults, or DSP topology. The ranges and defaults here are project choices. Spread only affects stereo input. This project uses a modulated all-pass network and makes no Line 6 sound or DSP parity claim.</p>
       </div>
       <div class="effect-parameter-group" aria-label="Pitch Ring Mod controls">
         <h3>Pitch Ring Mod · project-authored monophonic tracker</h3>
